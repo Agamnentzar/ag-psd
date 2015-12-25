@@ -6,8 +6,9 @@
 /src
 /coverage
 /coverage-remapped
+/test
 /.vs
-.sln
+/ag-psd.sln
 .gitignore
 .travis.yml
 /tslint.json
