@@ -1,0 +1,14 @@
+
+/node_modules
+/build/test
+/results
+/resources
+/src
+/coverage
+/coverage-remapped
+/.vs
+.sln
+.gitignore
+/tslint.json
+/tsd.json
+/gulpfile.js
