@@ -1,0 +1,24 @@
+{
+  "width": 300,
+  "height": 200,
+  "children": [
+    {
+      "name": "Layer 1"
+    },
+    {
+      "name": "Group 1",
+			"opacity": 100,
+      "children": [
+				{
+					"name": "Layer 2"
+				},
+				{
+					"name": "Group 2",
+					"hidden": true,
+					"opened": false,
+					"children": [ ]
+				}
+      ]
+    }
+  ]
+}

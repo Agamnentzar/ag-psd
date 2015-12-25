@@ -1,0 +1,371 @@
+{
+  "width": 300,
+  "height": 200,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "alphaChannelNames": [
+      "Transparency"
+    ],
+    "unicodeAlphaNames": [
+      "Transparency\u0000"
+    ],
+    "alphaIdentifiers": [],
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "layerState": 0,
+    "layersGroup": [
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1
+    ],
+    "layerSelectionIds": [
+      3
+    ],
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "version": 2,
+      "aspect": 1
+    },
+    "versionInfo": {
+      "version": 1,
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 21,
+      "left": 65,
+      "bottom": 167,
+      "right": 234,
+      "blendMode": "normal",
+      "opacity": 255,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "ść猫",
+      "effects": {
+        "dropShadow": {
+          "blur": 327680,
+          "intensity": 0,
+          "angle": 7864320,
+          "distance": 327680,
+          "color": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "blendMode": "mul ",
+          "enabled": true,
+          "useAngleInAllEffects": true,
+          "opacity": 191,
+          "nativeColor": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "innerShadow": {
+          "blur": 327680,
+          "intensity": 0,
+          "angle": 7864320,
+          "distance": 327680,
+          "color": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "blendMode": "mul ",
+          "enabled": false,
+          "useAngleInAllEffects": true,
+          "opacity": 191,
+          "nativeColor": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "outerGlow": {
+          "blur": 327680,
+          "intensity": 0,
+          "color": [
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            190,
+            189,
+            0,
+            0
+          ],
+          "blendMode": "scrn",
+          "enabled": true,
+          "opacity": 191,
+          "nativeColor": [
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            190,
+            189,
+            0,
+            0
+          ]
+        },
+        "innerGlow": {
+          "blur": 327680,
+          "intensity": 0,
+          "color": [
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            190,
+            189,
+            0,
+            0
+          ],
+          "blendMode": "scrn",
+          "enabled": false,
+          "opacity": 191,
+          "invert": true,
+          "nativeColor": [
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            190,
+            189,
+            0,
+            0
+          ]
+        },
+        "bevel": {
+          "angle": 7864320,
+          "strength": 327680,
+          "blur": 327680,
+          "highlightBlendMode": "scrn",
+          "shadowBlendMode": "mul ",
+          "highlightColor": [
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0
+          ],
+          "shadowColor": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "bevelStyle": 2,
+          "highlightOpacity": 191,
+          "shadowOpacity": 191,
+          "enabled": false,
+          "useAngleInAllEffects": true,
+          "up": false,
+          "realHighlightColor": [
+            0,
+            0,
+            255,
+            255,
+            255,
+            255,
+            255,
+            255,
+            0,
+            0
+          ],
+          "realShadowColor": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "solidFill": {
+          "blendMode": "norm",
+          "color": [
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "opacity": 255,
+          "enabled": true,
+          "nativeColor": [
+            0,
+            0,
+            255,
+            255,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            213,
+            158,
+            114,
+            167,
+            206,
+            225,
+            116,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "canvas": null
+    }
+  ],
+  "filterMask": {
+    "colorSpace": [
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "opacity": 50
+  },
+  "canvas": null
+}

@@ -1,0 +1,81 @@
+{
+  "width": 300,
+  "height": 200,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "normal",
+      "opacity": 255,
+      "transparencyProtected": false,
+      "hidden": false,
+      "clipping": false,
+      "name": "Background"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "normal",
+      "opacity": 255,
+      "transparencyProtected": false,
+      "hidden": false,
+      "clipping": false,
+      "name": "Layer #1"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "normal",
+      "opacity": 100,
+      "transparencyProtected": false,
+      "hidden": false,
+      "clipping": true,
+      "name": "Layer #2"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "normal",
+      "opacity": 255,
+      "transparencyProtected": false,
+      "hidden": true,
+      "clipping": false,
+      "name": "Layer #3"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "multiply",
+      "opacity": 200,
+      "transparencyProtected": true,
+      "hidden": false,
+      "clipping": false,
+      "name": "Layer #4"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "normal",
+      "opacity": 255,
+      "transparencyProtected": false,
+      "hidden": false,
+      "clipping": false,
+      "name": "Layer #5"
+    }
+  ]
+}

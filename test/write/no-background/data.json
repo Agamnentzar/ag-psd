@@ -1,0 +1,21 @@
+{
+  "width": 300,
+  "height": 200,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 300,
+      "blendMode": "normal",
+      "opacity": 255,
+      "transparencyProtected": false,
+      "visible": true,
+      "clipping": false,
+      "name": "Background"
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+	"rules": {
+		"class-name": true,
+		"forin": true,
+		"indent": [ true, "tabs" ],
+		"label-position": true,
+		"label-undefined": true,
+		"no-arg": true,
+		"no-console": [
+			true,
+			"debug",
+			"info",
+			"time",
+			"timeEnd",
+			"trace"
+		],
+		"no-construct": true,
+		"no-debugger": true,
+		"no-duplicate-key": true,
+		"no-duplicate-variable": true,
+		"no-eval": true,
+		"no-trailing-whitespace": true,
+		"no-unused-expression": true,
+		"no-unused-variable": false,
+		"no-unreachable": false,
+		"no-use-before-declare": true,
+		"one-line": [
+			true,
+			"check-open-brace",
+			"check-catch",
+			"check-whitespace"
+		],
+		"radix": true,
+		"semicolon": true,
+		"triple-equals": [ true, "allow-null-check" ],
+		"variable-name": false,
+		"whitespace": [
+			true,
+			"check-branch",
+			"check-decl",
+			"check-operator",
+			"check-type"
+		],
+		"eofline": true
+	}
+}
