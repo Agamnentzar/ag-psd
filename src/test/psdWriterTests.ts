@@ -1,5 +1,8 @@
+/// <reference path="../../typings/mkdirp/mkdirp.d.ts" />
+
 import * as fs from 'fs';
 import * as path from 'path';
+import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import { loadCanvasFromFile, toBuffer, compareBuffers, readPSD } from './common';
 import { Psd, Layer } from '../psd';
@@ -96,6 +99,7 @@ describe('PsdWriter', function () {
 			let buffer1 = toBuffer(writer1.getBuffer());
 			let buffer2 = writer2.getBuffer();
 
+			mkdirp.sync(resultsFilesPath);
 			fs.writeFileSync(path.join(resultsFilesPath, f + '-arrayBuffer.psd'), buffer1);
 			fs.writeFileSync(path.join(resultsFilesPath, f + '-buffer.psd'), buffer2);
 

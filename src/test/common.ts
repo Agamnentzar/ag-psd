@@ -82,11 +82,6 @@ export function extractPSD(filePath: string, psd: Psd) {
 	fs.writeFileSync(path.join(basePath, 'data.json'), JSON.stringify(psd, null, 2));
 }
 
-export function ensureDirectory(dirName: string) {
-	if (!fs.existsSync(dirName))
-		fs.mkdirSync(dirName);
-}
-
 export function saveCanvas(fileName: string, canvas: HTMLCanvasElement) {
 	if (canvas)
 		fs.writeFileSync(fileName, canvas.toBuffer());

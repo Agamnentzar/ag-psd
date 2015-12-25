@@ -1,7 +1,10 @@
+/// <reference path="../../typings/mkdirp/mkdirp.d.ts" />
+
 import * as fs from 'fs';
 import * as path from 'path';
+import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
-import { readPSD, importPSD, importPSDImages, compareCanvases, saveCanvas, ensureDirectory } from './common';
+import { readPSD, importPSD, importPSDImages, compareCanvases, saveCanvas } from './common';
 import { Layer } from '../psd';
 import PsdReader from '../psdReader';
 import ArrayBufferPsdReader from '../arrayBufferPsdReader';
@@ -70,7 +73,7 @@ describe('PsdReader', function () {
 			}
 
 			pushLayerCanvases(psd.children || []);
-			ensureDirectory(path.join(resultsFilesPath, f));
+			mkdirp.sync(path.join(resultsFilesPath, f));
 			compare.forEach(i => saveCanvas(path.join(resultsFilesPath, f, i.name), i.canvas));
 			fs.writeFileSync(path.join(resultsFilesPath, f, 'data.json'), JSON.stringify(psd, null, 2), 'utf8');
 
