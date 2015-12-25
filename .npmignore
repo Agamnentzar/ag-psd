@@ -9,6 +9,7 @@
 /.vs
 .sln
 .gitignore
+.travis.yml
 /tslint.json
 /tsd.json
 /gulpfile.js
