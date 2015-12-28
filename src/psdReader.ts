@@ -1,4 +1,4 @@
-﻿import { Psd, Layer, ChannelID, ColorMode, toBlendMode, Compression, SectionDividerType, LayerAdditionalInfo } from './psd';
+﻿import { Psd, Layer, ChannelID, ColorMode, toBlendMode, Compression, SectionDividerType, LayerAdditionalInfo, ReadOptions } from './psd';
 import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw } from './helpers';
 import { getImageResourceName } from './imageResources';
 import { getHandler } from './additionalInfo';
@@ -10,6 +10,15 @@ interface ChannelInfo {
 }
 
 const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
+
+function setupGrayscale(data: ImageData) {
+	let size = data.width * data.height * 4;
+
+	for (let i = 0; i < size; i += 4) {
+		data.data[i + 1] = data.data[i];
+		data.data[i + 2] = data.data[i];
+	}
+}
 
 export default class PsdReader {
 	protected offset = 0;
@@ -64,19 +73,33 @@ export default class PsdReader {
 
 		/* istanbul ignore if */
 		if (this.offset !== end)
-			throw new Error(`Unread section data: ${end - this.offset} bytes at ${this.offset.toString(16)}`);
+			throw new Error(`Unread section data: ${end - this.offset} bytes at 0x${this.offset.toString(16)}`);
 
 		while (end % round)
 			end++;
 
 		this.offset = end;
 	}
-	readPsd() {
+	checkSignature(...expected: string[]) {
+		let offset = this.offset;
+		let signature = this.readSignature();
+
+		/* istanbul ignore if */
+		if (expected.indexOf(signature) === -1)
+			throw new Error(`Invalid signature: '${signature}' at 0x${offset.toString(16)}`);
+	}
+	readPsd(options?: ReadOptions) {
+		let opt = options || {};
 		let psd = this.readHeader();
 		this.readColorModeData(psd);
 		this.readImageResources(psd);
-		this.readLayerAndMaskInfo(psd);
-		this.readImageData(psd);
+		let globalAlpha = this.readLayerAndMaskInfo(psd, opt.skipLayerImageData);
+
+		let skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || psd.children.length);
+
+		if (!skipComposite)
+			this.readImageData(psd, globalAlpha);
+
 		return psd;
 	}
 	private readHeader(): Psd {
@@ -132,9 +155,11 @@ export default class PsdReader {
 			}
 		});
 	}
-	private readLayerAndMaskInfo(psd: Psd) {
+	private readLayerAndMaskInfo(psd: Psd, skipImageData: boolean) {
+		let globalAlpha = false;
+
 		this.readSection(2, left => {
-			this.readLayerInfo(psd);
+			globalAlpha = this.readLayerInfo(psd, skipImageData);
 			this.readGlobalLayerMaskInfo(psd);
 
 			while (left()) {
@@ -145,16 +170,17 @@ export default class PsdReader {
 				}
 			}
 		});
+
+		return globalAlpha;
 	}
-	private readLayerInfo(psd: Psd) {
+	private readLayerInfo(psd: Psd, skipImageData: boolean) {
+		let globalAlpha = false;
+
 		this.readSection(2, left => {
 			let layerCount = this.readInt16();
-			let absoluteAlpha = false;
 
-			// If it is a negative number, its absolute value is the number of layers and
-			// the first alpha channel contains the transparency data for the merged result.
 			if (layerCount < 0) {
-				absoluteAlpha = true;
+				globalAlpha = true;
 				layerCount = -layerCount;
 			}
 
@@ -167,8 +193,10 @@ export default class PsdReader {
 				layerChannels.push(channels);
 			}
 
-			for (let i = 0; i < layerCount; i++)
-				this.readLayerChannelImageData(psd, layers[i], layerChannels[i]);
+			if (!skipImageData) {
+				for (let i = 0; i < layerCount; i++)
+					this.readLayerChannelImageData(psd, layers[i], layerChannels[i]);
+			}
 
 			this.skip(left());
 
@@ -193,6 +221,8 @@ export default class PsdReader {
 				}
 			}
 		});
+
+		return globalAlpha;
 	}
 	private readLayerRecord() {
 		let layer: Layer = <any>{};
@@ -233,14 +263,16 @@ export default class PsdReader {
 			this.readLayerBlendingRanges();
 			layer.name = this.readPascalString();
 
-			while (left() && !this.readUint8())
+			let last = 0;
+
+			while (left() && (last = this.readUint8()) === 0)
 				;
 
-			this.offset--;
+			if (last !== 0)
+				this.offset--;
 
-			while (left()) {
+			while (left() > 4)
 				this.readAdditionalLayerInfo(layer);
-			}
 		});
 
 		return { layer, channels };
@@ -288,17 +320,12 @@ export default class PsdReader {
 			if (compression === Compression.RawData)
 				readDataRaw(this, data, offset, layerWidth, layerHeight);
 			else if (compression === Compression.RleCompressed)
-				readDataRLE(this, data, offset, 4, layerWidth, layerHeight);
+				readDataRLE(this, data, 4, layerWidth, layerHeight, [offset]);
 			else
 				throw new Error(`Compression type not supported: ${compression}`);
 
 			if (data && psd.colorMode === ColorMode.Grayscale) {
-				let size = data.width * data.height * 4;
-
-				for (let i = 0; i < size; i += 4) {
-					data.data[i + 1] = data.data[i];
-					data.data[i + 2] = data.data[i];
-				}
+				setupGrayscale(data);
 			}
 		}
 
@@ -312,14 +339,6 @@ export default class PsdReader {
 			if (left())
 				throw new Error(`Not Implemented: global layer mask info`);
 		});
-	}
-	checkSignature(...expected: string[]) {
-		let offset = this.offset;
-		let signature = this.readSignature();
-
-		/* istanbul ignore if */
-		if (expected.indexOf(signature) === -1)
-			throw new Error(`Invalid signature: '${signature}' at ${offset.toString(16)}`);
 	}
 	private readAdditionalLayerInfo(target: LayerAdditionalInfo) {
 		this.checkSignature('8BIM', '8B64');
@@ -341,32 +360,50 @@ export default class PsdReader {
 			}
 		});
 	}
-	private readImageData(psd: Psd) {
+	private readImageData(psd: Psd, globalAlpha: boolean) {
+		let compression = <Compression>this.readUint16();
+
+		if (supportedColorModes.indexOf(psd.colorMode) === -1)
+			throw new Error(`Color mode not supported: ${psd.colorMode}`);
+
+		if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
+			throw new Error(`Compression type not supported: ${compression}`);
+
+		let canvas = this.createCanvas(psd.width, psd.height);
+		let context = canvas.getContext('2d');
+		let data = context.createImageData(psd.width, psd.height);
+		resetCanvas(data);
+
 		if (psd.colorMode === ColorMode.Bitmap) {
-			let compression = <Compression>this.readUint16();
-			let canvas = this.createCanvas(psd.width, psd.height);
-			let context = canvas.getContext('2d');
-			let data = context.createImageData(psd.width, psd.height);
-			resetCanvas(data);
+			let bytes: number[] = [];
 
 			if (compression === Compression.RawData) {
-				let bitmapBytes = <any>this.readBytes(Math.ceil(psd.width / 8) * psd.height);
-				decodeBitmap(bitmapBytes, data.data, psd.width, psd.height);
+				bytes = <any>this.readBytes(Math.ceil(psd.width / 8) * psd.height);
 			} else if (compression === Compression.RleCompressed) {
-				let bitmapData: ImageData = {
-					data: [],
-					width: psd.width,
-					height: psd.height,
-				};
-
-				readDataRLE(this, bitmapData, 0, 1, psd.width, psd.height);
-				decodeBitmap(bitmapData.data, data.data, psd.width, psd.height);
-			} else {
-				throw new Error(`Compression flag not supported: ${compression}`);
+				readDataRLE(this, { data: bytes, width: psd.width, height: psd.height }, 1, psd.width, psd.height, [0]);
 			}
 
-			context.putImageData(data, 0, 0);
-			psd.canvas = canvas;
+			decodeBitmap(bytes, data.data, psd.width, psd.height);
+		} else { // Grayscale | RGB
+			let channels = psd.colorMode === ColorMode.RGB ? [0, 1, 2] : [0];
+
+			if (globalAlpha)
+				channels.push(3);
+
+			if (compression === Compression.RawData) {
+				for (let i = 0; i < channels.length; i++) {
+					readDataRaw(this, data, channels[i], psd.width, psd.height);
+				}
+			} else if (compression === Compression.RleCompressed) {
+				readDataRLE(this, data, 4, psd.width, psd.height, channels);
+			}
+
+			if (psd.colorMode === ColorMode.Grayscale) {
+				setupGrayscale(data);
+			}
 		}
+
+		context.putImageData(data, 0, 0);
+		psd.canvas = canvas;
 	}
 }

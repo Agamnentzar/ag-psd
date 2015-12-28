@@ -234,3 +234,11 @@ export interface Psd extends LayerAdditionalInfo {
 	canvas?: HTMLCanvasElement;
 	imageResources?: ImageResources;
 }
+
+export interface ReadOptions {
+	skipLayerImageData?: boolean;
+	skipCompositeImageData?: boolean;
+}
+
+export interface WriteOptions {
+}

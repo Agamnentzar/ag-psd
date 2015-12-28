@@ -43,9 +43,19 @@ describe('PsdReader', function () {
 	});
 
 	it('should read width and height properly', function () {
-		let psd = readPSD(path.join(readFilesPath, 'groups', 'src.psd'));
+		let psd = readPSD(path.join(readFilesPath, 'blend-mode', 'src.psd'));
 		expect(psd.width).equal(300);
 		expect(psd.height).equal(200);
+	});
+
+	it('should skip composite image data', function () {
+		let psd = readPSD(path.join(readFilesPath, 'layers', 'src.psd'), { skipCompositeImageData: true });
+		expect(psd.canvas).not.ok;
+	});
+
+	it('should skip layer image data', function () {
+		let psd = readPSD(path.join(readFilesPath, 'layers', 'src.psd'), { skipLayerImageData: true });
+		expect(psd.children[0].canvas).not.ok;
 	});
 
 	fs.readdirSync(readFilesPath).forEach(f => {
@@ -78,7 +88,7 @@ describe('PsdReader', function () {
 			fs.writeFileSync(path.join(resultsFilesPath, f, 'data.json'), JSON.stringify(psd, null, 2), 'utf8');
 
 			expect(psd).eql(expected, f);
-			compare.forEach(i => compareCanvases(images[i.name] || null, i.canvas || null, `${f}:${i.name}`));
+			compare.forEach(i => compareCanvases(images[i.name] || null, i.canvas || null, `${f}/${i.name}`));
 		});
 	});
 });

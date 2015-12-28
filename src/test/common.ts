@@ -9,7 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as Canvas from 'canvas';
 import BufferPsdReader from '../bufferPsdReader';
-import { Psd } from '../psd';
+import { Psd, ReadOptions } from '../psd';
 
 const testsPath = path.join(__dirname, '..', '..', 'test');
 const resultsPath = path.join(__dirname, '..', '..', 'results');
@@ -55,10 +55,10 @@ export function importPSDImages(dirName: string) {
 	return images;
 }
 
-export function readPSD(fileName: string): Psd {
+export function readPSD(fileName: string, options?: ReadOptions): Psd {
 	let buffer = fs.readFileSync(fileName);
 	let reader = new BufferPsdReader(buffer);
-	return reader.readPsd();
+	return reader.readPsd(options);
 }
 
 export function extractPSD(filePath: string, psd: Psd) {

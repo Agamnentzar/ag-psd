@@ -1,3 +1,5 @@
+/// <reference path="../typings/my/canvas.d.ts" />
+
 import PsdReader from './psdReader';
 
 function toUint8Array(buffer: Buffer) {

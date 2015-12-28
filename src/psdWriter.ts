@@ -1,26 +1,31 @@
-﻿import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType } from './psd';
-import { ChannelData, getChannels, writeDataRaw, writeDataRLE } from './helpers';
+﻿import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions } from './psd';
+import { ChannelData, getChannels, writeDataRaw, writeDataRLE, hasAlpha } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
 
 function addChildren(layers: Layer[], children: Layer[]) {
-	for (let c of children) {
-		if (c.children) {
-			c.sectionDivider = {
-				type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
-				key: 'pass',
-				subtype: 0,
-			};
-			layers.push({
-				name: '</Layer group>',
-				sectionDivider: {
-					type: SectionDividerType.BoundingSectionDivider,
-				},
-			});
-			addChildren(layers, c.children);
-			layers.push(c);
-		} else {
-			layers.push(c);
+	if (children) {
+		for (let c of children) {
+			if (c.children && c.canvas)
+				throw new Error(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
+
+			if (c.children) {
+				c.sectionDivider = {
+					type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
+					key: 'pass',
+					subtype: 0,
+				};
+				layers.push({
+					name: '</Layer group>',
+					sectionDivider: {
+						type: SectionDividerType.BoundingSectionDivider,
+					},
+				});
+				addChildren(layers, c.children);
+				layers.push(c);
+			} else {
+				layers.push(c);
+			}
 		}
 	}
 }
@@ -87,25 +92,29 @@ export default class PsdWriter {
 		this.writeUint32(length);
 		this.offset = temp;
 	}
-	writePsd(psd: Psd) {
+	writePsd(psd: Psd, options?: WriteOptions) {
 		if (!(+psd.width > 0 && +psd.height > 0))
 			throw new Error('Invalid document size');
 
-		this.writeHeader(psd);
+		let opt = options || {};
+		let canvas = psd.canvas;
+		let globalAlpha = canvas && hasAlpha(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
+
+		this.writeHeader(psd, globalAlpha);
 		this.writeColorModeData(psd);
 		this.writeImageResources(psd);
-		this.writeLayerAndMaskInfo(psd);
-		this.writeImageData(psd);
+		this.writeLayerAndMaskInfo(psd, globalAlpha);
+		this.writeImageData(psd, globalAlpha);
 	}
-	private writeHeader(psd: Psd) {
+	private writeHeader(psd: Psd, globalAlpha: boolean) {
 		this.writeSignature('8BPS');
 		this.writeUint16(1); // version
 		this.writeZeros(6);
-		this.writeUint16(psd.channels || 3);
+		this.writeUint16(globalAlpha ? 4 : 3); // channels
 		this.writeUint32(psd.height);
 		this.writeUint32(psd.width);
-		this.writeUint16(psd.bitsPerChannel || 8);
-		this.writeUint16(typeof psd.colorMode !== 'undefined' ? psd.colorMode : ColorMode.RGB);
+		this.writeUint16(8); // bits per channel
+		this.writeUint16(ColorMode.RGB);
 	}
 	private writeColorModeData(psd: Psd) {
 		this.writeSection(1, () => {
@@ -125,14 +134,14 @@ export default class PsdWriter {
 			}
 		});
 	}
-	private writeLayerAndMaskInfo(psd: Psd) {
+	private writeLayerAndMaskInfo(psd: Psd, globalAlpha: boolean) {
 		this.writeSection(2, () => {
-			this.writeLayerInfo(psd);
+			this.writeLayerInfo(psd, globalAlpha);
 			this.writeGlobalLayerMaskInfo();
 			this.writeAdditionalLayerInfo(psd);
 		});
 	}
-	private writeLayerInfo(psd: Psd) {
+	private writeLayerInfo(psd: Psd, globalAlpha: boolean) {
 		this.writeSection(2, () => {
 			let layers: Layer[] = [];
 
@@ -143,8 +152,7 @@ export default class PsdWriter {
 
 			let channels = layers.map((l, i) => getChannels(l, i === 0));
 
-			// TODO: handle negative length for absolute alpha
-			this.writeInt16(layers.length);
+			this.writeInt16(globalAlpha ? -layers.length : layers.length);
 			layers.forEach((l, i) => this.writeLayerRecord(psd, l, channels[i]));
 			channels.forEach(c => this.writeLayerChannelImageData(c));
 		});
@@ -218,12 +226,21 @@ export default class PsdWriter {
 			}
 		}
 	}
-	private writeImageData(psd: Psd) {
-		let data = psd.canvas.getContext('2d').getImageData(0, 0, psd.width, psd.height);
-
-		for (let i = 0; i < 3; i++) {
-			this.writeUint16(Compression.RawData);
-			this.writeBytes(writeDataRaw(data, i, psd.width, psd.height));
+	private writeImageData(psd: Psd, globalAlpha: boolean) {
+		let channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
+		let data: ImageData;
+		
+		if (psd.canvas) {
+			data = psd.canvas.getContext('2d').getImageData(0, 0, psd.width, psd.height);
+		} else {
+			data = {
+				data: <any>new Uint8Array(4 * psd.width * psd.height),
+				width: psd.width,
+				height: psd.height,
+			};
 		}
+
+		this.writeUint16(Compression.RleCompressed);
+		this.writeBytes(writeDataRLE(data, psd.width, psd.height, channels));
 	}
 }

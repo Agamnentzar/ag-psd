@@ -31,15 +31,15 @@ export function readColor(reader: PsdReader) {
 	return toArray(reader.readBytes(10));
 }
 
-function isAllDataEqual(data: ImageData, offset: number, value: number) {
+export function hasAlpha(data: ImageData) {
 	let size = data.width * data.height;
 
 	for (let i = 0; i < size; i++) {
-		if (data.data[i * 4 + offset] !== value)
-			return false;
+		if (data.data[i * 4 + 3] !== 255)
+			return true;
 	}
 
-	return true;
+	return false;
 }
 
 function trimData(data: ImageData) {
@@ -125,12 +125,12 @@ export function getChannels(layer: Layer, background: boolean) {
 		ChannelID.Blue,
 	];
 
-	if (!background || layerWidth !== canvas.width || layerHeight !== canvas.height || !isAllDataEqual(data, 3, 255))
+	if (!background || layerWidth !== canvas.width || layerHeight !== canvas.height || hasAlpha(data))
 		channels.unshift(ChannelID.Transparency);
 
 	for (let channel of channels) {
 		let offset = offsetForChannel(channel);
-		let buffer = writeDataRLE(data, offset, layerWidth, layerHeight);
+		let buffer = writeDataRLE(data, layerWidth, layerHeight, [offset]);
 
 		result.push({
 			channelId: channel,
@@ -193,7 +193,7 @@ export function readDataRaw(reader: PsdReader, data: ImageData, offset: number, 
 		data.data[i * 4 + offset] = buffer[i];
 }
 
-export function writeDataRLE(imageData: ImageData, offset: number, width: number, height: number) {
+export function writeDataRLE_old(imageData: ImageData, offset: number, width: number, height: number) {
 	if (!width || !height)
 		return null;
 
@@ -278,38 +278,145 @@ export function writeDataRLE(imageData: ImageData, offset: number, width: number
 	return buffer;
 }
 
-export function readDataRLE(reader: PsdReader, data: ImageData, offset: number, step: number, width: number, height: number) {
-	let lengths: number[] = [];
-	let p = offset;
+export function writeDataRLE(imageData: ImageData, width: number, height: number, offsets: number[]) {
+	if (!width || !height)
+		return null;
 
-	for (let y = 0; y < height; y++)
-		lengths[y] = reader.readUint16();
+	let data = imageData.data;
+	let totalLength = 0;
+	let channels: { lengths: number[]; lines: number[][]; offset: number; }[] = [];
 
-	for (let y = 0; y < height; y++) {
-		let length = lengths[y];
-		let buffer = reader.readBytes(length);
+	for (let i = 0; i < offsets.length; i++) {
+		let lengths: number[] = [];
+		let lines: number[][] = [];
+		let offset = offsets[i];
 
-		for (let i = 0; i < length; i++) {
-			let header = buffer[i];
+		for (let y = 0, p = 0; y < height; y++ , p += width) {
+			let length = 0;
+			let line: number[] = [];
+			let last2 = -1;
+			let last = data[p * 4 + offset];
+			let count = 1;
+			let same = false;
 
-			if (header < 128) {
-				header++;
-				while (header-- > 0) {
-					data.data[p] = buffer[++i];
-					p += step;
+			for (let x = 1; x < width; x++) {
+				let v = data[(p + x) * 4 + offset];
+
+				if (count === 2)
+					same = last === v && last2 === v;
+
+				if (same && last !== v) {
+					length += 2;
+					line.push(count);
+					count = 0;
+					same = false;
+				} else if (!same && count > 2 && v === last && v === last2) {
+					length += count - 1;
+					line.push(count - 2);
+					count = 2;
+					same = true;
+				} else if (count === 128) {
+					length += same ? 2 : count + 1;
+					line.push(count);
+					count = 0;
+					same = false;
 				}
-			} else {
-				let value = buffer[++i];
-				header = 257 - header;
-				while (header-- > 0) {
-					data.data[p] = value;
-					p += step;
-				}
+
+				last2 = last;
+				last = v;
+				count++;
 			}
 
-			/* istanbul ignore if */
-			if (i >= length)
-				throw new Error(`Exceeded buffer size`);
+			length += same ? 2 : 1 + count;
+			line.push(count);
+			lines.push(line);
+			lengths.push(length);
+			totalLength += 2 + length;
+		}
+
+		channels.push({ lengths, lines, offset });
+	}
+
+	let buffer = new Uint8Array(totalLength);
+	let o = 0;
+
+	for (let channel of channels) {
+		for (let length of channel.lengths) {
+			buffer[o++] = (length >> 8) & 0xff;
+			buffer[o++] = length & 0xff;
+		}
+	}
+
+	for (let channel of channels) {
+		for (let y = 0, p = 0; y < height; y++ , p += width) {
+			let line = channel.lines[y];
+			let offset = channel.offset;
+			let x = 0;
+
+			for (let i = 0; i < line.length; i++) {
+				let v = data[(p + x) * 4 + offset];
+				let same = line[i] > 2 && v === data[(p + x + 1) * 4 + offset] && v === data[(p + x + 2) * 4 + offset];
+
+				if (same) {
+					buffer[o++] = 1 - line[i];
+					buffer[o++] = v;
+				} else {
+					buffer[o++] = line[i] - 1;
+
+					for (let j = 0; j < line[i]; j++)
+						buffer[o++] = data[(p + x + j) * 4 + offset];
+				}
+
+				x += line[i];
+			}
+		}
+	}
+
+	return buffer;
+}
+
+export function readDataRLE(reader: PsdReader, data: ImageData, step: number, width: number, height: number, offsets: number[]) {
+	let lengths: number[][] = [];
+
+	for (let c = 0; c < offsets.length; c++) {
+		lengths[c] = [];
+
+		for (let y = 0; y < height; y++) {
+			lengths[c][y] = reader.readUint16();
+		}
+	}
+
+	for (let c = 0; c < offsets.length; c++) {
+		let channelLengths = lengths[c];
+		let p = offsets[c];
+
+		for (let y = 0; y < height; y++) {
+			let length = channelLengths[y];
+			let buffer = reader.readBytes(length);
+
+			for (let i = 0; i < length; i++) {
+				let header = buffer[i];
+
+				if (header >= 128) {
+					let value = buffer[++i];
+					header = 256 - header;
+
+					for (let j = 0; j <= header; j++) {
+						data.data[p] = value;
+						p += step;
+					}
+				} else if (header < 128) {
+					for (let j = 0; j <= header; j++) {
+						data.data[p] = buffer[++i];
+						p += step;
+					}
+				}
+
+				/* istanbul ignore if */
+				if (i >= length) {
+					throw new Error(`Exceeded buffer size ${i}/${length}`);
+				}
+			}
 		}
 	}
 }

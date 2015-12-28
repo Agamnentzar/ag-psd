@@ -4,7 +4,8 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
-import { loadCanvasFromFile, toBuffer, compareBuffers, readPSD } from './common';
+import * as Canvas from 'canvas';
+import { loadCanvasFromFile, toBuffer, compareBuffers, compareCanvases, readPSD } from './common';
 import { Psd, Layer } from '../psd';
 import ArrayBufferPsdWriter from '../arrayBufferPsdWriter';
 import BufferPsdWriter from '../bufferPsdWriter';
@@ -66,6 +67,16 @@ describe('PsdWriter', function () {
 		writer.writeBuffer(null);
 	});
 
+	it('should not throw if writing psd with empty canvas', function () {
+		let writer = new BufferPsdWriter();
+		let psd: Psd = {
+			width: 300,
+			height: 200
+		};
+
+		writer.writePsd(psd);
+	});
+
 	it('should throw if passed invalid signature', function () {
 		let writer = new PsdWriter();
 
@@ -73,7 +84,21 @@ describe('PsdWriter', function () {
 			expect(() => writer.writeSignature(s), s).throw(`Invalid signature: '${s}'`);
 	});
 
-	it('should throw exception if has layer with both children and canvas properties set');
+	it('should throw exception if has layer with both children and canvas properties set', function () {
+		let writer = new BufferPsdWriter();
+		let psd: Psd = {
+			width: 300,
+			height: 200,
+			children: [
+				{
+					children: [],
+					canvas: new Canvas(300, 200),
+				}
+			]
+		};
+
+		expect(() => writer.writePsd(psd)).throw(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
+	});
 
 	it('should throw if psd has invalid width or height', function () {
 		let writer = new PsdWriter();
@@ -103,9 +128,14 @@ describe('PsdWriter', function () {
 			fs.writeFileSync(path.join(resultsFilesPath, f + '-arrayBuffer.psd'), buffer1);
 			fs.writeFileSync(path.join(resultsFilesPath, f + '-buffer.psd'), buffer2);
 
+			let reader = new BufferPsdReader(buffer2);
+			let result = reader.readPsd({ skipLayerImageData: true });
+			fs.writeFileSync(path.join(resultsFilesPath, f + '-composite.png'), result.canvas.toBuffer());
+			//compareCanvases(psd.canvas, result.canvas, 'composite image');
+
 			let expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
-			compareBuffers(buffer1, expected, `${f} [ArrayBufferPsdWriter]`);
-			compareBuffers(buffer2, expected, `${f} [BufferPsdWriter]`);
+			compareBuffers(buffer1, expected, `ArrayBufferPsdWriter`);
+			compareBuffers(buffer2, expected, `BufferPsdWriter`);
 		});
 	});
 });

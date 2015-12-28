@@ -56,13 +56,13 @@ import * as fs from 'fs';
 import { psdWriter } from 'ag-psd';
 
 var psd = {
-	width: 300,
-	height: 200,
-	children: [
-		{
-			name: 'Layer #1',
-		}
-	]
+  width: 300,
+  height: 200,
+  children: [
+    {
+      name: 'Layer #1',
+    }
+  ]
 };
 
 var buffer = psdWriter(psd);
@@ -97,13 +97,13 @@ xhr.addEventListener('load', function () {
 import { writePsd } from 'ag-psd';
 
 var psd = {
-	width: 300,
-	height: 200,
-	children: [
-		{
-			name: 'Layer #1',
-		}
-	]
+  width: 300,
+  height: 200,
+  children: [
+    {
+      name: 'Layer #1',
+    }
+  ]
 };
 
 var buffer = writePsd(psd);

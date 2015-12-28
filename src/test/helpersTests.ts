@@ -33,13 +33,13 @@ describe('helpers', function () {
 
 	describe('writeDataRLE()', function () {
 		it('sould return null for 0 size', function () {
-			expect(writeDataRLE(null, 0, 0, 0)).null;
-			expect(writeDataRLE(null, 0, 0, 100)).null;
-			expect(writeDataRLE(null, 0, 100, 0)).null;
+			expect(writeDataRLE(null, 0, 0, [0])).null;
+			expect(writeDataRLE(null, 0, 100, [0])).null;
+			expect(writeDataRLE(null, 100, 0, [0])).null;
 		});
 
 		rleTests.forEach((image, i) => {
-			it(`should correctly write RLE image (${i})`, function () {
+			it(`should correctly write & read RLE image (${i})`, function () {
 				let array: Uint8Array;
 				let result: number[];
 
@@ -55,11 +55,11 @@ describe('helpers', function () {
 						data: [],
 					};
 
-					array = writeDataRLE(input, 0, image.width, image.height);
+					array = writeDataRLE(input, image.width, image.height, [0]);
 					//console.log(`buffer: [${array}]`);
 
 					let reader = new ArrayBufferPsdReader(array.buffer);
-					readDataRLE(reader, output, 0, 4, image.width, image.height);
+					readDataRLE(reader, output, 4, image.width, image.height, [0]);
 					result = fromData(output.data);
 				} catch (e) {
 					throw new Error(`Error for image: ${i} [${array}] ${e.stack}`);
