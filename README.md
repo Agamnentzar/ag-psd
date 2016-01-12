@@ -53,7 +53,7 @@ fs.writeFileSync('layer-1.png', psd.children[0].canvas.getBuffer());
 
 ```javascript
 import * as fs from 'fs';
-import { psdWriter } from 'ag-psd';
+import { writePsd } from 'ag-psd';
 
 var psd = {
   width: 300,
@@ -65,7 +65,7 @@ var psd = {
   ]
 };
 
-var buffer = psdWriter(psd);
+var buffer = writePsd(psd);
 fs.writeFileSync('my-file.psd', buffer);
 ```
 
