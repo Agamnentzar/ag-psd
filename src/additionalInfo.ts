@@ -255,36 +255,45 @@ addHandler({
 	},
 });
 
-// function readStringOrClassId(reader: PsdReader) {
-// 	let text = reader.readUnicodeString();
-// 	return text.length === 0 ? reader.readSignature() : text;
-// }
+function readStringOrClassId(reader: PsdReader) {
+	let text = reader.readUnicodeString();
+	return text.length === 0 ? reader.readSignature() : text;
+}
 
-// addHandler({
-// 	key: 'lfx2',
-// 	has: target => typeof target.objectBaseEffectsLayerInfo !== 'undefined',
-// 	read: (reader, target) => {
-// 		let version = reader.readUint32();
-// 		let descriptorVersion = reader.readUint32();
-// 		let name = readStringOrClassId(reader);
-// 		let itemsCount = reader.readUint32();
-// 
-// 		for (let i = 0; i < itemsCount; i++) {
-// 			let length = reader.readUint32();
-// 			let key = reader.readSignature();
-// 			//...
-// 		}
-// 
-// 		target.objectBaseEffectsLayerInfo = {
-// 			version,
-// 			descriptorVersion,
-// 			descriptor: {
-// 				name,
-// 				//...
-// 			},
-// 		};
-// 	},
-// 	write: (writer, target) => {
-//		//...	
-// 	},
-// });
+function readStringOrClassId2(reader: PsdReader) {
+	let text = reader.readPascalString();
+	return text.length === 0 ? reader.readSignature() : text;
+}
+
+addHandler({
+	key: 'lfx2',
+	has: target => typeof target.objectBasedEffectsLayerInfo !== 'undefined',
+	read: (reader, target) => {
+		let version = reader.readUint32();
+		let descriptorVersion = reader.readUint32();
+
+		let name = reader.readUnicodeString();
+		let classId = readStringOrClassId(reader);
+		let itemsCount = reader.readUint32();
+
+		//for (let i = 0; i < itemsCount; i++) {
+		//	console.log('read item');
+		//	let key = readStringOrClassId(reader);
+		//	console.log('key', [key]);
+
+		//}
+
+		//target.objectBasedEffectsLayerInfo = {
+		//	version,
+		//	descriptorVersion,
+		//	descriptor: {
+		//		name,
+		//		classId,
+		//		//...
+		//	},
+		//};
+	},
+	write: (writer, target) => {
+		//...
+	},
+});

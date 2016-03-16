@@ -1,10 +1,10 @@
 import { expect } from 'chai';
-import { writeDataRLE, writeDataRaw, readDataRLE, offsetForChannel } from '../helpers';
+import { writeDataRLE, writeDataRaw, readDataRLE, offsetForChannel, PixelData, PixelArray } from '../helpers';
 import ArrayBufferPsdReader from '../arrayBufferPsdReader';
 
-const rleTests: ImageData[] = require('../../test/rle.json');
+const rleTests: PixelData[] = require('../../test/rle.json');
 
-function toData(data: number[]) {
+function toData(data: PixelArray) {
 	let result: number[] = [];
 
 	for (let i = 0; i < data.length; i++)
@@ -13,7 +13,7 @@ function toData(data: number[]) {
 	return result;
 }
 
-function fromData(data: number[]) {
+function fromData(data: PixelArray) {
 	let result: number[] = [];
 
 	for (let i = 0; i < data.length; i += 4)
@@ -44,12 +44,12 @@ describe('helpers', function () {
 				let result: number[];
 
 				try {
-					let input: ImageData = {
+					let input: PixelData = {
 						width: image.width,
 						height: image.height,
 						data: toData(image.data),
 					};
-					let output: ImageData = {
+					let output: PixelData = {
 						width: image.width,
 						height: image.height,
 						data: [],

@@ -1,6 +1,5 @@
 ﻿import { Psd, Layer, ChannelID, ColorMode, toBlendMode, Compression, SectionDividerType, LayerAdditionalInfo, ReadOptions } from './psd';
-import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw } from './helpers';
-import { getImageResourceName } from './imageResources';
+import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, PixelArray } from './helpers';
 import { getHandler } from './additionalInfo';
 import { getHandler as getResourceHandler } from './imageResources';
 
@@ -11,7 +10,7 @@ interface ChannelInfo {
 
 const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
 
-function setupGrayscale(data: ImageData) {
+function setupGrayscale(data: PixelData) {
 	let size = data.width * data.height * 4;
 
 	for (let i = 0; i < size; i += 4) {
@@ -158,7 +157,7 @@ export default class PsdReader {
 	private readLayerAndMaskInfo(psd: Psd, skipImageData: boolean) {
 		let globalAlpha = false;
 
-		this.readSection(2, left => {
+		this.readSection(1, left => {
 			globalAlpha = this.readLayerInfo(psd, skipImageData);
 			this.readGlobalLayerMaskInfo(psd);
 
@@ -336,8 +335,16 @@ export default class PsdReader {
 	}
 	private readGlobalLayerMaskInfo(psd: Psd) {
 		this.readSection(1, left => {
-			if (left())
-				throw new Error(`Not Implemented: global layer mask info`);
+			if (left()) {
+				let overlayColorSpace = this.readUint16();
+				let colorSpace1 = this.readUint16();
+				let colorSpace2 = this.readUint16();
+				let colorSpace3 = this.readUint16();
+				let colorSpace4 = this.readUint16();
+				let opacity = this.readUint16();
+				let kind = this.readUint8();
+				this.skip(left());
+			}
 		});
 	}
 	private readAdditionalLayerInfo(target: LayerAdditionalInfo) {
@@ -375,10 +382,10 @@ export default class PsdReader {
 		resetCanvas(data);
 
 		if (psd.colorMode === ColorMode.Bitmap) {
-			let bytes: number[] = [];
+			let bytes: PixelArray = [];
 
 			if (compression === Compression.RawData) {
-				bytes = <any>this.readBytes(Math.ceil(psd.width / 8) * psd.height);
+				bytes = this.readBytes(Math.ceil(psd.width / 8) * psd.height);
 			} else if (compression === Compression.RleCompressed) {
 				readDataRLE(this, { data: bytes, width: psd.width, height: psd.height }, 1, psd.width, psd.height, [0]);
 			}

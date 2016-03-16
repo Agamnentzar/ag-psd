@@ -8,6 +8,17 @@ export interface ChannelData {
 	length: number;
 }
 
+export interface PixelArray {
+	[index: number]: number;
+	length: number;
+}
+
+export interface PixelData {
+	data: PixelArray;
+	width: number;
+	height: number;
+}
+
 export function offsetForChannel(channelId: ChannelID) {
 	switch (channelId) {
 		case ChannelID.Red: return 0;
@@ -31,7 +42,7 @@ export function readColor(reader: PsdReader) {
 	return toArray(reader.readBytes(10));
 }
 
-export function hasAlpha(data: ImageData) {
+export function hasAlpha(data: PixelData) {
 	let size = data.width * data.height;
 
 	for (let i = 0; i < size; i++) {
@@ -42,7 +53,7 @@ export function hasAlpha(data: ImageData) {
 	return false;
 }
 
-function trimData(data: ImageData) {
+function trimData(data: PixelData) {
 	let top = 0;
 	let left = 0;
 	let right = data.width;
@@ -143,7 +154,7 @@ export function getChannels(layer: Layer, background: boolean) {
 	return result;
 }
 
-export function resetCanvas(data: ImageData) {
+export function resetCanvas(data: PixelData) {
 	let size = data.width * data.height * 4;
 
 	for (let p = 0; p < size;) {
@@ -154,7 +165,7 @@ export function resetCanvas(data: ImageData) {
 	}
 }
 
-export function decodeBitmap(input: number[], output: number[], width: number, height: number) {
+export function decodeBitmap(input: PixelArray, output: PixelArray, width: number, height: number) {
 	let size = width * height;
 
 	for (let y = 0, p = 0, o = 0; y < height; y++) {
@@ -173,7 +184,7 @@ export function decodeBitmap(input: number[], output: number[], width: number, h
 	}
 }
 
-export function writeDataRaw(data: ImageData, offset: number, width: number, height: number) {
+export function writeDataRaw(data: PixelData, offset: number, width: number, height: number) {
 	if (!width || !height)
 		return null;
 
@@ -185,7 +196,7 @@ export function writeDataRaw(data: ImageData, offset: number, width: number, hei
 	return array;
 }
 
-export function readDataRaw(reader: PsdReader, data: ImageData, offset: number, width: number, height: number) {
+export function readDataRaw(reader: PsdReader, data: PixelData, offset: number, width: number, height: number) {
 	let size = width * height;
 	let buffer = reader.readBytes(size);
 
@@ -193,7 +204,7 @@ export function readDataRaw(reader: PsdReader, data: ImageData, offset: number, 
 		data.data[i * 4 + offset] = buffer[i];
 }
 
-export function writeDataRLE(imageData: ImageData, width: number, height: number, offsets: number[]) {
+export function writeDataRLE(imageData: PixelData, width: number, height: number, offsets: number[]) {
 	if (!width || !height)
 		return null;
 
@@ -290,7 +301,7 @@ export function writeDataRLE(imageData: ImageData, width: number, height: number
 	return buffer;
 }
 
-export function readDataRLE(reader: PsdReader, data: ImageData, step: number, width: number, height: number, offsets: number[]) {
+export function readDataRLE(reader: PsdReader, data: PixelData, step: number, width: number, height: number, offsets: number[]) {
 	let lengths: number[][] = [];
 
 	for (let c = 0; c < offsets.length; c++) {

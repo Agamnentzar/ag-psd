@@ -1,0 +1,29 @@
+{
+  "width": 200,
+  "height": 200,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "layerState": 0,
+    "layersGroup": [
+      0
+    ]
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 159,
+      "right": 200,
+      "blendMode": "normal",
+      "opacity": 255,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer1",
+      "canvas": null
+    }
+  ],
+  "canvas": null
+}

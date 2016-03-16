@@ -229,7 +229,7 @@ export default class PsdWriter {
 	private writeImageData(psd: Psd, globalAlpha: boolean) {
 		let channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
 		let data: ImageData;
-		
+
 		if (psd.canvas) {
 			data = psd.canvas.getContext('2d').getImageData(0, 0, psd.width, psd.height);
 		} else {

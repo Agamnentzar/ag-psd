@@ -54,7 +54,7 @@ gulp.task('build', function () {
 gulp.task('tests', ['build'], function () {
 	return gulp.src('build/test/**/*.js', { read: false })
 		.pipe(mocha({
-			reporter: 'spec',
+			reporter: 'dot',
 			timeout: 10000,
 		}));
 });
@@ -62,7 +62,7 @@ gulp.task('tests', ['build'], function () {
 gulp.task('coverage', ['build'], function () {
 	return gulp.src('build/test/**/*.js', { read: false })
 		.pipe(mocha({
-			reporter: 'spec',
+			reporter: 'dot',
 			timeout: 10000,
 			istanbul: {
 				print: 'none',

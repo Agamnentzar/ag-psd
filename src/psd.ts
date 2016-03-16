@@ -181,6 +181,7 @@ export interface LayerAdditionalInfo {
 		data: number[];
 	}[];
 	effects?: LayerEffectsInfo;
+	objectBasedEffectsLayerInfo?: any;
 }
 
 export interface ImageResources {
