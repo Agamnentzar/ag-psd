@@ -1,4 +1,4 @@
-﻿var gulp = require('gulp');
+var gulp = require('gulp');
 var path = require('path');
 var del = require('del');
 var ts = require('gulp-typescript');
@@ -38,7 +38,7 @@ gulp.task('build', function () {
 });
 
 gulp.task('tests', ['build'], function () {
-	return gulp.src('build/test/**/*.js', { read: false })
+	return gulp.src(['build/test/**/*.js'], { read: false })
 		.pipe(mocha({
 			reporter: 'dot',
 			timeout: 10000,
@@ -46,7 +46,7 @@ gulp.task('tests', ['build'], function () {
 });
 
 gulp.task('coverage', ['build'], function () {
-	return gulp.src('build/test/**/*.js', { read: false })
+	return gulp.src(['build/test/**/*.js'], { read: false })
 		.pipe(mocha({
 			reporter: 'dot',
 			timeout: 10000,

@@ -30,7 +30,7 @@ export function offsetForChannel(channelId: ChannelID) {
 }
 
 export function toArray(value: Uint8Array) {
-	let result = new Array(value.length);
+	const result = new Array(value.length);
 
 	for (let i = 0; i < value.length; i++)
 		result[i] = value[i];
@@ -43,7 +43,7 @@ export function readColor(reader: PsdReader) {
 }
 
 export function hasAlpha(data: PixelData) {
-	let size = data.width * data.height;
+	const size = data.width * data.height;
 
 	for (let i = 0; i < size; i++) {
 		if (data.data[i * 4 + 3] !== 255)
@@ -97,9 +97,9 @@ export function getChannels(layer: Layer, background: boolean) {
 	if (typeof layer.right === 'undefined') layer.right = layer.canvas ? layer.canvas.width : layer.left;
 	if (typeof layer.bottom === 'undefined') layer.bottom = layer.canvas ? layer.canvas.height : layer.top;
 
+	const canvas = layer.canvas;
 	let layerWidth = layer.right - layer.left;
 	let layerHeight = layer.bottom - layer.top;
-	let canvas = layer.canvas;
 	let result: ChannelData[] = [{
 		channelId: ChannelID.Transparency,
 		compression: Compression.RawData,
@@ -110,9 +110,9 @@ export function getChannels(layer: Layer, background: boolean) {
 	if (!canvas || !layerWidth || !layerHeight)
 		return result;
 
-	let context = canvas.getContext('2d');
+	const context = canvas.getContext('2d');
 	let data = context.getImageData(layer.left, layer.top, layerWidth, layerHeight);
-	let { left, top, right, bottom } = trimData(data);
+	const { left, top, right, bottom } = trimData(data);
 
 	if (left !== 0 || top !== 0 || right !== data.width || bottom !== data.height) {
 		layer.left += left;
@@ -130,7 +130,7 @@ export function getChannels(layer: Layer, background: boolean) {
 
 	result = [];
 
-	let channels = [
+	const channels = [
 		ChannelID.Red,
 		ChannelID.Green,
 		ChannelID.Blue,
@@ -140,8 +140,8 @@ export function getChannels(layer: Layer, background: boolean) {
 		channels.unshift(ChannelID.Transparency);
 
 	for (let channel of channels) {
-		let offset = offsetForChannel(channel);
-		let buffer = writeDataRLE(data, layerWidth, layerHeight, [offset]);
+		const offset = offsetForChannel(channel);
+		const buffer = writeDataRLE(data, layerWidth, layerHeight, [offset]);
 
 		result.push({
 			channelId: channel,
@@ -155,7 +155,7 @@ export function getChannels(layer: Layer, background: boolean) {
 }
 
 export function resetCanvas(data: PixelData) {
-	let size = data.width * data.height * 4;
+	const size = data.width * data.height * 4;
 
 	for (let p = 0; p < size;) {
 		data.data[p++] = 0;
@@ -166,14 +166,12 @@ export function resetCanvas(data: PixelData) {
 }
 
 export function decodeBitmap(input: PixelArray, output: PixelArray, width: number, height: number) {
-	let size = width * height;
-
 	for (let y = 0, p = 0, o = 0; y < height; y++) {
 		for (let x = 0; x < width;) {
 			let b = input[o++];
 
 			for (let i = 0; i < 8 && x < width; i++ , x++) {
-				let v = b & 0x80 ? 0 : 255;
+				const v = b & 0x80 ? 0 : 255;
 				b = b << 1;
 				output[p++] = v;
 				output[p++] = v;
@@ -188,7 +186,7 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	if (!width || !height)
 		return null;
 
-	let array = new Uint8Array(width * height);
+	const array = new Uint8Array(width * height);
 
 	for (let i = 0; i < array.length; i++)
 		array[i] = data.data[i * 4 + offset];
@@ -197,8 +195,8 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 }
 
 export function readDataRaw(reader: PsdReader, data: PixelData, offset: number, width: number, height: number) {
-	let size = width * height;
-	let buffer = reader.readBytes(size);
+	const size = width * height;
+	const buffer = reader.readBytes(size);
 
 	for (let i = 0; i < size; i++)
 		data.data[i * 4 + offset] = buffer[i];
