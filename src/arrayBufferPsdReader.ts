@@ -1,7 +1,7 @@
-﻿import PsdReader from './psdReader';
+﻿import { PsdReader } from './psdReader';
 
 /* istanbul ignore next */
-export default class ArrayBufferPsdReader extends PsdReader {
+export class ArrayBufferPsdReader extends PsdReader {
 	private view: DataView;
 	constructor(private buffer: ArrayBuffer) {
 		super();

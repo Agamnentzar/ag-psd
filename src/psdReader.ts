@@ -19,7 +19,7 @@ function setupGrayscale(data: PixelData) {
 	}
 }
 
-export default class PsdReader {
+export class PsdReader {
 	protected offset = 0;
 	readInt8(): number { throw new Error('Not implemented'); }
 	readUint8(): number { throw new Error('Not implemented'); }
@@ -59,7 +59,7 @@ export default class PsdReader {
 
 		return text;
 	}
-	readSection(round: number, func: (left?: () => number) => void) {
+	readSection(round: number, func: (left: () => number) => void) {
 		const length = this.readUint32();
 		let end = this.offset + length;
 
@@ -92,9 +92,9 @@ export default class PsdReader {
 		const psd = this.readHeader();
 		this.readColorModeData(psd);
 		this.readImageResources(psd);
-		const globalAlpha = this.readLayerAndMaskInfo(psd, opt.skipLayerImageData);
-
-		const skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || psd.children.length);
+		const globalAlpha = this.readLayerAndMaskInfo(psd, !!opt.skipLayerImageData);
+		const hasChildren = psd.children && psd.children.length;
+		const skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || hasChildren);
 
 		if (!skipComposite)
 			this.readImageData(psd, globalAlpha);
@@ -211,12 +211,12 @@ export default class PsdReader {
 				if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
 					l.opened = type === SectionDividerType.OpenFolder;
 					l.children = [];
-					stack[stack.length - 1].children.unshift(l);
+					stack[stack.length - 1].children!.unshift(l);
 					stack.push(l);
 				} else if (type === SectionDividerType.BoundingSectionDivider) {
 					stack.pop();
 				} else {
-					stack[stack.length - 1].children.unshift(l);
+					stack[stack.length - 1].children!.unshift(l);
 				}
 			}
 		});
@@ -295,15 +295,15 @@ export default class PsdReader {
 		});
 	}
 	private readLayerChannelImageData(psd: Psd, layer: Layer, channels: ChannelInfo[]) {
-		const layerWidth = layer.right - layer.left;
-		const layerHeight = layer.bottom - layer.top;
-		let canvas: HTMLCanvasElement = null;
-		let context: CanvasRenderingContext2D = null;
-		let data: ImageData = null;
+		const layerWidth = layer.right! - layer.left!;
+		const layerHeight = layer.bottom! - layer.top!;
+		let canvas: HTMLCanvasElement | undefined;
+		let context: CanvasRenderingContext2D | undefined;
+		let data: ImageData | undefined;
 
 		if (layerWidth && layerHeight) {
 			canvas = this.createCanvas(layerWidth, layerHeight);
-			context = canvas.getContext('2d');
+			context = canvas.getContext('2d')!;
 			data = context.createImageData(layerWidth, layerHeight);
 			resetCanvas(data);
 		}
@@ -328,7 +328,7 @@ export default class PsdReader {
 			}
 		}
 
-		if (canvas) {
+		if (context && data) {
 			context.putImageData(data, 0, 0);
 			layer.canvas = canvas;
 		}
@@ -370,14 +370,14 @@ export default class PsdReader {
 	private readImageData(psd: Psd, globalAlpha: boolean) {
 		const compression = <Compression>this.readUint16();
 
-		if (supportedColorModes.indexOf(psd.colorMode) === -1)
+		if (supportedColorModes.indexOf(psd.colorMode!) === -1)
 			throw new Error(`Color mode not supported: ${psd.colorMode}`);
 
 		if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
 			throw new Error(`Compression type not supported: ${compression}`);
 
 		const canvas = this.createCanvas(psd.width, psd.height);
-		const context = canvas.getContext('2d');
+		const context = canvas.getContext('2d')!;
 		const data = context.createImageData(psd.width, psd.height);
 		resetCanvas(data);
 

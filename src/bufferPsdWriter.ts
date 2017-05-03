@@ -1,8 +1,6 @@
-/// <reference path="../typings/node/node.d.ts" />
+import { PsdWriter } from './psdWriter';
 
-import PsdWriter from './psdWriter';
-
-export default class BufferPsdWriter extends PsdWriter {
+export class BufferPsdWriter extends PsdWriter {
 	private buffer: Buffer;
 	constructor(size = 1024) {
 		super();
@@ -58,7 +56,7 @@ export default class BufferPsdWriter extends PsdWriter {
 		let offset = this.addSize(8);
 		this.buffer.writeDoubleBE(value, offset);
 	}
-	writeBytes(buffer: Uint8Array) {
+	writeBytes(buffer: Uint8Array | undefined) {
 		if (buffer) {
 			var offset = this.offset;
 			this.ensureSize(this.offset += buffer.length);

@@ -4,7 +4,6 @@
 		"forin": true,
 		"indent": [ true, "tabs" ],
 		"label-position": true,
-		"label-undefined": true,
 		"no-arg": true,
 		"no-console": [
 			true,
@@ -14,16 +13,15 @@
 			"timeEnd",
 			"trace"
 		],
+		"adjacent-overload-signatures": true,
+		"no-internal-module": true,
+		"no-namespace": true,
 		"no-construct": true,
+		"no-consecutive-blank-lines": [ true, 2 ],
 		"no-debugger": true,
-		"no-duplicate-key": true,
 		"no-duplicate-variable": true,
 		"no-eval": true,
 		"no-trailing-whitespace": true,
-		"no-unused-expression": true,
-		"no-unused-variable": false,
-		"no-unreachable": false,
-		"no-use-before-declare": true,
 		"one-line": [
 			true,
 			"check-open-brace",
@@ -31,7 +29,7 @@
 			"check-whitespace"
 		],
 		"radix": true,
-		"semicolon": true,
+		"semicolon": [ true, "always" ],
 		"triple-equals": [ true, "allow-null-check" ],
 		"variable-name": false,
 		"whitespace": [
@@ -41,6 +39,10 @@
 			"check-operator",
 			"check-type"
 		],
-		"eofline": true
+		"eofline": true,
+		"quotemark": [
+			true,
+			"single"
+		]
 	}
 }

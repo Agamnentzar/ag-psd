@@ -1,9 +1,7 @@
-/// <reference path="../typings/my/canvas.d.ts" />
-
-import PsdReader from './psdReader';
+import { PsdReader } from './psdReader';
 
 function toUint8Array(buffer: Buffer) {
-	let view = new Uint8Array(buffer.length);
+	const view = new Uint8Array(buffer.length);
 
 	for (let i = 0; i < buffer.length; ++i)
 		view[i] = buffer[i];
@@ -11,7 +9,15 @@ function toUint8Array(buffer: Buffer) {
 	return view;
 }
 
-export default class BufferPsdReader extends PsdReader {
+let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
+	throw new Error('Canvas not initialized, use initializeCanvas method to set up canvas creation method');
+};
+
+export function initializeCanvas(createCanvasMethod: (width: number, height: number) => HTMLCanvasElement) {
+	createCanvas = createCanvasMethod;
+}
+
+export class BufferPsdReader extends PsdReader {
 	constructor(private buffer: Buffer) {
 		super();
 	}
@@ -52,7 +58,6 @@ export default class BufferPsdReader extends PsdReader {
 		return toUint8Array(this.buffer.slice(this.offset - length, this.offset));
 	}
 	createCanvas(width: number, height: number) {
-		let Canvas = require('canvas');
-		return new Canvas(width, height);
+		return createCanvas(width, height);
 	}
 }

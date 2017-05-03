@@ -1,11 +1,15 @@
 {
 	"compilerOptions": {
+		"target": "es5",
 		"module": "commonjs",
 		"noImplicitAny": true,
+		"noImplicitThis": true,
 		"declaration": true,
-		"target": "es5"
+		"alwaysStrict": true,
+		"strictNullChecks": true
 	},
 	"exclude": [
-		"node_modules"
+		"node_modules",
+		"dist"
 	]
 }

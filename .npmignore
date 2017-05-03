@@ -1,16 +1,13 @@
 
 /node_modules
-/build/test
+/dist/test
 /results
 /resources
 /src
 /coverage
 /coverage-remapped
 /test
-/.vs
-/ag-psd.sln
 .gitignore
 .travis.yml
 /tslint.json
-/tsd.json
 /gulpfile.js

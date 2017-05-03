@@ -3,34 +3,35 @@ import { ChannelData, getChannels, writeDataRaw, writeDataRLE, hasAlpha } from '
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
 
-function addChildren(layers: Layer[], children: Layer[]) {
-	if (children) {
-		for (let c of children) {
-			if (c.children && c.canvas)
-				throw new Error(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
+function addChildren(layers: Layer[], children: Layer[] | undefined) {
+	if (!children)
+		return;
 
-			if (c.children) {
-				c.sectionDivider = {
-					type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
-					key: 'pass',
-					subtype: 0,
-				};
-				layers.push({
-					name: '</Layer group>',
-					sectionDivider: {
-						type: SectionDividerType.BoundingSectionDivider,
-					},
-				});
-				addChildren(layers, c.children);
-				layers.push(c);
-			} else {
-				layers.push(c);
-			}
+	for (let c of children) {
+		if (c.children && c.canvas)
+			throw new Error(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
+
+		if (c.children) {
+			c.sectionDivider = {
+				type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
+				key: 'pass',
+				subtype: 0,
+			};
+			layers.push({
+				name: '</Layer group>',
+				sectionDivider: {
+					type: SectionDividerType.BoundingSectionDivider,
+				},
+			});
+			addChildren(layers, c.children);
+			layers.push(c);
+		} else {
+			layers.push(c);
 		}
 	}
 }
 
-export default class PsdWriter {
+export class PsdWriter {
 	protected offset = 0;
 	writeInt8(value: number) { throw new Error('Not implemented'); }
 	writeUint8(value: number) { throw new Error('Not implemented'); }
@@ -40,10 +41,11 @@ export default class PsdWriter {
 	writeUint32(value: number) { throw new Error('Not implemented'); }
 	writeFloat32(value: number) { throw new Error('Not implemented'); }
 	writeFloat64(value: number) { throw new Error('Not implemented'); }
-	writeBytes(buffer: Uint8Array) { throw new Error('Not implemented'); }
-	writeBuffer(buffer: ArrayBuffer) {
-		if (buffer)
+	writeBytes(buffer: Uint8Array | undefined) { throw new Error('Not implemented'); }
+	writeBuffer(buffer: ArrayBuffer | undefined) {
+		if (buffer) {
 			this.writeBytes(new Uint8Array(buffer));
+		}
 	}
 	writeSignature(signature: string) {
 		if (!signature || signature.length !== 4)
@@ -61,7 +63,7 @@ export default class PsdWriter {
 		this.writeUint8(length);
 
 		for (let i = 0; i < length; i++) {
-			let code = text.charCodeAt(i);
+			const code = text.charCodeAt(i);
 			this.writeUint8(code < 128 ? code : '?'.charCodeAt(0));
 		}
 
@@ -75,7 +77,7 @@ export default class PsdWriter {
 			this.writeUint16(text.charCodeAt(i));
 	}
 	writeSection(round: number, func: Function) {
-		let offset = this.offset;
+		const offset = this.offset;
 		this.writeUint32(0);
 
 		func();
@@ -87,7 +89,7 @@ export default class PsdWriter {
 			length++;
 		}
 
-		let temp = this.offset;
+		const temp = this.offset;
 		this.offset = offset;
 		this.writeUint32(length);
 		this.offset = temp;
@@ -96,9 +98,9 @@ export default class PsdWriter {
 		if (!(+psd.width > 0 && +psd.height > 0))
 			throw new Error('Invalid document size');
 
-		let opt = options || {};
-		let canvas = psd.canvas;
-		let globalAlpha = canvas && hasAlpha(canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height));
+		const opt = options || {};
+		const canvas = psd.canvas;
+		const globalAlpha = !!canvas && hasAlpha(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height));
 
 		this.writeHeader(psd, globalAlpha);
 		this.writeColorModeData(psd);
@@ -122,13 +124,15 @@ export default class PsdWriter {
 	}
 	private writeImageResources(psd: Psd) {
 		this.writeSection(1, () => {
-			if (psd.imageResources) {
-				for (var handler of getImageResourceHandlers()) {
-					if (handler.has(psd.imageResources)) {
+			const imageResources = psd.imageResources;
+
+			if (imageResources) {
+				for (let handler of getImageResourceHandlers()) {
+					if (handler.has(imageResources)) {
 						this.writeSignature('8BIM');
 						this.writeUint16(handler.key);
 						this.writePascalString('');
-						this.writeSection(2, () => handler.write(this, psd.imageResources));
+						this.writeSection(2, () => handler.write(this, imageResources));
 					}
 				}
 			}
@@ -143,14 +147,14 @@ export default class PsdWriter {
 	}
 	private writeLayerInfo(psd: Psd, globalAlpha: boolean) {
 		this.writeSection(2, () => {
-			let layers: Layer[] = [];
+			const layers: Layer[] = [];
 
 			addChildren(layers, psd.children);
 
 			if (!layers.length)
 				layers.push({});
 
-			let channels = layers.map((l, i) => getChannels(l, i === 0));
+			const channels = layers.map((l, i) => getChannels(l, i === 0));
 
 			this.writeInt16(globalAlpha ? -layers.length : layers.length);
 			layers.forEach((l, i) => this.writeLayerRecord(psd, l, channels[i]));
@@ -158,10 +162,10 @@ export default class PsdWriter {
 		});
 	}
 	private writeLayerRecord(psd: Psd, layer: Layer, channels: ChannelData[]) {
-		this.writeUint32(layer.top);
-		this.writeUint32(layer.left);
-		this.writeUint32(layer.bottom);
-		this.writeUint32(layer.right);
+		this.writeUint32(layer.top || 0);
+		this.writeUint32(layer.left || 0);
+		this.writeUint32(layer.bottom || 0);
+		this.writeUint32(layer.right || 0);
 		this.writeUint16(channels.length);
 
 		for (let c of channels) {
@@ -199,7 +203,9 @@ export default class PsdWriter {
 			this.writeUint32(65535);
 			this.writeUint32(65535);
 
-			for (let i = 0; i < psd.channels; i++) {
+			const channels = psd.channels || 0;
+
+			for (let i = 0; i < channels; i++) {
 				this.writeUint32(65535);
 				this.writeUint32(65535);
 			}
@@ -218,7 +224,7 @@ export default class PsdWriter {
 		});
 	}
 	private writeAdditionalLayerInfo(target: LayerAdditionalInfo) {
-		for (var handler of getHandlers()) {
+		for (let handler of getHandlers()) {
 			if (handler.has(target)) {
 				this.writeSignature('8BIM');
 				this.writeSignature(handler.key);
@@ -227,14 +233,14 @@ export default class PsdWriter {
 		}
 	}
 	private writeImageData(psd: Psd, globalAlpha: boolean) {
-		let channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
+		const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
 		let data: ImageData;
 
 		if (psd.canvas) {
-			data = psd.canvas.getContext('2d').getImageData(0, 0, psd.width, psd.height);
+			data = psd.canvas.getContext('2d')!.getImageData(0, 0, psd.width, psd.height);
 		} else {
 			data = {
-				data: <any>new Uint8Array(4 * psd.width * psd.height),
+				data: new Uint8Array(4 * psd.width * psd.height) as any,
 				width: psd.width,
 				height: psd.height,
 			};

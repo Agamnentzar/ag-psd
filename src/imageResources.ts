@@ -1,6 +1,6 @@
 ﻿import { ImageResources } from './psd';
-import PsdReader from './psdReader';
-import PsdWriter from './psdWriter';
+import { PsdReader } from './psdReader';
+import { PsdWriter } from './psdWriter';
 
 export interface ResourceHandler {
 	key: number;
@@ -35,7 +35,7 @@ addHandler({
 			target.alphaChannelNames.push(reader.readPascalString(1));
 	},
 	write: (writer, target) => {
-		for (let name of target.alphaChannelNames)
+		for (let name of target.alphaChannelNames!)
 			writer.writePascalString(name);
 	},
 });
@@ -47,7 +47,7 @@ addHandler({
 		target.layerState = reader.readUint16();
 	},
 	write: (writer, target) => {
-		writer.writeUint16(target.layerState);
+		writer.writeUint16(target.layerState!);
 	},
 });
 
@@ -61,7 +61,7 @@ addHandler({
 			target.layersGroup.push(reader.readUint16());
 	},
 	write: (writer, target) => {
-		for (let g of target.layersGroup)
+		for (let g of target.layersGroup!)
 			writer.writeUint32(g);
 	},
 });
@@ -73,7 +73,7 @@ addHandler({
 		target.globalAngle = reader.readUint32();
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.globalAngle);
+		writer.writeUint32(target.globalAngle!);
 	},
 });
 
@@ -87,7 +87,7 @@ addHandler({
 			target.unicodeAlphaNames.push(reader.readUnicodeString());
 	},
 	write: (writer, target) => {
-		for (let name of target.unicodeAlphaNames)
+		for (let name of target.unicodeAlphaNames!)
 			writer.writeUnicodeString(name);
 	},
 });
@@ -99,7 +99,7 @@ addHandler({
 		target.globalAltitude = reader.readUint32();
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.globalAltitude);
+		writer.writeUint32(target.globalAltitude!);
 	},
 });
 
@@ -114,9 +114,9 @@ addHandler({
 			target.alphaIdentifiers.push(reader.readUint32());
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.alphaIdentifiers.length);
+		writer.writeUint32(target.alphaIdentifiers!.length);
 
-		for (let id of target.alphaIdentifiers)
+		for (let id of target.alphaIdentifiers!)
 			writer.writeUint32(id);
 	},
 });
@@ -132,9 +132,9 @@ addHandler({
 			throw new Error('Not implemented: URL List');
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.urlsList.length);
+		writer.writeUint32(target.urlsList!.length);
 
-		if (target.urlsList.length)
+		if (target.urlsList!.length)
 			throw new Error('Not implemented: URL List');
 	},
 });
@@ -152,11 +152,12 @@ addHandler({
 		};
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.versionInfo.version);
-		writer.writeUint8(target.versionInfo.hasRealMergedData ? 1 : 0);
-		writer.writeUnicodeString(target.versionInfo.writerName);
-		writer.writeUnicodeString(target.versionInfo.readerName);
-		writer.writeUint32(target.versionInfo.fileVersion);
+		const versionInfo = target.versionInfo!;
+		writer.writeUint32(versionInfo.version);
+		writer.writeUint8(versionInfo.hasRealMergedData ? 1 : 0);
+		writer.writeUnicodeString(versionInfo.writerName);
+		writer.writeUnicodeString(versionInfo.readerName);
+		writer.writeUint32(versionInfo.fileVersion);
 	},
 });
 
@@ -170,8 +171,8 @@ addHandler({
 		};
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.pixelAspectRatio.version);
-		writer.writeFloat64(target.pixelAspectRatio.aspect);
+		writer.writeUint32(target.pixelAspectRatio!.version);
+		writer.writeFloat64(target.pixelAspectRatio!.aspect);
 	},
 });
 
@@ -186,9 +187,9 @@ addHandler({
 			target.layerSelectionIds.push(reader.readUint32());
 	},
 	write: (writer, target) => {
-		writer.writeUint16(target.layerSelectionIds.length);
+		writer.writeUint16(target.layerSelectionIds!.length);
 
-		for (let id of target.layerSelectionIds)
+		for (let id of target.layerSelectionIds!)
 			writer.writeUint32(id);
 	},
 });
@@ -203,7 +204,7 @@ addHandler({
 			target.layerGroupsEnabledId.push(reader.readUint8());
 	},
 	write: (writer, target) => {
-		for (let id of target.layerGroupsEnabledId)
+		for (let id of target.layerGroupsEnabledId!)
 			writer.writeUint8(id);
 	},
 });
@@ -223,9 +224,9 @@ addHandler({
 //     this.writeUint16(24); // bits per pixel
 //     this.writeUint16(1); // number of planes
 //     // TODO: actual JFIF thumbnail data here
-//     
+//
 //     let array = new Uint8Array(thumbData);
-//     
+//
 //     for (let i = 0; i < array.length; i++)
 //         this.writeUint8(array[i]);
 // });

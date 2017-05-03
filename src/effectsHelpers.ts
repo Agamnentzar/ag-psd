@@ -1,7 +1,7 @@
 import { LayerEffectsInfo, LayerEffectsBevelInfo, LayerEffectsInnerGlowInfo, LayerEffectsOuterGlowInfo, LayerEffectsShadowInfo, LayerEffectsSolidFillInfo } from './psd';
 import { readColor } from './helpers';
-import PsdReader from './psdReader';
-import PsdWriter from './psdWriter';
+import { PsdReader } from './psdReader';
+import { PsdWriter } from './psdWriter';
 
 function readBlendMode(reader: PsdReader) {
 	reader.checkSignature('8BIM');

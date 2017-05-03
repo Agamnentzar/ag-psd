@@ -1,8 +1,7 @@
 
 /node_modules
-/build
+/dist
 /results
 /resources
 /coverage
 /coverage-remapped
-/.vs

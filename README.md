@@ -19,14 +19,8 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 
 ## Installing
 
-#### Node.js
 ```bash
 npm install ag-psd
-```
-
-#### Browser
-```bash
-jspm install npm:ag-psd
 ```
 
 ## Usage
@@ -35,14 +29,17 @@ jspm install npm:ag-psd
 
 #### Reading
 
-Needs [node-canvas](https://github.com/Automattic/node-canvas) peer dependency to read image data
+Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image data
 
 ```javascript
 import * as fs from 'fs';
-import { readPsd } from 'ag-psd';
+import * as Canvas from 'canvas';
+import { readPsd, initializeCanvas } from 'ag-psd';
 
-var buffer = fs.readFileSync('my-file.psd');
-var psd = readPsd(buffer);
+initializeCanvas((width, height) => new Canvas(width, height));
+
+const buffer = fs.readFileSync('my-file.psd');
+const psd = readPsd(buffer);
 
 console.log(psd);
 
@@ -55,7 +52,7 @@ fs.writeFileSync('layer-1.png', psd.children[0].canvas.getBuffer());
 import * as fs from 'fs';
 import { writePsd } from 'ag-psd';
 
-var psd = {
+const psd = {
   width: 300,
   height: 200,
   children: [
@@ -65,7 +62,7 @@ var psd = {
   ]
 };
 
-var buffer = writePsd(psd);
+const buffer = writePsd(psd);
 fs.writeFileSync('my-file.psd', buffer);
 ```
 
@@ -76,12 +73,12 @@ fs.writeFileSync('my-file.psd', buffer);
 ```javascript
 import { readPsd } from 'ag-psd';
 
-var xhr = new XMLHttpRequest();
+const xhr = new XMLHttpRequest();
 xhr.open('GET', 'my-file.psd', true);
 xhr.responseType = 'arraybuffer';
 xhr.addEventListener('load', function () {
-  var buffer = xhr.response;
-  var psd = readPsd(buffer);
+  const buffer = xhr.response;
+  const psd = readPsd(buffer);
 
   console.log(psd);
 
@@ -96,7 +93,7 @@ xhr.addEventListener('load', function () {
 ```javascript
 import { writePsd } from 'ag-psd';
 
-var psd = {
+const psd = {
   width: 300,
   height: 200,
   children: [
@@ -106,8 +103,8 @@ var psd = {
   ]
 };
 
-var buffer = writePsd(psd);
-var blob = new Blob([buffer], { type: 'application/octet-stream' });
+const buffer = writePsd(psd);
+const blob = new Blob([buffer], { type: 'application/octet-stream' });
 saveAs(blob, 'my-file.psd');
 ```
 

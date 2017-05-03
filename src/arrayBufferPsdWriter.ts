@@ -1,6 +1,6 @@
-﻿import PsdWriter from './psdWriter';
+﻿import { PsdWriter } from './psdWriter';
 
-export default class ArrayBufferPsdWriter extends PsdWriter {
+export class ArrayBufferPsdWriter extends PsdWriter {
 	private buffer: ArrayBuffer;
 	private view: DataView;
 	constructor(size = 1024) {
@@ -61,7 +61,7 @@ export default class ArrayBufferPsdWriter extends PsdWriter {
 		var offset = this.addSize(8);
 		this.view.setFloat64(offset, value, false);
 	}
-	writeBytes(buffer: Uint8Array) {
+	writeBytes(buffer: Uint8Array | undefined) {
 		if (buffer) {
 			this.ensureSize(this.offset + buffer.length);
 			var bytes = new Uint8Array(this.buffer);

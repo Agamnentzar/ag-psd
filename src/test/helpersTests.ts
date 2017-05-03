@@ -1,11 +1,11 @@
 import { expect } from 'chai';
 import { writeDataRLE, writeDataRaw, readDataRLE, offsetForChannel, PixelData, PixelArray } from '../helpers';
-import ArrayBufferPsdReader from '../arrayBufferPsdReader';
+import { ArrayBufferPsdReader } from '../arrayBufferPsdReader';
 
 const rleTests: PixelData[] = require('../../test/rle.json');
 
 function toData(data: PixelArray) {
-	let result: number[] = [];
+	const result: number[] = [];
 
 	for (let i = 0; i < data.length; i++)
 		result.push(data[i], data[i], data[i], data[i]);
@@ -14,7 +14,7 @@ function toData(data: PixelArray) {
 }
 
 function fromData(data: PixelArray) {
-	let result: number[] = [];
+	const result: number[] = [];
 
 	for (let i = 0; i < data.length; i += 4)
 		result.push(data[i]);
@@ -22,34 +22,34 @@ function fromData(data: PixelArray) {
 	return result;
 }
 
-describe('helpers', function () {
-	describe('writeDataRaw()', function () {
-		it('should return null for 0 size', function () {
-			expect(writeDataRaw(null, 0, 0, 0)).null;
-			expect(writeDataRaw(null, 0, 0, 100)).null;
-			expect(writeDataRaw(null, 0, 100, 0)).null;
+describe('helpers', () => {
+	describe('writeDataRaw()', () => {
+		it('returns undefined for 0 size', () => {
+			expect(writeDataRaw({} as any, 0, 0, 0)).undefined;
+			expect(writeDataRaw({} as any, 0, 0, 100)).undefined;
+			expect(writeDataRaw({} as any, 0, 100, 0)).undefined;
 		});
 	});
 
-	describe('writeDataRLE()', function () {
-		it('sould return null for 0 size', function () {
-			expect(writeDataRLE(null, 0, 0, [0])).null;
-			expect(writeDataRLE(null, 0, 100, [0])).null;
-			expect(writeDataRLE(null, 100, 0, [0])).null;
+	describe('writeDataRLE()', () => {
+		it('returns undefined for 0 size', () => {
+			expect(writeDataRLE({} as any, 0, 0, [0])).undefined;
+			expect(writeDataRLE({} as any, 0, 100, [0])).undefined;
+			expect(writeDataRLE({} as any, 100, 0, [0])).undefined;
 		});
 
 		rleTests.forEach((image, i) => {
-			it(`should correctly write & read RLE image (${i})`, function () {
-				let array: Uint8Array;
+			it(`correctly writes & reads RLE image (${i})`, () => {
+				let array: Uint8Array | undefined;
 				let result: number[];
 
 				try {
-					let input: PixelData = {
+					const input: PixelData = {
 						width: image.width,
 						height: image.height,
 						data: toData(image.data),
 					};
-					let output: PixelData = {
+					const output: PixelData = {
 						width: image.width,
 						height: image.height,
 						data: [],
@@ -58,7 +58,7 @@ describe('helpers', function () {
 					array = writeDataRLE(input, image.width, image.height, [0]);
 					//console.log(`buffer: [${array}]`);
 
-					let reader = new ArrayBufferPsdReader(array.buffer);
+					const reader = new ArrayBufferPsdReader(array!.buffer);
 					readDataRLE(reader, output, 4, image.width, image.height, [0]);
 					result = fromData(output.data);
 				} catch (e) {
@@ -70,8 +70,8 @@ describe('helpers', function () {
 		});
 	});
 
-	describe('offsetForChannel()', function () {
-		it('should return -1 for invalid channelId', function () {
+	describe('offsetForChannel()', () => {
+		it('should return -1 for invalid channelId', () => {
 			expect(offsetForChannel(<any>999)).equal(-1);
 		});
 	});

@@ -1,10 +1,10 @@
-import PsdReader from "./psdReader";
-import { Layer, ChannelID, Compression } from "./psd";
+import { PsdReader } from './psdReader';
+import { Layer, ChannelID, Compression } from './psd';
 
 export interface ChannelData {
 	channelId: ChannelID;
 	compression: Compression;
-	buffer: ArrayBuffer;
+	buffer: ArrayBuffer | undefined;
 	length: number;
 }
 
@@ -103,14 +103,14 @@ export function getChannels(layer: Layer, background: boolean) {
 	let result: ChannelData[] = [{
 		channelId: ChannelID.Transparency,
 		compression: Compression.RawData,
-		buffer: null,
+		buffer: void 0,
 		length: 2,
 	}];
 
 	if (!canvas || !layerWidth || !layerHeight)
 		return result;
 
-	const context = canvas.getContext('2d');
+	const context = canvas.getContext('2d')!;
 	let data = context.getImageData(layer.left, layer.top, layerWidth, layerHeight);
 	const { left, top, right, bottom } = trimData(data);
 
@@ -141,7 +141,7 @@ export function getChannels(layer: Layer, background: boolean) {
 
 	for (let channel of channels) {
 		const offset = offsetForChannel(channel);
-		const buffer = writeDataRLE(data, layerWidth, layerHeight, [offset]);
+		const buffer = writeDataRLE(data, layerWidth, layerHeight, [offset])!;
 
 		result.push({
 			channelId: channel,
@@ -184,7 +184,7 @@ export function decodeBitmap(input: PixelArray, output: PixelArray, width: numbe
 
 export function writeDataRaw(data: PixelData, offset: number, width: number, height: number) {
 	if (!width || !height)
-		return null;
+		return void 0;
 
 	const array = new Uint8Array(width * height);
 
@@ -194,30 +194,33 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	return array;
 }
 
-export function readDataRaw(reader: PsdReader, data: PixelData, offset: number, width: number, height: number) {
+export function readDataRaw(reader: PsdReader, data: PixelData | undefined, offset: number, width: number, height: number) {
 	const size = width * height;
 	const buffer = reader.readBytes(size);
 
-	for (let i = 0; i < size; i++)
-		data.data[i * 4 + offset] = buffer[i];
+	if (data) {
+		for (let i = 0; i < size; i++) {
+			data.data[i * 4 + offset] = buffer[i];
+		}
+	}
 }
 
 export function writeDataRLE(imageData: PixelData, width: number, height: number, offsets: number[]) {
 	if (!width || !height)
-		return null;
+		return void 0;
 
-	let data = imageData.data;
+	const data = imageData.data;
+	const channels: { lengths: number[]; lines: number[][]; offset: number; }[] = [];
 	let totalLength = 0;
-	let channels: { lengths: number[]; lines: number[][]; offset: number; }[] = [];
 
 	for (let i = 0; i < offsets.length; i++) {
-		let lengths: number[] = [];
-		let lines: number[][] = [];
-		let offset = offsets[i];
+		const lengths: number[] = [];
+		const lines: number[][] = [];
+		const offset = offsets[i];
 
 		for (let y = 0, p = 0; y < height; y++ , p += width) {
+			const line: number[] = [];
 			let length = 0;
-			let line: number[] = [];
 			let last2 = -1;
 			let last = data[p * 4 + offset];
 			let count = 1;
@@ -261,7 +264,7 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 		channels.push({ lengths, lines, offset });
 	}
 
-	let buffer = new Uint8Array(totalLength);
+	const buffer = new Uint8Array(totalLength);
 	let o = 0;
 
 	for (let channel of channels) {
@@ -273,13 +276,13 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 
 	for (let channel of channels) {
 		for (let y = 0, p = 0; y < height; y++ , p += width) {
-			let line = channel.lines[y];
-			let offset = channel.offset;
+			const line = channel.lines[y];
+			const offset = channel.offset;
 			let x = 0;
 
 			for (let i = 0; i < line.length; i++) {
-				let v = data[(p + x) * 4 + offset];
-				let same = line[i] > 2 && v === data[(p + x + 1) * 4 + offset] && v === data[(p + x + 2) * 4 + offset];
+				const v = data[(p + x) * 4 + offset];
+				const same = line[i] > 2 && v === data[(p + x + 1) * 4 + offset] && v === data[(p + x + 2) * 4 + offset];
 
 				if (same) {
 					buffer[o++] = 1 - line[i];
@@ -299,8 +302,8 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 	return buffer;
 }
 
-export function readDataRLE(reader: PsdReader, data: PixelData, step: number, width: number, height: number, offsets: number[]) {
-	let lengths: number[][] = [];
+export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step: number, width: number, height: number, offsets: number[]) {
+	const lengths: number[][] = [];
 
 	for (let c = 0; c < offsets.length; c++) {
 		lengths[c] = [];
@@ -311,27 +314,33 @@ export function readDataRLE(reader: PsdReader, data: PixelData, step: number, wi
 	}
 
 	for (let c = 0; c < offsets.length; c++) {
-		let channelLengths = lengths[c];
+		const channelLengths = lengths[c];
 		let p = offsets[c];
 
 		for (let y = 0; y < height; y++) {
-			let length = channelLengths[y];
-			let buffer = reader.readBytes(length);
+			const length = channelLengths[y];
+			const buffer = reader.readBytes(length);
 
 			for (let i = 0; i < length; i++) {
 				let header = buffer[i];
 
 				if (header >= 128) {
-					let value = buffer[++i];
+					const value = buffer[++i];
 					header = 256 - header;
 
 					for (let j = 0; j <= header; j++) {
-						data.data[p] = value;
+						if (data) {
+							data.data[p] = value;
+						}
+
 						p += step;
 					}
 				} else if (header < 128) {
 					for (let j = 0; j <= header; j++) {
-						data.data[p] = buffer[++i];
+						if (data) {
+							data.data[p] = buffer[++i];
+						}
+
 						p += step;
 					}
 				}
