@@ -71,7 +71,7 @@ fs.writeFileSync('my-file.psd', buffer);
 #### Reading
 
 ```javascript
-import { readPsd } from 'ag-psd';
+import { readPsd } from 'ag-psd/dist/browser';
 
 const xhr = new XMLHttpRequest();
 xhr.open('GET', 'my-file.psd', true);
@@ -91,7 +91,7 @@ xhr.addEventListener('load', function () {
 `saveAs` function from [FileSaver.js](https://github.com/eligrey/FileSaver.js/)
 
 ```javascript
-import { writePsd } from 'ag-psd';
+import { writePsd } from 'ag-psd/dist/browser';
 
 const psd = {
   width: 300,
@@ -106,6 +106,16 @@ const psd = {
 const buffer = writePsd(psd);
 const blob = new Blob([buffer], { type: 'application/octet-stream' });
 saveAs(blob, 'my-file.psd');
+```
+
+### Browser (bundle)
+
+```html
+<script src="node_modules/ag-psd/dist/bundle.js"></script>
+<script>
+  var readPsd = agPsd.readPsd;
+  // rest the same as above
+</script>
 ```
 
 ### Sample PSD document

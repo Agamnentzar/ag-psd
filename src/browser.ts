@@ -6,12 +6,12 @@ export { PsdReader } from './psdReader';
 export { PsdWriter } from './psdWriter';
 
 export function readPsd(buffer: ArrayBuffer, options?: ReadOptions): Psd {
-	let reader = new ArrayBufferPsdReader(buffer);
+	const reader = new ArrayBufferPsdReader(buffer);
 	return reader.readPsd(options);
 }
 
 export function writePsd(psd: Psd, options?: WriteOptions): ArrayBuffer {
-	let writer = new ArrayBufferPsdWriter();
+	const writer = new ArrayBufferPsdWriter();
 	writer.writePsd(psd, options);
 	return writer.getBuffer();
 }

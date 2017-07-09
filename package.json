@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "browser": "dist/browser.js",
@@ -10,8 +10,8 @@
   },
   "scripts": {
     "test": "gulp test",
-    "build": "gulp build",
-    "prepublish": "gulp build"
+    "build": "gulp build && browserify dist/browser.js --standalone agPsd -o dist/bundle.js",
+    "prepublish": "npm run build"
   },
   "jspm": {
     "main": "dist/browser.js",
@@ -27,6 +27,7 @@
     "@types/mkdirp": "^0.3.29",
     "@types/mocha": "^2.2.41",
     "@types/node": "^7.0.15",
+    "browserify": "^14.4.0",
     "canvas": "^1.4.0",
     "chai": "^3.5.0",
     "del": "^2.2.2",
