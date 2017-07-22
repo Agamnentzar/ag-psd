@@ -11,7 +11,9 @@
     "unicodeAlphaNames": [
       "Transparency\u0000"
     ],
-    "alphaIdentifiers": [],
+    "alphaIdentifiers": [
+      0
+    ],
     "globalAngle": 120,
     "globalAltitude": 30,
     "layerState": 6,
@@ -136,8 +138,7 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      },
-      "canvas": null
+      }
     },
     {
       "top": 0,
@@ -414,8 +415,7 @@
           "referencePoint": {
             "x": 0,
             "y": 0
-          },
-          "canvas": null
+          }
         },
         {
           "top": 11,
@@ -505,8 +505,7 @@
           "referencePoint": {
             "x": 0,
             "y": 0
-          },
-          "canvas": null
+          }
         }
       ]
     }
@@ -525,6 +524,5 @@
       0
     ],
     "opacity": 50
-  },
-  "canvas": null
+  }
 }

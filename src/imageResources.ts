@@ -17,7 +17,7 @@ function addHandler(handler: ResourceHandler) {
 	handlersMap[handler.key] = handler;
 }
 
-export function getHandler(key: number) {
+export function getHandler(key: number, _name?: string) {
 	return handlersMap[key];
 }
 
@@ -106,16 +106,13 @@ addHandler({
 addHandler({
 	key: 1053,
 	has: target => typeof target.alphaIdentifiers !== 'undefined',
-	read: (reader, target) => {
-		let count = reader.readUint32();
+	read: (reader, target, left) => {
 		target.alphaIdentifiers = [];
 
-		while (count--)
+		while (left() >= 4)
 			target.alphaIdentifiers.push(reader.readUint32());
 	},
 	write: (writer, target) => {
-		writer.writeUint32(target.alphaIdentifiers!.length);
-
 		for (let id of target.alphaIdentifiers!)
 			writer.writeUint32(id);
 	},

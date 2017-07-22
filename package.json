@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "browser": "dist/browser.js",
@@ -10,6 +10,7 @@
   },
   "scripts": {
     "test": "gulp test",
+    "dev": "gulp dev --tests",
     "build": "gulp build && browserify dist/browser.js --standalone agPsd -o dist/bundle.js",
     "prepublish": "npm run build"
   },
@@ -24,26 +25,26 @@
   "author": "Agamnentzar",
   "license": "MIT",
   "devDependencies": {
-    "@types/mkdirp": "^0.3.29",
+    "@types/mkdirp": "^0.5.0",
     "@types/mocha": "^2.2.41",
-    "@types/node": "^7.0.15",
+    "@types/node": "^8.0.14",
     "browserify": "^14.4.0",
     "canvas": "^1.4.0",
-    "chai": "^3.5.0",
-    "del": "^2.2.2",
+    "chai": "^4.1.0",
+    "del": "^3.0.0",
     "gulp": "^3.9.1",
     "gulp-sourcemaps": "^2.6.0",
     "gulp-spawn-mocha": "^3.3.0",
-    "gulp-tslint": "^8.0.0",
-    "gulp-typescript": "^3.1.6",
-    "merge2": "^1.0.3",
+    "gulp-tslint": "^8.1.1",
+    "gulp-typescript": "^3.2.1",
+    "merge2": "^1.1.0",
     "mkdirp": "^0.5.1",
-    "mocha": "^3.3.0",
+    "mocha": "^3.4.2",
     "remap-istanbul": "^0.9.5",
-    "run-sequence": "^1.2.2",
+    "run-sequence": "^2.0.0",
     "source-map-support": "^0.4.15",
-    "tslint": "^5.1.0",
-    "typescript": "^2.3.2",
-    "yargs": "^7.1.0"
+    "tslint": "^5.5.0",
+    "typescript": "^2.4.2",
+    "yargs": "^8.0.2"
   }
 }

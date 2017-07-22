@@ -1,3 +1,4 @@
+/// <reference types="mocha" />
 /// <reference path="../../typings/chai.d.ts" />
 /// <reference path="../../typings/canvas.d.ts" />
 
@@ -9,7 +10,6 @@ import * as Canvas from 'canvas';
 import { BufferPsdReader } from '../bufferPsdReader';
 import { Psd, ReadOptions, initializeCanvas } from '../index';
 
-const testsPath = path.join(__dirname, '..', '..', 'test');
 const resultsPath = path.join(__dirname, '..', '..', 'results');
 
 initializeCanvas((width, height) => new Canvas(width, height));

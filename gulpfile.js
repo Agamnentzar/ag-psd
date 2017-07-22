@@ -10,11 +10,7 @@ var remapIstanbul = require('remap-istanbul/lib/gulpRemapIstanbul');
 var merge = require('merge2');
 var argv = require('yargs').argv;
 
-gulp.task('clean', () => {
-	return del([
-		'dist/*',
-	]);
-});
+gulp.task('clean', () => del(['dist/*']));
 
 const project = ts.createProject('tsconfig.json');
 const scripts = ['src/**/*.ts'];
@@ -38,7 +34,11 @@ gulp.task('tests', () => {
 		.pipe(mocha({
 			reporter: 'dot',
 			timeout: 10000,
-		}));
+		}))
+		.on('error', function (e) {
+			console.log(e.message);
+			this.emit('end');
+		});
 });
 
 gulp.task('coverage', () => {
@@ -51,7 +51,12 @@ gulp.task('coverage', () => {
 });
 
 gulp.task('watch', () => {
-	gulp.watch(scripts, [argv.coverage ? 'cov' : (argv.tests ? 'test' : 'build')]);
+	gulp.watch([
+		...scripts,
+		'test/**/*.psd',
+		'test/**/*.png',
+		'test/**/*.json',
+	], [argv.coverage ? 'cov' : (argv.tests ? 'test' : 'build')]);
 });
 
 gulp.task('lint', () => {

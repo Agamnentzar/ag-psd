@@ -2,11 +2,10 @@
 	"compilerOptions": {
 		"target": "es5",
 		"module": "commonjs",
-		"noImplicitAny": true,
-		"noImplicitThis": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
 		"declaration": true,
-		"alwaysStrict": true,
-		"strictNullChecks": true
+		"strict": true
 	},
 	"exclude": [
 		"node_modules",

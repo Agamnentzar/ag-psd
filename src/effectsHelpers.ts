@@ -178,6 +178,6 @@ export function readEffects(reader: PsdReader) {
 	return effects;
 }
 
-export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
+export function writeEffects(_writer: PsdWriter, _effects: LayerEffectsInfo) {
 	throw new Error('Not implemented');
 }

@@ -255,26 +255,27 @@ addHandler({
 	},
 });
 
-function readStringOrClassId(reader: PsdReader) {
-	const text = reader.readUnicodeString();
-	return text.length === 0 ? reader.readSignature() : text;
-}
+// function readStringOrClassId(reader: PsdReader) {
+// 	const text = reader.readUnicodeString();
+// 	return text.length === 0 ? reader.readSignature() : text;
+// }
 
-function readStringOrClassId2(reader: PsdReader) {
-	const text = reader.readPascalString();
-	return text.length === 0 ? reader.readSignature() : text;
-}
+// function readStringOrClassId2(reader: PsdReader) {
+// 	const text = reader.readPascalString();
+// 	return text.length === 0 ? reader.readSignature() : text;
+// }
 
 addHandler({
 	key: 'lfx2',
 	has: target => typeof target.objectBasedEffectsLayerInfo !== 'undefined',
-	read: (reader, target) => {
-		const version = reader.readUint32();
-		const descriptorVersion = reader.readUint32();
+	read: (reader, _target, left) => {
+		reader.skip(left());
+		// const version = reader.readUint32();
+		// const descriptorVersion = reader.readUint32();
 
-		const name = reader.readUnicodeString();
-		const classId = readStringOrClassId(reader);
-		const itemsCount = reader.readUint32();
+		// const name = reader.readUnicodeString();
+		// const classId = readStringOrClassId(reader);
+		// const itemsCount = reader.readUint32();
 
 		//for (let i = 0; i < itemsCount; i++) {
 		//	console.log('read item');
@@ -293,7 +294,7 @@ addHandler({
 		//	},
 		//};
 	},
-	write: (writer, target) => {
+	write: (_writer, _target) => {
 		//...
 	},
 });

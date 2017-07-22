@@ -302,7 +302,7 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 	return buffer;
 }
 
-export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step: number, width: number, height: number, offsets: number[]) {
+export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step: number, _width: number, height: number, offsets: number[]) {
 	const lengths: number[][] = [];
 
 	for (let c = 0; c < offsets.length; c++) {

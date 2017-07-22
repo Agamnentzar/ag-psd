@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import * as Canvas from 'canvas';
-import { loadCanvasFromFile, toBuffer, compareBuffers, compareCanvases, readPSD } from './common';
+import { loadCanvasFromFile, toBuffer, compareBuffers } from './common';
 import { Psd, Layer } from '../psd';
 import { ArrayBufferPsdWriter } from '../arrayBufferPsdWriter';
 import { BufferPsdWriter } from '../bufferPsdWriter';

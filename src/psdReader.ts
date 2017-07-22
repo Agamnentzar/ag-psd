@@ -29,8 +29,8 @@ export class PsdReader {
 	readUint32(): number { throw new Error('Not implemented'); }
 	readFloat32(): number { throw new Error('Not implemented'); }
 	readFloat64(): number { throw new Error('Not implemented'); }
-	readBytes(length: number): Uint8Array { throw new Error('Not implemented'); }
-	createCanvas(width: number, height: number): HTMLCanvasElement { throw new Error('Not implemented'); }
+	readBytes(_length: number): Uint8Array { throw new Error('Not implemented'); }
+	createCanvas(_width: number, _height: number): HTMLCanvasElement { throw new Error('Not implemented'); }
 	skip(count: number) {
 		this.offset += count;
 	}
@@ -59,12 +59,13 @@ export class PsdReader {
 
 		return text;
 	}
-	readSection(round: number, func: (left: () => number) => void) {
+	readSection<T>(round: number, func: (left: () => number) => T): T | undefined {
 		const length = this.readUint32();
 		let end = this.offset + length;
+		let result: T | undefined;
 
 		if (length > 0)
-			func(() => end - this.offset);
+			result = func(() => end - this.offset);
 
 		/* istanbul ignore if */
 		if (this.offset > end)
@@ -78,6 +79,7 @@ export class PsdReader {
 			end++;
 
 		this.offset = end;
+		return result;
 	}
 	checkSignature(...expected: string[]) {
 		const offset = this.offset;
@@ -108,7 +110,7 @@ export class PsdReader {
 
 		/* istanbul ignore if */
 		if (version !== 1)
-			throw new Error(`Invalid PSD file version: '${version}'`);
+			throw new Error(`Invalid PSD file version: ${version}`);
 
 		this.skip(6);
 		const channels = this.readUint16();
@@ -123,8 +125,8 @@ export class PsdReader {
 
 		return { width, height, channels, bitsPerChannel, colorMode };
 	}
-	private readColorModeData(psd: Psd) {
-		this.readSection(1, left => {
+	private readColorModeData(_psd: Psd) {
+		this.readSection(1, () => {
 			throw new Error('Not Implemented: color mode data');
 		});
 	}
@@ -141,7 +143,7 @@ export class PsdReader {
 		const name = this.readPascalString();
 
 		this.readSection(2, left => {
-			const handler = getResourceHandler(id);
+			const handler = getResourceHandler(id, name);
 
 			if (!psd.imageResources)
 				psd.imageResources = {};
@@ -159,7 +161,7 @@ export class PsdReader {
 
 		this.readSection(1, left => {
 			globalAlpha = this.readLayerInfo(psd, skipImageData);
-			this.readGlobalLayerMaskInfo(psd);
+			this.readGlobalLayerMaskInfo();
 
 			while (left()) {
 				if (left() > 2) {
@@ -284,14 +286,18 @@ export class PsdReader {
 		});
 	}
 	private readLayerBlendingRanges() {
-		this.readSection(1, left => {
+		return this.readSection(1, left => {
 			const compositeGrayBlendSource = this.readUint32();
 			const compositeGraphBlendDestinationRange = this.readUint32();
+			const ranges = [];
 
 			while (left()) {
 				const sourceRange = this.readUint32();
 				const destRange = this.readUint32();
+				ranges.push({ sourceRange, destRange });
 			}
+
+			return { compositeGrayBlendSource, compositeGraphBlendDestinationRange, ranges };
 		});
 	}
 	private readLayerChannelImageData(psd: Psd, layer: Layer, channels: ChannelInfo[]) {
@@ -333,8 +339,8 @@ export class PsdReader {
 			layer.canvas = canvas;
 		}
 	}
-	private readGlobalLayerMaskInfo(psd: Psd) {
-		this.readSection(1, left => {
+	private readGlobalLayerMaskInfo() {
+		return this.readSection(1, left => {
 			if (left()) {
 				const overlayColorSpace = this.readUint16();
 				const colorSpace1 = this.readUint16();
@@ -344,6 +350,7 @@ export class PsdReader {
 				const opacity = this.readUint16();
 				const kind = this.readUint8();
 				this.skip(left());
+				return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
 			}
 		});
 	}
@@ -394,7 +401,7 @@ export class PsdReader {
 		} else { // Grayscale | RGB
 			const channels = psd.colorMode === ColorMode.RGB ? [0, 1, 2] : [0];
 
-			if (globalAlpha)
+			if (globalAlpha || psd.channels === 4)
 				channels.push(3);
 
 			if (compression === Compression.RawData) {

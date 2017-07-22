@@ -1,5 +1,5 @@
 ﻿import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions } from './psd';
-import { ChannelData, getChannels, writeDataRaw, writeDataRLE, hasAlpha } from './helpers';
+import { ChannelData, getChannels, writeDataRLE, hasAlpha } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
 
@@ -33,15 +33,15 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 
 export class PsdWriter {
 	protected offset = 0;
-	writeInt8(value: number) { throw new Error('Not implemented'); }
-	writeUint8(value: number) { throw new Error('Not implemented'); }
-	writeInt16(value: number) { throw new Error('Not implemented'); }
-	writeUint16(value: number) { throw new Error('Not implemented'); }
-	writeInt32(value: number) { throw new Error('Not implemented'); }
-	writeUint32(value: number) { throw new Error('Not implemented'); }
-	writeFloat32(value: number) { throw new Error('Not implemented'); }
-	writeFloat64(value: number) { throw new Error('Not implemented'); }
-	writeBytes(buffer: Uint8Array | undefined) { throw new Error('Not implemented'); }
+	writeInt8(_value: number) { throw new Error('Not implemented'); }
+	writeUint8(_value: number) { throw new Error('Not implemented'); }
+	writeInt16(_value: number) { throw new Error('Not implemented'); }
+	writeUint16(_value: number) { throw new Error('Not implemented'); }
+	writeInt32(_value: number) { throw new Error('Not implemented'); }
+	writeUint32(_value: number) { throw new Error('Not implemented'); }
+	writeFloat32(_value: number) { throw new Error('Not implemented'); }
+	writeFloat64(_value: number) { throw new Error('Not implemented'); }
+	writeBytes(_buffer: Uint8Array | undefined) { throw new Error('Not implemented'); }
 	writeBuffer(buffer: ArrayBuffer | undefined) {
 		if (buffer) {
 			this.writeBytes(new Uint8Array(buffer));
@@ -94,11 +94,10 @@ export class PsdWriter {
 		this.writeUint32(length);
 		this.offset = temp;
 	}
-	writePsd(psd: Psd, options?: WriteOptions) {
+	writePsd(psd: Psd, _options?: WriteOptions) {
 		if (!(+psd.width > 0 && +psd.height > 0))
 			throw new Error('Invalid document size');
 
-		const opt = options || {};
 		const canvas = psd.canvas;
 		const globalAlpha = !!canvas && hasAlpha(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height));
 
@@ -118,7 +117,7 @@ export class PsdWriter {
 		this.writeUint16(8); // bits per channel
 		this.writeUint16(ColorMode.RGB);
 	}
-	private writeColorModeData(psd: Psd) {
+	private writeColorModeData(_psd: Psd) {
 		this.writeSection(1, () => {
 		});
 	}

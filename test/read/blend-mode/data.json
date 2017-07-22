@@ -11,7 +11,9 @@
     "unicodeAlphaNames": [
       "Transparency\u0000"
     ],
-    "alphaIdentifiers": [],
+    "alphaIdentifiers": [
+      0
+    ],
     "globalAngle": 120,
     "globalAltitude": 30,
     "layerState": 0,
@@ -348,8 +350,7 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      },
-      "canvas": null
+      }
     }
   ],
   "filterMask": {
@@ -366,6 +367,5 @@
       0
     ],
     "opacity": 50
-  },
-  "canvas": null
+  }
 }
