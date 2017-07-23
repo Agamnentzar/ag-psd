@@ -5,7 +5,8 @@
 
 JavaScript library for reading and writing PSD files (Photoshop Document files)
 
-Implemented according to [official documentation](https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/).
+Implemented according to [official documentation](https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/)
+and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 
 ### Limitations
 

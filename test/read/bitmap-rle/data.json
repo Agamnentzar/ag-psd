@@ -5,8 +5,24 @@
   "bitsPerChannel": 1,
   "colorMode": 0,
   "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
     "globalAngle": 120,
     "globalAltitude": 30,
+    "gridAndGuidesInformation": {
+      "version": 1,
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
     "urlsList": [],
     "pixelAspectRatio": {
       "version": 2,
@@ -34,6 +50,5 @@
       0
     ],
     "opacity": 50
-  },
-  "canvas": null
+  }
 }

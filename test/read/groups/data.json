@@ -5,6 +5,14 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
     "alphaChannelNames": [
       "Transparency"
     ],
@@ -36,6 +44,14 @@
       1
     ],
     "layerSelectionIds": [],
+    "gridAndGuidesInformation": {
+      "version": 1,
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
     "urlsList": [],
     "pixelAspectRatio": {
       "version": 2,

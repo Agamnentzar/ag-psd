@@ -5,6 +5,14 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
     "layerState": 0,
     "layersGroup": [
       0
@@ -21,9 +29,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
-      "name": "Layer1",
-      "canvas": null
+      "name": "Layer1"
     }
-  ],
-  "canvas": null
+  ]
 }

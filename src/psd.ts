@@ -184,6 +184,9 @@ export interface LayerAdditionalInfo {
 	objectBasedEffectsLayerInfo?: any;
 }
 
+export type ResolutionUnit = 'PPI' | 'PPCM';
+export type SizeUnit = 'Inches' | 'Centimeters' | 'Points' | 'Picas' | 'Columns';
+
 export interface ImageResources {
 	layerState?: number;
 	layersGroup?: number[];
@@ -206,6 +209,25 @@ export interface ImageResources {
 		aspect: number;
 	};
 	urlsList?: any[];
+	gridAndGuidesInformation?: {
+		version?: number;
+		grid?: {
+			horizontal: number;
+			vertical: number;
+		},
+		guides?: {
+			location: number;
+			direction: 'horizontal' | 'vertical';
+		}[];
+	};
+	resolutionInfo?: {
+		horizontalResolution: number;
+		horizontalResolutionUnit: ResolutionUnit;
+		widthUnit: SizeUnit;
+		verticalResolution: number;
+		verticalResolutionUnit: ResolutionUnit;
+		heightUnit: SizeUnit;
+	};
 }
 
 export interface Layer extends LayerAdditionalInfo {

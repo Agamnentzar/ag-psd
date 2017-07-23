@@ -25,6 +25,51 @@ export function getHandlers() {
 	return handlers;
 }
 
+// 32-bit fixed-point number 16.16
+function readFixedPoint32(reader: PsdReader): number {
+	return reader.readUint32() / (1 << 16);
+}
+
+// 32-bit fixed-point number 16.16
+function writeFixedPoint32(writer: PsdWriter, value: number) {
+	writer.writeUint32(value * (1 << 16));
+}
+
+const RESOLUTION_UNITS = [undefined, 'PPI', 'PPCM'];
+const MEASUREMENT_UNITS = [undefined, 'Inches', 'Centimeters', 'Points', 'Picas', 'Columns'];
+
+addHandler({
+	key: 1005,
+	has: target => typeof target.resolutionInfo !== 'undefined',
+	read: (reader, target) => {
+		const horizontalResolution = readFixedPoint32(reader);
+		const horizontalResolutionUnit = reader.readUint16();
+		const widthUnit = reader.readUint16();
+		const verticalResolution = readFixedPoint32(reader);
+		const verticalResolutionUnit = reader.readUint16();
+		const heightUnit = reader.readUint16();
+
+		target.resolutionInfo = {
+			horizontalResolution,
+			horizontalResolutionUnit: RESOLUTION_UNITS[horizontalResolutionUnit] || 'PPI' as any,
+			widthUnit: MEASUREMENT_UNITS[widthUnit] || 'Inches' as any,
+			verticalResolution,
+			verticalResolutionUnit: RESOLUTION_UNITS[verticalResolutionUnit] || 'PPI' as any,
+			heightUnit: MEASUREMENT_UNITS[heightUnit] || 'Inches' as any,
+		};
+	},
+	write: (writer, target) => {
+		const info = target.resolutionInfo!;
+
+		writeFixedPoint32(writer, info.horizontalResolution || 0);
+		writer.writeUint16(Math.max(1, RESOLUTION_UNITS.indexOf(info.horizontalResolutionUnit)));
+		writer.writeUint16(Math.max(1, MEASUREMENT_UNITS.indexOf(info.widthUnit)));
+		writeFixedPoint32(writer, info.verticalResolution || 0);
+		writer.writeUint16(Math.max(1, RESOLUTION_UNITS.indexOf(info.verticalResolutionUnit)));
+		writer.writeUint16(Math.max(1, MEASUREMENT_UNITS.indexOf(info.heightUnit)));
+	},
+});
+
 addHandler({
 	key: 1006,
 	has: target => typeof target.alphaChannelNames !== 'undefined',
@@ -63,6 +108,46 @@ addHandler({
 	write: (writer, target) => {
 		for (let g of target.layersGroup!)
 			writer.writeUint32(g);
+	},
+});
+
+addHandler({
+	key: 1032,
+	has: target => typeof target.gridAndGuidesInformation !== 'undefined',
+	read: (reader, target) => {
+		target.gridAndGuidesInformation = {
+			version: reader.readUint32(),
+			grid: {
+				horizontal: reader.readUint32(),
+				vertical: reader.readUint32(),
+			},
+			guides: [],
+		};
+
+		let count = reader.readUint32();
+
+		while (count--) {
+			target.gridAndGuidesInformation.guides!.push({
+				location: reader.readUint32() / 32,
+				direction: reader.readUint8() ? 'horizontal' : 'vertical'
+			});
+		}
+	},
+	write: (writer, target) => {
+		const info = target.gridAndGuidesInformation!;
+		const version = info.version || 1;
+		const grid = info.grid || { horizontal: 18 * 32, vertical: 18 * 32 };
+		const guides = info.guides || [];
+
+		writer.writeUint32(version);
+		writer.writeUint32(grid.horizontal);
+		writer.writeUint32(grid.vertical);
+		writer.writeUint32(guides.length);
+
+		guides.forEach(g => {
+			writer.writeUint32(g.location * 32);
+			writer.writeUint8(g.direction === 'horizontal' ? 1 : 0);
+		});
 	},
 });
 

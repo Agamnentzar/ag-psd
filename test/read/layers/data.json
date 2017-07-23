@@ -5,6 +5,14 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
     "globalAngle": 120,
     "globalAltitude": 30,
     "layerState": 2,
@@ -21,6 +29,14 @@
     "layerSelectionIds": [
       3
     ],
+    "gridAndGuidesInformation": {
+      "version": 1,
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
     "urlsList": [],
     "pixelAspectRatio": {
       "version": 2,
@@ -123,8 +139,7 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      },
-      "canvas": null
+      }
     },
     {
       "top": 0,
@@ -213,8 +228,7 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      },
-      "canvas": null
+      }
     },
     {
       "top": 0,
@@ -304,8 +318,7 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      },
-      "canvas": null
+      }
     }
   ],
   "filterMask": {
@@ -322,6 +335,5 @@
       0
     ],
     "opacity": 50
-  },
-  "canvas": null
+  }
 }

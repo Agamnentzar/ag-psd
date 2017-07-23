@@ -1,0 +1,71 @@
+{
+  "width": 1024,
+  "height": 768,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 299.9999694824219,
+      "horizontalResolutionUnit": "PPCM",
+      "widthUnit": "Inches",
+      "verticalResolution": 299.9999694824219,
+      "verticalResolutionUnit": "PPCM",
+      "heightUnit": "Inches"
+    },
+    "globalAngle": 90,
+    "globalAltitude": 30,
+    "gridAndGuidesInformation": {
+      "version": 1,
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": [
+        {
+          "location": 531.4375,
+          "direction": "vertical"
+        },
+        {
+          "location": 413.8125,
+          "direction": "horizontal"
+        },
+        {
+          "location": 0,
+          "direction": "horizontal"
+        },
+        {
+          "location": 1,
+          "direction": "vertical"
+        }
+      ]
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "version": 2,
+      "aspect": 1
+    },
+    "versionInfo": {
+      "version": 1,
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CC",
+      "fileVersion": 1
+    }
+  },
+  "filterMask": {
+    "colorSpace": [
+      0,
+      0,
+      255,
+      255,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "opacity": 50
+  }
+}

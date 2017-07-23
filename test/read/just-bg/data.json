@@ -5,8 +5,24 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 299.99940490722656,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 299.99940490722656,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
     "globalAngle": 120,
     "globalAltitude": 30,
+    "gridAndGuidesInformation": {
+      "version": 1,
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
     "urlsList": [],
     "pixelAspectRatio": {
       "version": 2,
