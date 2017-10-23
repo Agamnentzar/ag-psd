@@ -4,7 +4,7 @@ import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import * as Canvas from 'canvas';
 import { loadCanvasFromFile, toBuffer, compareBuffers } from './common';
-import { Psd, Layer } from '../psd';
+import { Psd } from '../psd';
 import { ArrayBufferPsdWriter } from '../arrayBufferPsdWriter';
 import { BufferPsdWriter } from '../bufferPsdWriter';
 import { BufferPsdReader } from '../bufferPsdReader';
@@ -21,13 +21,6 @@ function loadPsdFromFile(basePath: string) {
 			l.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}.png`));
 	});
 	return psd;
-}
-
-function nullCanvas(obj: Psd | Layer) {
-	if (obj.canvas)
-		obj.canvas = void 0;
-	if (obj.children)
-		obj.children.forEach(nullCanvas);
 }
 
 describe('PsdWriter', () => {

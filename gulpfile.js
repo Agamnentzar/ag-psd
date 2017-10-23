@@ -1,14 +1,14 @@
-var gulp = require('gulp');
-var path = require('path');
-var del = require('del');
-var ts = require('gulp-typescript');
-var mocha = require('gulp-spawn-mocha');
-var tslint = require('gulp-tslint');
-var sourcemaps = require('gulp-sourcemaps');
-var runSequence = require('run-sequence');
-var remapIstanbul = require('remap-istanbul/lib/gulpRemapIstanbul');
-var merge = require('merge2');
-var argv = require('yargs').argv;
+const gulp = require('gulp');
+const path = require('path');
+const del = require('del');
+const ts = require('gulp-typescript');
+const mocha = require('gulp-spawn-mocha');
+const tslint = require('gulp-tslint');
+const sourcemaps = require('gulp-sourcemaps');
+const runSequence = require('run-sequence');
+const remapIstanbul = require('remap-istanbul/lib/gulpRemapIstanbul');
+const merge = require('merge2');
+const argv = require('yargs').argv;
 
 gulp.task('clean', () => del(['dist/*']));
 
@@ -56,7 +56,7 @@ gulp.task('watch', () => {
 		'test/**/*.psd',
 		'test/**/*.png',
 		'test/**/*.json',
-	], [argv.coverage ? 'cov' : (argv.tests ? 'test' : 'build')]);
+	], [argv.coverage ? 'cov' : 'test']);
 });
 
 gulp.task('lint', () => {

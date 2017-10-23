@@ -76,12 +76,14 @@ addHandler({
 	read: (reader, target, left) => {
 		target.alphaChannelNames = [];
 
-		if (left())
+		while (left()) {
 			target.alphaChannelNames.push(reader.readPascalString(1));
+		}
 	},
 	write: (writer, target) => {
-		for (let name of target.alphaChannelNames!)
+		for (let name of target.alphaChannelNames!) {
 			writer.writePascalString(name);
+		}
 	},
 });
 

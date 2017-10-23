@@ -401,8 +401,13 @@ export class PsdReader {
 		} else { // Grayscale | RGB
 			const channels = psd.colorMode === ColorMode.RGB ? [0, 1, 2] : [0];
 
-			if (globalAlpha || psd.channels === 4)
+			if (psd.channels && psd.channels > 3) {
+				for (let i = 3; i < psd.channels; i++) {
+					channels.push(i);
+				}
+			} else if (globalAlpha) {
 				channels.push(3);
+			}
 
 			if (compression === Compression.RawData) {
 				for (let i = 0; i < channels.length; i++) {

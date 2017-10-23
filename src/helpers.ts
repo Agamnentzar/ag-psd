@@ -315,6 +315,7 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 
 	for (let c = 0; c < offsets.length; c++) {
 		const channelLengths = lengths[c];
+		const extra = c > 3;
 		let p = offsets[c];
 
 		for (let y = 0; y < height; y++) {
@@ -329,7 +330,7 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 					header = 256 - header;
 
 					for (let j = 0; j <= header; j++) {
-						if (data) {
+						if (data && !extra) {
 							data.data[p] = value;
 						}
 
@@ -337,8 +338,10 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 					}
 				} else if (header < 128) {
 					for (let j = 0; j <= header; j++) {
-						if (data) {
-							data.data[p] = buffer[++i];
+						i++;
+
+						if (data && !extra) {
+							data.data[p] = buffer[i];
 						}
 
 						p += step;
