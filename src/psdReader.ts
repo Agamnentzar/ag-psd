@@ -319,15 +319,17 @@ export class PsdReader {
 			const offset = offsetForChannel(channel.id);
 
 			/* istanbul ignore if */
-			if (offset < 0)
+			if (offset < 0) {
 				throw new Error(`Channel not supported: ${channel.id}`);
+			}
 
-			if (compression === Compression.RawData)
+			if (compression === Compression.RawData) {
 				readDataRaw(this, data, offset, layerWidth, layerHeight);
-			else if (compression === Compression.RleCompressed)
+			} else if (compression === Compression.RleCompressed) {
 				readDataRLE(this, data, 4, layerWidth, layerHeight, [offset]);
-			else
+			} else {
 				throw new Error(`Compression type not supported: ${compression}`);
+			}
 
 			if (data && psd.colorMode === ColorMode.Grayscale) {
 				setupGrayscale(data);

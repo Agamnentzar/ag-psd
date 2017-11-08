@@ -71,8 +71,8 @@ describe('helpers', () => {
 	});
 
 	describe('offsetForChannel()', () => {
-		it('should return -1 for invalid channelId', () => {
-			expect(offsetForChannel(<any>999)).equal(-1);
+		it('should return offset for other channelId', () => {
+			expect(offsetForChannel(<any>10)).equal(11);
 		});
 	});
 });

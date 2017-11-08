@@ -25,7 +25,7 @@ export function offsetForChannel(channelId: ChannelID) {
 		case ChannelID.Green: return 1;
 		case ChannelID.Blue: return 2;
 		case ChannelID.Transparency: return 3;
-		default: return -1;
+		default: return channelId + 1;
 	}
 }
 
@@ -198,7 +198,7 @@ export function readDataRaw(reader: PsdReader, data: PixelData | undefined, offs
 	const size = width * height;
 	const buffer = reader.readBytes(size);
 
-	if (data) {
+	if (data && offset < 4) {
 		for (let i = 0; i < size; i++) {
 			data.data[i * 4 + offset] = buffer[i];
 		}
@@ -315,7 +315,7 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 
 	for (let c = 0; c < offsets.length; c++) {
 		const channelLengths = lengths[c];
-		const extra = c > 3;
+		const extra = c > 3 || offsets[c] > 3;
 		let p = offsets[c];
 
 		for (let y = 0; y < height; y++) {
