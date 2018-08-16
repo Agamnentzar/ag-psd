@@ -40,7 +40,7 @@ export function importPSD(dirName: string): Psd | undefined {
 	const dataPath = path.join(dirName, 'data.json');
 
 	if (!fs.existsSync(dataPath))
-		return void 0;
+		return undefined;
 
 	return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 }
@@ -69,13 +69,13 @@ export function extractPSD(filePath: string, psd: Psd) {
 
 	if (psd.canvas) {
 		fs.writeFileSync(path.join(basePath, 'canvas.png'), psd.canvas.toBuffer());
-		psd.canvas = void 0;
+		psd.canvas = undefined;
 	}
 
 	psd.children!.forEach((l, i) => {
 		if (l.canvas) {
 			fs.writeFileSync(path.join(basePath, `layer-${i}.png`), l.canvas.toBuffer());
-			l.canvas = void 0;
+			l.canvas = undefined;
 		}
 	});
 

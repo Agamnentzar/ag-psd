@@ -31,17 +31,19 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 	}
 }
 
+const NOT_IMPLEMENTED = 'Not implemented';
+
 export class PsdWriter {
 	protected offset = 0;
-	writeInt8(_value: number) { throw new Error('Not implemented'); }
-	writeUint8(_value: number) { throw new Error('Not implemented'); }
-	writeInt16(_value: number) { throw new Error('Not implemented'); }
-	writeUint16(_value: number) { throw new Error('Not implemented'); }
-	writeInt32(_value: number) { throw new Error('Not implemented'); }
-	writeUint32(_value: number) { throw new Error('Not implemented'); }
-	writeFloat32(_value: number) { throw new Error('Not implemented'); }
-	writeFloat64(_value: number) { throw new Error('Not implemented'); }
-	writeBytes(_buffer: Uint8Array | undefined) { throw new Error('Not implemented'); }
+	writeInt8(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeUint8(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeInt16(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeUint16(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeInt32(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeUint32(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeFloat32(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeFloat64(_value: number) { throw new Error(NOT_IMPLEMENTED); }
+	writeBytes(_buffer: Uint8Array | undefined) { throw new Error(NOT_IMPLEMENTED); }
 	writeBuffer(buffer: ArrayBuffer | undefined) {
 		if (buffer) {
 			this.writeBytes(new Uint8Array(buffer));

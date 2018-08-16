@@ -8,60 +8,60 @@ export class BufferPsdWriter extends PsdWriter {
 	}
 	private ensureSize(size: number) {
 		if (size > this.buffer.length) {
-			var newLength = this.buffer.length;
+			let newLength = this.buffer.length;
 
 			do {
 				newLength *= 2;
 			} while (size > newLength);
 
-			var newBuffer = new Buffer(newLength);
+			const newBuffer = new Buffer(newLength);
 			this.buffer.copy(newBuffer);
 			this.buffer = newBuffer;
 		}
 	}
 	private addSize(size: number) {
-		var offset = this.offset;
+		const offset = this.offset;
 		this.ensureSize(this.offset += size);
 		return offset;
 	}
 	writeInt8(value: number) {
-		let offset = this.addSize(1);
+		const offset = this.addSize(1);
 		this.buffer.writeInt8(value, offset);
 	}
 	writeUint8(value: number) {
-		let offset = this.addSize(1);
+		const offset = this.addSize(1);
 		this.buffer.writeUInt8(value, offset);
 	}
 	writeInt16(value: number) {
-		let offset = this.addSize(2);
+		const offset = this.addSize(2);
 		this.buffer.writeInt16BE(value, offset);
 	}
 	writeUint16(value: number) {
-		let offset = this.addSize(2);
+		const offset = this.addSize(2);
 		this.buffer.writeUInt16BE(value, offset);
 	}
 	writeInt32(value: number) {
-		let offset = this.addSize(4);
+		const offset = this.addSize(4);
 		this.buffer.writeInt32BE(value, offset);
 	}
 	writeUint32(value: number) {
-		let offset = this.addSize(4);
+		const offset = this.addSize(4);
 		this.buffer.writeUInt32BE(value, offset);
 	}
 	writeFloat32(value: number) {
-		let offset = this.addSize(4);
+		const offset = this.addSize(4);
 		this.buffer.writeFloatBE(value, offset);
 	}
 	writeFloat64(value: number) {
-		let offset = this.addSize(8);
+		const offset = this.addSize(8);
 		this.buffer.writeDoubleBE(value, offset);
 	}
 	writeBytes(buffer: Uint8Array | undefined) {
 		if (buffer) {
-			var offset = this.offset;
+			const offset = this.offset;
 			this.ensureSize(this.offset += buffer.length);
 
-			for (var i = 0; i < buffer.length; i++)
+			for (let i = 0; i < buffer.length; i++)
 				this.buffer[i + offset] = buffer[i];
 		}
 	}

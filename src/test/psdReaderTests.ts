@@ -65,7 +65,7 @@ describe('PsdReader', () => {
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; }[] = [];
 
 			compare.push({ name: `canvas.png`, canvas: psd.canvas });
-			psd.canvas = void 0;
+			psd.canvas = undefined;
 
 			let i = 0;
 
@@ -75,7 +75,7 @@ describe('PsdReader', () => {
 						pushLayerCanvases(l.children);
 					} else {
 						compare.push({ name: `layer-${i++}.png`, canvas: l.canvas });
-						l.canvas = void 0;
+						l.canvas = undefined;
 					}
 				});
 			}

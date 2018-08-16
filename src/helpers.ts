@@ -103,7 +103,7 @@ export function getChannels(layer: Layer, background: boolean) {
 	let result: ChannelData[] = [{
 		channelId: ChannelID.Transparency,
 		compression: Compression.RawData,
-		buffer: void 0,
+		buffer: undefined,
 		length: 2,
 	}];
 
@@ -184,7 +184,7 @@ export function decodeBitmap(input: PixelArray, output: PixelArray, width: numbe
 
 export function writeDataRaw(data: PixelData, offset: number, width: number, height: number) {
 	if (!width || !height)
-		return void 0;
+		return undefined;
 
 	const array = new Uint8Array(width * height);
 
@@ -207,7 +207,7 @@ export function readDataRaw(reader: PsdReader, data: PixelData | undefined, offs
 
 export function writeDataRLE(imageData: PixelData, width: number, height: number, offsets: number[]) {
 	if (!width || !height)
-		return void 0;
+		return undefined;
 
 	const data = imageData.data;
 	const channels: { lengths: number[]; lines: number[][]; offset: number; }[] = [];

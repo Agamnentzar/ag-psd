@@ -44,7 +44,7 @@ export class ArrayBufferPsdReader extends PsdReader {
 		return new Uint8Array(this.view.buffer, this.offset - length, length);
 	}
 	createCanvas(width: number, height: number) {
-		let canvas = document.createElement('canvas');
+		const canvas = document.createElement('canvas');
 		canvas.width = width;
 		canvas.height = height;
 		return canvas;

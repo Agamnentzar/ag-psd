@@ -34,7 +34,7 @@ describe('PsdWriter', () => {
 		expect(() => writer.writeUint32(0), 'writeUint32').throw('Not implemented');
 		expect(() => writer.writeFloat32(0), 'writeFloat32').throw('Not implemented');
 		expect(() => writer.writeFloat64(0), 'writeFloat64').throw('Not implemented');
-		expect(() => writer.writeBytes(void 0), 'writeBytes').throw('Not implemented');
+		expect(() => writer.writeBytes(undefined), 'writeBytes').throw('Not implemented');
 	});
 
 	[ArrayBufferPsdWriter, BufferPsdWriter].forEach(Writer => {
@@ -48,14 +48,14 @@ describe('PsdWriter', () => {
 			writer.writeUint32(0);
 			writer.writeFloat32(0);
 			writer.writeFloat64(0);
-			writer.writeBytes(void 0);
+			writer.writeBytes(undefined);
 			writer.writeBytes(new Uint8Array([1, 2, 3, 4]));
 		});
 	});
 
 	it('should not throw if passed undefined buffer', () => {
 		const writer = new PsdWriter();
-		writer.writeBuffer(void 0);
+		writer.writeBuffer(undefined);
 	});
 
 	it('should not throw if writing psd with empty canvas', () => {
@@ -71,7 +71,7 @@ describe('PsdWriter', () => {
 	it('should throw if passed invalid signature', () => {
 		const writer = new PsdWriter();
 
-		for (var s of [undefined, null, 'a', 'ab', 'abcde'])
+		for (const s of [undefined, null, 'a', 'ab', 'abcde'])
 			expect(() => writer.writeSignature(s as any), s as any).throw(`Invalid signature: '${s}'`);
 	});
 

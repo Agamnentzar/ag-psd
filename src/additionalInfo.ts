@@ -96,7 +96,7 @@ addHandler({
 	key: 'lspf',
 	has: target => typeof target.protected !== 'undefined',
 	read: (reader, target) => {
-		let flags = reader.readUint32();
+		const flags = reader.readUint32();
 		target.protected = {
 			transparency: (flags & 0x01) !== 0,
 			composite: (flags & 0x02) !== 0,
@@ -104,7 +104,7 @@ addHandler({
 		};
 	},
 	write: (writer, target) => {
-		let flags =
+		const flags =
 			(target.protected!.transparency ? 0x01 : 0) |
 			(target.protected!.composite ? 0x02 : 0) |
 			(target.protected!.position ? 0x04 : 0);
@@ -147,12 +147,12 @@ addHandler({
 	key: 'lsct',
 	has: target => typeof target.sectionDivider !== 'undefined',
 	read: (reader, target, left) => {
-		let item: any = {};
+		const item: any = {};
 
 		item.type = reader.readUint32();
 
 		if (left()) {
-			let signature = reader.readSignature();
+			const signature = reader.readSignature();
 
 			if (signature !== '8BIM')
 				throw new Error(`Invalid signature: '${signature}'`);
@@ -279,7 +279,7 @@ addHandler({
 
 		//for (let i = 0; i < itemsCount; i++) {
 		//	console.log('read item');
-		//	let key = readStringOrClassId(reader);
+		//	const key = readStringOrClassId(reader);
 		//	console.log('key', [key]);
 
 		//}

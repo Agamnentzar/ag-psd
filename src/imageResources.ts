@@ -9,8 +9,8 @@ export interface ResourceHandler {
 	write: (writer: PsdWriter, target: ImageResources) => void;
 }
 
-let handlers: ResourceHandler[] = [];
-let handlersMap: { [key: number]: ResourceHandler } = {};
+const handlers: ResourceHandler[] = [];
+const handlersMap: { [key: number]: ResourceHandler } = {};
 
 function addHandler(handler: ResourceHandler) {
 	handlers.push(handler);
@@ -81,7 +81,7 @@ addHandler({
 		}
 	},
 	write: (writer, target) => {
-		for (let name of target.alphaChannelNames!) {
+		for (const name of target.alphaChannelNames!) {
 			writer.writePascalString(name);
 		}
 	},
@@ -108,7 +108,7 @@ addHandler({
 			target.layersGroup.push(reader.readUint16());
 	},
 	write: (writer, target) => {
-		for (let g of target.layersGroup!)
+		for (const g of target.layersGroup!)
 			writer.writeUint32(g);
 	},
 });
@@ -174,7 +174,7 @@ addHandler({
 			target.unicodeAlphaNames.push(reader.readUnicodeString());
 	},
 	write: (writer, target) => {
-		for (let name of target.unicodeAlphaNames!)
+		for (const name of target.unicodeAlphaNames!)
 			writer.writeUnicodeString(name);
 	},
 });
@@ -200,7 +200,7 @@ addHandler({
 			target.alphaIdentifiers.push(reader.readUint32());
 	},
 	write: (writer, target) => {
-		for (let id of target.alphaIdentifiers!)
+		for (const id of target.alphaIdentifiers!)
 			writer.writeUint32(id);
 	},
 });
@@ -209,7 +209,7 @@ addHandler({
 	key: 1054,
 	has: target => typeof target.urlsList !== 'undefined',
 	read: (reader, target) => {
-		let count = reader.readUint32();
+		const count = reader.readUint32();
 		target.urlsList = [];
 
 		if (count)
@@ -273,7 +273,7 @@ addHandler({
 	write: (writer, target) => {
 		writer.writeUint16(target.layerSelectionIds!.length);
 
-		for (let id of target.layerSelectionIds!)
+		for (const id of target.layerSelectionIds!)
 			writer.writeUint32(id);
 	},
 });
@@ -288,7 +288,7 @@ addHandler({
 			target.layerGroupsEnabledId.push(reader.readUint8());
 	},
 	write: (writer, target) => {
-		for (let id of target.layerGroupsEnabledId!)
+		for (const id of target.layerGroupsEnabledId!)
 			writer.writeUint8(id);
 	},
 });
@@ -309,7 +309,7 @@ addHandler({
 //     this.writeUint16(1); // number of planes
 //     // TODO: actual JFIF thumbnail data here
 //
-//     let array = new Uint8Array(thumbData);
+//     const array = new Uint8Array(thumbData);
 //
 //     for (let i = 0; i < array.length; i++)
 //         this.writeUint8(array[i]);

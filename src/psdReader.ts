@@ -19,18 +19,20 @@ function setupGrayscale(data: PixelData) {
 	}
 }
 
+const NOT_IMPLEMENTED = 'Not implemented';
+
 export class PsdReader {
 	protected offset = 0;
-	readInt8(): number { throw new Error('Not implemented'); }
-	readUint8(): number { throw new Error('Not implemented'); }
-	readInt16(): number { throw new Error('Not implemented'); }
-	readUint16(): number { throw new Error('Not implemented'); }
-	readInt32(): number { throw new Error('Not implemented'); }
-	readUint32(): number { throw new Error('Not implemented'); }
-	readFloat32(): number { throw new Error('Not implemented'); }
-	readFloat64(): number { throw new Error('Not implemented'); }
-	readBytes(_length: number): Uint8Array { throw new Error('Not implemented'); }
-	createCanvas(_width: number, _height: number): HTMLCanvasElement { throw new Error('Not implemented'); }
+	readInt8(): number { throw new Error(NOT_IMPLEMENTED); }
+	readUint8(): number { throw new Error(NOT_IMPLEMENTED); }
+	readInt16(): number { throw new Error(NOT_IMPLEMENTED); }
+	readUint16(): number { throw new Error(NOT_IMPLEMENTED); }
+	readInt32(): number { throw new Error(NOT_IMPLEMENTED); }
+	readUint32(): number { throw new Error(NOT_IMPLEMENTED); }
+	readFloat32(): number { throw new Error(NOT_IMPLEMENTED); }
+	readFloat64(): number { throw new Error(NOT_IMPLEMENTED); }
+	readBytes(_length: number): Uint8Array { throw new Error(NOT_IMPLEMENTED); }
+	createCanvas(_width: number, _height: number): HTMLCanvasElement { throw new Error(NOT_IMPLEMENTED); }
 	skip(count: number) {
 		this.offset += count;
 	}
