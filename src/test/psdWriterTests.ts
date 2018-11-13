@@ -2,8 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
-import * as Canvas from 'canvas';
-import { loadCanvasFromFile, toBuffer, compareBuffers } from './common';
+import { loadCanvasFromFile, toBuffer, compareBuffers, createCanvas } from './common';
 import { Psd } from '../psd';
 import { ArrayBufferPsdWriter } from '../arrayBufferPsdWriter';
 import { BufferPsdWriter } from '../bufferPsdWriter';
@@ -17,8 +16,9 @@ function loadPsdFromFile(basePath: string) {
 	const psd: Psd = JSON.parse(fs.readFileSync(path.join(basePath, 'data.json'), 'utf8'));
 	psd.canvas = loadCanvasFromFile(path.join(basePath, 'canvas.png'));
 	psd.children!.forEach((l, i) => {
-		if (!l.children)
+		if (!l.children) {
 			l.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}.png`));
+		}
 	});
 	return psd;
 }
@@ -83,7 +83,7 @@ describe('PsdWriter', () => {
 			children: [
 				{
 					children: [],
-					canvas: new Canvas(300, 200),
+					canvas: createCanvas(300, 300),
 				}
 			]
 		};

@@ -34,10 +34,10 @@ Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image dat
 
 ```javascript
 import * as fs from 'fs';
-import * as Canvas from 'canvas';
+import { createCanvas } from 'canvas';
 import { readPsd, initializeCanvas } from 'ag-psd';
 
-initializeCanvas((width, height) => new Canvas(width, height));
+initializeCanvas(createCanvas);
 
 const buffer = fs.readFileSync('my-file.psd');
 const psd = readPsd(buffer);

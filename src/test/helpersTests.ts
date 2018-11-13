@@ -7,8 +7,9 @@ const rleTests: PixelData[] = require('../../test/rle.json');
 function toData(data: PixelArray) {
 	const result: number[] = [];
 
-	for (let i = 0; i < data.length; i++)
+	for (let i = 0; i < data.length; i++) {
 		result.push(data[i], data[i], data[i], data[i]);
+	}
 
 	return result;
 }
@@ -16,8 +17,9 @@ function toData(data: PixelArray) {
 function fromData(data: PixelArray) {
 	const result: number[] = [];
 
-	for (let i = 0; i < data.length; i += 4)
+	for (let i = 0; i < data.length; i += 4) {
 		result.push(data[i]);
+	}
 
 	return result;
 }

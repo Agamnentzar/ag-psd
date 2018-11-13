@@ -6,13 +6,14 @@ require('source-map-support').install();
 
 import * as fs from 'fs';
 import * as path from 'path';
-import * as Canvas from 'canvas';
+import { createCanvas, Image } from 'canvas';
 import { BufferPsdReader } from '../bufferPsdReader';
 import { Psd, ReadOptions, initializeCanvas } from '../index';
+export { createCanvas };
 
 const resultsPath = path.join(__dirname, '..', '..', 'results');
 
-initializeCanvas((width, height) => new Canvas(width, height));
+initializeCanvas(createCanvas);
 
 export type ImageMap = { [key: string]: HTMLCanvasElement };
 
@@ -20,8 +21,9 @@ export function toArrayBuffer(buffer: Buffer) {
 	const ab = new ArrayBuffer(buffer.length);
 	const view = new Uint8Array(ab);
 
-	for (let i = 0; i < buffer.length; ++i)
+	for (let i = 0; i < buffer.length; ++i) {
 		view[i] = buffer[i];
+	}
 
 	return ab;
 }
@@ -30,8 +32,9 @@ export function toBuffer(ab: ArrayBuffer) {
 	const buffer = new Buffer(ab.byteLength);
 	const view = new Uint8Array(ab);
 
-	for (let i = 0; i < buffer.length; ++i)
+	for (let i = 0; i < buffer.length; ++i) {
 		buffer[i] = view[i];
+	}
 
 	return buffer;
 }
@@ -89,9 +92,9 @@ export function saveCanvas(fileName: string, canvas: HTMLCanvasElement | undefin
 }
 
 export function loadCanvasFromFile(filePath: string) {
-	const img = new Canvas.Image();
+	const img = new Image();
 	img.src = fs.readFileSync(filePath);
-	const canvas = new Canvas(img.width, img.height);
+	const canvas = createCanvas(img.width, img.height);
 	canvas.getContext('2d')!.drawImage(img, 0, 0);
 	return canvas;
 }
@@ -111,8 +114,9 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 	const length = expectedData.width * expectedData.height * 4;
 
 	for (let i = 0; i < length; i++) {
-		if (expectedData.data[i] !== actualData.data[i])
+		if (expectedData.data[i] !== actualData.data[i]) {
 			throw new Error(`Actual canvas different than expected (${name})`);
+		}
 	}
 }
 
@@ -125,7 +129,8 @@ export function compareBuffers(actual: Buffer, expected: Buffer, test: string) {
 		throw new Error(`Buffers differ in size actual: ${actual.length} expected: ${expected.length} (${test})`);
 
 	for (let i = 0; i < actual.length; i++) {
-		if (actual[i] !== expected[i])
+		if (actual[i] !== expected[i]) {
 			throw new Error(`Buffers differ at byte: ${i} actual: ${actual[i]} expected: ${expected[i]} (${test})`);
+		}
 	}
 }

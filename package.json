@@ -11,6 +11,7 @@
   "scripts": {
     "test": "gulp test",
     "dev": "gulp dev --tests",
+    "lint": "tslint -c tslint.json src/ts/**/*.ts",
     "build": "gulp build && browserify dist/browser.js --standalone agPsd -o dist/bundle.js",
     "prepublish": "npm run build"
   },
@@ -27,24 +28,22 @@
   "devDependencies": {
     "@types/mkdirp": "^0.5.2",
     "@types/mocha": "^5.2.5",
-    "@types/node": "^10.7.1",
-    "browserify": "^16.2.2",
-    "canvas": "^1.6.11",
-    "chai": "^4.1.2",
+    "@types/node": "^10.12.7",
+    "browserify": "^16.2.3",
+    "canvas": "^2.1.0",
+    "chai": "^4.2.0",
     "del": "^3.0.0",
-    "gulp": "^3.9.1",
+    "gulp": "^4.0.0",
     "gulp-sourcemaps": "^2.6.4",
     "gulp-spawn-mocha": "^5.0.1",
-    "gulp-tslint": "^8.1.3",
     "gulp-typescript": "^3.2.4",
-    "merge2": "^1.2.2",
+    "merge2": "^1.2.3",
     "mkdirp": "^0.5.1",
     "mocha": "^5.2.0",
-    "remap-istanbul": "^0.11.1",
-    "run-sequence": "^2.2.1",
-    "source-map-support": "^0.5.8",
+    "remap-istanbul": "^0.12.0",
+    "source-map-support": "^0.5.9",
     "tslint": "^5.11.0",
-    "typescript": "^3.0.1",
-    "yargs": "^12.0.1"
+    "typescript": "^3.1.6",
+    "yargs": "^12.0.2"
   }
 }
