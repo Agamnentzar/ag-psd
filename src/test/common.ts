@@ -7,8 +7,8 @@ require('source-map-support').install();
 import * as fs from 'fs';
 import * as path from 'path';
 import { createCanvas, Image } from 'canvas';
-import { BufferPsdReader } from '../bufferPsdReader';
 import { Psd, ReadOptions, initializeCanvas } from '../index';
+import { readPsd, createReader } from '../psdReader';
 export { createCanvas };
 
 const resultsPath = path.join(__dirname, '..', '..', 'results');
@@ -26,17 +26,6 @@ export function toArrayBuffer(buffer: Buffer) {
 	}
 
 	return ab;
-}
-
-export function toBuffer(ab: ArrayBuffer) {
-	const buffer = new Buffer(ab.byteLength);
-	const view = new Uint8Array(ab);
-
-	for (let i = 0; i < buffer.length; ++i) {
-		buffer[i] = view[i];
-	}
-
-	return buffer;
 }
 
 export function importPSD(dirName: string): Psd | undefined {
@@ -58,10 +47,10 @@ export function importPSDImages(dirName: string) {
 	return images;
 }
 
-export function readPSD(fileName: string, options?: ReadOptions): Psd {
+export function readPsdFromFile(fileName: string, options?: ReadOptions): Psd {
 	const buffer = fs.readFileSync(fileName);
-	const reader = new BufferPsdReader(buffer);
-	return reader.readPsd(options);
+	const reader = createReader(buffer.buffer);
+	return readPsd(reader, options);
 }
 
 export function extractPSD(filePath: string, psd: Psd) {

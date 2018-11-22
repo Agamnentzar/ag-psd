@@ -1,18 +1,17 @@
-import { BufferPsdReader } from './bufferPsdReader';
-import { BufferPsdWriter } from './bufferPsdWriter';
 import { Psd, ReadOptions, WriteOptions } from './psd';
-export { initializeCanvas } from './bufferPsdReader';
+import { PsdWriter, writePsd as writePsdInternal, getWriterBuffer, createWriter } from './psdWriter';
+import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
+export { initializeCanvas } from './helpers';
 export * from './psd';
-export { PsdReader } from './psdReader';
-export { PsdWriter } from './psdWriter';
+export { PsdReader, PsdWriter };
 
-export function readPsd(buffer: Buffer, options?: ReadOptions): Psd {
-	const reader = new BufferPsdReader(buffer);
-	return reader.readPsd(options);
+export function readPsd(buffer: Buffer | ArrayBuffer, options?: ReadOptions): Psd {
+	const reader = createReader('buffer' in buffer ? buffer.buffer : buffer);
+	return readPsdInternal(reader, options);
 }
 
 export function writePsd(psd: Psd, options?: WriteOptions): Buffer {
-	const writer = new BufferPsdWriter();
-	writer.writePsd(psd, options);
-	return writer.getBuffer();
+	const writer = createWriter();
+	writePsdInternal(writer, psd, options);
+	return new Buffer(getWriterBuffer(writer));
 }

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { writeDataRLE, writeDataRaw, readDataRLE, offsetForChannel, PixelData, PixelArray } from '../helpers';
-import { ArrayBufferPsdReader } from '../arrayBufferPsdReader';
+import { createReader } from '../psdReader';
 
 const rleTests: PixelData[] = require('../../test/rle.json');
 
@@ -60,7 +60,7 @@ describe('helpers', () => {
 					array = writeDataRLE(input, image.width, image.height, [0]);
 					//console.log(`buffer: [${array}]`);
 
-					const reader = new ArrayBufferPsdReader(array!.buffer);
+					const reader = createReader(array!.buffer);
 					readDataRLE(reader, output, 4, image.width, image.height, [0]);
 					result = fromData(output.data);
 				} catch (e) {
@@ -73,8 +73,8 @@ describe('helpers', () => {
 	});
 
 	describe('offsetForChannel()', () => {
-		it('should return offset for other channelId', () => {
-			expect(offsetForChannel(<any>10)).equal(11);
+		it('returns offset for other channelId', () => {
+			expect(offsetForChannel(10)).equal(11);
 		});
 	});
 });

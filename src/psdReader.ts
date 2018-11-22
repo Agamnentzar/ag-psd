@@ -1,5 +1,5 @@
 import { Psd, Layer, ChannelID, ColorMode, toBlendMode, Compression, SectionDividerType, LayerAdditionalInfo, ReadOptions } from './psd';
-import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, PixelArray } from './helpers';
+import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, PixelArray, createCanvas } from './helpers';
 import { getHandler } from './additionalInfo';
 import { getHandler as getResourceHandler } from './imageResources';
 
@@ -19,414 +19,479 @@ function setupGrayscale(data: PixelData) {
 	}
 }
 
-const NOT_IMPLEMENTED = 'Not implemented';
+export interface PsdReader {
+	offset: number;
+	view: DataView;
+}
 
-export class PsdReader {
-	protected offset = 0;
-	readInt8(): number { throw new Error(NOT_IMPLEMENTED); }
-	readUint8(): number { throw new Error(NOT_IMPLEMENTED); }
-	readInt16(): number { throw new Error(NOT_IMPLEMENTED); }
-	readUint16(): number { throw new Error(NOT_IMPLEMENTED); }
-	readInt32(): number { throw new Error(NOT_IMPLEMENTED); }
-	readUint32(): number { throw new Error(NOT_IMPLEMENTED); }
-	readFloat32(): number { throw new Error(NOT_IMPLEMENTED); }
-	readFloat64(): number { throw new Error(NOT_IMPLEMENTED); }
-	readBytes(_length: number): Uint8Array { throw new Error(NOT_IMPLEMENTED); }
-	createCanvas(_width: number, _height: number): HTMLCanvasElement { throw new Error(NOT_IMPLEMENTED); }
-	skip(count: number) {
-		this.offset += count;
+export function readUint8(reader: PsdReader) {
+	reader.offset += 1;
+	return reader.view.getUint8(reader.offset - 1);
+}
+
+export function readInt16(reader: PsdReader) {
+	reader.offset += 2;
+	return reader.view.getInt16(reader.offset - 2, false);
+}
+
+export function readUint16(reader: PsdReader) {
+	reader.offset += 2;
+	return reader.view.getUint16(reader.offset - 2, false);
+}
+
+export function readInt32(reader: PsdReader) {
+	reader.offset += 4;
+	return reader.view.getInt32(reader.offset - 4, false);
+}
+
+export function readUint32(reader: PsdReader) {
+	reader.offset += 4;
+	return reader.view.getUint32(reader.offset - 4, false);
+}
+
+export function readFloat64(reader: PsdReader) {
+	reader.offset += 8;
+	return reader.view.getFloat64(reader.offset - 8, false);
+}
+
+export function readBytes(reader: PsdReader, length: number) {
+	reader.offset += length;
+	return new Uint8Array(reader.view.buffer, reader.offset - length, length);
+}
+
+export function createReader(buffer: ArrayBuffer) {
+	const view = new DataView(buffer);
+	const offset = 0;
+	return { view, offset };
+}
+
+export function readPsd(reader: PsdReader, options?: ReadOptions) {
+	const opt = options || {};
+	const psd = readHeader(reader);
+	readColorModeData(reader, psd);
+	readImageResources(reader, psd);
+	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!opt.skipLayerImageData);
+	const hasChildren = psd.children && psd.children.length;
+	const skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || hasChildren);
+
+	if (!skipComposite) {
+		readImageData(reader, psd, globalAlpha);
 	}
-	private readString(length: number) {
-		const buffer: any = this.readBytes(length);
-		return String.fromCharCode(...buffer);
+
+	return psd;
+}
+
+export function readSignature(reader: PsdReader) {
+	return readShortString(reader, 4);
+}
+
+export function readPascalString(reader: PsdReader, padTo = 2) {
+	let length = readUint8(reader);
+	const text = readShortString(reader, length);
+
+	while (++length % padTo) {
+		skipBytes(reader, 1);
 	}
-	readSignature() {
-		return this.readString(4);
+
+	return text;
+}
+
+export function readUnicodeString(reader: PsdReader) {
+	let length = readUint32(reader);
+	let text = '';
+
+	while (length--) {
+		text += String.fromCharCode(readUint16(reader));
 	}
-	readPascalString(padTo = 2) {
-		let length = this.readUint8();
-		const text = this.readString(length);
 
-		while (++length % padTo)
-			this.skip(1);
+	return text;
+}
 
-		return text;
+export function skipBytes(reader: PsdReader, count: number) {
+	reader.offset += count;
+}
+
+export function checkSignature(reader: PsdReader, ...expected: string[]) {
+	const offset = reader.offset;
+	const signature = readSignature(reader);
+
+	/* istanbul ignore if */
+	if (expected.indexOf(signature) === -1) {
+		throw new Error(`Invalid signature: '${signature}' at 0x${offset.toString(16)}`);
 	}
-	readUnicodeString() {
-		let length = this.readUint32();
-		let text = '';
+}
 
-		while (length--)
-			text += String.fromCharCode(this.readUint16());
+function readShortString(reader: PsdReader, length: number) {
+	const buffer: any = readBytes(reader, length);
+	return String.fromCharCode(...buffer);
+}
 
-		return text;
-	}
-	readSection<T>(round: number, func: (left: () => number) => T): T | undefined {
-		const length = this.readUint32();
-		let end = this.offset + length;
-		let result: T | undefined;
+function readHeader(reader: PsdReader): Psd {
+	checkSignature(reader, '8BPS');
 
-		if (length > 0)
-			result = func(() => end - this.offset);
+	const version = readUint16(reader);
 
-		/* istanbul ignore if */
-		if (this.offset > end)
-			throw new Error('Exceeded section limits');
+	/* istanbul ignore if */
+	if (version !== 1)
+		throw new Error(`Invalid PSD file version: ${version}`);
 
-		/* istanbul ignore if */
-		if (this.offset !== end)
-			throw new Error(`Unread section data: ${end - this.offset} bytes at 0x${this.offset.toString(16)}`);
+	skipBytes(reader, 6);
+	const channels = readUint16(reader);
+	const height = readUint32(reader);
+	const width = readUint32(reader);
+	const bitsPerChannel = readUint16(reader);
+	const colorMode = readUint16(reader);
 
-		while (end % round)
-			end++;
+	/* istanbul ignore if */
+	if (supportedColorModes.indexOf(colorMode) === -1)
+		throw new Error(`Color mode not supported: ${colorMode}`);
 
-		this.offset = end;
-		return result;
-	}
-	checkSignature(...expected: string[]) {
-		const offset = this.offset;
-		const signature = this.readSignature();
+	return { width, height, channels, bitsPerChannel, colorMode };
+}
 
-		/* istanbul ignore if */
-		if (expected.indexOf(signature) === -1)
-			throw new Error(`Invalid signature: '${signature}' at 0x${offset.toString(16)}`);
-	}
-	readPsd(options?: ReadOptions) {
-		const opt = options || {};
-		const psd = this.readHeader();
-		this.readColorModeData(psd);
-		this.readImageResources(psd);
-		const globalAlpha = this.readLayerAndMaskInfo(psd, !!opt.skipLayerImageData);
-		const hasChildren = psd.children && psd.children.length;
-		const skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || hasChildren);
+function readColorModeData(reader: PsdReader, _psd: Psd) {
+	readSection(reader, 1, () => {
+		throw new Error('Not Implemented: color mode data');
+	});
+}
 
-		if (!skipComposite)
-			this.readImageData(psd, globalAlpha);
+function readImageResources(reader: PsdReader, psd: Psd) {
+	readSection(reader, 1, left => {
+		while (left()) {
+			readImageResource(reader, psd);
+		}
+	});
+}
 
-		return psd;
-	}
-	private readHeader(): Psd {
-		this.checkSignature('8BPS');
+function readImageResource(reader: PsdReader, psd: Psd) {
+	checkSignature(reader, '8BIM');
 
-		const version = this.readUint16();
+	const id = readUint16(reader);
+	const name = readPascalString(reader);
 
-		/* istanbul ignore if */
-		if (version !== 1)
-			throw new Error(`Invalid PSD file version: ${version}`);
+	readSection(reader, 2, left => {
+		const handler = getResourceHandler(id, name);
 
-		this.skip(6);
-		const channels = this.readUint16();
-		const height = this.readUint32();
-		const width = this.readUint32();
-		const bitsPerChannel = this.readUint16();
-		const colorMode = this.readUint16();
+		if (!psd.imageResources) {
+			psd.imageResources = {};
+		}
 
-		/* istanbul ignore if */
-		if (supportedColorModes.indexOf(colorMode) === -1)
-			throw new Error(`Color mode not supported: ${colorMode}`);
+		if (handler) {
+			handler.read(reader, psd.imageResources, left);
+		} else {
+			//console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
+			skipBytes(reader, left());
+		}
+	});
+}
 
-		return { width, height, channels, bitsPerChannel, colorMode };
-	}
-	private readColorModeData(_psd: Psd) {
-		this.readSection(1, () => {
-			throw new Error('Not Implemented: color mode data');
-		});
-	}
-	private readImageResources(psd: Psd) {
-		this.readSection(1, left => {
-			while (left())
-				this.readImageResource(psd);
-		});
-	}
-	private readImageResource(psd: Psd) {
-		this.checkSignature('8BIM');
+function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolean) {
+	let globalAlpha = false;
 
-		const id = this.readUint16();
-		const name = this.readPascalString();
+	readSection(reader, 1, left => {
+		globalAlpha = readLayerInfo(reader, psd, skipImageData);
+		readGlobalLayerMaskInfo(reader);
 
-		this.readSection(2, left => {
-			const handler = getResourceHandler(id, name);
-
-			if (!psd.imageResources)
-				psd.imageResources = {};
-
-			if (handler) {
-				handler.read(this, psd.imageResources, left);
+		while (left()) {
+			if (left() > 2) {
+				readAdditionalLayerInfo(reader, psd);
 			} else {
-				//console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
-				this.skip(left());
+				skipBytes(reader, left());
 			}
-		});
-	}
-	private readLayerAndMaskInfo(psd: Psd, skipImageData: boolean) {
-		let globalAlpha = false;
+		}
+	});
 
-		this.readSection(1, left => {
-			globalAlpha = this.readLayerInfo(psd, skipImageData);
-			this.readGlobalLayerMaskInfo();
+	return globalAlpha;
+}
 
-			while (left()) {
-				if (left() > 2) {
-					this.readAdditionalLayerInfo(psd);
-				} else {
-					this.skip(left());
-				}
-			}
-		});
+function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean) {
+	let globalAlpha = false;
 
-		return globalAlpha;
-	}
-	private readLayerInfo(psd: Psd, skipImageData: boolean) {
-		let globalAlpha = false;
+	readSection(reader, 2, left => {
+		let layerCount = readInt16(reader);
 
-		this.readSection(2, left => {
-			let layerCount = this.readInt16();
+		if (layerCount < 0) {
+			globalAlpha = true;
+			layerCount = -layerCount;
+		}
 
-			if (layerCount < 0) {
-				globalAlpha = true;
-				layerCount = -layerCount;
-			}
+		const layers: Layer[] = [];
+		const layerChannels: ChannelInfo[][] = [];
 
-			const layers: Layer[] = [];
-			const layerChannels: ChannelInfo[][] = [];
+		for (let i = 0; i < layerCount; i++) {
+			const { layer, channels } = readLayerRecord(reader);
+			layers.push(layer);
+			layerChannels.push(channels);
+		}
 
+		if (!skipImageData) {
 			for (let i = 0; i < layerCount; i++) {
-				const { layer, channels } = this.readLayerRecord();
-				layers.push(layer);
-				layerChannels.push(channels);
+				readLayerChannelImageData(reader, psd, layers[i], layerChannels[i]);
 			}
-
-			if (!skipImageData) {
-				for (let i = 0; i < layerCount; i++)
-					this.readLayerChannelImageData(psd, layers[i], layerChannels[i]);
-			}
-
-			this.skip(left());
-
-			if (!psd.children)
-				psd.children = [];
-
-			const stack: (Layer | Psd)[] = [psd];
-
-			for (let i = layers.length - 1; i >= 0; i--) {
-				const l = layers[i];
-				const type = l.sectionDivider ? l.sectionDivider.type : SectionDividerType.Other;
-
-				if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
-					l.opened = type === SectionDividerType.OpenFolder;
-					l.children = [];
-					stack[stack.length - 1].children!.unshift(l);
-					stack.push(l);
-				} else if (type === SectionDividerType.BoundingSectionDivider) {
-					stack.pop();
-				} else {
-					stack[stack.length - 1].children!.unshift(l);
-				}
-			}
-		});
-
-		return globalAlpha;
-	}
-	private readLayerRecord() {
-		const layer: Layer = <any>{};
-		layer.top = this.readInt32();
-		layer.left = this.readInt32();
-		layer.bottom = this.readInt32();
-		layer.right = this.readInt32();
-
-		const channelCount = this.readUint16();
-		const channels: ChannelInfo[] = [];
-
-		for (let i = 0; i < channelCount; i++) {
-			const channelID = <ChannelID>this.readInt16();
-			const channelLength = this.readUint32();
-			channels.push({ id: channelID, length: channelLength });
 		}
 
-		this.checkSignature('8BIM');
+		skipBytes(reader, left());
 
-		const blendMode = this.readSignature();
+		if (!psd.children) {
+			psd.children = [];
+		}
+
+		const stack: (Layer | Psd)[] = [psd];
+
+		for (let i = layers.length - 1; i >= 0; i--) {
+			const l = layers[i];
+			const type = l.sectionDivider ? l.sectionDivider.type : SectionDividerType.Other;
+
+			if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
+				l.opened = type === SectionDividerType.OpenFolder;
+				l.children = [];
+				stack[stack.length - 1].children!.unshift(l);
+				stack.push(l);
+			} else if (type === SectionDividerType.BoundingSectionDivider) {
+				stack.pop();
+			} else {
+				stack[stack.length - 1].children!.unshift(l);
+			}
+		}
+	});
+
+	return globalAlpha;
+}
+
+function readLayerRecord(reader: PsdReader) {
+	const layer: Layer = {};
+	layer.top = readInt32(reader);
+	layer.left = readInt32(reader);
+	layer.bottom = readInt32(reader);
+	layer.right = readInt32(reader);
+
+	const channelCount = readUint16(reader);
+	const channels: ChannelInfo[] = [];
+
+	for (let i = 0; i < channelCount; i++) {
+		const channelID = <ChannelID>readInt16(reader);
+		const channelLength = readUint32(reader);
+		channels.push({ id: channelID, length: channelLength });
+	}
+
+	checkSignature(reader, '8BIM');
+
+	const blendMode = readSignature(reader);
+
+	/* istanbul ignore if */
+	if (!toBlendMode[blendMode])
+		throw new Error(`Invalid blend mode: '${blendMode}'`);
+
+	layer.blendMode = toBlendMode[blendMode];
+	layer.opacity = readUint8(reader);
+	layer.clipping = readUint8(reader) === 1;
+
+	const flags = readUint8(reader);
+	layer.transparencyProtected = (flags & 0x01) !== 0;
+	layer.hidden = (flags & 0x02) !== 0;
+
+	readUint8(reader); // filler
+
+	readSection(reader, 1, left => {
+		readLayerMaskData(reader);
+		readLayerBlendingRanges(reader);
+		layer.name = readPascalString(reader);
+
+		let last = 0;
+
+		while (left() && (last = readUint8(reader)) === 0) {
+		}
+
+		if (last !== 0) {
+			reader.offset--;
+		}
+
+		while (left() > 4) {
+			readAdditionalLayerInfo(reader, layer);
+		}
+	});
+
+	return { layer, channels };
+}
+
+function readLayerMaskData(reader: PsdReader) {
+	readSection(reader, 1, left => {
+		/* istanbul ignore if */
+		if (left()) {
+			throw new Error(`Not Implemented: layer mask data`);
+		}
+	});
+}
+
+function readLayerBlendingRanges(reader: PsdReader) {
+	return readSection(reader, 1, left => {
+		const compositeGrayBlendSource = readUint32(reader);
+		const compositeGraphBlendDestinationRange = readUint32(reader);
+		const ranges = [];
+
+		while (left()) {
+			const sourceRange = readUint32(reader);
+			const destRange = readUint32(reader);
+			ranges.push({ sourceRange, destRange });
+		}
+
+		return { compositeGrayBlendSource, compositeGraphBlendDestinationRange, ranges };
+	});
+}
+
+function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[]) {
+	const layerWidth = layer.right! - layer.left!;
+	const layerHeight = layer.bottom! - layer.top!;
+	let canvas: HTMLCanvasElement | undefined;
+	let context: CanvasRenderingContext2D | undefined;
+	let data: ImageData | undefined;
+
+	if (layerWidth && layerHeight) {
+		canvas = createCanvas(layerWidth, layerHeight);
+		context = canvas.getContext('2d')!;
+		data = context.createImageData(layerWidth, layerHeight);
+		resetCanvas(data);
+	}
+
+	for (let channel of channels) {
+		const compression = <Compression>readUint16(reader);
+		const offset = offsetForChannel(channel.id);
 
 		/* istanbul ignore if */
-		if (!toBlendMode[blendMode])
-			throw new Error(`Invalid blend mode: '${blendMode}'`);
-
-		layer.blendMode = toBlendMode[blendMode];
-		layer.opacity = this.readUint8();
-		layer.clipping = this.readUint8() === 1;
-
-		const flags = this.readUint8();
-		layer.transparencyProtected = (flags & 0x01) !== 0;
-		layer.hidden = (flags & 0x02) !== 0;
-
-		this.readUint8(); // filler
-
-		this.readSection(1, left => {
-			this.readLayerMaskData();
-			this.readLayerBlendingRanges();
-			layer.name = this.readPascalString();
-
-			let last = 0;
-
-			while (left() && (last = this.readUint8()) === 0)
-				;
-
-			if (last !== 0)
-				this.offset--;
-
-			while (left() > 4)
-				this.readAdditionalLayerInfo(layer);
-		});
-
-		return { layer, channels };
-	}
-	private readLayerMaskData() {
-		this.readSection(1, left => {
-			/* istanbul ignore if */
-			if (left())
-				throw new Error(`Not Implemented: layer mask data`);
-		});
-	}
-	private readLayerBlendingRanges() {
-		return this.readSection(1, left => {
-			const compositeGrayBlendSource = this.readUint32();
-			const compositeGraphBlendDestinationRange = this.readUint32();
-			const ranges = [];
-
-			while (left()) {
-				const sourceRange = this.readUint32();
-				const destRange = this.readUint32();
-				ranges.push({ sourceRange, destRange });
-			}
-
-			return { compositeGrayBlendSource, compositeGraphBlendDestinationRange, ranges };
-		});
-	}
-	private readLayerChannelImageData(psd: Psd, layer: Layer, channels: ChannelInfo[]) {
-		const layerWidth = layer.right! - layer.left!;
-		const layerHeight = layer.bottom! - layer.top!;
-		let canvas: HTMLCanvasElement | undefined;
-		let context: CanvasRenderingContext2D | undefined;
-		let data: ImageData | undefined;
-
-		if (layerWidth && layerHeight) {
-			canvas = this.createCanvas(layerWidth, layerHeight);
-			context = canvas.getContext('2d')!;
-			data = context.createImageData(layerWidth, layerHeight);
-			resetCanvas(data);
+		if (offset < 0) {
+			throw new Error(`Channel not supported: ${channel.id}`);
 		}
 
-		for (let channel of channels) {
-			const compression = <Compression>this.readUint16();
-			const offset = offsetForChannel(channel.id);
-
-			/* istanbul ignore if */
-			if (offset < 0) {
-				throw new Error(`Channel not supported: ${channel.id}`);
-			}
-
-			if (compression === Compression.RawData) {
-				readDataRaw(this, data, offset, layerWidth, layerHeight);
-			} else if (compression === Compression.RleCompressed) {
-				readDataRLE(this, data, 4, layerWidth, layerHeight, [offset]);
-			} else {
-				throw new Error(`Compression type not supported: ${compression}`);
-			}
-
-			if (data && psd.colorMode === ColorMode.Grayscale) {
-				setupGrayscale(data);
-			}
-		}
-
-		if (context && data) {
-			context.putImageData(data, 0, 0);
-			layer.canvas = canvas;
-		}
-	}
-	private readGlobalLayerMaskInfo() {
-		return this.readSection(1, left => {
-			if (left()) {
-				const overlayColorSpace = this.readUint16();
-				const colorSpace1 = this.readUint16();
-				const colorSpace2 = this.readUint16();
-				const colorSpace3 = this.readUint16();
-				const colorSpace4 = this.readUint16();
-				const opacity = this.readUint16();
-				const kind = this.readUint8();
-				this.skip(left());
-				return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
-			}
-		});
-	}
-	private readAdditionalLayerInfo(target: LayerAdditionalInfo) {
-		this.checkSignature('8BIM', '8B64');
-		const key = this.readSignature();
-
-		this.readSection(2, left => {
-			const handler = getHandler(key);
-
-			if (handler) {
-				handler.read(this, target, left);
-			} else {
-				console.log(`Unhandled additional info: ${key}`);
-				this.skip(left());
-			}
-
-			if (left()) {
-				console.log(`Unread ${left()} bytes left for tag: ${key}`);
-				this.skip(left());
-			}
-		});
-	}
-	private readImageData(psd: Psd, globalAlpha: boolean) {
-		const compression = <Compression>this.readUint16();
-
-		if (supportedColorModes.indexOf(psd.colorMode!) === -1)
-			throw new Error(`Color mode not supported: ${psd.colorMode}`);
-
-		if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
+		if (compression === Compression.RawData) {
+			readDataRaw(reader, data, offset, layerWidth, layerHeight);
+		} else if (compression === Compression.RleCompressed) {
+			readDataRLE(reader, data, 4, layerWidth, layerHeight, [offset]);
+		} else {
 			throw new Error(`Compression type not supported: ${compression}`);
-
-		const canvas = this.createCanvas(psd.width, psd.height);
-		const context = canvas.getContext('2d')!;
-		const data = context.createImageData(psd.width, psd.height);
-		resetCanvas(data);
-
-		if (psd.colorMode === ColorMode.Bitmap) {
-			let bytes: PixelArray = [];
-
-			if (compression === Compression.RawData) {
-				bytes = this.readBytes(Math.ceil(psd.width / 8) * psd.height);
-			} else if (compression === Compression.RleCompressed) {
-				readDataRLE(this, { data: bytes, width: psd.width, height: psd.height }, 1, psd.width, psd.height, [0]);
-			}
-
-			decodeBitmap(bytes, data.data, psd.width, psd.height);
-		} else { // Grayscale | RGB
-			const channels = psd.colorMode === ColorMode.RGB ? [0, 1, 2] : [0];
-
-			if (psd.channels && psd.channels > 3) {
-				for (let i = 3; i < psd.channels; i++) {
-					channels.push(i);
-				}
-			} else if (globalAlpha) {
-				channels.push(3);
-			}
-
-			if (compression === Compression.RawData) {
-				for (let i = 0; i < channels.length; i++) {
-					readDataRaw(this, data, channels[i], psd.width, psd.height);
-				}
-			} else if (compression === Compression.RleCompressed) {
-				readDataRLE(this, data, 4, psd.width, psd.height, channels);
-			}
-
-			if (psd.colorMode === ColorMode.Grayscale) {
-				setupGrayscale(data);
-			}
 		}
 
-		context.putImageData(data, 0, 0);
-		psd.canvas = canvas;
+		if (data && psd.colorMode === ColorMode.Grayscale) {
+			setupGrayscale(data);
+		}
 	}
+
+	if (context && data) {
+		context.putImageData(data, 0, 0);
+		layer.canvas = canvas;
+	}
+}
+
+function readGlobalLayerMaskInfo(reader: PsdReader) {
+	return readSection(reader, 1, left => {
+		if (left()) {
+			const overlayColorSpace = readUint16(reader);
+			const colorSpace1 = readUint16(reader);
+			const colorSpace2 = readUint16(reader);
+			const colorSpace3 = readUint16(reader);
+			const colorSpace4 = readUint16(reader);
+			const opacity = readUint16(reader);
+			const kind = readUint8(reader);
+			skipBytes(reader, left());
+			return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
+		}
+	});
+}
+
+function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo) {
+	checkSignature(reader, '8BIM', '8B64');
+	const key = readSignature(reader);
+
+	readSection(reader, 2, left => {
+		const handler = getHandler(key);
+
+		if (handler) {
+			handler.read(reader, target, left);
+		} else {
+			console.log(`Unhandled additional info: ${key}`);
+			skipBytes(reader, left());
+		}
+
+		if (left()) {
+			console.log(`Unread ${left()} bytes left for tag: ${key}`);
+			skipBytes(reader, left());
+		}
+	});
+}
+
+function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean) {
+	const compression = <Compression>readUint16(reader);
+
+	if (supportedColorModes.indexOf(psd.colorMode!) === -1)
+		throw new Error(`Color mode not supported: ${psd.colorMode}`);
+
+	if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
+		throw new Error(`Compression type not supported: ${compression}`);
+
+	const canvas = createCanvas(psd.width, psd.height);
+	const context = canvas.getContext('2d')!;
+	const data = context.createImageData(psd.width, psd.height);
+	resetCanvas(data);
+
+	if (psd.colorMode === ColorMode.Bitmap) {
+		let bytes: PixelArray = [];
+
+		if (compression === Compression.RawData) {
+			bytes = readBytes(reader, Math.ceil(psd.width / 8) * psd.height);
+		} else if (compression === Compression.RleCompressed) {
+			readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, 1, psd.width, psd.height, [0]);
+		}
+
+		decodeBitmap(bytes, data.data, psd.width, psd.height);
+	} else { // Grayscale | RGB
+		const channels = psd.colorMode === ColorMode.RGB ? [0, 1, 2] : [0];
+
+		if (psd.channels && psd.channels > 3) {
+			for (let i = 3; i < psd.channels; i++) {
+				channels.push(i);
+			}
+		} else if (globalAlpha) {
+			channels.push(3);
+		}
+
+		if (compression === Compression.RawData) {
+			for (let i = 0; i < channels.length; i++) {
+				readDataRaw(reader, data, channels[i], psd.width, psd.height);
+			}
+		} else if (compression === Compression.RleCompressed) {
+			readDataRLE(reader, data, 4, psd.width, psd.height, channels);
+		}
+
+		if (psd.colorMode === ColorMode.Grayscale) {
+			setupGrayscale(data);
+		}
+	}
+
+	context.putImageData(data, 0, 0);
+	psd.canvas = canvas;
+}
+
+function readSection<T>(reader: PsdReader, round: number, func: (left: () => number) => T): T | undefined {
+	const length = readUint32(reader);
+	let end = reader.offset + length;
+	let result: T | undefined;
+
+	if (length > 0)
+		result = func(() => end - reader.offset);
+
+	/* istanbul ignore if */
+	if (reader.offset > end) {
+		throw new Error('Exceeded section limits');
+	}
+
+	/* istanbul ignore if */
+	if (reader.offset !== end) {
+		throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
+	}
+
+	while (end % round) {
+		end++;
+	}
+
+	reader.offset = end;
+	return result;
 }

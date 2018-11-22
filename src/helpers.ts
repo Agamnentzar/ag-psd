@@ -1,4 +1,4 @@
-import { PsdReader } from './psdReader';
+import { PsdReader, readBytes, readUint16 } from './psdReader';
 import { Layer, ChannelID, Compression } from './psd';
 
 export interface ChannelData {
@@ -39,7 +39,7 @@ export function toArray(value: Uint8Array) {
 }
 
 export function readColor(reader: PsdReader) {
-	return toArray(reader.readBytes(10));
+	return toArray(readBytes(reader, 10));
 }
 
 export function hasAlpha(data: PixelData) {
@@ -196,7 +196,7 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 
 export function readDataRaw(reader: PsdReader, data: PixelData | undefined, offset: number, width: number, height: number) {
 	const size = width * height;
-	const buffer = reader.readBytes(size);
+	const buffer = readBytes(reader, size);
 
 	if (data && offset < 4) {
 		for (let i = 0; i < size; i++) {
@@ -309,7 +309,7 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 		lengths[c] = [];
 
 		for (let y = 0; y < height; y++) {
-			lengths[c][y] = reader.readUint16();
+			lengths[c][y] = readUint16(reader);
 		}
 	}
 
@@ -320,7 +320,7 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 
 		for (let y = 0; y < height; y++) {
 			const length = channelLengths[y];
-			const buffer = reader.readBytes(length);
+			const buffer = readBytes(reader, length);
 
 			for (let i = 0; i < length; i++) {
 				let header = buffer[i];
@@ -355,4 +355,21 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 			}
 		}
 	}
+}
+
+export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
+	throw new Error('Canvas not initialized, use initializeCanvas method to set up canvas creation method');
+};
+
+if (typeof document !== 'undefined') {
+	createCanvas = (width, height) => {
+		const canvas = document.createElement('canvas');
+		canvas.width = width;
+		canvas.height = height;
+		return canvas;
+	};
+}
+
+export function initializeCanvas(createCanvasMethod: (width: number, height: number) => HTMLCanvasElement) {
+	createCanvas = createCanvasMethod;
 }

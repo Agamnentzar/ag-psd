@@ -1,16 +1,19 @@
-import { LayerEffectsInfo, LayerEffectsBevelInfo, LayerEffectsInnerGlowInfo, LayerEffectsOuterGlowInfo, LayerEffectsShadowInfo, LayerEffectsSolidFillInfo } from './psd';
+import {
+	LayerEffectsInfo, LayerEffectsBevelInfo, LayerEffectsInnerGlowInfo, LayerEffectsOuterGlowInfo,
+	LayerEffectsShadowInfo, LayerEffectsSolidFillInfo
+} from './psd';
 import { readColor } from './helpers';
-import { PsdReader } from './psdReader';
+import { PsdReader, checkSignature, readSignature, skipBytes, readUint16, readUint8, readUint32, readInt32 } from './psdReader';
 import { PsdWriter } from './psdWriter';
 
 function readBlendMode(reader: PsdReader) {
-	reader.checkSignature('8BIM');
-	return reader.readSignature();
+	checkSignature(reader, '8BIM');
+	return readSignature(reader);
 }
 
 function readShadowInfo(reader: PsdReader): LayerEffectsShadowInfo {
-	const size = reader.readUint32();
-	const version = reader.readUint32();
+	const size = readUint32(reader);
+	const version = readUint32(reader);
 
 	if (size !== 41 && size !== 51)
 		throw new Error(`Invalid effects shadow info size: ${size}`);
@@ -18,23 +21,23 @@ function readShadowInfo(reader: PsdReader): LayerEffectsShadowInfo {
 	if (version !== 0 && version !== 2)
 		throw new Error(`Invalid effects shadow info version: ${version}`);
 
-	const blur = reader.readInt32();
-	const intensity = reader.readInt32();
-	const angle = reader.readInt32();
-	const distance = reader.readInt32();
+	const blur = readInt32(reader);
+	const intensity = readInt32(reader);
+	const angle = readInt32(reader);
+	const distance = readInt32(reader);
 	const color = readColor(reader);
 	const blendMode = readBlendMode(reader);
-	const enabled = !!reader.readUint8();
-	const useAngleInAllEffects = !!reader.readUint8();
-	const opacity = reader.readUint8();
+	const enabled = !!readUint8(reader);
+	const useAngleInAllEffects = !!readUint8(reader);
+	const opacity = readUint8(reader);
 	const nativeColor = size >= 51 ? readColor(reader) : undefined;
 
 	return { blur, intensity, angle, distance, color, blendMode, enabled, useAngleInAllEffects, opacity, nativeColor };
 }
 
 function readOuterGlowInfo(reader: PsdReader): LayerEffectsOuterGlowInfo {
-	const size = reader.readUint32();
-	const version = reader.readUint32();
+	const size = readUint32(reader);
+	const version = readUint32(reader);
 
 	if (size !== 32 && size !== 42)
 		throw new Error(`Invalid effects outer glow info size: ${size}`);
@@ -42,20 +45,20 @@ function readOuterGlowInfo(reader: PsdReader): LayerEffectsOuterGlowInfo {
 	if (version !== 0 && version !== 2)
 		throw new Error(`Invalid effects outer glow info version: ${version}`);
 
-	const blur = reader.readUint32();
-	const intensity = reader.readUint32();
+	const blur = readUint32(reader);
+	const intensity = readUint32(reader);
 	const color = readColor(reader);
 	const blendMode = readBlendMode(reader);
-	const enabled = !!reader.readUint8();
-	const opacity = reader.readUint8();
+	const enabled = !!readUint8(reader);
+	const opacity = readUint8(reader);
 	const nativeColor = size >= 42 ? readColor(reader) : undefined;
 
 	return { blur, intensity, color, blendMode, enabled, opacity, nativeColor };
 }
 
 function readInnerGlowInfo(reader: PsdReader): LayerEffectsInnerGlowInfo {
-	const size = reader.readUint32();
-	const version = reader.readUint32();
+	const size = readUint32(reader);
+	const version = readUint32(reader);
 
 	if (size !== 33 && size !== 43)
 		throw new Error(`Invalid effects inner glow info size: ${size}`);
@@ -63,22 +66,22 @@ function readInnerGlowInfo(reader: PsdReader): LayerEffectsInnerGlowInfo {
 	if (version !== 0 && version !== 2)
 		throw new Error(`Invalid effects inner glow info version: ${version}`);
 
-	const blur = reader.readUint32();
-	const intensity = reader.readUint32();
+	const blur = readUint32(reader);
+	const intensity = readUint32(reader);
 	const color = readColor(reader);
 	const blendMode = readBlendMode(reader);
-	const enabled = !!reader.readUint8();
-	const opacity = reader.readUint8();
+	const enabled = !!readUint8(reader);
+	const opacity = readUint8(reader);
 
-	const invert = size >= 43 ? !!reader.readUint8() : undefined;
+	const invert = size >= 43 ? !!readUint8(reader) : undefined;
 	const nativeColor = size >= 43 ? readColor(reader) : undefined;
 
 	return { blur, intensity, color, blendMode, enabled, opacity, invert, nativeColor };
 }
 
 function readBevelInfo(reader: PsdReader): LayerEffectsBevelInfo {
-	const size = reader.readUint32();
-	const version = reader.readUint32();
+	const size = readUint32(reader);
+	const version = readUint32(reader);
 
 	if (size !== 58 && size !== 78)
 		throw new Error(`Invalid effects bevel info size: ${size}`);
@@ -86,19 +89,19 @@ function readBevelInfo(reader: PsdReader): LayerEffectsBevelInfo {
 	if (version !== 0 && version !== 2)
 		throw new Error(`Invalid effects bevel info version: ${version}`);
 
-	const angle = reader.readUint32();
-	const strength = reader.readUint32();
-	const blur = reader.readUint32();
+	const angle = readUint32(reader);
+	const strength = readUint32(reader);
+	const blur = readUint32(reader);
 	const highlightBlendMode = readBlendMode(reader);
 	const shadowBlendMode = readBlendMode(reader);
 	const highlightColor = readColor(reader);
 	const shadowColor = readColor(reader);
-	const bevelStyle = reader.readUint8();
-	const highlightOpacity = reader.readUint8();
-	const shadowOpacity = reader.readUint8();
-	const enabled = !!reader.readUint8();
-	const useAngleInAllEffects = !!reader.readUint8();
-	const up = !!reader.readUint8();
+	const bevelStyle = readUint8(reader);
+	const highlightOpacity = readUint8(reader);
+	const shadowOpacity = readUint8(reader);
+	const enabled = !!readUint8(reader);
+	const useAngleInAllEffects = !!readUint8(reader);
+	const up = !!readUint8(reader);
 
 	const realHighlightColor = size >= 78 ? readColor(reader) : undefined;
 	const realShadowColor = size >= 78 ? readColor(reader) : undefined;
@@ -111,8 +114,8 @@ function readBevelInfo(reader: PsdReader): LayerEffectsBevelInfo {
 }
 
 function readSolidFillInfo(reader: PsdReader): LayerEffectsSolidFillInfo {
-	const size = reader.readUint32();
-	const version = reader.readUint32();
+	const size = readUint32(reader);
+	const version = readUint32(reader);
 
 	if (size !== 34)
 		throw new Error(`Invalid effects solid fill info size: ${size}`);
@@ -122,32 +125,32 @@ function readSolidFillInfo(reader: PsdReader): LayerEffectsSolidFillInfo {
 
 	const blendMode = readBlendMode(reader);
 	const color = readColor(reader);
-	const opacity = reader.readUint8();
-	const enabled = !!reader.readUint8();
+	const opacity = readUint8(reader);
+	const enabled = !!readUint8(reader);
 	const nativeColor = readColor(reader);
 
 	return { blendMode, color, opacity, enabled, nativeColor };
 }
 
 export function readEffects(reader: PsdReader) {
-	const version = reader.readUint16();
+	const version = readUint16(reader);
 
 	if (version !== 0)
 		throw new Error(`Invalid effects layer version: ${version}`);
 
-	const effectsCount = reader.readUint16();
+	const effectsCount = readUint16(reader);
 	const effects: LayerEffectsInfo = <any>{};
 
 	for (let i = 0; i < effectsCount; i++) {
-		reader.checkSignature('8BIM');
-		const type = reader.readSignature();
+		checkSignature(reader, '8BIM');
+		const type = readSignature(reader);
 
 		switch (type) {
 			case 'cmnS': // common state (see See Effects layer, common state info)
-				const size = reader.readUint32();
-				const version = reader.readUint32();
-				const visible = !!reader.readUint8();
-				reader.skip(2);
+				const size = readUint32(reader);
+				const version = readUint32(reader);
+				const visible = !!readUint8(reader);
+				skipBytes(reader, 2);
 
 				if (size !== 7 || version !== 0 || !visible)
 					throw new Error(`Invalid effects common state`);

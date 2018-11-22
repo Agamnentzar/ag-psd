@@ -91,8 +91,9 @@
 /* istanbul ignore next */
 export function getImageResourceName(id: number) {
 	for (let r of imageResources) {
-		if (r[1] === id)
+		if (r[1] === id) {
 			return r[2];
+		}
 	}
 
 	return 'Invalid image Resource';

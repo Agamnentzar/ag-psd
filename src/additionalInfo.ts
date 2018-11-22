@@ -1,8 +1,14 @@
 import { readEffects, writeEffects } from './effectsHelpers';
 import { readColor, toArray } from './helpers';
 import { LayerAdditionalInfo } from './psd';
-import { PsdReader } from './psdReader';
-import { PsdWriter } from './psdWriter';
+import {
+	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
+	readBytes
+} from './psdReader';
+import {
+	PsdWriter, writeZeros, writeUnicodeString, writeSignature, writeBytes, writeUint32, writeUint16,
+	writeFloat64, writeUint8
+} from './psdWriter';
 
 export interface InfoHandler {
 	key: string;
@@ -14,7 +20,13 @@ export interface InfoHandler {
 const handlers: InfoHandler[] = [];
 const handlersMap: { [key: string]: InfoHandler } = {};
 
-function addHandler(handler: InfoHandler) {
+function addHandler(
+	key: string,
+	has: (target: LayerAdditionalInfo) => boolean,
+	read: (reader: PsdReader, target: LayerAdditionalInfo, left: () => number) => void,
+	write: (writer: PsdWriter, target: LayerAdditionalInfo) => void,
+) {
+	const handler: InfoHandler = { key, has, read, write };
 	handlers.push(handler);
 	handlersMap[handler.key] = handler;
 }
@@ -27,255 +39,255 @@ export function getHandlers() {
 	return handlers;
 }
 
-addHandler({
-	key: 'luni',
-	has: target => typeof target.name !== 'undefined',
-	read: (reader, target, left) => {
-		target.name = reader.readUnicodeString();
-		reader.skip(left()); // TEMP: skipping
+addHandler(
+	'luni',
+	target => typeof target.name !== 'undefined',
+	(reader, target, left) => {
+		target.name = readUnicodeString(reader);
+		skipBytes(reader, left()); // TEMP: skipping
 	},
-	write: (writer, target) => {
-		writer.writeUnicodeString(target.name!);
+	(writer, target) => {
+		writeUnicodeString(writer, target.name!);
 	}
-});
+);
 
-addHandler({
-	key: 'lnsr',
-	has: target => typeof target.nameSource !== 'undefined',
-	read: (reader, target) => target.nameSource = reader.readSignature(),
-	write: (writer, target) => writer.writeSignature(target.nameSource!),
-});
+addHandler(
+	'lnsr',
+	target => typeof target.nameSource !== 'undefined',
+	(reader, target) => target.nameSource = readSignature(reader),
+	(writer, target) => writeSignature(writer, target.nameSource!),
+);
 
-addHandler({
-	key: 'lyid',
-	has: target => typeof target.id !== 'undefined',
-	read: (reader, target) => target.id = reader.readUint32(),
-	write: (writer, target) => writer.writeUint32(target.id!),
-});
+addHandler(
+	'lyid',
+	target => typeof target.id !== 'undefined',
+	(reader, target) => target.id = readUint32(reader),
+	(writer, target) => writeUint32(writer, target.id!),
+);
 
-addHandler({
-	key: 'clbl',
-	has: target => typeof target.blendClippendElements !== 'undefined',
-	read: (reader, target) => {
-		target.blendClippendElements = !!reader.readUint8();
-		reader.skip(3);
+addHandler(
+	'clbl',
+	target => typeof target.blendClippendElements !== 'undefined',
+	(reader, target) => {
+		target.blendClippendElements = !!readUint8(reader);
+		skipBytes(reader, 3);
 	},
-	write: (writer, target) => {
-		writer.writeUint8(target.blendClippendElements ? 1 : 0);
-		writer.writeZeros(3);
+	(writer, target) => {
+		writeUint8(writer, target.blendClippendElements ? 1 : 0);
+		writeZeros(writer, 3);
 	},
-});
+);
 
-addHandler({
-	key: 'infx',
-	has: target => typeof target.blendInteriorElements !== 'undefined',
-	read: (reader, target) => {
-		target.blendInteriorElements = !!reader.readUint8();
-		reader.skip(3);
+addHandler(
+	'infx',
+	target => typeof target.blendInteriorElements !== 'undefined',
+	(reader, target) => {
+		target.blendInteriorElements = !!readUint8(reader);
+		skipBytes(reader, 3);
 	},
-	write: (writer, target) => {
-		writer.writeUint8(target.blendInteriorElements ? 1 : 0);
-		writer.writeZeros(3);
+	(writer, target) => {
+		writeUint8(writer, target.blendInteriorElements ? 1 : 0);
+		writeZeros(writer, 3);
 	},
-});
+);
 
-addHandler({
-	key: 'knko',
-	has: target => typeof target.knockout !== 'undefined',
-	read: (reader, target) => {
-		target.knockout = !!reader.readUint8();
-		reader.skip(3);
+addHandler(
+	'knko',
+	target => typeof target.knockout !== 'undefined',
+	(reader, target) => {
+		target.knockout = !!readUint8(reader);
+		skipBytes(reader, 3);
 	},
-	write: (writer, target) => {
-		writer.writeUint8(target.knockout ? 1 : 0);
-		writer.writeZeros(3);
+	(writer, target) => {
+		writeUint8(writer, target.knockout ? 1 : 0);
+		writeZeros(writer, 3);
 	},
-});
+);
 
-addHandler({
-	key: 'lspf',
-	has: target => typeof target.protected !== 'undefined',
-	read: (reader, target) => {
-		const flags = reader.readUint32();
+addHandler(
+	'lspf',
+	target => typeof target.protected !== 'undefined',
+	(reader, target) => {
+		const flags = readUint32(reader);
 		target.protected = {
 			transparency: (flags & 0x01) !== 0,
 			composite: (flags & 0x02) !== 0,
 			position: (flags & 0x04) !== 0,
 		};
 	},
-	write: (writer, target) => {
+	(writer, target) => {
 		const flags =
 			(target.protected!.transparency ? 0x01 : 0) |
 			(target.protected!.composite ? 0x02 : 0) |
 			(target.protected!.position ? 0x04 : 0);
 
-		writer.writeUint32(flags);
+		writeUint32(writer, flags);
 	},
-});
+);
 
-addHandler({
-	key: 'lclr',
-	has: target => typeof target.sheetColors !== 'undefined',
-	read: (reader, target) => {
+addHandler(
+	'lclr',
+	target => typeof target.sheetColors !== 'undefined',
+	(reader, target) => {
 		target.sheetColors = {
-			color1: reader.readUint32(),
-			color2: reader.readUint32(),
+			color1: readUint32(reader),
+			color2: readUint32(reader),
 		};
 	},
-	write: (writer, target) => {
-		writer.writeUint32(target.sheetColors!.color1);
-		writer.writeUint32(target.sheetColors!.color2);
+	(writer, target) => {
+		writeUint32(writer, target.sheetColors!.color1);
+		writeUint32(writer, target.sheetColors!.color2);
 	},
-});
+);
 
-addHandler({
-	key: 'fxrp',
-	has: target => typeof target.referencePoint !== 'undefined',
-	read: (reader, target) => {
+addHandler(
+	'fxrp',
+	target => typeof target.referencePoint !== 'undefined',
+	(reader, target) => {
 		target.referencePoint = {
-			x: reader.readFloat64(),
-			y: reader.readFloat64(),
+			x: readFloat64(reader),
+			y: readFloat64(reader),
 		};
 	},
-	write: (writer, target) => {
-		writer.writeFloat64(target.referencePoint!.x);
-		writer.writeFloat64(target.referencePoint!.y);
+	(writer, target) => {
+		writeFloat64(writer, target.referencePoint!.x);
+		writeFloat64(writer, target.referencePoint!.y);
 	},
-});
+);
 
-addHandler({
-	key: 'lsct',
-	has: target => typeof target.sectionDivider !== 'undefined',
-	read: (reader, target, left) => {
+addHandler(
+	'lsct',
+	target => typeof target.sectionDivider !== 'undefined',
+	(reader, target, left) => {
 		const item: any = {};
 
-		item.type = reader.readUint32();
+		item.type = readUint32(reader);
 
 		if (left()) {
-			const signature = reader.readSignature();
+			const signature = readSignature(reader);
 
 			if (signature !== '8BIM')
 				throw new Error(`Invalid signature: '${signature}'`);
 
-			item.key = reader.readSignature();
+			item.key = readSignature(reader);
 		}
 
 		if (left()) {
 			// 0 = normal
 			// 1 = scene group, affects the animation timeline.
-			item.subType = reader.readUint32();
+			item.subType = readUint32(reader);
 		}
 
 		target.sectionDivider = item;
 	},
-	write: (writer, target) => {
-		writer.writeUint32(target.sectionDivider!.type);
+	(writer, target) => {
+		writeUint32(writer, target.sectionDivider!.type);
 
 		if (target.sectionDivider!.key) {
-			writer.writeSignature('8BIM');
-			writer.writeSignature(target.sectionDivider!.key!);
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, target.sectionDivider!.key!);
 
 			if (typeof target.sectionDivider!.subtype !== 'undefined')
-				writer.writeUint32(target.sectionDivider!.subtype!);
+				writeUint32(writer, target.sectionDivider!.subtype!);
 		}
 	},
-});
+);
 
-addHandler({
-	key: 'FMsk',
-	has: target => typeof target.filterMask !== 'undefined',
-	read: (reader, target) => {
+addHandler(
+	'FMsk',
+	target => typeof target.filterMask !== 'undefined',
+	(reader, target) => {
 		target.filterMask = {
 			colorSpace: readColor(reader),
-			opacity: reader.readUint16(),
+			opacity: readUint16(reader),
 		};
 	},
-	write: (writer, target) => {
-		writer.writeBytes(new Uint8Array(target.filterMask!.colorSpace));
-		writer.writeUint16(target.filterMask!.opacity);
+	(writer, target) => {
+		writeBytes(writer, new Uint8Array(target.filterMask!.colorSpace));
+		writeUint16(writer, target.filterMask!.opacity);
 	},
-});
+);
 
-addHandler({
-	key: 'shmd',
-	has: target => typeof target.metadata !== 'undefined',
-	read: (reader, target) => {
-		const count = reader.readUint32();
+addHandler(
+	'shmd',
+	target => typeof target.metadata !== 'undefined',
+	(reader, target) => {
+		const count = readUint32(reader);
 		target.metadata = [];
 
 		for (let i = 0; i < count; i++) {
-			const signature = reader.readSignature();
+			const signature = readSignature(reader);
 
 			if (signature !== '8BIM')
 				throw new Error(`Invalid signature: '${signature}'`);
 
-			const key = reader.readSignature();
-			const copy = !!reader.readUint8();
-			reader.skip(3);
-			const length = reader.readUint32();
-			const data = toArray(reader.readBytes(length));
+			const key = readSignature(reader);
+			const copy = !!readUint8(reader);
+			skipBytes(reader, 3);
+			const length = readUint32(reader);
+			const data = toArray(readBytes(reader, length));
 			target.metadata.push({ key, copy, data });
 		}
 	},
-	write: (writer, target) => {
-		writer.writeUint32(target.metadata!.length);
+	(writer, target) => {
+		writeUint32(writer, target.metadata!.length);
 
 		for (let i = 0; i < target.metadata!.length; i++) {
 			const item = target.metadata![i];
-			writer.writeSignature('8BIM');
-			writer.writeSignature(item.key);
-			writer.writeUint8(item.copy ? 1 : 0);
-			writer.writeZeros(3);
-			writer.writeUint32(item.data.length);
-			writer.writeBytes(new Uint8Array(item.data));
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, item.key);
+			writeUint8(writer, item.copy ? 1 : 0);
+			writeZeros(writer, 3);
+			writeUint32(writer, item.data.length);
+			writeBytes(writer, new Uint8Array(item.data));
 		}
 	},
-});
+);
 
-addHandler({
-	key: 'lyvr',
-	has: target => typeof target.version !== 'undefined',
-	read: (reader, target) => {
-		target.version = reader.readUint32();
+addHandler(
+	'lyvr',
+	target => typeof target.version !== 'undefined',
+	(reader, target) => {
+		target.version = readUint32(reader);
 	},
-	write: (writer, target) => {
-		writer.writeUint32(target.version!);
+	(writer, target) => {
+		writeUint32(writer, target.version!);
 	},
-});
+);
 
-addHandler({
-	key: 'lrFX',
-	has: target => typeof target.effects !== 'undefined',
-	read: (reader, target, left) => {
+addHandler(
+	'lrFX',
+	target => typeof target.effects !== 'undefined',
+	(reader, target, left) => {
 		target.effects = readEffects(reader);
-		reader.skip(left()); // TEMP: skipping
+		skipBytes(reader, left()); // TEMP: skipping
 	},
-	write: (writer, target) => {
+	(writer, target) => {
 		writeEffects(writer, target.effects!);
 	},
-});
+);
 
 // function readStringOrClassId(reader: PsdReader) {
 // 	const text = reader.readUnicodeString();
-// 	return text.length === 0 ? reader.readSignature() : text;
+// 	return text.length === 0 ? readSignature(reader) : text;
 // }
 
 // function readStringOrClassId2(reader: PsdReader) {
 // 	const text = reader.readPascalString();
-// 	return text.length === 0 ? reader.readSignature() : text;
+// 	return text.length === 0 ? readSignature(reader) : text;
 // }
 
-addHandler({
-	key: 'lfx2',
-	has: target => typeof target.objectBasedEffectsLayerInfo !== 'undefined',
-	read: (reader, _target, left) => {
-		reader.skip(left());
-		// const version = reader.readUint32();
-		// const descriptorVersion = reader.readUint32();
+addHandler(
+	'lfx2',
+	target => typeof target.objectBasedEffectsLayerInfo !== 'undefined',
+	(reader, _target, left) => {
+		skipBytes(reader, left());
+		// const version = readUint32(reader);
+		// const descriptorVersion = readUint32(reader);
 
 		// const name = reader.readUnicodeString();
 		// const classId = readStringOrClassId(reader);
-		// const itemsCount = reader.readUint32();
+		// const itemsCount = readUint32(reader);
 
 		//for (let i = 0; i < itemsCount; i++) {
 		//	console.log('read item');
@@ -294,7 +306,7 @@ addHandler({
 		//	},
 		//};
 	},
-	write: (_writer, _target) => {
+	(_writer, _target) => {
 		//...
 	},
-});
+);

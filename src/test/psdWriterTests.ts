@@ -2,12 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
-import { loadCanvasFromFile, toBuffer, compareBuffers, createCanvas } from './common';
+import { loadCanvasFromFile, compareBuffers, createCanvas } from './common';
 import { Psd } from '../psd';
-import { ArrayBufferPsdWriter } from '../arrayBufferPsdWriter';
-import { BufferPsdWriter } from '../bufferPsdWriter';
-import { BufferPsdReader } from '../bufferPsdReader';
-import { PsdWriter } from '../psdWriter';
+import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
+import { readPsd, createReader } from '../psdReader';
 
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
@@ -24,59 +22,25 @@ function loadPsdFromFile(basePath: string) {
 }
 
 describe('PsdWriter', () => {
-	it('should throw exceptions for all read methods in base class', () => {
-		const writer = new PsdWriter();
-		expect(() => writer.writeInt8(0), 'writeInt8').throw('Not implemented');
-		expect(() => writer.writeUint8(0), 'writeUint8').throw('Not implemented');
-		expect(() => writer.writeInt16(0), 'writeInt16').throw('Not implemented');
-		expect(() => writer.writeUint16(0), 'writeUint16').throw('Not implemented');
-		expect(() => writer.writeInt32(0), 'writeInt32').throw('Not implemented');
-		expect(() => writer.writeUint32(0), 'writeUint32').throw('Not implemented');
-		expect(() => writer.writeFloat32(0), 'writeFloat32').throw('Not implemented');
-		expect(() => writer.writeFloat64(0), 'writeFloat64').throw('Not implemented');
-		expect(() => writer.writeBytes(undefined), 'writeBytes').throw('Not implemented');
-	});
-
-	[ArrayBufferPsdWriter, BufferPsdWriter].forEach(Writer => {
-		it(`should work for all overloaded methods (${(<any>Writer).name})`, () => {
-			const writer = new Writer();
-			writer.writeInt8(0);
-			writer.writeUint8(0);
-			writer.writeInt16(0);
-			writer.writeUint16(0);
-			writer.writeInt32(0);
-			writer.writeUint32(0);
-			writer.writeFloat32(0);
-			writer.writeFloat64(0);
-			writer.writeBytes(undefined);
-			writer.writeBytes(new Uint8Array([1, 2, 3, 4]));
-		});
-	});
-
-	it('should not throw if passed undefined buffer', () => {
-		const writer = new PsdWriter();
-		writer.writeBuffer(undefined);
-	});
-
-	it('should not throw if writing psd with empty canvas', () => {
-		const writer = new BufferPsdWriter();
+	it('does not throw if writing psd with empty canvas', () => {
+		const writer = createWriter();
 		const psd: Psd = {
 			width: 300,
 			height: 200
 		};
 
-		writer.writePsd(psd);
+		writePsd(writer, psd);
 	});
 
-	it('should throw if passed invalid signature', () => {
-		const writer = new PsdWriter();
+	it('throws if passed invalid signature', () => {
+		const writer = createWriter();
 
 		for (const s of [undefined, null, 'a', 'ab', 'abcde'])
-			expect(() => writer.writeSignature(s as any), s as any).throw(`Invalid signature: '${s}'`);
+			expect(() => writeSignature(writer, s as any), s as any).throw(`Invalid signature: '${s}'`);
 	});
 
-	it('should throw exception if has layer with both children and canvas properties set', () => {
-		const writer = new BufferPsdWriter();
+	it('throws exception if has layer with both children and canvas properties set', () => {
+		const writer = createWriter();
 		const psd: Psd = {
 			width: 300,
 			height: 200,
@@ -88,45 +52,40 @@ describe('PsdWriter', () => {
 			]
 		};
 
-		expect(() => writer.writePsd(psd)).throw(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
+		expect(() => writePsd(writer, psd)).throw(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
 	});
 
-	it('should throw if psd has invalid width or height', () => {
-		const writer = new PsdWriter();
+	it('throws if psd has invalid width or height', () => {
+		const writer = createWriter();
 		const psd: Psd = {
 			width: -5,
 			height: 0,
 		};
 
-		expect(() => writer.writePsd(psd)).throw(`Invalid document size`);
+		expect(() => writePsd(writer, psd)).throw(`Invalid document size`);
 	});
 
 	fs.readdirSync(writeFilesPath).forEach(f => {
-		it(`should properly write PSD file (${f})`, () => {
+		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);
 			const psd = loadPsdFromFile(basePath);
 
-			const writer1 = new ArrayBufferPsdWriter(2048);
-			const writer2 = new BufferPsdWriter(2048);
+			const writer = createWriter(2048);
 
-			writer1.writePsd(psd);
-			writer2.writePsd(psd);
+			writePsd(writer, psd);
 
-			const buffer1 = toBuffer(writer1.getBuffer());
-			const buffer2 = writer2.getBuffer();
+			const buffer = new Buffer(getWriterBuffer(writer));
 
 			mkdirp.sync(resultsFilesPath);
-			fs.writeFileSync(path.join(resultsFilesPath, f + '-arrayBuffer.psd'), buffer1);
-			fs.writeFileSync(path.join(resultsFilesPath, f + '-buffer.psd'), buffer2);
+			fs.writeFileSync(path.join(resultsFilesPath, f + '-arrayBuffer.psd'), buffer);
 
-			const reader = new BufferPsdReader(buffer2);
-			const result = reader.readPsd({ skipLayerImageData: true });
+			const reader = createReader(buffer.buffer);
+			const result = readPsd(reader, { skipLayerImageData: true });
 			fs.writeFileSync(path.join(resultsFilesPath, f + '-composite.png'), result.canvas!.toBuffer());
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
 
 			const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
-			compareBuffers(buffer1, expected, `ArrayBufferPsdWriter`);
-			compareBuffers(buffer2, expected, `BufferPsdWriter`);
+			compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
 		});
 	});
 });
