@@ -1,4 +1,4 @@
-﻿export const fromBlendMode: { [key: string]: string } = {};
+export const fromBlendMode: { [key: string]: string } = {};
 export const toBlendMode: { [key: string]: string } = {
 	'pass': 'pass through',
 	'norm': 'normal',

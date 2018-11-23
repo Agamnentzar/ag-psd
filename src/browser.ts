@@ -1,4 +1,4 @@
-﻿import { Psd, ReadOptions, WriteOptions } from './psd';
+import { Psd, ReadOptions, WriteOptions } from './psd';
 import { PsdWriter, writePsd as writerPsdInternal, getWriterBuffer, createWriter } from './psdWriter';
 import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
 export * from './psd';

@@ -1,4 +1,4 @@
-﻿interface HTMLCanvasElement {
+interface HTMLCanvasElement {
 	toBuffer(callback: (err: any, buffer: Buffer) => void): void;
 	toBuffer(): Buffer;
 }

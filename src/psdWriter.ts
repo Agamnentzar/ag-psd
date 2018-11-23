@@ -1,4 +1,4 @@
-﻿import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions } from './psd';
+import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions } from './psd';
 import { ChannelData, getChannels, writeDataRLE, hasAlpha } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';

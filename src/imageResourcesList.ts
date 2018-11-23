@@ -1,4 +1,4 @@
-﻿export const imageResources: [number, number, string][] = [
+export const imageResources: [number, number, string][] = [
 	[0x03E8, 1000, '(Obsolete--Photoshop 2.0 only) Contains five 2- byte values: number of channels, rows, columns, depth, and mode'],
 	[0x03E9, 1001, 'Macintosh print manager print info record'],
 	[0x03EB, 1003, '(Obsolete--Photoshop 2.0 only) Indexed color table'],

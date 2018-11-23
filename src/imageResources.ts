@@ -1,4 +1,4 @@
-﻿import { ImageResources } from './psd';
+import { ImageResources } from './psd';
 import { PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64 } from './psdReader';
 import { PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16 } from './psdWriter';
 
