@@ -1,5 +1,5 @@
 import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions } from './psd';
-import { ChannelData, getChannels, writeDataRLE, hasAlpha } from './helpers';
+import { ChannelData, getChannels, writeDataRLE, hasAlpha, createCanvas } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
 
@@ -86,9 +86,14 @@ export function writeUnicodeString(writer: PsdWriter, text: string) {
 	}
 }
 
-export function writePsd(writer: PsdWriter, psd: Psd, _options?: WriteOptions) {
+export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}) {
 	if (!(+psd.width > 0 && +psd.height > 0))
 		throw new Error('Invalid document size');
+
+	if (options.generateThumbnail) {
+		psd.imageResources = psd.imageResources || {};
+		psd.imageResources.thumbnail = createThumbnail(psd);
+	}
 
 	const canvas = psd.canvas;
 	const globalAlpha = !!canvas && hasAlpha(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height));
@@ -336,4 +341,28 @@ function addSize(writer: PsdWriter, size: number) {
 	const offset = writer.offset;
 	ensureSize(writer, writer.offset += size);
 	return offset;
+}
+
+function createThumbnail(psd: Psd) {
+	const canvas = createCanvas(10, 10);
+	let scale = 1;
+
+	if (psd.width > psd.height) {
+		canvas.width = 160;
+		canvas.height = Math.floor(psd.height * (canvas.width / psd.width));
+		scale = canvas.width / psd.width;
+	} else {
+		canvas.height = 160;
+		canvas.width = Math.floor(psd.width * (canvas.height / psd.height));
+		scale = canvas.height / psd.height;
+	}
+
+	const context = canvas.getContext('2d')!;
+	context.scale(scale, scale);
+
+	if (psd.canvas) {
+		context.drawImage(psd.canvas, 0, 0);
+	}
+
+	return canvas;
 }

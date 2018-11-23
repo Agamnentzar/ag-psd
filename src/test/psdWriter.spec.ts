@@ -10,7 +10,7 @@ import { readPsd, createReader } from '../psdReader';
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
 
-function loadPsdFromFile(basePath: string) {
+function loadPsdFromJSONAndPNGFiles(basePath: string) {
 	const psd: Psd = JSON.parse(fs.readFileSync(path.join(basePath, 'data.json'), 'utf8'));
 	psd.canvas = loadCanvasFromFile(path.join(basePath, 'canvas.png'));
 	psd.children!.forEach((l, i) => {
@@ -68,16 +68,15 @@ describe('PsdWriter', () => {
 	fs.readdirSync(writeFilesPath).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);
-			const psd = loadPsdFromFile(basePath);
-
+			const psd = loadPsdFromJSONAndPNGFiles(basePath);
 			const writer = createWriter(2048);
 
-			writePsd(writer, psd);
+			writePsd(writer, psd, { generateThumbnail: true });
 
 			const buffer = new Buffer(getWriterBuffer(writer));
 
 			mkdirp.sync(resultsFilesPath);
-			fs.writeFileSync(path.join(resultsFilesPath, f + '-arrayBuffer.psd'), buffer);
+			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
 
 			const reader = createReader(buffer.buffer);
 			const result = readPsd(reader, { skipLayerImageData: true });

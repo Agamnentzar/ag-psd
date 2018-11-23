@@ -1,6 +1,12 @@
 import { ImageResources } from './psd';
-import { PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64 } from './psdReader';
-import { PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16 } from './psdWriter';
+import {
+	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes
+} from './psdReader';
+import {
+	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes
+} from './psdWriter';
+import { createCanvasFromData } from './helpers';
+import { toByteArray } from 'base64-js';
 
 export interface ResourceHandler {
 	key: number;
@@ -309,25 +315,52 @@ addHandler(
 	},
 );
 
-//private writeThumbnailResource(thumb: HTMLCanvasElement) {
-// this.writeSignature('8BIM');
-// this.writeUint16(1036); // resource ID
-// this.writeUint16(0); // name (pascal string)
-// this.section(2,() => { // size
-//     this.writeUint32(0); // format (1 = kJpegRGB; 0 = kRawRGB)
-//     this.writeUint32(thumb.width); // width
-//     this.writeUint32(thumb.height); // height
-//     // Widthbytes: Padded row bytes = (width * bits per pixel + 31) / 32 * 4
-//     this.writeUint32((((thumb.width * 8 * 4 + 31) / 32) | 0) * 4);
-//     var compressedSizeOffset = writer.getOffset();
-//     this.writeUint32(0); // size after compression
-//     this.writeUint16(24); // bits per pixel
-//     this.writeUint16(1); // number of planes
-//     // TODO: actual JFIF thumbnail data here
-//
-//     const array = new Uint8Array(thumbData);
-//
-//     for (let i = 0; i < array.length; i++)
-//         this.writeUint8(array[i]);
-// });
-//}
+addHandler(
+	1036,
+	target => typeof target.thumbnail !== 'undefined',
+	(reader, target, left) => {
+		const format = readUint32(reader); // 1 = kJpegRGB, 0 = kRawRGB
+		const width = readUint32(reader);
+		const height = readUint32(reader);
+		const widthBytes = readUint32(reader); // = (width * bits_per_pixel + 31) / 32 * 4.
+		const totalSize = readUint32(reader); // = widthBytes * height * planes
+		const sizeAfterCompression = readUint32(reader);
+		const bitsPerPixel = readUint16(reader); // 24
+		const planes = readUint16(reader); // 1
+
+		if (format !== 1 || bitsPerPixel !== 24 || planes !== 1) {
+			console.log(`invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
+			skipBytes(reader, left());
+			return;
+		}
+
+		width;
+		height;
+		widthBytes;
+		totalSize;
+		sizeAfterCompression;
+
+		const size = left();
+		const bytes = readBytes(reader, size);
+		target.thumbnail = createCanvasFromData(bytes);
+	},
+	(writer, target) => {
+		const thumb = target.thumbnail!;
+		const data = toByteArray(thumb.toDataURL('image/jpeg').substr('data:image/jpeg;base64,'.length));
+		const bitsPerPixel = 24;
+		const widthBytes = (thumb.width * bitsPerPixel + 31) / 32 * 4;
+		const planes = 1;
+		const totalSize = widthBytes * thumb.height * planes;
+		const sizeAfterCompression = data.length;
+
+		writeUint32(writer, 1); // 1 = kJpegRGB
+		writeUint32(writer, thumb.width);
+		writeUint32(writer, thumb.height);
+		writeUint32(writer, widthBytes);
+		writeUint32(writer, totalSize);
+		writeUint32(writer, sizeAfterCompression);
+		writeUint16(writer, bitsPerPixel);
+		writeUint16(writer, planes);
+		writeBytes(writer, data);
+	},
+);

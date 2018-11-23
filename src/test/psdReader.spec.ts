@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
-import { readPsdFromFile, importPSD, importPSDImages, compareCanvases, saveCanvas } from './common';
+import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas } from './common';
 import { Layer } from '../psd';
 
 const readFilesPath = path.join(__dirname, '..', '..', 'test', 'read');
@@ -30,7 +30,7 @@ describe('PsdReader', () => {
 			const basePath = path.join(readFilesPath, f);
 			const psd = readPsdFromFile(path.join(basePath, 'src.psd'));
 			const expected = importPSD(basePath);
-			const images = importPSDImages(basePath);
+			const images = loadImagesFromDirectory(basePath);
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; }[] = [];
 
 			compare.push({ name: `canvas.png`, canvas: psd.canvas });
@@ -51,7 +51,14 @@ describe('PsdReader', () => {
 
 			pushLayerCanvases(psd.children || []);
 			mkdirp.sync(path.join(resultsFilesPath, f));
+
+			if (psd.imageResources && psd.imageResources.thumbnail) {
+				compare.push({ name: 'thumb.png', canvas: psd.imageResources.thumbnail });
+				delete psd.imageResources.thumbnail;
+			}
+
 			compare.forEach(i => saveCanvas(path.join(resultsFilesPath, f, i.name), i.canvas));
+
 			fs.writeFileSync(path.join(resultsFilesPath, f, 'data.json'), JSON.stringify(psd, null, 2), 'utf8');
 
 			clearEmptyCanvasFields(psd);

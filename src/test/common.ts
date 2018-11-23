@@ -13,7 +13,15 @@ export { createCanvas };
 
 const resultsPath = path.join(__dirname, '..', '..', 'results');
 
-initializeCanvas(createCanvas);
+function createCanvasFromData(data: Uint8Array) {
+	const image = new Image();
+	image.src = new Buffer(data);
+	const canvas = createCanvas(image.width, image.height);
+	canvas.getContext('2d')!.drawImage(image, 0, 0);
+	return canvas;
+}
+
+initializeCanvas(createCanvas, createCanvasFromData);
 
 export type ImageMap = { [key: string]: HTMLCanvasElement };
 
@@ -37,7 +45,7 @@ export function importPSD(dirName: string): Psd | undefined {
 	return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 }
 
-export function importPSDImages(dirName: string) {
+export function loadImagesFromDirectory(dirName: string) {
 	const images: ImageMap = {};
 
 	fs.readdirSync(dirName)

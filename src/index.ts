@@ -6,7 +6,9 @@ export * from './psd';
 export { PsdReader, PsdWriter };
 
 export function readPsd(buffer: Buffer | ArrayBuffer, options?: ReadOptions): Psd {
-	const reader = createReader('buffer' in buffer ? buffer.buffer : buffer);
+	const reader = 'buffer' in buffer ?
+		createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
+		createReader(buffer);
 	return readPsdInternal(reader, options);
 }
 

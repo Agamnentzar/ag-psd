@@ -228,6 +228,7 @@ export interface ImageResources {
 		verticalResolutionUnit: ResolutionUnit;
 		heightUnit: SizeUnit;
 	};
+	thumbnail?: HTMLCanvasElement;
 }
 
 export interface Layer extends LayerAdditionalInfo {
@@ -261,7 +262,9 @@ export interface Psd extends LayerAdditionalInfo {
 export interface ReadOptions {
 	skipLayerImageData?: boolean;
 	skipCompositeImageData?: boolean;
+	skipThumbnail?: boolean;
 }
 
 export interface WriteOptions {
+	generateThumbnail?: boolean;
 }

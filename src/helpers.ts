@@ -1,5 +1,6 @@
 import { PsdReader, readBytes, readUint16 } from './psdReader';
 import { Layer, ChannelID, Compression } from './psd';
+import { fromByteArray } from 'base64-js';
 
 export interface ChannelData {
 	channelId: ChannelID;
@@ -358,7 +359,11 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 }
 
 export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
-	throw new Error('Canvas not initialized, use initializeCanvas method to set up canvas creation method');
+	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');
+};
+
+export let createCanvasFromData: (data: Uint8Array) => HTMLCanvasElement = () => {
+	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvasFromData method');
 };
 
 if (typeof document !== 'undefined') {
@@ -368,8 +373,22 @@ if (typeof document !== 'undefined') {
 		canvas.height = height;
 		return canvas;
 	};
+
+	createCanvasFromData = (data) => {
+		const image = new Image();
+		image.src = 'data:image/jpeg;base64,' + fromByteArray(data);
+		const canvas = document.createElement('canvas');
+		canvas.width = image.width;
+		canvas.height = image.height;
+		canvas.getContext('2d')!.drawImage(image, 0, 0);
+		return canvas;
+	};
 }
 
-export function initializeCanvas(createCanvasMethod: (width: number, height: number) => HTMLCanvasElement) {
+export function initializeCanvas(
+	createCanvasMethod: (width: number, height: number) => HTMLCanvasElement,
+	createCanvasFromDataMethod?: (data: Uint8Array) => HTMLCanvasElement,
+) {
 	createCanvas = createCanvasMethod;
+	createCanvasFromData = createCanvasFromDataMethod || createCanvasFromData;
 }

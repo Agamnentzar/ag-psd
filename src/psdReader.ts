@@ -59,20 +59,18 @@ export function readBytes(reader: PsdReader, length: number) {
 	return new Uint8Array(reader.view.buffer, reader.offset - length, length);
 }
 
-export function createReader(buffer: ArrayBuffer) {
-	const view = new DataView(buffer);
-	const offset = 0;
-	return { view, offset };
+export function createReader(buffer: ArrayBuffer, offset?: number, length?: number) {
+	const view = new DataView(buffer, offset, length);
+	return { view, offset: 0 };
 }
 
-export function readPsd(reader: PsdReader, options?: ReadOptions) {
-	const opt = options || {};
+export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	const psd = readHeader(reader);
 	readColorModeData(reader, psd);
-	readImageResources(reader, psd);
-	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!opt.skipLayerImageData);
+	readImageResources(reader, psd, options);
+	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!options.skipLayerImageData);
 	const hasChildren = psd.children && psd.children.length;
-	const skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || hasChildren);
+	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
 
 	if (!skipComposite) {
 		readImageData(reader, psd, globalAlpha);
@@ -155,15 +153,15 @@ function readColorModeData(reader: PsdReader, _psd: Psd) {
 	});
 }
 
-function readImageResources(reader: PsdReader, psd: Psd) {
+function readImageResources(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	readSection(reader, 1, left => {
 		while (left()) {
-			readImageResource(reader, psd);
+			readImageResource(reader, psd, options);
 		}
 	});
 }
 
-function readImageResource(reader: PsdReader, psd: Psd) {
+function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	checkSignature(reader, '8BIM');
 
 	const id = readUint16(reader);
@@ -171,12 +169,13 @@ function readImageResource(reader: PsdReader, psd: Psd) {
 
 	readSection(reader, 2, left => {
 		const handler = getResourceHandler(id, name);
+		const skip = id === 1036 && !!options.skipThumbnail;
 
 		if (!psd.imageResources) {
 			psd.imageResources = {};
 		}
 
-		if (handler) {
+		if (handler && !skip) {
 			handler.read(reader, psd.imageResources, left);
 		} else {
 			//console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
