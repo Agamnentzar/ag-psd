@@ -35,8 +35,9 @@ describe('PsdWriter', () => {
 	it('throws if passed invalid signature', () => {
 		const writer = createWriter();
 
-		for (const s of [undefined, null, 'a', 'ab', 'abcde'])
+		for (const s of [undefined, null, 'a', 'ab', 'abcde']) {
 			expect(() => writeSignature(writer, s as any), s as any).throw(`Invalid signature: '${s}'`);
+		}
 	});
 
 	it('throws exception if has layer with both children and canvas properties set', () => {
@@ -70,8 +71,13 @@ describe('PsdWriter', () => {
 			const basePath = path.join(writeFilesPath, f);
 			const psd = loadPsdFromJSONAndPNGFiles(basePath);
 			const writer = createWriter(2048);
+			const before = JSON.stringify(psd, replacer);
 
-			writePsd(writer, psd, { generateThumbnail: true });
+			writePsd(writer, psd, { generateThumbnail: true, trimImageData: true });
+
+			const after = JSON.stringify(psd, replacer);
+
+			expect(before).equal(after, 'psd object mutated');
 
 			const buffer = new Buffer(getWriterBuffer(writer));
 
@@ -88,3 +94,11 @@ describe('PsdWriter', () => {
 		});
 	});
 });
+
+function replacer(key: string, value: any) {
+	if (key === 'canvas') {
+		return '<canvas>';
+	} else {
+		return value;
+	}
+}

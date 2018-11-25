@@ -32,13 +32,13 @@ export const toBlendMode: { [key: string]: string } = {
 
 Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
 
-export enum ColorSpace {
-	RGB = 0,
-	HSB = 1,
-	CMYK = 2,
-	Lab = 7,
-	Grayscale = 8,
-}
+// export enum ColorSpace {
+// 	RGB = 0,
+// 	HSB = 1,
+// 	CMYK = 2,
+// 	Lab = 7,
+// 	Grayscale = 8,
+// }
 
 export enum ColorMode {
 	Bitmap = 0,
@@ -260,11 +260,17 @@ export interface Psd extends LayerAdditionalInfo {
 }
 
 export interface ReadOptions {
+	// does not load layer image data
 	skipLayerImageData?: boolean;
+	// does not load composite image data
 	skipCompositeImageData?: boolean;
+	// does not load thumbnail
 	skipThumbnail?: boolean;
 }
 
 export interface WriteOptions {
+	// automatically generates thumbnail from composite image
 	generateThumbnail?: boolean;
+	// trims transparent pixels from layer image data
+	trimImageData?: boolean;
 }

@@ -1,4 +1,4 @@
-import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions } from './psd';
+import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, ImageResources } from './psd';
 import { ChannelData, getChannels, writeDataRLE, hasAlpha, createCanvas } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
@@ -90,9 +90,10 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	if (!(+psd.width > 0 && +psd.height > 0))
 		throw new Error('Invalid document size');
 
+	let imageResources = psd.imageResources || {};
+
 	if (options.generateThumbnail) {
-		psd.imageResources = psd.imageResources || {};
-		psd.imageResources.thumbnail = createThumbnail(psd);
+		imageResources = { ...imageResources, thumbnail: createThumbnail(psd) };
 	}
 
 	const canvas = psd.canvas;
@@ -100,8 +101,8 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	writeHeader(writer, psd, globalAlpha);
 	writeColorModeData(writer, psd);
-	writeImageResources(writer, psd);
-	writeLayerAndMaskInfo(writer, psd, globalAlpha);
+	writeImageResources(writer, imageResources);
+	writeLayerAndMaskInfo(writer, psd, globalAlpha, options);
 	writeImageData(writer, psd, globalAlpha);
 }
 
@@ -151,32 +152,28 @@ function writeColorModeData(writer: PsdWriter, _psd: Psd) {
 	writeSection(writer, 1, () => { });
 }
 
-function writeImageResources(writer: PsdWriter, psd: Psd) {
+function writeImageResources(writer: PsdWriter, imageResources: ImageResources) {
 	writeSection(writer, 1, () => {
-		const imageResources = psd.imageResources;
-
-		if (imageResources) {
-			for (const handler of getImageResourceHandlers()) {
-				if (handler.has(imageResources)) {
-					writeSignature(writer, '8BIM');
-					writeUint16(writer, handler.key);
-					writePascalString(writer, '');
-					writeSection(writer, 2, () => handler.write(writer, imageResources));
-				}
+		for (const handler of getImageResourceHandlers()) {
+			if (handler.has(imageResources)) {
+				writeSignature(writer, '8BIM');
+				writeUint16(writer, handler.key);
+				writePascalString(writer, '');
+				writeSection(writer, 2, () => handler.write(writer, imageResources));
 			}
 		}
 	});
 }
 
-function writeLayerAndMaskInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean) {
+function writeLayerAndMaskInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: WriteOptions) {
 	writeSection(writer, 2, () => {
-		writeLayerInfo(writer, psd, globalAlpha);
+		writeLayerInfo(writer, psd, globalAlpha, options);
 		writeGlobalLayerMaskInfo(writer);
 		writeAdditionalLayerInfo(writer, psd);
 	});
 }
 
-function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean) {
+function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: WriteOptions) {
 	writeSection(writer, 2, () => {
 		const layers: Layer[] = [];
 
@@ -186,7 +183,7 @@ function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean) {
 			layers.push({});
 		}
 
-		const channels = layers.map((l, i) => getChannels(l, i === 0));
+		const channels = layers.map((l, i) => getChannels(l, i === 0, options));
 
 		writeInt16(writer, globalAlpha ? -layers.length : layers.length);
 		layers.forEach((l, i) => writeLayerRecord(writer, psd, l, channels[i]));
@@ -301,7 +298,7 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 		}
 
 		if (c.children) {
-			c.sectionDivider = {
+			const sectionDivider = {
 				type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
 				key: 'pass',
 				subtype: 0,
@@ -313,9 +310,9 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 				},
 			});
 			addChildren(layers, c.children);
-			layers.push(c);
+			layers.push({ ...c, sectionDivider });
 		} else {
-			layers.push(c);
+			layers.push({ ...c });
 		}
 	}
 }

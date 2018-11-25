@@ -1,5 +1,5 @@
 import { PsdReader, readBytes, readUint16 } from './psdReader';
-import { Layer, ChannelID, Compression } from './psd';
+import { Layer, ChannelID, Compression, WriteOptions } from './psd';
 import { fromByteArray } from 'base64-js';
 
 export interface ChannelData {
@@ -33,8 +33,9 @@ export function offsetForChannel(channelId: ChannelID) {
 export function toArray(value: Uint8Array) {
 	const result = new Array(value.length);
 
-	for (let i = 0; i < value.length; i++)
+	for (let i = 0; i < value.length; i++) {
 		result[i] = value[i];
+	}
 
 	return result;
 }
@@ -44,11 +45,12 @@ export function readColor(reader: PsdReader) {
 }
 
 export function hasAlpha(data: PixelData) {
-	const size = data.width * data.height;
+	const size = data.width * data.height * 4;
 
-	for (let i = 0; i < size; i++) {
-		if (data.data[i * 4 + 3] !== 255)
+	for (let i = 3; i < size; i += 4) {
+		if (data.data[i] !== 255) {
 			return true;
+		}
 	}
 
 	return false;
@@ -66,16 +68,18 @@ function trimData(data: PixelData) {
 
 	function isRowEmpty(y: number) {
 		for (let x = left; x < right; x++) {
-			if (!isEmpty(x, y))
+			if (!isEmpty(x, y)) {
 				return false;
+			}
 		}
 		return true;
 	}
 
 	function isColEmpty(x: number) {
 		for (let y = top; y < bottom; y++) {
-			if (!isEmpty(x, y))
+			if (!isEmpty(x, y)) {
 				return false;
+			}
 		}
 		return true;
 	}
@@ -92,44 +96,66 @@ function trimData(data: PixelData) {
 	return { top, left, right, bottom };
 }
 
-export function getChannels(layer: Layer, background: boolean) {
-	if (typeof layer.top === 'undefined') layer.top = 0;
-	if (typeof layer.left === 'undefined') layer.left = 0;
-	if (typeof layer.right === 'undefined') layer.right = layer.canvas ? layer.canvas.width : layer.left;
-	if (typeof layer.bottom === 'undefined') layer.bottom = layer.canvas ? layer.canvas.height : layer.top;
-
+export function getChannels(layer: Layer, background: boolean, options: WriteOptions) {
 	const canvas = layer.canvas;
-	let layerWidth = layer.right - layer.left;
-	let layerHeight = layer.bottom - layer.top;
-	let result: ChannelData[] = [{
-		channelId: ChannelID.Transparency,
-		compression: Compression.RawData,
-		buffer: undefined,
-		length: 2,
-	}];
 
-	if (!canvas || !layerWidth || !layerHeight)
-		return result;
-
-	const context = canvas.getContext('2d')!;
-	let data = context.getImageData(layer.left, layer.top, layerWidth, layerHeight);
-	const { left, top, right, bottom } = trimData(data);
-
-	if (left !== 0 || top !== 0 || right !== data.width || bottom !== data.height) {
-		layer.left += left;
-		layer.top += top;
-		layer.right -= (data.width - right);
-		layer.bottom -= (data.height - bottom);
-		layerWidth = layer.right - layer.left;
-		layerHeight = layer.bottom - layer.top;
-
-		if (!layerWidth || !layerHeight)
-			return result;
-
-		data = context.getImageData(layer.left, layer.top, layerWidth, layerHeight);
+	if (typeof layer.top === 'undefined') {
+		layer.top = 0;
 	}
 
-	result = [];
+	if (typeof layer.left === 'undefined') {
+		layer.left = 0;
+	}
+
+	if (typeof layer.right === 'undefined') {
+		layer.right = canvas ? canvas.width - layer.top : layer.left;
+	}
+
+	if (typeof layer.bottom === 'undefined') {
+		layer.bottom = canvas ? canvas.height - layer.left : layer.top;
+	}
+
+	const result: ChannelData[] = [
+		{
+			channelId: ChannelID.Transparency,
+			compression: Compression.RawData,
+			buffer: undefined,
+			length: 2,
+		}
+	];
+
+	if (!canvas)
+		return result;
+
+	let layerWidth = Math.min(layer.right - layer.left, canvas.width);
+	let layerHeight = Math.min(layer.bottom - layer.top, canvas.height);
+
+	if (!layerWidth || !layerHeight)
+		return result;
+
+	layer.right = layer.left + layerWidth;
+	layer.bottom = layer.top + layerHeight;
+
+	const context = canvas.getContext('2d')!;
+	let data = context.getImageData(0, 0, layerWidth, layerHeight);
+
+	if (options.trimImageData) {
+		const { left, top, right, bottom } = trimData(data);
+
+		if (left !== 0 || top !== 0 || right !== data.width || bottom !== data.height) {
+			layer.left += left;
+			layer.top += top;
+			layer.right -= (data.width - right);
+			layer.bottom -= (data.height - bottom);
+			layerWidth = layer.right - layer.left;
+			layerHeight = layer.bottom - layer.top;
+
+			if (!layerWidth || !layerHeight)
+				return result;
+
+			data = context.getImageData(left, top, layerWidth, layerHeight);
+		}
+	}
 
 	const channels = [
 		ChannelID.Red,
@@ -137,22 +163,21 @@ export function getChannels(layer: Layer, background: boolean) {
 		ChannelID.Blue,
 	];
 
-	if (!background || layerWidth !== canvas.width || layerHeight !== canvas.height || hasAlpha(data))
+	if (!background || hasAlpha(data)) {
 		channels.unshift(ChannelID.Transparency);
+	}
 
-	for (let channel of channels) {
+	return channels.map(channel => {
 		const offset = offsetForChannel(channel);
 		const buffer = writeDataRLE(data, layerWidth, layerHeight, [offset])!;
 
-		result.push({
+		return {
 			channelId: channel,
 			compression: Compression.RleCompressed,
 			buffer: buffer,
 			length: 2 + buffer.length,
-		});
-	}
-
-	return result;
+		};
+	});
 }
 
 export function resetCanvas(data: PixelData) {
@@ -189,8 +214,9 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 
 	const array = new Uint8Array(width * height);
 
-	for (let i = 0; i < array.length; i++)
+	for (let i = 0; i < array.length; i++) {
 		array[i] = data.data[i * 4 + offset];
+	}
 
 	return array;
 }
@@ -230,8 +256,9 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 			for (let x = 1; x < width; x++) {
 				let v = data[(p + x) * 4 + offset];
 
-				if (count === 2)
+				if (count === 2) {
 					same = last === v && last2 === v;
+				}
 
 				if (same && last !== v) {
 					length += 2;
@@ -268,14 +295,14 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 	const buffer = new Uint8Array(totalLength);
 	let o = 0;
 
-	for (let channel of channels) {
-		for (let length of channel.lengths) {
+	for (const channel of channels) {
+		for (const length of channel.lengths) {
 			buffer[o++] = (length >> 8) & 0xff;
 			buffer[o++] = length & 0xff;
 		}
 	}
 
-	for (let channel of channels) {
+	for (const channel of channels) {
 		for (let y = 0, p = 0; y < height; y++ , p += width) {
 			const line = channel.lines[y];
 			const offset = channel.offset;
@@ -291,8 +318,9 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 				} else {
 					buffer[o++] = line[i] - 1;
 
-					for (let j = 0; j < line[i]; j++)
+					for (let j = 0; j < line[i]; j++) {
 						buffer[o++] = data[(p + x + j) * 4 + offset];
+					}
 				}
 
 				x += line[i];
