@@ -97,14 +97,19 @@ export function loadCanvasFromFile(filePath: string) {
 }
 
 export function compareCanvases(expected: HTMLCanvasElement | undefined, actual: HTMLCanvasElement | undefined, name: string) {
+	const saveActual = () => fs.writeFileSync(path.join(resultsPath, 'failures', `${name}.png`), actual!.toBuffer());
+
 	if (expected === actual)
 		return;
 	if (!expected)
 		throw new Error(`Expected canvas is null (${name})`);
 	if (!actual)
 		throw new Error(`Actual canvas is null (${name})`);
-	if (expected.width !== actual.width || expected.height !== actual.height)
+
+	if (expected.width !== actual.width || expected.height !== actual.height) {
+		saveActual();
 		throw new Error(`Canvas size is different than expected (${name})`);
+	}
 
 	const expectedData = expected.getContext('2d')!.getImageData(0, 0, expected.width, expected.height);
 	const actualData = actual.getContext('2d')!.getImageData(0, 0, actual.width, actual.height);
@@ -112,6 +117,7 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 
 	for (let i = 0; i < length; i++) {
 		if (expectedData.data[i] !== actualData.data[i]) {
+			saveActual();
 			throw new Error(`Actual canvas different than expected (${name})`);
 		}
 	}

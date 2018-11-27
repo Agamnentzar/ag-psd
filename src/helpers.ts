@@ -56,48 +56,52 @@ export function hasAlpha(data: PixelData) {
 	return false;
 }
 
+function isRowEmpty({ data, width }: PixelData, y: number, left: number, right: number) {
+	const start = ((y * width + left) * 4 + 3) | 0;
+	const end = (start + (right - left) * 4) | 0;
+
+	for (let i = start; i < end; i = (i + 4) | 0) {
+		if (data[i] !== 0) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
+function isColEmpty({ data, width }: PixelData, x: number, top: number, bottom: number) {
+	const stride = (width * 4) | 0;
+	const start = (top * stride + x * 4 + 3) | 0;
+
+	for (let y = top, i = start; y < bottom; y++ , i = (i + stride) | 0) {
+		if (data[i] !== 0) {
+			return false;
+		}
+	}
+
+	return true;
+}
+
 function trimData(data: PixelData) {
 	let top = 0;
 	let left = 0;
 	let right = data.width;
 	let bottom = data.height;
 
-	function isEmpty(x: number, y: number) {
-		return data.data[(y * data.width + x) * 4 + 3] === 0;
-	}
-
-	function isRowEmpty(y: number) {
-		for (let x = left; x < right; x++) {
-			if (!isEmpty(x, y)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	function isColEmpty(x: number) {
-		for (let y = top; y < bottom; y++) {
-			if (!isEmpty(x, y)) {
-				return false;
-			}
-		}
-		return true;
-	}
-
-	while (top < bottom && isRowEmpty(top))
+	while (top < bottom && isRowEmpty(data, top, left, right))
 		top++;
-	while (bottom > top && isRowEmpty(bottom - 1))
+	while (bottom > top && isRowEmpty(data, bottom - 1, left, right))
 		bottom--;
-	while (left < right && isColEmpty(left))
+	while (left < right && isColEmpty(data, left, top, bottom))
 		left++;
-	while (right > left && isColEmpty(right - 1))
+	while (right > left && isColEmpty(data, right - 1, top, bottom))
 		right--;
 
 	return { top, left, right, bottom };
 }
 
 export function getChannels(layer: Layer, background: boolean, options: WriteOptions) {
-	const canvas = layer.canvas;
+	let canvas = layer.canvas;
 
 	if (typeof layer.top === 'undefined') {
 		layer.top = 0;
@@ -108,11 +112,19 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 	}
 
 	if (typeof layer.right === 'undefined') {
-		layer.right = canvas ? canvas.width - layer.top : layer.left;
+		layer.right = canvas ? canvas.width + layer.left : layer.left;
 	}
 
 	if (typeof layer.bottom === 'undefined') {
-		layer.bottom = canvas ? canvas.height - layer.left : layer.top;
+		layer.bottom = canvas ? canvas.height + layer.top : layer.top;
+	}
+
+	if (layer.right < layer.left) {
+		layer.right = layer.left;
+	}
+
+	if (layer.bottom < layer.top) {
+		layer.bottom = layer.top;
 	}
 
 	const result: ChannelData[] = [
@@ -127,8 +139,16 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 	if (!canvas)
 		return result;
 
-	let layerWidth = Math.min(layer.right - layer.left, canvas.width);
-	let layerHeight = Math.min(layer.bottom - layer.top, canvas.height);
+	let layerWidth = layer.right - layer.left;
+	let layerHeight = layer.bottom - layer.top;
+
+	if (options.trimImageData) {
+		layerWidth = Math.min(layerWidth, canvas.width);
+		layerHeight = Math.min(layerHeight, canvas.height);
+	} else if (layerWidth > canvas.width || layerHeight > canvas.height) {
+		canvas = createCanvas(layerWidth, layerHeight);
+		canvas.getContext('2d')!.drawImage(layer.canvas!, 0, 0);
+	}
 
 	if (!layerWidth || !layerHeight)
 		return result;
@@ -221,40 +241,45 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	return array;
 }
 
-export function readDataRaw(reader: PsdReader, data: PixelData | undefined, offset: number, width: number, height: number) {
+export function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset: number, width: number, height: number) {
 	const size = width * height;
 	const buffer = readBytes(reader, size);
 
-	if (data && offset < 4) {
-		for (let i = 0; i < size; i++) {
-			data.data[i * 4 + offset] = buffer[i];
+	if (pixelData && offset < 4) {
+		const data = pixelData.data;
+
+		for (let i = 0, p = offset | 0; i < size; i++ , p = (p + 4) | 0) {
+			data[p] = buffer[i];
 		}
 	}
 }
 
-export function writeDataRLE(imageData: PixelData, width: number, height: number, offsets: number[]) {
+// TODO: use scratch buffer (max possible size -> .slice(0, offset))
+export function writeDataRLE({ data }: PixelData, width: number, height: number, offsets: number[]) {
 	if (!width || !height)
 		return undefined;
 
-	const data = imageData.data;
-	const channels: { lengths: number[]; lines: number[][]; offset: number; }[] = [];
+	const stride = (4 * width) | 0;
+	const channels: { lines: number[][]; offset: number; }[] = [];
 	let totalLength = 0;
 
+	const lengthsBuffer = new Uint8Array(offsets.length * height * 2);
+	let o = 0;
+
 	for (let i = 0; i < offsets.length; i++) {
-		const lengths: number[] = [];
 		const lines: number[][] = [];
 		const offset = offsets[i];
 
-		for (let y = 0, p = 0; y < height; y++ , p += width) {
+		for (let y = 0, p = offset | 0; y < height; y++ , p = (p + stride) | 0) {
 			const line: number[] = [];
 			let length = 0;
 			let last2 = -1;
-			let last = data[p * 4 + offset];
+			let last = data[p];
 			let count = 1;
 			let same = false;
 
-			for (let x = 1; x < width; x++) {
-				let v = data[(p + x) * 4 + offset];
+			for (let x = 4 | 0; x < stride; x = (x + 4) | 0) {
+				let v = data[p + x];
 
 				if (count === 2) {
 					same = last === v && last2 === v;
@@ -283,34 +308,31 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 			}
 
 			length += same ? 2 : 1 + count;
+
 			line.push(count);
 			lines.push(line);
-			lengths.push(length);
+
+			lengthsBuffer[o++] = (length >> 8) & 0xff;
+			lengthsBuffer[o++] = length & 0xff;
+
 			totalLength += 2 + length;
 		}
 
-		channels.push({ lengths, lines, offset });
+		channels.push({ lines, offset });
 	}
 
 	const buffer = new Uint8Array(totalLength);
-	let o = 0;
+	buffer.set(lengthsBuffer);
 
-	for (const channel of channels) {
-		for (const length of channel.lengths) {
-			buffer[o++] = (length >> 8) & 0xff;
-			buffer[o++] = length & 0xff;
-		}
-	}
-
-	for (const channel of channels) {
-		for (let y = 0, p = 0; y < height; y++ , p += width) {
-			const line = channel.lines[y];
-			const offset = channel.offset;
+	for (const { offset, lines } of channels) {
+		for (let y = 0, p = offset | 0; y < height; y++ , p = (p + stride) | 0) {
+			const line = lines[y];
 			let x = 0;
 
 			for (let i = 0; i < line.length; i++) {
-				const v = data[(p + x) * 4 + offset];
-				const same = line[i] > 2 && v === data[(p + x + 1) * 4 + offset] && v === data[(p + x + 2) * 4 + offset];
+				const idx = (p + x * 4) | 0;
+				const v = data[idx];
+				const same = line[i] > 2 && v === data[(idx + 4) | 0] && v === data[(idx + 8) | 0];
 
 				if (same) {
 					buffer[o++] = 1 - line[i];
@@ -319,7 +341,7 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 					buffer[o++] = line[i] - 1;
 
 					for (let j = 0; j < line[i]; j++) {
-						buffer[o++] = data[(p + x + j) * 4 + offset];
+						buffer[o++] = data[(idx + j * 4) | 0];
 					}
 				}
 
@@ -331,7 +353,7 @@ export function writeDataRLE(imageData: PixelData, width: number, height: number
 	return buffer;
 }
 
-export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step: number, _width: number, height: number, offsets: number[]) {
+export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, step: number, _width: number, height: number, offsets: number[]) {
 	const lengths: number[][] = [];
 
 	for (let c = 0; c < offsets.length; c++) {
@@ -342,10 +364,13 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 		}
 	}
 
+	const data = pixelData && pixelData.data;
+
 	for (let c = 0; c < offsets.length; c++) {
 		const channelLengths = lengths[c];
 		const extra = c > 3 || offsets[c] > 3;
-		let p = offsets[c];
+		const readData = !!data && !extra;
+		let p = offsets[c] | 0;
 
 		for (let y = 0; y < height; y++) {
 			const length = channelLengths[y];
@@ -358,22 +383,28 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 					const value = buffer[++i];
 					header = 256 - header;
 
-					for (let j = 0; j <= header; j++) {
-						if (data && !extra) {
-							data.data[p] = value;
+					if (readData) {
+						for (let j = 0; j <= header; j++) {
+							data![p] = value;
+							p = (p + step) | 0;
 						}
-
-						p += step;
+					} else {
+						for (let j = 0; j <= header; j++) {
+							p = (p + step) | 0;
+						}
 					}
-				} else if (header < 128) {
-					for (let j = 0; j <= header; j++) {
-						i++;
-
-						if (data && !extra) {
-							data.data[p] = buffer[i];
+				} else { // header < 128
+					if (readData) {
+						for (let j = 0; j <= header; j++) {
+							i++;
+							data![p] = buffer[i];
+							p = (p + step) | 0;
 						}
-
-						p += step;
+					} else {
+						for (let j = 0; j <= header; j++) {
+							i++;
+							p = (p + step) | 0;
+						}
 					}
 				}
 
@@ -386,14 +417,17 @@ export function readDataRLE(reader: PsdReader, data: PixelData | undefined, step
 	}
 }
 
+/* istanbul ignore next */
 export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');
 };
 
+/* istanbul ignore next */
 export let createCanvasFromData: (data: Uint8Array) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvasFromData method');
 };
 
+/* istanbul ignore if */
 if (typeof document !== 'undefined') {
 	createCanvas = (width, height) => {
 		const canvas = document.createElement('canvas');

@@ -31,6 +31,10 @@ describe('helpers', () => {
 			expect(writeDataRaw({} as any, 0, 0, 100)).undefined;
 			expect(writeDataRaw({} as any, 0, 100, 0)).undefined;
 		});
+
+		it('writes data', () => {
+			writeDataRaw({ data: new Uint8ClampedArray(16 * 16 * 4), width: 16, height: 16 }, 0, 16, 16);
+		});
 	});
 
 	describe('writeDataRLE()', () => {
