@@ -1,18 +1,15 @@
-import { PsdReader, readBytes, readUint16 } from './psdReader';
+import { PsdReader, readBytes, readUint16, skipBytes } from './psdReader';
 import { Layer, ChannelID, Compression, WriteOptions } from './psd';
 import { fromByteArray } from 'base64-js';
 
 export interface ChannelData {
 	channelId: ChannelID;
 	compression: Compression;
-	buffer: ArrayBuffer | undefined;
+	buffer: Uint8Array | undefined;
 	length: number;
 }
 
-export interface PixelArray {
-	[index: number]: number;
-	length: number;
-}
+export type PixelArray = Uint8ClampedArray | Uint8Array;
 
 export interface PixelData {
 	data: PixelArray;
@@ -100,7 +97,17 @@ function trimData(data: PixelData) {
 	return { top, left, right, bottom };
 }
 
-export function getChannels(layer: Layer, background: boolean, options: WriteOptions) {
+export function getLayerDimentions(layer: Layer) {
+	const { canvas } = layer;
+
+	if (canvas && canvas.width && canvas.height) {
+		return { width: canvas.width, height: canvas.height };
+	} else {
+		return { width: 0, height: 0 };
+	}
+}
+
+export function getChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions): ChannelData[] {
 	let canvas = layer.canvas;
 
 	if (typeof layer.top === 'undefined') {
@@ -109,22 +116,6 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 
 	if (typeof layer.left === 'undefined') {
 		layer.left = 0;
-	}
-
-	if (typeof layer.right === 'undefined') {
-		layer.right = canvas ? canvas.width + layer.left : layer.left;
-	}
-
-	if (typeof layer.bottom === 'undefined') {
-		layer.bottom = canvas ? canvas.height + layer.top : layer.top;
-	}
-
-	if (layer.right < layer.left) {
-		layer.right = layer.left;
-	}
-
-	if (layer.bottom < layer.top) {
-		layer.bottom = layer.top;
 	}
 
 	const result: ChannelData[] = [
@@ -136,28 +127,19 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 		}
 	];
 
-	if (!canvas)
+	let { width, height } = getLayerDimentions(layer);
+
+	if (!canvas || !width || !height) {
+		layer.right = layer.left;
+		layer.bottom = layer.top;
 		return result;
-
-	let layerWidth = layer.right - layer.left;
-	let layerHeight = layer.bottom - layer.top;
-
-	if (options.trimImageData) {
-		layerWidth = Math.min(layerWidth, canvas.width);
-		layerHeight = Math.min(layerHeight, canvas.height);
-	} else if (layerWidth > canvas.width || layerHeight > canvas.height) {
-		canvas = createCanvas(layerWidth, layerHeight);
-		canvas.getContext('2d')!.drawImage(layer.canvas!, 0, 0);
 	}
 
-	if (!layerWidth || !layerHeight)
-		return result;
-
-	layer.right = layer.left + layerWidth;
-	layer.bottom = layer.top + layerHeight;
+	layer.right = layer.left + width;
+	layer.bottom = layer.top + height;
 
 	const context = canvas.getContext('2d')!;
-	let data = context.getImageData(0, 0, layerWidth, layerHeight);
+	let data = context.getImageData(0, 0, width, height);
 
 	if (options.trimImageData) {
 		const { left, top, right, bottom } = trimData(data);
@@ -167,13 +149,13 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 			layer.top += top;
 			layer.right -= (data.width - right);
 			layer.bottom -= (data.height - bottom);
-			layerWidth = layer.right - layer.left;
-			layerHeight = layer.bottom - layer.top;
+			width = layer.right - layer.left;
+			height = layer.bottom - layer.top;
 
-			if (!layerWidth || !layerHeight)
+			if (!width || !height)
 				return result;
 
-			data = context.getImageData(left, top, layerWidth, layerHeight);
+			data = context.getImageData(left, top, width, height);
 		}
 	}
 
@@ -189,7 +171,7 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 
 	return channels.map(channel => {
 		const offset = offsetForChannel(channel);
-		const buffer = writeDataRLE(data, layerWidth, layerHeight, [offset])!;
+		const buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
 
 		return {
 			channelId: channel,
@@ -200,14 +182,12 @@ export function getChannels(layer: Layer, background: boolean, options: WriteOpt
 	});
 }
 
-export function resetCanvas(data: PixelData) {
-	const size = data.width * data.height * 4;
+export function resetCanvas({ width, height, data }: PixelData) {
+	const size = (width * height) | 0;
+	const buffer = new Uint32Array(data.buffer);
 
-	for (let p = 0; p < size;) {
-		data.data[p++] = 0;
-		data.data[p++] = 0;
-		data.data[p++] = 0;
-		data.data[p++] = 255;
+	for (let p = 0; p < size; p = (p + 1) | 0) {
+		buffer[p] = 0xff000000;
 	}
 }
 
@@ -254,163 +234,147 @@ export function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined,
 	}
 }
 
-// TODO: use scratch buffer (max possible size -> .slice(0, offset))
-export function writeDataRLE({ data }: PixelData, width: number, height: number, offsets: number[]) {
+export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]) {
 	if (!width || !height)
 		return undefined;
 
 	const stride = (4 * width) | 0;
-	const channels: { lines: number[][]; offset: number; }[] = [];
-	let totalLength = 0;
 
-	const lengthsBuffer = new Uint8Array(offsets.length * height * 2);
-	let o = 0;
+	let ol = 0;
+	let o = (offsets.length * 2 * height) | 0;
 
-	for (let i = 0; i < offsets.length; i++) {
-		const lines: number[][] = [];
-		const offset = offsets[i];
+	for (const offset of offsets) {
+		for (let y = 0, p = offset | 0; y < height; y++) {
+			const strideStart = (y * stride) | 0;
+			const strideEnd = (strideStart + stride) | 0;
+			const lastIndex = (strideEnd + offset - 4) | 0;
+			const lastIndex2 = (lastIndex - 4) | 0;
+			const startOffset = o;
 
-		for (let y = 0, p = offset | 0; y < height; y++ , p = (p + stride) | 0) {
-			const line: number[] = [];
-			let length = 0;
-			let last2 = -1;
-			let last = data[p];
-			let count = 1;
-			let same = false;
+			for (p = (strideStart + offset) | 0; p < strideEnd; p = (p + 4) | 0) {
+				if (p < lastIndex2) {
+					let value1 = data[p];
+					p = (p + 4) | 0;
+					let value2 = data[p];
+					p = (p + 4) | 0;
+					let value3 = data[p];
 
-			for (let x = 4 | 0; x < stride; x = (x + 4) | 0) {
-				let v = data[p + x];
+					if (value1 === value2 && value1 === value3) {
+						let count = 3;
 
-				if (count === 2) {
-					same = last === v && last2 === v;
-				}
+						while (count < 128 && p < lastIndex && data[(p + 4) | 0] === value1) {
+							count = (count + 1) | 0;
+							p = (p + 4) | 0;
+						}
 
-				if (same && last !== v) {
-					length += 2;
-					line.push(count);
-					count = 0;
-					same = false;
-				} else if (!same && count > 2 && v === last && v === last2) {
-					length += count - 1;
-					line.push(count - 2);
-					count = 2;
-					same = true;
-				} else if (count === 128) {
-					length += same ? 2 : count + 1;
-					line.push(count);
-					count = 0;
-					same = false;
-				}
+						buffer[o++] = 1 - count;
+						buffer[o++] = value1;
+					} else {
+						const countIndex = o;
+						let writeLast = true;
+						let count = 1;
+						buffer[o++] = 0;
+						buffer[o++] = value1;
 
-				last2 = last;
-				last = v;
-				count++;
-			}
+						while (p < lastIndex && count < 128) {
+							p = (p + 4) | 0;
+							value1 = value2;
+							value2 = value3;
+							value3 = data[p];
 
-			length += same ? 2 : 1 + count;
+							if (value1 === value2 && value1 === value3) {
+								p = (p - 12) | 0;
+								writeLast = false;
+								break;
+							} else {
+								count++;
+								buffer[o++] = value1;
+							}
+						}
 
-			line.push(count);
-			lines.push(line);
+						if (writeLast) {
+							if (count < 127) {
+								buffer[o++] = value2;
+								buffer[o++] = value3;
+								count += 2;
+							} else if (count < 128) {
+								buffer[o++] = value2;
+								count++;
+								p = (p - 4) | 0;
+							} else {
+								p = (p - 8) | 0;
+							}
+						}
 
-			lengthsBuffer[o++] = (length >> 8) & 0xff;
-			lengthsBuffer[o++] = length & 0xff;
-
-			totalLength += 2 + length;
-		}
-
-		channels.push({ lines, offset });
-	}
-
-	const buffer = new Uint8Array(totalLength);
-	buffer.set(lengthsBuffer);
-
-	for (const { offset, lines } of channels) {
-		for (let y = 0, p = offset | 0; y < height; y++ , p = (p + stride) | 0) {
-			const line = lines[y];
-			let x = 0;
-
-			for (let i = 0; i < line.length; i++) {
-				const idx = (p + x * 4) | 0;
-				const v = data[idx];
-				const same = line[i] > 2 && v === data[(idx + 4) | 0] && v === data[(idx + 8) | 0];
-
-				if (same) {
-					buffer[o++] = 1 - line[i];
-					buffer[o++] = v;
-				} else {
-					buffer[o++] = line[i] - 1;
-
-					for (let j = 0; j < line[i]; j++) {
-						buffer[o++] = data[(idx + j * 4) | 0];
+						buffer[countIndex] = count - 1;
 					}
+				} else if (p === lastIndex) {
+					buffer[o++] = 0;
+					buffer[o++] = data[p];
+				} else { // p === lastIndex2
+					buffer[o++] = 1;
+					buffer[o++] = data[p];
+					p = (p + 4) | 0;
+					buffer[o++] = data[p];
 				}
-
-				x += line[i];
 			}
+
+			const length = o - startOffset;
+			buffer[ol++] = (length >> 8) & 0xff;
+			buffer[ol++] = length & 0xff;
 		}
 	}
 
-	return buffer;
+	return buffer.slice(0, o);
 }
 
-export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, step: number, _width: number, height: number, offsets: number[]) {
-	const lengths: number[][] = [];
+export function readDataRLE(
+	reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, step: number, offsets: number[]
+) {
+	const lengths = new Uint16Array(offsets.length * height);
+	const data = pixelData && pixelData.data;
 
-	for (let c = 0; c < offsets.length; c++) {
-		lengths[c] = [];
-
-		for (let y = 0; y < height; y++) {
-			lengths[c][y] = readUint16(reader);
+	for (let o = 0, li = 0; o < offsets.length; o++) {
+		for (let y = 0; y < height; y++ , li++) {
+			lengths[li] = readUint16(reader);
 		}
 	}
 
-	const data = pixelData && pixelData.data;
+	for (let c = 0, li = 0; c < offsets.length; c++) {
+		const offset = offsets[c] | 0;
+		const extra = c > 3 || offset > 3;
 
-	for (let c = 0; c < offsets.length; c++) {
-		const channelLengths = lengths[c];
-		const extra = c > 3 || offsets[c] > 3;
-		const readData = !!data && !extra;
-		let p = offsets[c] | 0;
+		if (!data || extra) {
+			for (let y = 0; y < height; y++ , li++) {
+				skipBytes(reader, lengths[li]);
+			}
+		} else {
+			for (let y = 0, p = offset | 0; y < height; y++ , li++) {
+				const length = lengths[li];
+				const buffer = readBytes(reader, length);
 
-		for (let y = 0; y < height; y++) {
-			const length = channelLengths[y];
-			const buffer = readBytes(reader, length);
+				for (let i = 0; i < length; i++) {
+					let header = buffer[i];
 
-			for (let i = 0; i < length; i++) {
-				let header = buffer[i];
+					if (header >= 128) {
+						const value = buffer[++i];
+						header = (256 - header) | 0;
 
-				if (header >= 128) {
-					const value = buffer[++i];
-					header = 256 - header;
-
-					if (readData) {
-						for (let j = 0; j <= header; j++) {
-							data![p] = value;
+						for (let j = 0; j <= header; j = (j + 1) | 0) {
+							data[p] = value;
 							p = (p + step) | 0;
 						}
-					} else {
-						for (let j = 0; j <= header; j++) {
-							p = (p + step) | 0;
-						}
-					}
-				} else { // header < 128
-					if (readData) {
-						for (let j = 0; j <= header; j++) {
-							i++;
-							data![p] = buffer[i];
-							p = (p + step) | 0;
-						}
-					} else {
-						for (let j = 0; j <= header; j++) {
-							i++;
+					} else { // header < 128
+						for (let j = 0; j <= header; j = (j + 1) | 0) {
+							data[p] = buffer[++i];
 							p = (p + step) | 0;
 						}
 					}
-				}
 
-				/* istanbul ignore if */
-				if (i >= length) {
-					throw new Error(`Exceeded buffer size ${i}/${length}`);
+					/* istanbul ignore if */
+					if (i >= length) {
+						throw new Error(`Invalid RLE data: exceeded buffer size ${i}/${length}`);
+					}
 				}
 			}
 		}

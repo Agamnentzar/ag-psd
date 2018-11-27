@@ -36,6 +36,30 @@ export function toArrayBuffer(buffer: Buffer) {
 	return ab;
 }
 
+export function repeat<T>(times: number, ...values: T[]): T[] {
+	if (!values.length) {
+		throw new Error('missing values');
+	}
+
+	const array: T[] = [];
+
+	for (let i = 0; i < times; i++) {
+		array.push(...values);
+	}
+
+	return array;
+}
+
+export function range(start: number, length: number): number[] {
+	const array: number[] = [];
+
+	for (let i = 0; i < length; i++) {
+		array.push(start + i);
+	}
+
+	return array;
+}
+
 export function importPSD(dirName: string): Psd | undefined {
 	const dataPath = path.join(dirName, 'data.json');
 
@@ -57,7 +81,7 @@ export function loadImagesFromDirectory(dirName: string) {
 
 export function readPsdFromFile(fileName: string, options?: ReadOptions): Psd {
 	const buffer = fs.readFileSync(fileName);
-	const reader = createReader(buffer.buffer);
+	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 	return readPsd(reader, options);
 }
 
@@ -97,7 +121,9 @@ export function loadCanvasFromFile(filePath: string) {
 }
 
 export function compareCanvases(expected: HTMLCanvasElement | undefined, actual: HTMLCanvasElement | undefined, name: string) {
-	const saveActual = () => fs.writeFileSync(path.join(resultsPath, 'failures', `${name}.png`), actual!.toBuffer());
+	const saveFailure = () => {
+		fs.writeFileSync(path.join(resultsPath, 'failures', `${name.replace(/[\\/]/, '-')}`), actual!.toBuffer());
+	};
 
 	if (expected === actual)
 		return;
@@ -107,7 +133,7 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 		throw new Error(`Actual canvas is null (${name})`);
 
 	if (expected.width !== actual.width || expected.height !== actual.height) {
-		saveActual();
+		saveFailure();
 		throw new Error(`Canvas size is different than expected (${name})`);
 	}
 
@@ -117,7 +143,7 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 
 	for (let i = 0; i < length; i++) {
 		if (expectedData.data[i] !== actualData.data[i]) {
-			saveActual();
+			saveFailure();
 			throw new Error(`Actual canvas different than expected (${name})`);
 		}
 	}

@@ -1,5 +1,5 @@
 import { Psd, Layer, ChannelID, ColorMode, toBlendMode, Compression, SectionDividerType, LayerAdditionalInfo, ReadOptions } from './psd';
-import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, PixelArray, createCanvas } from './helpers';
+import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, createCanvas } from './helpers';
 import { getHandler } from './additionalInfo';
 import { getHandler as getResourceHandler } from './imageResources';
 
@@ -339,8 +339,9 @@ function readLayerBlendingRanges(reader: PsdReader) {
 }
 
 function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[]) {
-	const layerWidth = layer.right! - layer.left!;
-	const layerHeight = layer.bottom! - layer.top!;
+	const layerWidth = (layer.right || 0) - (layer.left || 0);
+	const layerHeight = (layer.bottom || 0) - (layer.top || 0);
+
 	let canvas: HTMLCanvasElement | undefined;
 	let context: CanvasRenderingContext2D | undefined;
 	let data: ImageData | undefined;
@@ -364,7 +365,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		if (compression === Compression.RawData) {
 			readDataRaw(reader, data, offset, layerWidth, layerHeight);
 		} else if (compression === Compression.RleCompressed) {
-			readDataRLE(reader, data, 4, layerWidth, layerHeight, [offset]);
+			readDataRLE(reader, data, layerWidth, layerHeight, 4, [offset]);
 		} else {
 			throw new Error(`Compression type not supported: ${compression}`);
 		}
@@ -432,12 +433,15 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean) {
 	resetCanvas(data);
 
 	if (psd.colorMode === ColorMode.Bitmap) {
-		let bytes: PixelArray = [];
+		let bytes: Uint8Array;
 
 		if (compression === Compression.RawData) {
 			bytes = readBytes(reader, Math.ceil(psd.width / 8) * psd.height);
 		} else if (compression === Compression.RleCompressed) {
-			readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, 1, psd.width, psd.height, [0]);
+			bytes = new Uint8Array(psd.width * psd.height);
+			readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 1, [0]);
+		} else {
+			throw new Error(`Unsupported compression: ${compression}`);
 		}
 
 		decodeBitmap(bytes, data.data, psd.width, psd.height);
@@ -457,7 +461,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean) {
 				readDataRaw(reader, data, channels[i], psd.width, psd.height);
 			}
 		} else if (compression === Compression.RleCompressed) {
-			readDataRLE(reader, data, 4, psd.width, psd.height, channels);
+			readDataRLE(reader, data, psd.width, psd.height, 4, channels);
 		}
 
 		if (psd.colorMode === ColorMode.Grayscale) {

@@ -78,8 +78,8 @@ describe('PsdWriter', () => {
 	const fullImage = loadCanvasFromFile(path.join(layerImagesPath, 'full.png'));
 	const transparentImage = loadCanvasFromFile(path.join(layerImagesPath, 'transparent.png'));
 	const trimmedImage = loadCanvasFromFile(path.join(layerImagesPath, 'trimmed.png'));
-	const croppedImage = loadCanvasFromFile(path.join(layerImagesPath, 'cropped.png'));
-	const paddedImage = loadCanvasFromFile(path.join(layerImagesPath, 'padded.png'));
+	// const croppedImage = loadCanvasFromFile(path.join(layerImagesPath, 'cropped.png'));
+	// const paddedImage = loadCanvasFromFile(path.join(layerImagesPath, 'padded.png'));
 
 	describe('layer left, top, right, bottom handling', () => {
 		it('handles undefined left, top, right, bottom with layer image the same size as document', () => {
@@ -97,7 +97,7 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(fullImage, layer.canvas, 'full-layer-image');
+			compareCanvases(fullImage, layer.canvas, 'full-layer-image.png');
 			expect(layer.left).equal(0);
 			expect(layer.top).equal(0);
 			expect(layer.right).equal(300);
@@ -119,7 +119,7 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(fullImage, layer.canvas, 'oversized-layer-image');
+			compareCanvases(fullImage, layer.canvas, 'oversized-layer-image.png');
 			expect(layer.left).equal(0);
 			expect(layer.top).equal(0);
 			expect(layer.right).equal(300);
@@ -141,7 +141,7 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(trimmedImage, layer.canvas, 'smaller-layer-image');
+			compareCanvases(trimmedImage, layer.canvas, 'smaller-layer-image.png');
 			expect(layer.left).equal(0);
 			expect(layer.top).equal(0);
 			expect(layer.right).equal(192);
@@ -163,7 +163,7 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(transparentImage, layer.canvas, 'transparent-layer-image');
+			compareCanvases(transparentImage, layer.canvas, 'transparent-layer-image.png');
 			expect(layer.left).equal(0);
 			expect(layer.top).equal(0);
 			expect(layer.right).equal(300);
@@ -185,7 +185,7 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd, { trimImageData: true });
 
 			const layer = result.children![0];
-			compareCanvases(trimmedImage, layer.canvas, 'trimmed-layer-image');
+			compareCanvases(trimmedImage, layer.canvas, 'trimmed-layer-image.png');
 			expect(layer.left).equal(51);
 			expect(layer.top).equal(65);
 			expect(layer.right).equal(243);
@@ -209,14 +209,14 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(fullImage, layer.canvas, 'left-top-layer-image');
+			compareCanvases(fullImage, layer.canvas, 'left-top-layer-image.png');
 			expect(layer.left).equal(50);
 			expect(layer.top).equal(30);
 			expect(layer.right).equal(350);
 			expect(layer.bottom).equal(230);
 		});
 
-		it('crops layer to right/bottom values', () => {
+		it('ignores right/bottom values', () => {
 			const psd: Psd = {
 				width: 300,
 				height: 200,
@@ -233,14 +233,14 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(croppedImage, layer.canvas, 'cropped-layer-image');
+			compareCanvases(fullImage, layer.canvas, 'cropped-layer-image.png');
 			expect(layer.left).equal(0);
 			expect(layer.top).equal(0);
-			expect(layer.right).equal(200);
-			expect(layer.bottom).equal(100);
+			expect(layer.right).equal(300);
+			expect(layer.bottom).equal(200);
 		});
 
-		it('pads layer to right/bottom values', () => {
+		it('ignores larger right/bottom values', () => {
 			const psd: Psd = {
 				width: 300,
 				height: 200,
@@ -257,14 +257,14 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			compareCanvases(paddedImage, layer.canvas, 'padded-layer-image');
+			compareCanvases(fullImage, layer.canvas, 'padded-layer-image.png');
 			expect(layer.left).equal(0);
 			expect(layer.top).equal(0);
-			expect(layer.right).equal(400);
-			expect(layer.bottom).equal(250);
+			expect(layer.right).equal(300);
+			expect(layer.bottom).equal(200);
 		});
 
-		it('does not save layer image if left/top/right/bottom amount to empty picture', () => {
+		it('ignores right/bottom values if they do not match canvas size', () => {
 			const psd: Psd = {
 				width: 300,
 				height: 200,
@@ -283,14 +283,14 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			expect(layer.canvas).undefined;
+			compareCanvases(fullImage, layer.canvas, 'empty-layer-image.png');
 			expect(layer.left).equal(50);
 			expect(layer.top).equal(50);
-			expect(layer.right).equal(50);
-			expect(layer.bottom).equal(50);
+			expect(layer.right).equal(350);
+			expect(layer.bottom).equal(250);
 		});
 
-		it('does not save layer image if left/top/right/bottom values amount to negative size', () => {
+		it('ignores right/bottom values if they amount to negative size', () => {
 			const psd: Psd = {
 				width: 300,
 				height: 200,
@@ -309,11 +309,11 @@ describe('PsdWriter', () => {
 			const result = writeAndRead(psd);
 
 			const layer = result.children![0];
-			expect(layer.canvas).undefined;
+			compareCanvases(fullImage, layer.canvas, 'empty-layer-image.png');
 			expect(layer.left).equal(50);
 			expect(layer.top).equal(50);
-			expect(layer.right).equal(50);
-			expect(layer.bottom).equal(50);
+			expect(layer.right).equal(350);
+			expect(layer.bottom).equal(250);
 		});
 	});
 
