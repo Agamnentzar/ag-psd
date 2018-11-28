@@ -137,7 +137,7 @@ saveAs(blob, 'my-file.psd');
       "blendMode": "normal",
       "opacity": 255,
       "transparencyProtected": false,
-      "visible": true,
+      "hidden": true,
       "clipping": false,
       "name": "Layer 0",
       "canvas": [Canvas]
@@ -150,7 +150,7 @@ saveAs(blob, 'my-file.psd');
       "blendMode": "multiply",
       "opacity": 255,
       "transparencyProtected": true,
-      "visible": false,
+      "hidden": false,
       "clipping": false,
       "name": "Layer 3",
       "canvas": [Canvas]
