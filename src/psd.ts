@@ -182,6 +182,8 @@ export interface LayerAdditionalInfo {
 	}[];
 	effects?: LayerEffectsInfo;
 	objectBasedEffectsLayerInfo?: any;
+	// typeToolObjectSetting?: any;
+	// textEngineData?: number[];
 }
 
 export type ResolutionUnit = 'PPI' | 'PPCM';

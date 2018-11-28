@@ -4,6 +4,7 @@ import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas } from './common';
 import { Layer } from '../psd';
+import { readPsd } from '../index';
 
 const readFilesPath = path.join(__dirname, '..', '..', 'test', 'read');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
@@ -23,6 +24,17 @@ describe('PsdReader', () => {
 	it('skips layer image data', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { skipLayerImageData: true });
 		expect(psd.children![0].canvas).not.ok;
+	});
+
+	it('reads PSD from Buffer with offset', () => {
+		const file = fs.readFileSync(path.join(readFilesPath, 'layers', 'src.psd'));
+		const outer = Buffer.alloc(file.byteLength + 100);
+		file.copy(outer, 100);
+		const inner = Buffer.from(outer.buffer, 100, file.byteLength);
+
+		const psd = readPsd(inner);
+
+		expect(psd.width).equal(300);
 	});
 
 	fs.readdirSync(readFilesPath).forEach(f => {

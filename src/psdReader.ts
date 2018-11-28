@@ -56,7 +56,7 @@ export function readFloat64(reader: PsdReader) {
 
 export function readBytes(reader: PsdReader, length: number) {
 	reader.offset += length;
-	return new Uint8Array(reader.view.buffer, reader.offset - length, length);
+	return new Uint8Array(reader.view.buffer, reader.view.byteOffset + reader.offset - length, length);
 }
 
 export function createReader(buffer: ArrayBuffer, offset?: number, length?: number) {
@@ -99,7 +99,21 @@ export function readUnicodeString(reader: PsdReader) {
 	let text = '';
 
 	while (length--) {
-		text += String.fromCharCode(readUint16(reader));
+		const value = readUint16(reader);
+
+		if (value || length > 0) { // remove trailing \0
+			text += String.fromCharCode(value);
+		}
+	}
+
+	return text;
+}
+
+export function readAsciiString(reader: PsdReader, length: number) {
+	let text = '';
+
+	while (length--) {
+		text += String.fromCharCode(readUint8(reader));
 	}
 
 	return text;
@@ -192,6 +206,10 @@ function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolea
 		readGlobalLayerMaskInfo(reader);
 
 		while (left()) {
+			// while (left() && reader.view.getUint8(reader.offset) === 0) {
+			// 	reader.offset++;
+			// }
+
 			if (left() > 2) {
 				readAdditionalLayerInfo(reader, psd);
 			} else {
@@ -419,7 +437,7 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo)
 }
 
 function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean) {
-	const compression = <Compression>readUint16(reader);
+	const compression = readUint16(reader) as Compression;
 
 	if (supportedColorModes.indexOf(psd.colorMode!) === -1)
 		throw new Error(`Color mode not supported: ${psd.colorMode}`);

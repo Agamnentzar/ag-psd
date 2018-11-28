@@ -3,7 +3,7 @@ import { readColor, toArray } from './helpers';
 import { LayerAdditionalInfo } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes
+	readBytes, readAsciiString, readInt32
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeUnicodeString, writeSignature, writeBytes, writeUint32, writeUint16,
@@ -266,17 +266,67 @@ addHandler(
 		writeEffects(writer, target.effects!);
 	},
 );
+/*
+addHandler(
+	'TySh',
+	_target => false, // typeof target.effects !== 'undefined',
+	(reader, target) => {
+		const version = readUint16(reader);
 
-// function readStringOrClassId(reader: PsdReader) {
-// 	const text = reader.readUnicodeString();
-// 	return text.length === 0 ? readSignature(reader) : text;
-// }
+		if (version !== 1) {
+			throw new Error(`Invalid TySh version: ${version}`);
+		}
 
-// function readStringOrClassId2(reader: PsdReader) {
-// 	const text = reader.readPascalString();
-// 	return text.length === 0 ? readSignature(reader) : text;
-// }
+		const transform = [
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+		];
 
+		const textVersion = readUint16(reader);
+		const descriptorVersion = readUint32(reader);
+
+		if (textVersion !== 50 || descriptorVersion !== 16) {
+			throw new Error(`Invalid TySh text version: ${textVersion}/${descriptorVersion}`);
+		}
+
+		const text = readDescriptorStructure(reader);
+
+		const warpVersion = readUint16(reader);
+		const warpDescriptorVersion = readUint32(reader);
+
+		if (warpVersion !== 1 || warpDescriptorVersion !== 16) {
+			throw new Error(`Invalid TySh warp version: ${warpVersion} ${warpDescriptorVersion}`);
+		}
+
+		const warp = readDescriptorStructure(reader);
+
+		const left = readInt32(reader);
+		const top = readInt32(reader);
+		const right = readInt32(reader);
+		const bottom = readInt32(reader);
+
+		target.typeToolObjectSetting = { transform, text, warp, left, top, right, bottom };
+	},
+	(_writer, _target) => {
+		throw new Error('not implemented');
+	},
+);
+
+addHandler(
+	'Txt2',
+	target => typeof target.textEngineData !== 'undefined',
+	(reader, target, left) => {
+		target.textEngineData = Array.from(readBytes(reader, left()));
+	},
+	(writer, target) => {
+		writeBytes(writer, new Uint8Array(target.textEngineData!));
+	},
+);
+*/
 addHandler(
 	'lfx2',
 	target => typeof target.objectBasedEffectsLayerInfo !== 'undefined',
@@ -310,3 +360,166 @@ addHandler(
 		//...
 	},
 );
+
+// Helpers
+
+function readAsciiStringOrClassId(reader: PsdReader) {
+	const length = readUint32(reader);
+	return length === 0 ? readSignature(reader) : readAsciiString(reader, length);
+}
+
+function readDescriptorStructure(reader: PsdReader) {
+	const name = readUnicodeString(reader);
+	const classID = readAsciiStringOrClassId(reader);
+	const itemsCount = readUint32(reader);
+	const object: any = {};
+
+	for (let i = 0; i < itemsCount; i++) {
+		const key = readAsciiStringOrClassId(reader);
+		const type = readSignature(reader);
+		const data = readOSType(reader, type);
+		object[key] = data;
+	}
+
+	name;
+	classID;
+
+	return object;
+}
+
+function readOSType(reader: PsdReader, type: string) {
+	switch (type) {
+		case 'obj ': // Reference
+			return readReferenceStructure(reader);
+		case 'Objc': // Descriptor
+			return readDescriptorStructure(reader);
+		case 'VlLs': // List
+			return readListStructure(reader);
+		case 'doub': // Double
+			return readFloat64(reader);
+		case 'UntF': // Unit float
+			return readUnitFloatStructure(reader);
+		case 'TEXT': // String
+			return readUnicodeString(reader);
+		case 'enum': // Enumerated
+			return readEnumerated(reader);
+		case 'long': // Integer
+			return readInt32(reader);
+		case 'comp': // Large Integer
+			return readLargeInteger(reader);
+		case 'bool': // Boolean
+			return !!readUint8(reader);
+		case 'GlbO': // GlobalObject same as Descriptor
+			return readDescriptorStructure(reader);
+		case 'type': // Class
+		case 'GlbC': // Class
+			return readClassStructure(reader);
+		case 'alis': // Alias
+			return readAliasStructure(reader);
+		case 'tdta': // Raw Data
+			return readRawData(reader);
+		default:
+			throw new Error(`Invalid TySh descriptor OSType: ${type} at ${reader.offset.toString(16)}`);
+	}
+}
+
+function readReferenceStructure(reader: PsdReader) {
+	const itemsCount = readUint32(reader);
+	const items: any[] = [];
+
+	for (let i = 0; i < itemsCount; i++) {
+		const type = readSignature(reader);
+
+		switch (type) {
+			case 'prop': // Property
+				items.push(readPropertyStructure(reader));
+				break;
+			case 'Clss': // Class
+				items.push(readClassStructure(reader));
+				break;
+			case 'Enmr': // Enumerated Reference
+				items.push(readEnumeratedReference(reader));
+			case 'rele': // Offset
+				items.push(readOffsetStructure(reader));
+				break;
+			case 'Idnt': // Identifier
+				throw new Error(`Not implemented: Idnt`);
+			case 'indx': // Index
+				throw new Error(`Not implemented: indx`);
+			case 'name': // Name
+				throw new Error(`Not implemented: name`);
+			default:
+				throw new Error(`Invalid TySh descriptor Reference type: ${type}`);
+		}
+	}
+
+	return items;
+}
+
+function readPropertyStructure(reader: PsdReader) {
+	const name = readUnicodeString(reader);
+	const classID = readAsciiStringOrClassId(reader);
+	const keyID = readAsciiStringOrClassId(reader);
+	return { name, classID, keyID };
+}
+
+function readUnitFloatStructure(reader: PsdReader) {
+	const units = readSignature(reader);
+	const value = readFloat64(reader);
+	return { units, value };
+}
+
+function readClassStructure(reader: PsdReader) {
+	const name = readUnicodeString(reader);
+	const classID = readAsciiStringOrClassId(reader);
+	return { name, classID };
+}
+
+function readEnumeratedReference(reader: PsdReader) {
+	const name = readUnicodeString(reader);
+	const classID = readAsciiStringOrClassId(reader);
+	const TypeID = readAsciiStringOrClassId(reader);
+	const enumValue = readAsciiStringOrClassId(reader);
+	return { name, classID, TypeID, enumValue };
+}
+
+function readOffsetStructure(reader: PsdReader) {
+	const name = readUnicodeString(reader);
+	const classID = readAsciiStringOrClassId(reader);
+	const value = readUint32(reader);
+	return { name, classID, value };
+}
+
+function readAliasStructure(reader: PsdReader) {
+	const length = readUint32(reader);
+	return Array.from(readBytes(reader, length));
+}
+
+function readListStructure(reader: PsdReader) {
+	const length = readUint32(reader);
+	const type = readSignature(reader);
+	const items: any[] = [];
+
+	for (let i = 0; i < length; i++) {
+		items.push(readOSType(reader, type));
+	}
+
+	return items;
+}
+
+function readLargeInteger(reader: PsdReader) {
+	const low = readUint32(reader);
+	const high = readUint32(reader);
+	return { low, high };
+}
+
+function readEnumerated(reader: PsdReader) {
+	const type = readAsciiStringOrClassId(reader);
+	const value = readAsciiStringOrClassId(reader);
+	return `${type}.${value}`;
+}
+
+function readRawData(reader: PsdReader) {
+	const length = readUint32(reader);
+	return Array.from(readBytes(reader, length));
+}
