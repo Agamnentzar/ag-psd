@@ -16,7 +16,6 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 * Does not support layer masks
 * Does not support color palettes
 * Does not support all metadata fields
-* Does not support thumbnails
 
 ## Installing
 
