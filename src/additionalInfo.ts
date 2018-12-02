@@ -3,7 +3,7 @@ import { readColor, toArray } from './helpers';
 import { LayerAdditionalInfo } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readAsciiString, readInt32, readInt16, readFloat32, readInt32LE, readUnicodeStringWithLength
+	readBytes, readAsciiString, readInt32, readFloat32, readInt32LE, readUnicodeStringWithLength
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeUnicodeString, writeSignature, writeBytes, writeUint32, writeUint16,
