@@ -12,6 +12,7 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 
 * Supports only RGB, Grayscale and Bitmap color modes
 * Supports only 8 bits per channel
+* Does not support The Large Document Format (8BPB/PSB) 
 * Does not support vector/text layers
 * Does not support layer masks
 * Does not support color palettes
@@ -170,7 +171,7 @@ gulp build
 ### Testing
 
 ```bash
-gulp tests           # run tests
+gulp test            # run tests
 gulp cov             # run tests & coverage
 ```
 
@@ -180,7 +181,6 @@ Watch task with building, testing and code coverage
 
 ```bash
 gulp dev             # run with build watch task
-gulp dev --tests     # run with build & tests watch tasks
 gulp dev --coverage  # run with build & tests & coverage watch tasks
-gulp lint            # run tslint
+npm run lint         # run tslint
 ```

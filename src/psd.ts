@@ -262,17 +262,17 @@ export interface Psd extends LayerAdditionalInfo {
 }
 
 export interface ReadOptions {
-	// does not load layer image data
+	/** does not load layer image data */
 	skipLayerImageData?: boolean;
-	// does not load composite image data
+	/** does not load composite image data */
 	skipCompositeImageData?: boolean;
-	// does not load thumbnail
+	/** does not load thumbnail */
 	skipThumbnail?: boolean;
 }
 
 export interface WriteOptions {
-	// automatically generates thumbnail from composite image
+	/** automatically generates thumbnail from composite image */
 	generateThumbnail?: boolean;
-	// trims transparent pixels from layer image data
+	/** trims transparent pixels from layer image data */
 	trimImageData?: boolean;
 }

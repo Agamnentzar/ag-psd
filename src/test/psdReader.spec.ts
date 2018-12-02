@@ -37,7 +37,7 @@ describe('PsdReader', () => {
 		expect(psd.width).equal(300);
 	});
 
-	fs.readdirSync(readFilesPath).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/text/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const psd = readPsdFromFile(path.join(basePath, 'src.psd'));

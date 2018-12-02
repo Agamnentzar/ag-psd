@@ -3,7 +3,7 @@ import { readColor, toArray } from './helpers';
 import { LayerAdditionalInfo } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readAsciiString, readInt32
+	readBytes, readAsciiString, readInt32, readInt16, readFloat32, readInt32LE, readUnicodeStringWithLength
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeUnicodeString, writeSignature, writeBytes, writeUint32, writeUint16,
@@ -271,7 +271,7 @@ addHandler(
 	'TySh',
 	_target => false, // typeof target.effects !== 'undefined',
 	(reader, target) => {
-		const version = readUint16(reader);
+		const version = readInt16(reader);
 
 		if (version !== 1) {
 			throw new Error(`Invalid TySh version: ${version}`);
@@ -286,8 +286,8 @@ addHandler(
 			readFloat64(reader),
 		];
 
-		const textVersion = readUint16(reader);
-		const descriptorVersion = readUint32(reader);
+		const textVersion = readInt16(reader);
+		const descriptorVersion = readInt32(reader);
 
 		if (textVersion !== 50 || descriptorVersion !== 16) {
 			throw new Error(`Invalid TySh text version: ${textVersion}/${descriptorVersion}`);
@@ -295,8 +295,10 @@ addHandler(
 
 		const text = readDescriptorStructure(reader);
 
-		const warpVersion = readUint16(reader);
-		const warpDescriptorVersion = readUint32(reader);
+		// console.log('EngineData:', parseEngineData(text.EngineData));
+
+		const warpVersion = readInt16(reader);
+		const warpDescriptorVersion = readInt32(reader);
 
 		if (warpVersion !== 1 || warpDescriptorVersion !== 16) {
 			throw new Error(`Invalid TySh warp version: ${warpVersion} ${warpDescriptorVersion}`);
@@ -364,13 +366,12 @@ addHandler(
 // Helpers
 
 function readAsciiStringOrClassId(reader: PsdReader) {
-	const length = readUint32(reader);
+	const length = readInt32(reader);
 	return length === 0 ? readSignature(reader) : readAsciiString(reader, length);
 }
 
 function readDescriptorStructure(reader: PsdReader) {
-	const name = readUnicodeString(reader);
-	const classID = readAsciiStringOrClassId(reader);
+	readClassStructure(reader);
 	const itemsCount = readUint32(reader);
 	const object: any = {};
 
@@ -381,9 +382,6 @@ function readDescriptorStructure(reader: PsdReader) {
 		object[key] = data;
 	}
 
-	name;
-	classID;
-
 	return object;
 }
 
@@ -392,12 +390,15 @@ function readOSType(reader: PsdReader, type: string) {
 		case 'obj ': // Reference
 			return readReferenceStructure(reader);
 		case 'Objc': // Descriptor
+		case 'GlbO': // GlobalObject same as Descriptor
 			return readDescriptorStructure(reader);
 		case 'VlLs': // List
 			return readListStructure(reader);
 		case 'doub': // Double
 			return readFloat64(reader);
-		case 'UntF': // Unit float
+		case 'UntF': // Unit double
+			return readUnitDoubleStructure(reader);
+		case 'UnFl': // Unit float
 			return readUnitFloatStructure(reader);
 		case 'TEXT': // String
 			return readUnicodeString(reader);
@@ -409,8 +410,6 @@ function readOSType(reader: PsdReader, type: string) {
 			return readLargeInteger(reader);
 		case 'bool': // Boolean
 			return !!readUint8(reader);
-		case 'GlbO': // GlobalObject same as Descriptor
-			return readDescriptorStructure(reader);
 		case 'type': // Class
 		case 'GlbC': // Class
 			return readClassStructure(reader);
@@ -418,13 +417,17 @@ function readOSType(reader: PsdReader, type: string) {
 			return readAliasStructure(reader);
 		case 'tdta': // Raw Data
 			return readRawData(reader);
+		case 'ObAr': // Object array
+			throw new Error('not implemented: ObAr');
+		case 'Pth ': // File path
+			return readFilePath(reader);
 		default:
 			throw new Error(`Invalid TySh descriptor OSType: ${type} at ${reader.offset.toString(16)}`);
 	}
 }
 
 function readReferenceStructure(reader: PsdReader) {
-	const itemsCount = readUint32(reader);
+	const itemsCount = readInt32(reader);
 	const items: any[] = [];
 
 	for (let i = 0; i < itemsCount; i++) {
@@ -439,15 +442,19 @@ function readReferenceStructure(reader: PsdReader) {
 				break;
 			case 'Enmr': // Enumerated Reference
 				items.push(readEnumeratedReference(reader));
+				break;
 			case 'rele': // Offset
 				items.push(readOffsetStructure(reader));
 				break;
 			case 'Idnt': // Identifier
-				throw new Error(`Not implemented: Idnt`);
+				items.push(readInt32(reader));
+				break;
 			case 'indx': // Index
-				throw new Error(`Not implemented: indx`);
+				items.push(readInt32(reader));
+				break;
 			case 'name': // Name
-				throw new Error(`Not implemented: name`);
+				items.push(readUnicodeString(reader));
+				break;
 			default:
 				throw new Error(`Invalid TySh descriptor Reference type: ${type}`);
 		}
@@ -457,16 +464,32 @@ function readReferenceStructure(reader: PsdReader) {
 }
 
 function readPropertyStructure(reader: PsdReader) {
-	const name = readUnicodeString(reader);
-	const classID = readAsciiStringOrClassId(reader);
+	const { name, classID } = readClassStructure(reader);
 	const keyID = readAsciiStringOrClassId(reader);
 	return { name, classID, keyID };
 }
 
-function readUnitFloatStructure(reader: PsdReader) {
+const unitsMap: { [key: string]: string; } = {
+	'#Ang': 'Angle',
+	'#Rsl': 'Density',
+	'#Rlt': 'Distance',
+	'#Nne': 'None',
+	'#Prc': 'Percent',
+	'#Pxl': 'Pixels',
+	'#Mlm': 'Millimeters',
+	'#Pnt': 'Points',
+};
+
+function readUnitDoubleStructure(reader: PsdReader) {
 	const units = readSignature(reader);
 	const value = readFloat64(reader);
-	return { units, value };
+	return { units: unitsMap[units], value };
+}
+
+function readUnitFloatStructure(reader: PsdReader) {
+	const units = readSignature(reader);
+	const value = readFloat32(reader);
+	return { units: unitsMap[units], value };
 }
 
 function readClassStructure(reader: PsdReader) {
@@ -476,27 +499,25 @@ function readClassStructure(reader: PsdReader) {
 }
 
 function readEnumeratedReference(reader: PsdReader) {
-	const name = readUnicodeString(reader);
-	const classID = readAsciiStringOrClassId(reader);
+	const { name, classID } = readClassStructure(reader);
 	const TypeID = readAsciiStringOrClassId(reader);
-	const enumValue = readAsciiStringOrClassId(reader);
-	return { name, classID, TypeID, enumValue };
+	const value = readAsciiStringOrClassId(reader);
+	return { name, classID, TypeID, value };
 }
 
 function readOffsetStructure(reader: PsdReader) {
-	const name = readUnicodeString(reader);
-	const classID = readAsciiStringOrClassId(reader);
+	const { name, classID } = readClassStructure(reader);
 	const value = readUint32(reader);
 	return { name, classID, value };
 }
 
 function readAliasStructure(reader: PsdReader) {
-	const length = readUint32(reader);
-	return Array.from(readBytes(reader, length));
+	const length = readInt32(reader);
+	return readAsciiString(reader, length);
 }
 
 function readListStructure(reader: PsdReader) {
-	const length = readUint32(reader);
+	const length = readInt32(reader);
 	const type = readSignature(reader);
 	const items: any[] = [];
 
@@ -520,6 +541,19 @@ function readEnumerated(reader: PsdReader) {
 }
 
 function readRawData(reader: PsdReader) {
-	const length = readUint32(reader);
+	const length = readInt32(reader);
 	return Array.from(readBytes(reader, length));
+}
+
+function readFilePath(reader: PsdReader) {
+	const length = readInt32(reader);
+	const sig = readSignature(reader);
+	const pathSize = readInt32LE(reader);
+	const charsCount = readInt32LE(reader);
+	const path = readUnicodeStringWithLength(reader, charsCount);
+
+	length;
+	pathSize;
+
+	return { sig, path };
 }

@@ -29,6 +29,10 @@ export function readUint8(reader: PsdReader) {
 	return reader.view.getUint8(reader.offset - 1);
 }
 
+export function peekUint8(reader: PsdReader) {
+	return reader.view.getUint8(reader.offset);
+}
+
 export function readInt16(reader: PsdReader) {
 	reader.offset += 2;
 	return reader.view.getInt16(reader.offset - 2, false);
@@ -44,9 +48,19 @@ export function readInt32(reader: PsdReader) {
 	return reader.view.getInt32(reader.offset - 4, false);
 }
 
+export function readInt32LE(reader: PsdReader) {
+	reader.offset += 4;
+	return reader.view.getInt32(reader.offset - 4, true);
+}
+
 export function readUint32(reader: PsdReader) {
 	reader.offset += 4;
 	return reader.view.getUint32(reader.offset - 4, false);
+}
+
+export function readFloat32(reader: PsdReader) {
+	reader.offset += 8;
+	return reader.view.getFloat32(reader.offset - 8, false);
 }
 
 export function readFloat64(reader: PsdReader) {
@@ -69,6 +83,7 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	readColorModeData(reader, psd);
 	readImageResources(reader, psd, options);
 	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!options.skipLayerImageData);
+
 	const hasChildren = psd.children && psd.children.length;
 	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
 
@@ -95,7 +110,11 @@ export function readPascalString(reader: PsdReader, padTo = 2) {
 }
 
 export function readUnicodeString(reader: PsdReader) {
-	let length = readUint32(reader);
+	const length = readUint32(reader);
+	return readUnicodeStringWithLength(reader, length);
+}
+
+export function readUnicodeStringWithLength(reader: PsdReader, length: number) {
 	let text = '';
 
 	while (length--) {
@@ -203,14 +222,22 @@ function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolea
 
 	readSection(reader, 1, left => {
 		globalAlpha = readLayerInfo(reader, psd, skipImageData);
-		readGlobalLayerMaskInfo(reader);
 
-		while (left()) {
-			// while (left() && reader.view.getUint8(reader.offset) === 0) {
-			// 	reader.offset++;
-			// }
+		// SAI does not include this section
+		if (left() > 0) {
+			readGlobalLayerMaskInfo(reader);
+		} else {
+			// revert back to end of section if exceeded section limits
+			skipBytes(reader, left());
+		}
 
-			if (left() > 2) {
+		while (left() > 0) {
+			// sometimes there are empty bytes here
+			while (left() && peekUint8(reader) === 0) {
+				skipBytes(reader, 1);
+			}
+
+			if (left() >= 12) {
 				readAdditionalLayerInfo(reader, psd);
 			} else {
 				skipBytes(reader, left());
@@ -286,8 +313,8 @@ function readLayerRecord(reader: PsdReader) {
 	const channels: ChannelInfo[] = [];
 
 	for (let i = 0; i < channelCount; i++) {
-		const channelID = <ChannelID>readInt16(reader);
-		const channelLength = readUint32(reader);
+		const channelID = readInt16(reader) as ChannelID;
+		const channelLength = readInt32(reader);
 		channels.push({ id: channelID, length: channelLength });
 	}
 
@@ -307,23 +334,14 @@ function readLayerRecord(reader: PsdReader) {
 	layer.transparencyProtected = (flags & 0x01) !== 0;
 	layer.hidden = (flags & 0x02) !== 0;
 
-	readUint8(reader); // filler
+	skipBytes(reader, 1);
 
 	readSection(reader, 1, left => {
 		readLayerMaskData(reader);
 		readLayerBlendingRanges(reader);
-		layer.name = readPascalString(reader);
+		layer.name = readPascalString(reader, 4);
 
-		let last = 0;
-
-		while (left() && (last = readUint8(reader)) === 0) {
-		}
-
-		if (last !== 0) {
-			reader.offset--;
-		}
-
-		while (left() > 4) {
+		while (left()) {
 			readAdditionalLayerInfo(reader, layer);
 		}
 	});
@@ -492,12 +510,14 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean) {
 }
 
 function readSection<T>(reader: PsdReader, round: number, func: (left: () => number) => T): T | undefined {
-	const length = readUint32(reader);
-	let end = reader.offset + length;
-	let result: T | undefined;
+	const length = readInt32(reader);
 
-	if (length > 0)
-		result = func(() => end - reader.offset);
+	if (length <= 0) {
+		return undefined;
+	}
+
+	let end = reader.offset + length;
+	const result = func(() => end - reader.offset);
 
 	/* istanbul ignore if */
 	if (reader.offset > end) {
