@@ -5,6 +5,7 @@
 		"lib": ["es2016", "dom"],
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
+		"preserveConstEnums": true,
 		"declaration": true,
 		"strict": true
 	},

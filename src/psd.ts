@@ -32,7 +32,7 @@ export const toBlendMode: { [key: string]: string } = {
 
 Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
 
-// export enum ColorSpace {
+// export const enum ColorSpace {
 // 	RGB = 0,
 // 	HSB = 1,
 // 	CMYK = 2,
@@ -40,7 +40,7 @@ Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
 // 	Grayscale = 8,
 // }
 
-export enum ColorMode {
+export const enum ColorMode {
 	Bitmap = 0,
 	Grayscale = 1,
 	Indexed = 2,
@@ -51,7 +51,7 @@ export enum ColorMode {
 	Lab = 9,
 }
 
-export enum ChannelID {
+export const enum ChannelID {
 	Red = 0,
 	Green = 1,
 	Blue = 2,
@@ -60,14 +60,14 @@ export enum ChannelID {
 	RealUserMask = -3,
 }
 
-export enum Compression {
+export const enum Compression {
 	RawData = 0,
 	RleCompressed = 1,
 	ZipWithoutPrediction = 2,
 	ZipWithPrediction = 3,
 }
 
-export enum SectionDividerType {
+export const enum SectionDividerType {
 	Other = 0,
 	OpenFolder = 1,
 	ClosedFolder = 2,

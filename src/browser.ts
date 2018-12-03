@@ -1,7 +1,11 @@
 import { Psd, ReadOptions, WriteOptions } from './psd';
 import { PsdWriter, writePsd as writerPsdInternal, getWriterBuffer, createWriter } from './psdWriter';
 import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
-export * from './psd';
+export {
+	ColorMode, ChannelID, Compression, SectionDividerType, Color, LayerEffectsShadowInfo, LayerEffectsOuterGlowInfo,
+	LayerEffectsInnerGlowInfo, LayerEffectsBevelInfo, LayerEffectsSolidFillInfo, LayerEffectsInfo, LayerAdditionalInfo,
+	ResolutionUnit, SizeUnit, ImageResources, Layer, Psd, ReadOptions, WriteOptions
+} from './psd';
 export { PsdReader, PsdWriter };
 
 export function readPsd(buffer: ArrayBuffer, options?: ReadOptions): Psd {

@@ -332,20 +332,24 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 	}
 }
 
+function resizeBuffer(writer: PsdWriter, size: number) {
+	let newLength = writer.buffer.byteLength;
+
+	do {
+		newLength *= 2;
+	} while (size > newLength);
+
+	const newBuffer = new ArrayBuffer(newLength);
+	const newBytes = new Uint8Array(newBuffer);
+	const oldBytes = new Uint8Array(writer.buffer);
+	newBytes.set(oldBytes);
+	writer.buffer = newBuffer;
+	writer.view = new DataView(writer.buffer);
+}
+
 function ensureSize(writer: PsdWriter, size: number) {
 	if (size > writer.buffer.byteLength) {
-		let newLength = writer.buffer.byteLength;
-
-		do {
-			newLength *= 2;
-		} while (size > newLength);
-
-		const newBuffer = new ArrayBuffer(newLength);
-		const newBytes = new Uint8Array(newBuffer);
-		const oldBytes = new Uint8Array(writer.buffer);
-		newBytes.set(oldBytes);
-		writer.buffer = newBuffer;
-		writer.view = new DataView(writer.buffer);
+		resizeBuffer(writer, size);
 	}
 }
 
