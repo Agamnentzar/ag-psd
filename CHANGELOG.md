@@ -16,7 +16,7 @@
   import 'ag-psd/initialize-canvas';
   import { readPsd } from 'ag-psd';
   ```
-- Changed `writePsd()` method to always return `ArrayBuffer`. If you need `Buffer` as a result user `writePsdBuffer()` method instead.
+- Changed `writePsd()` method to always return `ArrayBuffer`. If you need `Buffer` as a result use `writePsdBuffer()` method instead.
 - Simplified script import on browser, now import is the same on both platforms.
 
   before:
