@@ -1,6 +1,7 @@
 
 /node_modules
 /dist/test
+/dist-es/test
 /results
 /resources
 /src
@@ -10,5 +11,6 @@
 /test
 .gitignore
 .travis.yml
+/.vscode
 /tslint.json
 /gulpfile.js

@@ -1,9 +1,10 @@
 {
   "name": "ag-psd",
-  "version": "4.0.3",
+  "version": "5.0.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
-  "browser": "dist/browser.js",
+  "module": "dist-es/index.js",
+  "browser": "dist/index.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/Agamnentzar/ag-psd"
@@ -12,13 +13,15 @@
     "test": "gulp test",
     "dev": "gulp dev --tests",
     "lint": "tslint -c tslint.json src/ts/**/*.ts",
-    "build": "gulp build && browserify dist/browser.js --standalone agPsd -o dist/bundle.js",
+    "build": "gulp build && browserify dist/index.js --standalone agPsd -o dist/bundle.js",
     "prepublish": "npm run build"
   },
   "jspm": {
-    "main": "dist/browser.js",
+    "main": "dist/index.js",
     "jspmNodeConversion": false,
-    "dependencies": {}
+    "dependencies": {
+      "base64-js": "^1.3.0"
+    }
   },
   "keywords": [
     "psd"

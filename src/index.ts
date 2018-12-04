@@ -22,8 +22,16 @@ export function readPsd(buffer: ArrayBuffer | BufferLike, options?: ReadOptions)
 	return readPsdInternal(reader, options);
 }
 
-export function writePsd(psd: Psd, options?: WriteOptions): Buffer {
+export function writePsd(psd: Psd, options?: WriteOptions): ArrayBuffer {
 	const writer = createWriter();
 	writePsdInternal(writer, psd, options);
-	return new Buffer(getWriterBuffer(writer));
+	return getWriterBuffer(writer);
+}
+
+export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
+	if (typeof Buffer === 'undefined') {
+		throw new Error('Buffer not supported on this platform');
+	}
+
+	return new Buffer(writePsd(psd, options));
 }

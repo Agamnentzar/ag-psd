@@ -30,28 +30,31 @@ npm install ag-psd
 
 #### Reading
 
-Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image data
+Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image data or thumbnails
 
 ```javascript
 import * as fs from 'fs';
-import { createCanvas } from 'canvas';
+import 'ag-psd/initialize-canvas'; // only needed for reading image data and thumbnails
 import { readPsd, initializeCanvas } from 'ag-psd';
 
-initializeCanvas(createCanvas);
-
 const buffer = fs.readFileSync('my-file.psd');
-const psd = readPsd(buffer);
 
-console.log(psd);
+// read only document structure
+const psd1 = readPsd(buffer, { skipLayerImageData: true, skipCompositeImageData: true, skipThumbnail: true });
+console.log(psd1);
 
-fs.writeFileSync('layer-1.png', psd.children[0].canvas.getBuffer());
+// read document structure and image data
+const psd2 = readPsd(buffer);
+console.log(psd2);
+fs.writeFileSync('layer-1.png', psd2.children[0].canvas.getBuffer());
 ```
 
 #### Writing
 
 ```javascript
 import * as fs from 'fs';
-import { writePsd } from 'ag-psd';
+import 'ag-psd/initialize-canvas'; // only needed for writing image data and thumbnails
+import { writePsdBuffer } from 'ag-psd';
 
 const psd = {
   width: 300,
@@ -63,7 +66,7 @@ const psd = {
   ]
 };
 
-const buffer = writePsd(psd);
+const buffer = writePsdBuffer(psd);
 fs.writeFileSync('my-file.psd', buffer);
 ```
 
@@ -72,7 +75,7 @@ fs.writeFileSync('my-file.psd', buffer);
 #### Reading
 
 ```javascript
-import { readPsd } from 'ag-psd/dist/browser';
+import { readPsd } from 'ag-psd';
 
 const xhr = new XMLHttpRequest();
 xhr.open('GET', 'my-file.psd', true);
@@ -92,7 +95,7 @@ xhr.addEventListener('load', function () {
 `saveAs` function from [FileSaver.js](https://github.com/eligrey/FileSaver.js/)
 
 ```javascript
-import { writePsd } from 'ag-psd/dist/browser';
+import { writePsd } from 'ag-psd';
 
 const psd = {
   width: 300,
@@ -117,6 +120,26 @@ saveAs(blob, 'my-file.psd');
   var readPsd = agPsd.readPsd;
   // rest the same as above
 </script>
+```
+
+### Options
+
+```typescript
+interface ReadOptions {
+  /** does not load layer image data */
+  skipLayerImageData?: boolean;
+  /** does not load composite image data */
+  skipCompositeImageData?: boolean;
+  /** does not load thumbnail */
+  skipThumbnail?: boolean;
+}
+
+interface WriteOptions {
+  /** automatically generates thumbnail from composite image */
+  generateThumbnail?: boolean;
+  /** trims transparent pixels from layer image data */
+  trimImageData?: boolean;
+}
 ```
 
 ### Sample PSD document

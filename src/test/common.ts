@@ -7,21 +7,12 @@ require('source-map-support').install();
 import * as fs from 'fs';
 import * as path from 'path';
 import { createCanvas, Image } from 'canvas';
-import { Psd, ReadOptions, initializeCanvas } from '../index';
+import '../initializeCanvas';
+import { Psd, ReadOptions } from '../index';
 import { readPsd, createReader } from '../psdReader';
 export { createCanvas };
 
 const resultsPath = path.join(__dirname, '..', '..', 'results');
-
-function createCanvasFromData(data: Uint8Array) {
-	const image = new Image();
-	image.src = new Buffer(data);
-	const canvas = createCanvas(image.width, image.height);
-	canvas.getContext('2d')!.drawImage(image, 0, 0);
-	return canvas;
-}
-
-initializeCanvas(createCanvas, createCanvasFromData);
 
 export type ImageMap = { [key: string]: HTMLCanvasElement };
 
