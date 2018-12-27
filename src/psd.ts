@@ -256,7 +256,6 @@ export interface Psd extends LayerAdditionalInfo {
 	bitsPerChannel?: number;
 	colorMode?: ColorMode;
 	children?: Layer[];
-	thumb?: HTMLCanvasElement;
 	canvas?: HTMLCanvasElement;
 	imageResources?: ImageResources;
 }
