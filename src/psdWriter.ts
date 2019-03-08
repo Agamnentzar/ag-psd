@@ -110,7 +110,13 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	}
 
 	const canvas = psd.canvas;
-	const globalAlpha = !!canvas && hasAlpha(canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height));
+
+	if (canvas && (psd.width !== canvas.width || psd.height !== canvas.height)) {
+		throw new Error('Document canvas must have the same size as document');
+	}
+
+	const imageData = canvas && canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height);
+	const globalAlpha = !!imageData && hasAlpha(imageData);
 	const maxBufferSize = Math.max(getLargestLayerSize(psd.children), 4 * 2 * psd.width * psd.height + 2 * psd.height);
 	const tempBuffer = new Uint8Array(maxBufferSize);
 
@@ -118,7 +124,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	writeColorModeData(writer, psd);
 	writeImageResources(writer, imageResources);
 	writeLayerAndMaskInfo(tempBuffer, writer, psd, globalAlpha, options);
-	writeImageData(tempBuffer, writer, psd, globalAlpha);
+	writeImageData(tempBuffer, writer, globalAlpha, psd.width, psd.height, imageData);
 }
 
 export function writeBuffer(writer: PsdWriter, buffer: Uint8Array | undefined) {
@@ -285,22 +291,19 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 	}
 }
 
-function writeImageData(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean) {
+function writeImageData(
+	tempBuffer: Uint8Array, writer: PsdWriter, globalAlpha: boolean, width: number, height: number,
+	imageData: ImageData | undefined
+) {
 	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
-	let data: PixelData;
-
-	if (psd.canvas) {
-		data = psd.canvas.getContext('2d')!.getImageData(0, 0, psd.width, psd.height);
-	} else {
-		data = {
-			data: new Uint8Array(4 * psd.width * psd.height),
-			width: psd.width,
-			height: psd.height,
-		};
-	}
+	const data: PixelData = imageData || {
+		data: new Uint8Array(4 * width * height),
+		width,
+		height,
+	};
 
 	writeUint16(writer, Compression.RleCompressed);
-	writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
+	writeBytes(writer, writeDataRLE(tempBuffer, data, width, height, channels));
 }
 
 function addChildren(layers: Layer[], children: Layer[] | undefined) {

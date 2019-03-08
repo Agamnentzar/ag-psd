@@ -73,7 +73,7 @@ export function readBytes(reader: PsdReader, length: number) {
 	return new Uint8Array(reader.view.buffer, reader.view.byteOffset + reader.offset - length, length);
 }
 
-export function createReader(buffer: ArrayBuffer, offset?: number, length?: number) {
+export function createReader(buffer: ArrayBuffer, offset?: number, length?: number): PsdReader {
 	const view = new DataView(buffer, offset, length);
 	return { view, offset: 0 };
 }
