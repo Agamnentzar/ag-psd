@@ -263,6 +263,10 @@ export interface Psd extends LayerAdditionalInfo {
 export interface ReadOptions {
 	/** does not load layer image data */
 	skipLayerImageData?: boolean;
+	/** does not load layer mask data */
+	skipLayerMaskData?: boolean;
+	/** don't treat "channel not supported" as a fatal error */
+	channelNotSupportedNotFatal?: boolean;
 	/** does not load composite image data */
 	skipCompositeImageData?: boolean;
 	/** does not load thumbnail */

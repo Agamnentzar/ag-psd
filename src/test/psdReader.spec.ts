@@ -26,6 +26,12 @@ describe('PsdReader', () => {
 		expect(psd.children![0].canvas).not.ok;
 	});
 
+	it('can read a PSD with layer masks, but only if we skip layer image data and ignore channel not supported', () => {
+		const psd = readPsdFromFile(path.join(readFilesPath, '../layer-mask', 'src.psd'),
+		                            { skipLayerMaskData: true, channelNotSupportedNotFatal: true });
+		expect(psd.children![0].canvas).ok;
+	});
+
 	it('reads PSD from Buffer with offset', () => {
 		const file = fs.readFileSync(path.join(readFilesPath, 'layers', 'src.psd'));
 		const outer = Buffer.alloc(file.byteLength + 100);
