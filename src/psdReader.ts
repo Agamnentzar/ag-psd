@@ -82,7 +82,8 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	const psd = readHeader(reader);
 	readColorModeData(reader, psd);
 	readImageResources(reader, psd, options);
-	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!options.skipLayerImageData);
+	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!options.skipLayerImageData, !!options.skipLayerMaskData,
+	                                         !!options.channelNotSupportedNotFatal);
 
 	const hasChildren = psd.children && psd.children.length;
 	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
@@ -217,11 +218,12 @@ function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	});
 }
 
-function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolean) {
+function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolean, skipLayerMaskData: boolean,
+                              channelNotSupportedNotFatal: boolean) {
 	let globalAlpha = false;
 
 	readSection(reader, 1, left => {
-		globalAlpha = readLayerInfo(reader, psd, skipImageData);
+		globalAlpha = readLayerInfo(reader, psd, skipImageData, skipLayerMaskData, channelNotSupportedNotFatal);
 
 		// SAI does not include this section
 		if (left() > 0) {
@@ -248,7 +250,8 @@ function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolea
 	return globalAlpha;
 }
 
-function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean) {
+function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean, skipLayerMaskData: boolean,
+                       channelNotSupportedNotFatal: boolean) {
 	let globalAlpha = false;
 
 	readSection(reader, 2, left => {
@@ -263,14 +266,14 @@ function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean) {
 		const layerChannels: ChannelInfo[][] = [];
 
 		for (let i = 0; i < layerCount; i++) {
-			const { layer, channels } = readLayerRecord(reader);
+			const { layer, channels } = readLayerRecord(reader, skipLayerMaskData);
 			layers.push(layer);
 			layerChannels.push(channels);
 		}
 
 		if (!skipImageData) {
 			for (let i = 0; i < layerCount; i++) {
-				readLayerChannelImageData(reader, psd, layers[i], layerChannels[i]);
+				readLayerChannelImageData(reader, psd, layers[i], layerChannels[i], channelNotSupportedNotFatal);
 			}
 		}
 
@@ -302,7 +305,7 @@ function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean) {
 	return globalAlpha;
 }
 
-function readLayerRecord(reader: PsdReader) {
+function readLayerRecord(reader: PsdReader, skipLayerMaskData: boolean) {
 	const layer: Layer = {};
 	layer.top = readInt32(reader);
 	layer.left = readInt32(reader);
@@ -337,7 +340,7 @@ function readLayerRecord(reader: PsdReader) {
 	skipBytes(reader, 1);
 
 	readSection(reader, 1, left => {
-		readLayerMaskData(reader);
+		readLayerMaskData(reader, skipLayerMaskData);
 		readLayerBlendingRanges(reader);
 		layer.name = readPascalString(reader, 4);
 
@@ -349,10 +352,12 @@ function readLayerRecord(reader: PsdReader) {
 	return { layer, channels };
 }
 
-function readLayerMaskData(reader: PsdReader) {
+function readLayerMaskData(reader: PsdReader, skipLayerMaskData: boolean) {
 	readSection(reader, 1, left => {
 		/* istanbul ignore if */
-		if (left()) {
+		if (skipLayerMaskData) {
+			skipBytes(reader, left());
+		} else if (left()) {
 			throw new Error(`Not Implemented: layer mask data`);
 		}
 	});
@@ -374,7 +379,8 @@ function readLayerBlendingRanges(reader: PsdReader) {
 	});
 }
 
-function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[]) {
+function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[],
+                                   channelNotSupportedNotFatal: boolean) {
 	const layerWidth = (layer.right || 0) - (layer.left || 0);
 	const layerHeight = (layer.bottom || 0) - (layer.top || 0);
 
@@ -395,7 +401,12 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 
 		/* istanbul ignore if */
 		if (offset < 0) {
-			throw new Error(`Channel not supported: ${channel.id}`);
+			const msgText = `Channel not supported: ${channel.id}`;
+			if (channelNotSupportedNotFatal) {
+				console.log(msgText);
+			} else {
+				throw new Error(msgText);
+			}
 		}
 
 		if (compression === Compression.RawData) {
