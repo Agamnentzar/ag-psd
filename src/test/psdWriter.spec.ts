@@ -16,7 +16,7 @@ function writeAndRead(psd: Psd, writeOptions: WriteOptions = {}, readOptions: Re
 	writePsd(writer, psd, writeOptions);
 	const buffer = getWriterBuffer(writer);
 	const reader = createReader(buffer);
-	return readPsd(reader, readOptions);
+	return readPsd(reader, { ...readOptions, throwForMissingFeatures: true, logMissingFeatures: true });
 }
 
 function loadPsdFromJSONAndPNGFiles(basePath: string) {
@@ -336,7 +336,7 @@ describe('PsdWriter', () => {
 			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
 
 			const reader = createReader(buffer.buffer);
-			const result = readPsd(reader, { skipLayerImageData: true });
+			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true });
 			fs.writeFileSync(path.join(resultsFilesPath, f + '-composite.png'), result.canvas!.toBuffer());
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
 

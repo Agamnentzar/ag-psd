@@ -3,32 +3,32 @@ import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas } from './common';
-import { Layer } from '../psd';
+import { Layer, ReadOptions } from '../psd';
 import { readPsd } from '../index';
 
 const readFilesPath = path.join(__dirname, '..', '..', 'test', 'read');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
+const opts: ReadOptions = { throwForMissingFeatures: true, logMissingFeatures: true };
 
 describe('PsdReader', () => {
 	it('reads width and height properly', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, 'blend-mode', 'src.psd'));
+		const psd = readPsdFromFile(path.join(readFilesPath, 'blend-mode', 'src.psd'), { ...opts });
 		expect(psd.width).equal(300);
 		expect(psd.height).equal(200);
 	});
 
 	it('skips composite image data', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { skipCompositeImageData: true });
+		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { ...opts, skipCompositeImageData: true });
 		expect(psd.canvas).not.ok;
 	});
 
 	it('skips layer image data', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { skipLayerImageData: true });
+		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { ...opts, skipLayerImageData: true });
 		expect(psd.children![0].canvas).not.ok;
 	});
 
-	it('can read a PSD with layer masks, but only if we skip layer image data and ignore channel not supported', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, '../layer-mask', 'src.psd'),
-		                            { skipLayerMaskData: true, channelNotSupportedNotFatal: true });
+	it('can read a PSD with layer masks (only if throw on missing features is not set)', () => {
+		const psd = readPsdFromFile(path.join(readFilesPath, '../layer-mask', 'src.psd'));
 		expect(psd.children![0].canvas).ok;
 	});
 
@@ -38,7 +38,7 @@ describe('PsdReader', () => {
 		file.copy(outer, 100);
 		const inner = Buffer.from(outer.buffer, 100, file.byteLength);
 
-		const psd = readPsd(inner);
+		const psd = readPsd(inner, opts);
 
 		expect(psd.width).equal(300);
 	});
@@ -46,7 +46,7 @@ describe('PsdReader', () => {
 	fs.readdirSync(readFilesPath).filter(f => !/text/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
-			const psd = readPsdFromFile(path.join(basePath, 'src.psd'));
+			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), opts);
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; }[] = [];

@@ -1,5 +1,11 @@
 # Changelog
 
+## v6.0.0
+
+- Changed reading to ignore not implemented features by default instead of throwing
+- Removed logging missing handling for layer info
+- Added `throwForMissingFeatures` and `logMissingFeatures` read options for previous behavior
+
 ## v5.0.0
 
 - Simplified canvas initialization on NodeJS

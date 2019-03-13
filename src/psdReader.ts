@@ -80,10 +80,9 @@ export function createReader(buffer: ArrayBuffer, offset?: number, length?: numb
 
 export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	const psd = readHeader(reader);
-	readColorModeData(reader, psd);
+	readColorModeData(reader, psd, options);
 	readImageResources(reader, psd, options);
-	const globalAlpha = readLayerAndMaskInfo(reader, psd, !!options.skipLayerImageData, !!options.skipLayerMaskData,
-	                                         !!options.channelNotSupportedNotFatal);
+	const globalAlpha = readLayerAndMaskInfo(reader, psd, options);
 
 	const hasChildren = psd.children && psd.children.length;
 	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
@@ -181,9 +180,13 @@ function readHeader(reader: PsdReader): Psd {
 	return { width, height, channels, bitsPerChannel, colorMode };
 }
 
-function readColorModeData(reader: PsdReader, _psd: Psd) {
-	readSection(reader, 1, () => {
-		throw new Error('Not Implemented: color mode data');
+function readColorModeData(reader: PsdReader, _psd: Psd, options: ReadOptions) {
+	readSection(reader, 1, left => {
+		if (options.throwForMissingFeatures) {
+			throw new Error('Not Implemented: color mode data');
+		} else {
+			skipBytes(reader, left());
+		}
 	});
 }
 
@@ -218,12 +221,11 @@ function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	});
 }
 
-function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolean, skipLayerMaskData: boolean,
-                              channelNotSupportedNotFatal: boolean) {
+function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	let globalAlpha = false;
 
 	readSection(reader, 1, left => {
-		globalAlpha = readLayerInfo(reader, psd, skipImageData, skipLayerMaskData, channelNotSupportedNotFatal);
+		globalAlpha = readLayerInfo(reader, psd, options);
 
 		// SAI does not include this section
 		if (left() > 0) {
@@ -240,7 +242,7 @@ function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolea
 			}
 
 			if (left() >= 12) {
-				readAdditionalLayerInfo(reader, psd);
+				readAdditionalLayerInfo(reader, psd, !!options.logMissingFeatures);
 			} else {
 				skipBytes(reader, left());
 			}
@@ -250,8 +252,7 @@ function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, skipImageData: boolea
 	return globalAlpha;
 }
 
-function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean, skipLayerMaskData: boolean,
-                       channelNotSupportedNotFatal: boolean) {
+function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	let globalAlpha = false;
 
 	readSection(reader, 2, left => {
@@ -266,14 +267,14 @@ function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean, skip
 		const layerChannels: ChannelInfo[][] = [];
 
 		for (let i = 0; i < layerCount; i++) {
-			const { layer, channels } = readLayerRecord(reader, skipLayerMaskData);
+			const { layer, channels } = readLayerRecord(reader, options);
 			layers.push(layer);
 			layerChannels.push(channels);
 		}
 
-		if (!skipImageData) {
+		if (!options.skipLayerImageData) {
 			for (let i = 0; i < layerCount; i++) {
-				readLayerChannelImageData(reader, psd, layers[i], layerChannels[i], channelNotSupportedNotFatal);
+				readLayerChannelImageData(reader, psd, layers[i], layerChannels[i], options);
 			}
 		}
 
@@ -305,7 +306,7 @@ function readLayerInfo(reader: PsdReader, psd: Psd, skipImageData: boolean, skip
 	return globalAlpha;
 }
 
-function readLayerRecord(reader: PsdReader, skipLayerMaskData: boolean) {
+function readLayerRecord(reader: PsdReader, options: ReadOptions) {
 	const layer: Layer = {};
 	layer.top = readInt32(reader);
 	layer.left = readInt32(reader);
@@ -340,25 +341,26 @@ function readLayerRecord(reader: PsdReader, skipLayerMaskData: boolean) {
 	skipBytes(reader, 1);
 
 	readSection(reader, 1, left => {
-		readLayerMaskData(reader, skipLayerMaskData);
+		readLayerMaskData(reader, options);
 		readLayerBlendingRanges(reader);
 		layer.name = readPascalString(reader, 4);
 
 		while (left()) {
-			readAdditionalLayerInfo(reader, layer);
+			readAdditionalLayerInfo(reader, layer, !!options.logMissingFeatures);
 		}
 	});
 
 	return { layer, channels };
 }
 
-function readLayerMaskData(reader: PsdReader, skipLayerMaskData: boolean) {
+function readLayerMaskData(reader: PsdReader, options: ReadOptions) {
 	readSection(reader, 1, left => {
-		/* istanbul ignore if */
-		if (skipLayerMaskData) {
-			skipBytes(reader, left());
-		} else if (left()) {
-			throw new Error(`Not Implemented: layer mask data`);
+		if (left()) {
+			if (options.throwForMissingFeatures) {
+				throw new Error(`Not Implemented: layer mask data`);
+			} else {
+				skipBytes(reader, left());
+			}
 		}
 	});
 }
@@ -379,8 +381,7 @@ function readLayerBlendingRanges(reader: PsdReader) {
 	});
 }
 
-function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[],
-                                   channelNotSupportedNotFatal: boolean) {
+function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[], options: ReadOptions) {
 	const layerWidth = (layer.right || 0) - (layer.left || 0);
 	const layerHeight = (layer.bottom || 0) - (layer.top || 0);
 
@@ -398,27 +399,27 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 	for (let channel of channels) {
 		const compression = <Compression>readUint16(reader);
 		const offset = offsetForChannel(channel.id);
+		let targetData = data;
 
 		/* istanbul ignore if */
 		if (offset < 0) {
-			const msgText = `Channel not supported: ${channel.id}`;
-			if (channelNotSupportedNotFatal) {
-				console.log(msgText);
-			} else {
-				throw new Error(msgText);
+			targetData = undefined;
+
+			if (options.throwForMissingFeatures) {
+				throw new Error(`Channel not supported: ${channel.id}`);
 			}
 		}
 
 		if (compression === Compression.RawData) {
-			readDataRaw(reader, data, offset, layerWidth, layerHeight);
+			readDataRaw(reader, targetData, offset, layerWidth, layerHeight);
 		} else if (compression === Compression.RleCompressed) {
-			readDataRLE(reader, data, layerWidth, layerHeight, 4, [offset]);
+			readDataRLE(reader, targetData, layerWidth, layerHeight, 4, [offset]);
 		} else {
 			throw new Error(`Compression type not supported: ${compression}`);
 		}
 
-		if (data && psd.colorMode === ColorMode.Grayscale) {
-			setupGrayscale(data);
+		if (targetData && psd.colorMode === ColorMode.Grayscale) {
+			setupGrayscale(targetData);
 		}
 	}
 
@@ -444,7 +445,7 @@ function readGlobalLayerMaskInfo(reader: PsdReader) {
 	});
 }
 
-function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo) {
+function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo, logMissing: boolean) {
 	checkSignature(reader, '8BIM', '8B64');
 	const key = readSignature(reader);
 
@@ -454,12 +455,12 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo)
 		if (handler) {
 			handler.read(reader, target, left);
 		} else {
-			console.log(`Unhandled additional info: ${key}`);
+			logMissing && console.log(`Unhandled additional info: ${key}`);
 			skipBytes(reader, left());
 		}
 
 		if (left()) {
-			console.log(`Unread ${left()} bytes left for tag: ${key}`);
+			logMissing && console.log(`Unread ${left()} bytes left for tag: ${key}`);
 			skipBytes(reader, left());
 		}
 	});
