@@ -1,5 +1,8 @@
-import { Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, ImageResources } from './psd';
-import { ChannelData, getChannels, hasAlpha, createCanvas, writeDataRLE, PixelData, getLayerDimentions } from './helpers';
+import {
+	Psd, Layer, fromBlendMode, Compression, LayerAdditionalInfo, ColorMode, SectionDividerType,
+	WriteOptions, ImageResources, LayerMaskFlags, MaskParameters
+} from './psd';
+import { getChannels, hasAlpha, createCanvas, writeDataRLE, PixelData, getLayerDimentions, LayerChannelData } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
 
@@ -35,9 +38,19 @@ export function writeUint16(writer: PsdWriter, value: number) {
 	writer.view.setUint16(offset, value, false);
 }
 
+export function writeInt32(writer: PsdWriter, value: number) {
+	const offset = addSize(writer, 4);
+	writer.view.setInt32(offset, value, false);
+}
+
+
 export function writeUint32(writer: PsdWriter, value: number) {
 	const offset = addSize(writer, 4);
 	writer.view.setUint32(offset, value, false);
+}
+
+export function writeInt32At(writer: PsdWriter, value: number, offset: number) {
+	writer.view.setInt32(offset, value, false);
 }
 
 export function writeFloat64(writer: PsdWriter, value: number) {
@@ -54,8 +67,14 @@ export function writeBytes(writer: PsdWriter, buffer: Uint8Array | undefined) {
 	}
 }
 
+export function writeZeros(writer: PsdWriter, count: number) {
+	for (let i = 0; i < count; i++) {
+		writeUint8(writer, 0);
+	}
+}
+
 export function writeSignature(writer: PsdWriter, signature: string) {
-	if (!signature || signature.length !== 4) {
+	if (signature.length !== 4) {
 		throw new Error(`Invalid signature: '${signature}'`);
 	}
 
@@ -86,6 +105,12 @@ export function writeUnicodeString(writer: PsdWriter, text: string) {
 	}
 }
 
+export function writeBuffer(writer: PsdWriter, buffer: Uint8Array | undefined) {
+	if (buffer) {
+		writeBytes(writer, buffer);
+	}
+}
+
 function getLayerSize(layer: Layer) {
 	if (layer.canvas) {
 		const { width, height } = getLayerDimentions(layer);
@@ -97,6 +122,22 @@ function getLayerSize(layer: Layer) {
 
 function getLargestLayerSize(layers: Layer[] = []): number {
 	return layers.reduce((max, layer) => Math.max(max, getLayerSize(layer), getLargestLayerSize(layer.children)), 0);
+}
+
+function writeSection(writer: PsdWriter, round: number, func: () => void) {
+	const offset = writer.offset;
+	writeInt32(writer, 0);
+
+	func();
+
+	let length = writer.offset - offset - 4;
+
+	while ((length % round) !== 0) {
+		writeUint8(writer, 0);
+		length++;
+	}
+
+	writeInt32At(writer, length, offset);
 }
 
 export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}) {
@@ -127,37 +168,6 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	writeImageData(tempBuffer, writer, globalAlpha, psd.width, psd.height, imageData);
 }
 
-export function writeBuffer(writer: PsdWriter, buffer: Uint8Array | undefined) {
-	if (buffer) {
-		writeBytes(writer, buffer);
-	}
-}
-
-export function writeZeros(writer: PsdWriter, count: number) {
-	for (let i = 0; i < count; i++) {
-		writeUint8(writer, 0);
-	}
-}
-
-function writeSection(writer: PsdWriter, round: number, func: () => void) {
-	const offset = writer.offset;
-	writeUint32(writer, 0);
-
-	func();
-
-	let length = writer.offset - offset - 4;
-
-	while ((length % round) !== 0) {
-		writeUint8(writer, 0);
-		length++;
-	}
-
-	const temp = writer.offset;
-	writer.offset = offset;
-	writeUint32(writer, length);
-	writer.offset = temp;
-}
-
 function writeHeader(writer: PsdWriter, psd: Psd, globalAlpha: boolean) {
 	writeSignature(writer, '8BPS');
 	writeUint16(writer, 1); // version
@@ -170,7 +180,9 @@ function writeHeader(writer: PsdWriter, psd: Psd, globalAlpha: boolean) {
 }
 
 function writeColorModeData(writer: PsdWriter, _psd: Psd) {
-	writeSection(writer, 1, () => { });
+	writeSection(writer, 1, () => {
+		// TODO: implement
+	});
 }
 
 function writeImageResources(writer: PsdWriter, imageResources: ImageResources) {
@@ -204,24 +216,34 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			layers.push({});
 		}
 
-		const channels = layers.map((l, i) => getChannels(tempBuffer, l, i === 0, options));
-
 		writeInt16(writer, globalAlpha ? -layers.length : layers.length);
-		layers.forEach((l, i) => writeLayerRecord(writer, psd, l, channels[i]));
-		channels.forEach(c => writeLayerChannelImageData(writer, c));
+
+		const layerData = layers.map((l, i) => getChannels(tempBuffer, l, i === 0, options));
+		layerData.forEach(l => writeLayerRecord(writer, psd, l));
+		layerData.forEach(l => writeLayerChannelImageData(writer, l));
 	});
 }
 
-function writeLayerRecord(writer: PsdWriter, psd: Psd, layer: Layer, channels: ChannelData[]) {
-	writeUint32(writer, layer.top || 0);
-	writeUint32(writer, layer.left || 0);
-	writeUint32(writer, layer.bottom || 0);
-	writeUint32(writer, layer.right || 0);
+const enum LayerFlags {
+	TransparencyProtected = 1,
+	Hidden = 2,
+	Obsolete = 4, // obsolete
+	HasRelevantBit4 = 8,
+	PixelDataIrrelevantToAppearanceOfDocument = 16,
+}
+
+function writeLayerRecord(writer: PsdWriter, psd: Psd, layerData: LayerChannelData) {
+	const { layer, top, left, bottom, right, channels } = layerData;
+
+	writeInt32(writer, top);
+	writeInt32(writer, left);
+	writeInt32(writer, bottom);
+	writeInt32(writer, right);
 	writeUint16(writer, channels.length);
 
 	for (const c of channels) {
 		writeInt16(writer, c.channelId);
-		writeUint32(writer, c.length);
+		writeInt32(writer, c.length);
 	}
 
 	writeSignature(writer, '8BIM');
@@ -229,28 +251,60 @@ function writeLayerRecord(writer: PsdWriter, psd: Psd, layer: Layer, channels: C
 	writeUint8(writer, typeof layer.opacity !== 'undefined' ? layer.opacity : 255);
 	writeUint8(writer, layer.clipping ? 1 : 0);
 
-	let flags = 0;
-
-	if (layer.transparencyProtected) {
-		flags = flags | 0x01;
-	}
-
-	if (layer.hidden) {
-		flags = flags | 0x02;
-	}
+	const flags = 0 |
+		(layer.transparencyProtected ? LayerFlags.TransparencyProtected : 0) |
+		(layer.hidden ? LayerFlags.Hidden : 0) |
+		LayerFlags.HasRelevantBit4;
 
 	writeUint8(writer, flags);
 	writeUint8(writer, 0); // filler
 	writeSection(writer, 1, () => {
-		writeLayerMaskData(writer);
+		writeLayerMaskData(writer, layer, layerData);
 		writeLayerBlendingRanges(writer, psd);
 		writePascalString(writer, layer.name || '', 4);
 		writeAdditionalLayerInfo(writer, layer);
 	});
 }
 
-function writeLayerMaskData(writer: PsdWriter) {
-	writeSection(writer, 1, () => { });
+function writeLayerMaskData(writer: PsdWriter, { mask }: Layer, layerData: LayerChannelData) {
+	writeSection(writer, 4, () => {
+		if (mask && layerData.mask) {
+			writeInt32(writer, layerData.mask.top);
+			writeInt32(writer, layerData.mask.left);
+			writeInt32(writer, layerData.mask.bottom);
+			writeInt32(writer, layerData.mask.right);
+			writeUint8(writer, mask.defaultColor || 0);
+
+			const flags = 0 |
+				(mask.disabled ? LayerMaskFlags.LayerMaskDisabled : 0) |
+				(mask.positionRelativeToLayer ? LayerMaskFlags.PositionRelativeToLayer : 0);
+
+			writeUint8(writer, flags);
+
+			const parameters = 0 |
+				(mask.userMaskDensity !== undefined ? MaskParameters.UserMaskDensity : 0) |
+				(mask.userMaskFeather !== undefined ? MaskParameters.UserMaskFeather : 0) |
+				(mask.vectorMaskDensity !== undefined ? MaskParameters.UserMaskDensity : 0) |
+				(mask.vectorMaskFeather !== undefined ? MaskParameters.UserMaskFeather : 0);
+
+			if (parameters) {
+				writeUint8(writer, parameters);
+
+				if (mask.userMaskDensity !== undefined)
+					writeUint8(writer, mask.userMaskDensity);
+				if (mask.userMaskFeather !== undefined)
+					writeFloat64(writer, mask.userMaskFeather);
+				if (mask.vectorMaskDensity !== undefined)
+					writeUint8(writer, mask.vectorMaskDensity);
+				if (mask.vectorMaskFeather !== undefined)
+					writeFloat64(writer, mask.vectorMaskFeather);
+			}
+
+			// TODO: handler rest of the fields
+
+			// writeZeros(writer, 2);
+		}
+	});
 }
 
 function writeLayerBlendingRanges(writer: PsdWriter, psd: Psd) {
@@ -267,7 +321,7 @@ function writeLayerBlendingRanges(writer: PsdWriter, psd: Psd) {
 	});
 }
 
-function writeLayerChannelImageData(writer: PsdWriter, channels: ChannelData[]) {
+function writeLayerChannelImageData(writer: PsdWriter, { channels }: LayerChannelData) {
 	for (const channel of channels) {
 		writeUint16(writer, channel.compression);
 
@@ -278,7 +332,9 @@ function writeLayerChannelImageData(writer: PsdWriter, channels: ChannelData[]) 
 }
 
 function writeGlobalLayerMaskInfo(writer: PsdWriter) {
-	writeSection(writer, 1, () => { });
+	writeSection(writer, 1, () => {
+		// TODO: implement
+	});
 }
 
 function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo) {
@@ -286,7 +342,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		if (handler.has(target)) {
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, handler.key);
-			writeSection(writer, 2, () => handler.write(writer, target));
+			writeSection(writer, 4, () => handler.write(writer, target));
 		}
 	}
 }

@@ -27,7 +27,7 @@ describe('PsdReader', () => {
 		expect(psd.children![0].canvas).not.ok;
 	});
 
-	it('can read a PSD with layer masks (only if throw on missing features is not set)', () => {
+	it.skip('can read a PSD with layer masks (only if throw on missing features is not set)', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, '../layer-mask', 'src.psd'));
 		expect(psd.children![0].canvas).ok;
 	});
@@ -61,8 +61,14 @@ describe('PsdReader', () => {
 					if (l.children) {
 						pushLayerCanvases(l.children);
 					} else {
-						compare.push({ name: `layer-${i++}.png`, canvas: l.canvas });
+						const layerId = i++;
+						compare.push({ name: `layer-${layerId}.png`, canvas: l.canvas });
 						l.canvas = undefined;
+
+						if (l.mask) {
+							compare.push({ name: `layer-${layerId}-mask.png`, canvas: l.mask.canvas });
+							delete l.mask.canvas;
+						}
 					}
 				});
 			}

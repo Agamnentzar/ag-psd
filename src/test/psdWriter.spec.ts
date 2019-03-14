@@ -25,6 +25,10 @@ function loadPsdFromJSONAndPNGFiles(basePath: string) {
 	psd.children!.forEach((l, i) => {
 		if (!l.children) {
 			l.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}.png`));
+
+			if (l.mask) {
+				l.mask.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}-mask.png`));
+			}
 		}
 	});
 	return psd;
@@ -44,8 +48,8 @@ describe('PsdWriter', () => {
 	it('throws if passed invalid signature', () => {
 		const writer = createWriter();
 
-		for (const s of [undefined, null, 'a', 'ab', 'abcde']) {
-			expect(() => writeSignature(writer, s as any), s as any).throw(`Invalid signature: '${s}'`);
+		for (const s of ['a', 'ab', 'abcde']) {
+			expect(() => writeSignature(writer, s), s).throw(`Invalid signature: '${s}'`);
 		}
 	});
 

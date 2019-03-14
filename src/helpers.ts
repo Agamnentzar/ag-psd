@@ -9,6 +9,21 @@ export interface ChannelData {
 	length: number;
 }
 
+export interface LayerChannelData {
+	layer: Layer;
+	channels: ChannelData[];
+	top: number;
+	left: number;
+	right: number;
+	bottom: number;
+	mask?: {
+		top: number;
+		left: number;
+		right: number;
+		bottom: number;
+	};
+}
+
 export type PixelArray = Uint8ClampedArray | Uint8Array;
 
 export interface PixelData {
@@ -97,9 +112,7 @@ function trimData(data: PixelData) {
 	return { top, left, right, bottom };
 }
 
-export function getLayerDimentions(layer: Layer) {
-	const { canvas } = layer;
-
+export function getLayerDimentions({ canvas }: { canvas?: HTMLCanvasElement; }) {
 	if (canvas && canvas.width && canvas.height) {
 		return { width: canvas.width, height: canvas.height };
 	} else {
@@ -107,18 +120,44 @@ export function getLayerDimentions(layer: Layer) {
 	}
 }
 
-export function getChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions): ChannelData[] {
+export function getChannels(
+	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
+): LayerChannelData {
+	const layerData = getLayerChannels(tempBuffer, layer, background, options);
+	const mask = layer.mask;
+
+	if (mask && mask.canvas) {
+		let { top = 0, left = 0, right = 0, bottom = 0 } = mask;
+		let { width, height } = getLayerDimentions(mask);
+
+		if (width && height) {
+			right = left + width;
+			bottom = top + height;
+
+			const context = mask.canvas.getContext('2d')!;
+			const data = context.getImageData(0, 0, width, height);
+			const buffer = writeDataRLE(tempBuffer, data, width, height, [0])!;
+
+			layerData.mask = { top, left, right, bottom };
+			layerData.channels.push({
+				channelId: ChannelID.UserMask,
+				compression: Compression.RleCompressed,
+				buffer: buffer,
+				length: 2 + buffer.length,
+			});
+		}
+	}
+
+	return layerData;
+}
+
+export function getLayerChannels(
+	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
+): LayerChannelData {
 	let canvas = layer.canvas;
 
-	if (typeof layer.top === 'undefined') {
-		layer.top = 0;
-	}
-
-	if (typeof layer.left === 'undefined') {
-		layer.left = 0;
-	}
-
-	const result: ChannelData[] = [
+	let { top = 0, left = 0, right = 0, bottom = 0 } = layer;
+	let channels: ChannelData[] = [
 		{
 			channelId: ChannelID.Transparency,
 			compression: Compression.RawData,
@@ -130,46 +169,47 @@ export function getChannels(tempBuffer: Uint8Array, layer: Layer, background: bo
 	let { width, height } = getLayerDimentions(layer);
 
 	if (!canvas || !width || !height) {
-		layer.right = layer.left;
-		layer.bottom = layer.top;
-		return result;
+		right = left;
+		bottom = top;
+		return { layer, top, left, right, bottom, channels };
 	}
 
-	layer.right = layer.left + width;
-	layer.bottom = layer.top + height;
+	right = left + width;
+	bottom = top + height;
 
 	const context = canvas.getContext('2d')!;
 	let data = context.getImageData(0, 0, width, height);
 
 	if (options.trimImageData) {
-		const { left, top, right, bottom } = trimData(data);
+		const trimmed = trimData(data);
 
-		if (left !== 0 || top !== 0 || right !== data.width || bottom !== data.height) {
-			layer.left += left;
-			layer.top += top;
-			layer.right -= (data.width - right);
-			layer.bottom -= (data.height - bottom);
-			width = layer.right - layer.left;
-			height = layer.bottom - layer.top;
+		if (trimmed.left !== 0 || trimmed.top !== 0 || trimmed.right !== data.width || trimmed.bottom !== data.height) {
+			left += trimmed.left;
+			top += trimmed.top;
+			right -= (data.width - trimmed.right);
+			bottom -= (data.height - trimmed.bottom);
+			width = right - left;
+			height = bottom - top;
 
-			if (!width || !height)
-				return result;
+			if (!width || !height) {
+				return { layer, top, left, right, bottom, channels };
+			}
 
-			data = context.getImageData(left, top, width, height);
+			data = context.getImageData(trimmed.left, trimmed.top, width, height);
 		}
 	}
 
-	const channels = [
+	const channelIds = [
 		ChannelID.Red,
 		ChannelID.Green,
 		ChannelID.Blue,
 	];
 
-	if (!background || hasAlpha(data)) {
-		channels.unshift(ChannelID.Transparency);
+	if (!background || hasAlpha(data) || layer.mask) {
+		channelIds.unshift(ChannelID.Transparency);
 	}
 
-	return channels.map(channel => {
+	channels = channelIds.map(channel => {
 		const offset = offsetForChannel(channel);
 		const buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
 
@@ -180,6 +220,8 @@ export function getChannels(tempBuffer: Uint8Array, layer: Layer, background: bo
 			length: 2 + buffer.length,
 		};
 	});
+
+	return { layer, top, left, right, bottom, channels };
 }
 
 export function resetCanvas({ width, height, data }: PixelData) {

@@ -244,7 +244,7 @@ addHandler(
 addHandler(
 	1057,
 	target => typeof target.versionInfo !== 'undefined',
-	(reader, target) => {
+	(reader, target, left) => {
 		target.versionInfo = {
 			version: readUint32(reader),
 			hasRealMergedData: !!readUint8(reader),
@@ -252,6 +252,7 @@ addHandler(
 			readerName: readUnicodeString(reader),
 			fileVersion: readUint32(reader),
 		};
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const versionInfo = target.versionInfo!;

@@ -41,7 +41,7 @@ export function getHandlers() {
 
 addHandler(
 	'luni',
-	target => typeof target.name !== 'undefined',
+	target => target.name !== undefined,
 	(reader, target, left) => {
 		target.name = readUnicodeString(reader);
 		skipBytes(reader, left()); // TEMP: skipping
@@ -53,21 +53,21 @@ addHandler(
 
 addHandler(
 	'lnsr',
-	target => typeof target.nameSource !== 'undefined',
+	target => target.nameSource !== undefined,
 	(reader, target) => target.nameSource = readSignature(reader),
 	(writer, target) => writeSignature(writer, target.nameSource!),
 );
 
 addHandler(
 	'lyid',
-	target => typeof target.id !== 'undefined',
+	target => target.id !== undefined,
 	(reader, target) => target.id = readUint32(reader),
 	(writer, target) => writeUint32(writer, target.id!),
 );
 
 addHandler(
 	'clbl',
-	target => typeof target.blendClippendElements !== 'undefined',
+	target => target.blendClippendElements !== undefined,
 	(reader, target) => {
 		target.blendClippendElements = !!readUint8(reader);
 		skipBytes(reader, 3);
@@ -80,7 +80,7 @@ addHandler(
 
 addHandler(
 	'infx',
-	target => typeof target.blendInteriorElements !== 'undefined',
+	target => target.blendInteriorElements !== undefined,
 	(reader, target) => {
 		target.blendInteriorElements = !!readUint8(reader);
 		skipBytes(reader, 3);
@@ -93,7 +93,7 @@ addHandler(
 
 addHandler(
 	'knko',
-	target => typeof target.knockout !== 'undefined',
+	target => target.knockout !== undefined,
 	(reader, target) => {
 		target.knockout = !!readUint8(reader);
 		skipBytes(reader, 3);
@@ -106,7 +106,7 @@ addHandler(
 
 addHandler(
 	'lspf',
-	target => typeof target.protected !== 'undefined',
+	target => target.protected !== undefined,
 	(reader, target) => {
 		const flags = readUint32(reader);
 		target.protected = {
@@ -127,7 +127,7 @@ addHandler(
 
 addHandler(
 	'lclr',
-	target => typeof target.sheetColors !== 'undefined',
+	target => target.sheetColors !== undefined,
 	(reader, target) => {
 		target.sheetColors = {
 			color1: readUint32(reader),
@@ -142,7 +142,7 @@ addHandler(
 
 addHandler(
 	'fxrp',
-	target => typeof target.referencePoint !== 'undefined',
+	target => target.referencePoint !== undefined,
 	(reader, target) => {
 		target.referencePoint = {
 			x: readFloat64(reader),
@@ -157,7 +157,7 @@ addHandler(
 
 addHandler(
 	'lsct',
-	target => typeof target.sectionDivider !== 'undefined',
+	target => target.sectionDivider !== undefined,
 	(reader, target, left) => {
 		const item: any = {};
 
@@ -187,7 +187,7 @@ addHandler(
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, target.sectionDivider!.key!);
 
-			if (typeof target.sectionDivider!.subtype !== 'undefined')
+			if (target.sectionDivider!.subtype !== undefined)
 				writeUint32(writer, target.sectionDivider!.subtype!);
 		}
 	},
@@ -195,7 +195,7 @@ addHandler(
 
 addHandler(
 	'FMsk',
-	target => typeof target.filterMask !== 'undefined',
+	target => target.filterMask !== undefined,
 	(reader, target) => {
 		target.filterMask = {
 			colorSpace: readColor(reader),
@@ -210,7 +210,7 @@ addHandler(
 
 addHandler(
 	'shmd',
-	target => typeof target.metadata !== 'undefined',
+	target => target.metadata !== undefined,
 	(reader, target) => {
 		const count = readUint32(reader);
 		target.metadata = [];
@@ -246,7 +246,7 @@ addHandler(
 
 addHandler(
 	'lyvr',
-	target => typeof target.version !== 'undefined',
+	target => target.version !== undefined,
 	(reader, target) => {
 		target.version = readUint32(reader);
 	},
@@ -257,7 +257,7 @@ addHandler(
 
 addHandler(
 	'lrFX',
-	target => typeof target.effects !== 'undefined',
+	target => target.effects !== undefined,
 	(reader, target, left) => {
 		target.effects = readEffects(reader);
 		skipBytes(reader, left()); // TEMP: skipping
@@ -269,7 +269,7 @@ addHandler(
 /*
 addHandler(
 	'TySh',
-	_target => false, // typeof target.effects !== 'undefined',
+	_target => false, // target.effects !== undefined,
 	(reader, target) => {
 		const version = readInt16(reader);
 
@@ -320,7 +320,7 @@ addHandler(
 
 addHandler(
 	'Txt2',
-	target => typeof target.textEngineData !== 'undefined',
+	target => target.textEngineData !== undefined,
 	(reader, target, left) => {
 		target.textEngineData = Array.from(readBytes(reader, left()));
 	},
@@ -331,7 +331,7 @@ addHandler(
 */
 addHandler(
 	'lfx2',
-	target => typeof target.objectBasedEffectsLayerInfo !== 'undefined',
+	target => target.objectBasedEffectsLayerInfo !== undefined,
 	(reader, _target, left) => {
 		skipBytes(reader, left());
 		// const version = readUint32(reader);

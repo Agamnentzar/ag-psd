@@ -145,11 +145,27 @@ export interface LayerEffectsInfo {
 	solidFill?: LayerEffectsSolidFillInfo;
 }
 
+export interface LayerMaskData {
+	top?: number;
+	left?: number;
+	bottom?: number;
+	right?: number;
+	defaultColor?: number;
+	disabled?: boolean;
+	positionRelativeToLayer?: boolean;
+	userMaskDensity?: number;
+	userMaskFeather?: number;
+	vectorMaskDensity?: number;
+	vectorMaskFeather?: number;
+	canvas?: HTMLCanvasElement;
+}
+
 export interface LayerAdditionalInfo {
 	name?: string; // layer name
 	nameSource?: string; // layer name source
 	id?: number; // layer id
 	version?: number; // layer version
+	mask?: LayerMaskData;
 	blendClippendElements?: boolean;
 	blendInteriorElements?: boolean;
 	knockout?: boolean;
@@ -278,4 +294,19 @@ export interface WriteOptions {
 	generateThumbnail?: boolean;
 	/** trims transparent pixels from layer image data */
 	trimImageData?: boolean;
+}
+
+export const enum LayerMaskFlags {
+	PositionRelativeToLayer = 1,
+	LayerMaskDisabled = 2,
+	InvertLayerMaskWhenBlending = 4, // obsolete
+	LayerMaskFromRenderingOtherData = 8,
+	MaskHasParametersAppliedToIt = 16,
+}
+
+export const enum MaskParameters {
+	UserMaskDensity = 1,
+	UserMaskFeather = 2,
+	VectorMaskDensity = 4,
+	VectorMaskFeather = 8,
 }

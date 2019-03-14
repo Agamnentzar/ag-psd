@@ -1,5 +1,9 @@
 # Changelog
 
+## v6.1.0
+
+- Added loading and saving layer masks
+
 ## v6.0.0
 
 - Changed reading to ignore not implemented features by default instead of throwing
