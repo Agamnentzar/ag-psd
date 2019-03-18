@@ -14,7 +14,6 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 * Supports only 8 bits per channel
 * Does not support The Large Document Format (8BPB/PSB) 
 * Does not support vector/text layers
-* Does not support layer masks
 * Does not support color palettes
 * Does not support all metadata fields
 
