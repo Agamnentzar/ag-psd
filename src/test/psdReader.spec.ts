@@ -49,7 +49,7 @@ describe('PsdReader', () => {
 			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), opts);
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);
-			const compare: { name: string; canvas: HTMLCanvasElement | undefined; }[] = [];
+			const compare: { name: string; canvas: HTMLCanvasElement | undefined; skip?: boolean; }[] = [];
 
 			compare.push({ name: `canvas.png`, canvas: psd.canvas });
 			psd.canvas = undefined;
@@ -77,7 +77,7 @@ describe('PsdReader', () => {
 			mkdirp.sync(path.join(resultsFilesPath, f));
 
 			if (psd.imageResources && psd.imageResources.thumbnail) {
-				compare.push({ name: 'thumb.png', canvas: psd.imageResources.thumbnail });
+				compare.push({ name: 'thumb.png', canvas: psd.imageResources.thumbnail, skip: true });
 				delete psd.imageResources.thumbnail;
 			}
 
@@ -89,7 +89,7 @@ describe('PsdReader', () => {
 			clearEmptyCanvasFields(expected);
 
 			expect(psd).eql(expected, f);
-			compare.forEach(i => compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
+			compare.forEach(i => i.skip || compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
 		});
 	});
 });
