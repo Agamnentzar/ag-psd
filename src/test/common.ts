@@ -113,7 +113,11 @@ export function loadCanvasFromFile(filePath: string) {
 
 export function compareCanvases(expected: HTMLCanvasElement | undefined, actual: HTMLCanvasElement | undefined, name: string) {
 	const saveFailure = () => {
-		fs.writeFileSync(path.join(resultsPath, 'failures', `${name.replace(/[\\/]/, '-')}`), actual!.toBuffer());
+		const failuresDir = path.join(resultsPath, 'failures');
+		if (!fs.existsSync(failuresDir)) {
+			fs.mkdirSync(failuresDir);
+		}
+		fs.writeFileSync(path.join(failuresDir, `${name.replace(/[\\/]/, '-')}`), actual!.toBuffer());
 	};
 
 	if (expected === actual)
