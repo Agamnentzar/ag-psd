@@ -5,6 +5,7 @@
   "bitsPerChannel": 1,
   "colorMode": 0,
   "imageResources": {
+    "captionDigest": "3f400644348efc5d3bcf3f311fa62568",
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -12,6 +13,12 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
     },
     "globalAngle": 120,
     "globalAltitude": 30,

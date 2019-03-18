@@ -160,6 +160,35 @@ export interface LayerMaskData {
 	canvas?: HTMLCanvasElement;
 }
 
+export type TextGridding = 'none';
+export type Orientation = 'horizontal' | 'vertical';
+export type Antialias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
+export type WarpStyle =
+	'none' | 'arc' | 'arcLower' | 'arcUpper' | 'arch' | 'bulge' | 'shellLower' | 'shellUpper' | 'flag' |
+	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist';
+
+export interface LayerTextWarp {
+	style?: WarpStyle;
+	value?: number;
+	perspective?: number;
+	perspectiveOther?: number;
+	rotate?: Orientation;
+}
+
+export interface LayerTextData {
+	transform?: number[];
+	text: string;
+	gridding?: TextGridding;
+	orientation?: Orientation;
+	antialias?: Antialias;
+	index?: number;
+	warp?: LayerTextWarp;
+	top?: number;
+	left?: number;
+	bottom?: number;
+	right?: number;
+}
+
 export interface LayerAdditionalInfo {
 	name?: string; // layer name
 	nameSource?: string; // layer name source
@@ -198,8 +227,7 @@ export interface LayerAdditionalInfo {
 	}[];
 	effects?: LayerEffectsInfo;
 	objectBasedEffectsLayerInfo?: any;
-	// typeToolObjectSetting?: any;
-	// textEngineData?: number[];
+	text?: LayerTextData;
 }
 
 export type ResolutionUnit = 'PPI' | 'PPCM';
@@ -247,6 +275,21 @@ export interface ImageResources {
 		heightUnit: SizeUnit;
 	};
 	thumbnail?: HTMLCanvasElement;
+	captionDigest?: string;
+	xmpMetadata?: string;
+	printScale?: {
+		style?: 'centered' | 'size to fit' | 'user defined';
+		x?: number;
+		y?: number;
+		scale?: number;
+	};
+	// printInformation?: {
+	// 	// psts?: boolean;
+	// 	// inte?: string;
+	// 	// printSixteenBit?: boolean;
+	// 	printerName?: string;
+	// 	// bltn?: string;
+	// };
 }
 
 export interface Layer extends LayerAdditionalInfo {

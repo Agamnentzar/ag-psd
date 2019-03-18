@@ -5,6 +5,7 @@
   "bitsPerChannel": 8,
   "colorMode": 1,
   "imageResources": {
+    "captionDigest": "deb1bd4b8cac8b2c496c97087a0f961e",
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -12,6 +13,12 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
     },
     "alphaChannelNames": [
       "Transparency"

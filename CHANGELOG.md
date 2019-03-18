@@ -1,5 +1,10 @@
 # Changelog
 
+## v6.2.0
+
+- Added print scale image resource handling
+- Added caption digest image resource handling
+
 ## v6.1.0
 
 - Added loading and saving layer masks

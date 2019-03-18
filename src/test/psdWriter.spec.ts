@@ -6,6 +6,7 @@ import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } fro
 import { Psd, WriteOptions, ReadOptions } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
 import { readPsd, createReader } from '../psdReader';
+import { writePsdBuffer } from '../index';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
@@ -321,23 +322,20 @@ describe('PsdWriter', () => {
 		});
 	});
 
-	fs.readdirSync(writeFilesPath).forEach(f => {
+	fs.readdirSync(writeFilesPath).filter(f => !/text/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);
 			const psd = loadPsdFromJSONAndPNGFiles(basePath);
-			const writer = createWriter();
+
 			const before = JSON.stringify(psd, replacer);
-
-			writePsd(writer, psd, { generateThumbnail: true, trimImageData: true });
-
+			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true });
 			const after = JSON.stringify(psd, replacer);
 
 			expect(before).equal(after, 'psd object mutated');
 
-			const buffer = new Buffer(getWriterBuffer(writer));
-
 			mkdirp.sync(resultsFilesPath);
 			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
+			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
 
 			const reader = createReader(buffer.buffer);
 			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true });

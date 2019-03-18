@@ -5,6 +5,7 @@ import {
 import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, createCanvas } from './helpers';
 import { getHandler } from './additionalInfo';
 import { getHandler as getResourceHandler } from './imageResources';
+// import { decodeString } from './utf8';
 
 interface ChannelInfo {
 	id: ChannelID;
@@ -67,8 +68,8 @@ export function readUint32(reader: PsdReader) {
 }
 
 export function readFloat32(reader: PsdReader) {
-	reader.offset += 8;
-	return reader.view.getFloat32(reader.offset - 8, false);
+	reader.offset += 4;
+	return reader.view.getFloat32(reader.offset - 4, false);
 }
 
 export function readFloat64(reader: PsdReader) {
@@ -124,6 +125,11 @@ export function readAsciiString(reader: PsdReader, length: number) {
 
 	return text;
 }
+
+// export function readUtf8String(reader: PsdReader, length: number) {
+// 	const buffer = readBytes(reader, length);
+// 	return decodeString(buffer);
+// }
 
 export function skipBytes(reader: PsdReader, count: number) {
 	reader.offset += count;
@@ -216,9 +222,9 @@ function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
 		}
 
 		if (handler && !skip) {
-			handler.read(reader, psd.imageResources, left);
+			handler.read(reader, psd.imageResources, left, options);
 		} else {
-			//console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
+			// console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
 			skipBytes(reader, left());
 		}
 	});

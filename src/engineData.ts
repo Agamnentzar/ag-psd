@@ -1,4 +1,4 @@
-export function parseEngineData(data: number[]) {
+export function parseEngineData(data: number[] | Uint8Array) {
 	const openBracket = '('.charCodeAt(0);
 	const closeBracket = ')'.charCodeAt(0);
 	let text = '';
@@ -17,7 +17,6 @@ export function parseEngineData(data: number[]) {
 		}
 	}
 
-	const lines = text.split(/\n/g);
 	const nodeStack: any[] = [];
 	const propertyStack: (string | undefined)[] = [];
 
@@ -32,21 +31,102 @@ export function parseEngineData(data: number[]) {
 		}
 	}
 
-	type Instruction = { regex: RegExp; parse: (match: RegExpMatchArray) => void; };
+	let index = 0;
 
-	const instructions: Instruction[] = [
-		{ // HashStart
-			regex: /^<<$/,
-			parse() {
+	function isWhitespace(char: string) {
+		return char === ' ' || char === '\n' || char === '\r' || char === '\t';
+	}
+
+	function skipWhitespace() {
+		while (index < text.length && isWhitespace(text.charAt(index))) {
+			index++;
+		}
+	}
+
+	function getToken() {
+		const char = text.charAt(index);
+
+		if (char === '<' && text.charAt(index + 1) === '<') {
+			index += 2;
+			return '<<';
+		} else if (char === '>' && text.charAt(index + 1) === '>') {
+			index += 2;
+			return '>>';
+		} else if (char === '/' || char === '(' || char === '[' || char === ']') {
+			index += 1;
+			return char;
+		} else if (char === 't' && text.substr(index, 4) === 'true') {
+			index += 4;
+			return 'true';
+		} else if (char === 'f' && text.substr(index, 5) === 'false') {
+			index += 5;
+			return 'false';
+		} else if (/[0-9.-]/.test(char)) {
+			return '0';
+		} else {
+			index += 1;
+			return `invalid token "${char}" at ${index} around "${text.substring(index - 10, index + 10)}"`;
+		}
+	}
+
+	function getName() {
+		const start = index;
+
+		while (index < text.length && !isWhitespace(text.charAt(index))) {
+			index++;
+		}
+
+		return text.substring(start, index);
+	}
+
+	function getText() {
+		const start = index;
+
+		while (index < text.length && text.charAt(index) !== ')') {
+			if (text.charAt(index) === '\\') {
+				index++;
+			}
+
+			index++;
+		}
+
+		index++;
+
+		return text.substring(start, index - 1);
+	}
+
+	function getNumber() {
+		const start = index;
+
+		while (index < text.length && /[0-9.-]/.test(text.charAt(index))) {
+			index++;
+		}
+
+		return parseFloat(text.substring(start, index));
+	}
+
+	function addValue(value: any) {
+		if (Array.isArray(node)) {
+			node.push(value);
+		} else if (node) {
+			node[property!] = value;
+		}
+	}
+
+	skipWhitespace();
+
+	while (index < text.length) {
+		const token = getToken();
+
+		switch (token) {
+			case '<<': {
 				nodeStack.push(node);
 				propertyStack.push(property);
 				node = {};
 				property = undefined;
+				break;
 			}
-		},
-		{ // HashEnd
-			regex: /^>>$/,
-			parse() {
+			case '>>': {
 				const nodeValue = nodeStack.pop();
 				const propertyValue = propertyStack.pop();
 
@@ -54,100 +134,45 @@ export function parseEngineData(data: number[]) {
 					updateNode(propertyValue!, nodeValue);
 					node = nodeValue;
 				}
-			},
-		},
-		{ // SingleLineArray
-			regex: /^\[(.*)\]$/,
-			parse(match) {
-				const trimmed = match[1].trim();
-				return trimmed ? trimmed.split(/ /g).map(parseTokens) : [];
+				break;
 			}
-		},
-		{ // MultiLineArrayStart,
-			regex: /^\/(\w+) \[$/,
-			parse(match) {
+			case '/': {
+				property = getName();
+				break;
+			}
+			case '(': {
+				const text = getText();
+				addValue(text);
+				break;
+			}
+			case '[': {
 				nodeStack.push(node);
-				propertyStack.push(match[1]);
+				propertyStack.push(property);
 				node = [];
 				property = undefined;
+				break;
 			}
-		},
-		{ // MultiLineArrayEnd,
-			regex: /^\]$/,
-			parse() {
+			case ']': {
 				const nodeValue = nodeStack.pop();
 				const propertyValue = propertyStack.pop();
 				updateNode(propertyValue!, nodeValue);
 				node = nodeValue;
+				break;
 			}
-		},
-		{ // Property
-			regex: /^\/([A-Z0-9]+)$/i,
-			parse(match) {
-				property = match[1];
+			case '0': {
+				addValue(getNumber());
+				break;
 			}
-		},
-		{ // PropertyWithData,
-			regex: /^\/([A-Z0-9]+) ([^]*)$/i,
-			parse(match) {
-				property = match[1];
-				const data = parseTokens(match[2]);
-
-				if (Array.isArray(node)) {
-					node.push(data);
-				} else if (node) {
-					node[property] = data;
-				}
-
-				return data;
+			case 'true':
+			case 'false': {
+				addValue(token === 'true');
+				break;
 			}
-		},
-		{ // String
-			regex: /^\(([^]*)\)$/m,
-			parse(match) {
-				return match[1]; // .trim();
-			}
-		},
-		{ // NumberWithDecimal
-			regex: /^(-?\d*\.\d+)$/,
-			parse(match) {
-				return parseFloat(match[1]);
-			}
-		},
-		{ // Number
-			regex: /^(-?\d+)$/,
-			parse(match) {
-				return parseInt(match[1], 10);
-			}
-		},
-		{ // Boolean
-			regex: /^(true|false)$/,
-			parse(match) {
-				return match[1] === 'true';
-			}
-		},
-		{ // Noop
-			regex: /^$/,
-			parse() {
-			}
-		},
-	];
-
-	for (const line of lines) {
-		const cleaned = line.replace(/\t/g, '').trim();
-		parseTokens(cleaned);
-	}
-
-	function parseTokens(line: string) {
-		for (const { regex, parse } of instructions) {
-			const match = regex.exec(line);
-
-			if (match) {
-				return parse(match);
-			}
+			default:
+				console.log('# unhandled token', token);
 		}
 
-		throw new Error(`Unparsed engine data line: ${line}`);
+		skipWhitespace();
 	}
 
 	// console.log(JSON.stringify(node, null, 2)); // .substr(0, 1000));

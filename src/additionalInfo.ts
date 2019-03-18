@@ -1,14 +1,15 @@
 import { readEffects, writeEffects } from './effectsHelpers';
 import { readColor, toArray } from './helpers';
-import { LayerAdditionalInfo } from './psd';
+import { LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, Antialias } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readAsciiString, readInt32, readFloat32, readInt32LE, readUnicodeStringWithLength
+	readBytes, readInt32, readInt16
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeUnicodeString, writeSignature, writeBytes, writeUint32, writeUint16,
-	writeFloat64, writeUint8
+	writeFloat64, writeUint8, writeInt16, writeInt32
 } from './psdWriter';
+import { readDescriptorStructure, writeDescriptorStructure } from './descriptor';
 
 export interface InfoHandler {
 	key: string;
@@ -38,6 +39,220 @@ export function getHandler(key: string) {
 export function getHandlers() {
 	return handlers;
 }
+
+interface TextDescriptor {
+	'Txt ': string;
+	textGridding: string;
+	Ornt: string;
+	AntA: string;
+	TextIndex: number;
+	EngineData?: Uint8Array;
+}
+
+interface WarpDescriptor {
+	warpStyle: string;
+	warpValue: number;
+	warpPerspective: number;
+	warpPerspectiveOther: number;
+	warpRotate: string;
+}
+
+interface Dict {
+	[key: string]: string;
+}
+
+function revMap(map: Dict) {
+	const result: Dict = {};
+	Object.keys(map).forEach(key => result[map[key]] = key);
+	return result;
+}
+
+// textGridding.None
+const textGridding: Dict = {
+	none: 'None',
+};
+
+const textGriddingRev = revMap(textGridding);
+
+function toTextGridding(value: string): TextGridding {
+	return (textGriddingRev[value.split('.')[1]] as any) || 'none';
+}
+
+function fromTextGridding(value: TextGridding | undefined) {
+	return `textGridding.${textGridding[value!] || 'None'}`;
+}
+
+// Ornt.Hrzn | Ornt.Vrtc
+const Ornt: Dict = {
+	horizontal: 'Hrzn',
+	vertical: 'Vrtc',
+};
+
+const OrntRev = revMap(Ornt);
+
+function toOrientation(value: string): Orientation {
+	return (OrntRev[value.split('.')[1]] as any) || 'horizontal';
+}
+
+function fromOrientation(value: Orientation | undefined) {
+	return `textGridding.${Ornt[value!] || 'Hrzn'}`;
+}
+
+// Annt.antiAliasSharp | Annt.Anno | Annt.AnCr | Annt.AnSt | Annt.AnSm
+const Annt: Dict = {
+	none: 'Anno',
+	sharp: 'antiAliasSharp',
+	crisp: 'AnCr',
+	strong: 'AnSt',
+	smooth: 'AnSm',
+};
+
+const AnntRev = revMap(Annt);
+
+function toAntialias(value: string): Antialias {
+	return (AnntRev[value.split('.')[1]] as any) || 'none';
+}
+
+function fromAntialias(value: Antialias | undefined) {
+	return `Annt.${Annt[value!] || 'Anno'}`;
+}
+
+// warpStyle.warpNone | warpStyle.warpArc | warpStyle.warpArcLower | warpStyle.warpArcUpper | warpStyle.warpArch
+// warpStyle.warpBulge | warpStyle.warpShellLower | warpStyle.warpShellUpper | warpStyle.warpFlag
+// warpStyle.warpWave | warpStyle.warpFish | warpStyle.warpRise | warpStyle.warpFisheye |
+// warpStyle.warpInflate | warpStyle.warpSqueeze | warpStyle.warpTwist
+const warpStyle: Dict = {
+	none: 'warpNone',
+	arc: 'warpArc',
+	arcLower: 'warpArcLower',
+	arcUpper: 'warpArcUpper',
+	arch: 'warpArch',
+	bulge: 'warpBulge',
+	shellLower: 'warpShellLower',
+	shellUpper: 'warpShellUpper',
+	flag: 'warpFlag',
+	wave: 'warpWave',
+	fish: 'warpFish',
+	rise: 'warpRise',
+	fisheye: 'warpFisheye',
+	inflate: 'warpInflate',
+	squeeze: 'warpSqueeze',
+	twist: 'warpTwist',
+};
+
+const warpStyleRev = revMap(warpStyle);
+
+function toWarpStyle(value: string): WarpStyle {
+	return (warpStyleRev[value.split('.')[1]] as any) || 'none';
+}
+
+function fromWarpStyle(value: WarpStyle | undefined) {
+	return `warpStyle.${warpStyle[value!] || 'warpNone'}`;
+}
+
+addHandler(
+	'TySh',
+	target => target.text !== undefined,
+	(reader, target) => {
+		const version = readInt16(reader);
+
+		if (version !== 1) {
+			throw new Error(`Invalid TySh version: ${version}`);
+		}
+
+		const transform = [
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+			readFloat64(reader),
+		];
+
+		const textVersion = readInt16(reader);
+		const descriptorVersion = readInt32(reader);
+
+		if (textVersion !== 50 || descriptorVersion !== 16) {
+			throw new Error(`Invalid TySh text version: ${textVersion}/${descriptorVersion}`);
+		}
+
+		const text: TextDescriptor = readDescriptorStructure(reader);
+
+		// console.log('EngineData:', JSON.stringify(parseEngineData(text.EngineData), null, 2), '\n');
+
+		const warpVersion = readInt16(reader);
+		const warpDescriptorVersion = readInt32(reader);
+
+		if (warpVersion !== 1 || warpDescriptorVersion !== 16) {
+			throw new Error(`Invalid TySh warp version: ${warpVersion} ${warpDescriptorVersion}`);
+		}
+
+		const warp: WarpDescriptor = readDescriptorStructure(reader);
+
+		const left = readInt32(reader);
+		const top = readInt32(reader);
+		const right = readInt32(reader);
+		const bottom = readInt32(reader);
+
+		target.text = {
+			transform, left, top, right, bottom,
+			text: text['Txt '],
+			index: text.TextIndex || 0,
+			gridding: toTextGridding(text.textGridding),
+			antialias: toAntialias(text.AntA),
+			orientation: toOrientation(text.Ornt),
+			warp: {
+				style: toWarpStyle(warp.warpStyle),
+				value: warp.warpValue || 0,
+				perspective: warp.warpPerspective || 0,
+				perspectiveOther: warp.warpPerspectiveOther || 0,
+				rotate: toOrientation(warp.warpRotate),
+			},
+		};
+	},
+	(writer, target) => {
+		const text = target.text!;
+		const warp = text.warp || {};
+		const transform = text.transform || [1, 0, 0, 1, 0, 0];
+
+		const textDescriptor: TextDescriptor = {
+			'Txt ': text.text,
+			textGridding: fromTextGridding(text.gridding),
+			Ornt: fromOrientation(text.orientation),
+			AntA: fromAntialias(text.antialias),
+			TextIndex: text.index || 0,
+		};
+
+		const warpDescriptor: WarpDescriptor = {
+			warpStyle: fromWarpStyle(warp.style),
+			warpValue: warp.value || 0,
+			warpPerspective: warp.perspective || 0,
+			warpPerspectiveOther: warp.perspectiveOther || 0,
+			warpRotate: fromOrientation(warp.rotate),
+		};
+
+		writeInt16(writer, 1); // version
+
+		for (let i = 0; i < 6; i++) {
+			writeFloat64(writer, transform[i] || 0);
+		}
+
+		writeInt16(writer, 50); // text version
+		writeInt32(writer, 16); // text descriptor version
+
+		writeDescriptorStructure(writer, '', 'TxLr', textDescriptor);
+
+		writeInt16(writer, 1); // warp version
+		writeInt32(writer, 16); // warp descriptor version
+
+		writeDescriptorStructure(writer, '', 'warp', warpDescriptor);
+
+		writeInt32(writer, text.left || 0);
+		writeInt32(writer, text.top || 0);
+		writeInt32(writer, text.right || 0);
+		writeInt32(writer, text.bottom || 0);
+	},
+);
 
 addHandler(
 	'luni',
@@ -141,6 +356,42 @@ addHandler(
 );
 
 addHandler(
+	'shmd',
+	target => target.metadata !== undefined,
+	(reader, target) => {
+		const count = readUint32(reader);
+		target.metadata = [];
+
+		for (let i = 0; i < count; i++) {
+			const signature = readSignature(reader);
+
+			if (signature !== '8BIM')
+				throw new Error(`Invalid signature: '${signature}'`);
+
+			const key = readSignature(reader);
+			const copy = !!readUint8(reader);
+			skipBytes(reader, 3);
+			const length = readUint32(reader);
+			const data = toArray(readBytes(reader, length));
+			target.metadata.push({ key, copy, data });
+		}
+	},
+	(writer, target) => {
+		writeUint32(writer, target.metadata!.length);
+
+		for (let i = 0; i < target.metadata!.length; i++) {
+			const item = target.metadata![i];
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, item.key);
+			writeUint8(writer, item.copy ? 1 : 0);
+			writeZeros(writer, 3);
+			writeUint32(writer, item.data.length);
+			writeBytes(writer, new Uint8Array(item.data));
+		}
+	},
+);
+
+addHandler(
 	'fxrp',
 	target => target.referencePoint !== undefined,
 	(reader, target) => {
@@ -194,57 +445,6 @@ addHandler(
 );
 
 addHandler(
-	'FMsk',
-	target => target.filterMask !== undefined,
-	(reader, target) => {
-		target.filterMask = {
-			colorSpace: readColor(reader),
-			opacity: readUint16(reader),
-		};
-	},
-	(writer, target) => {
-		writeBytes(writer, new Uint8Array(target.filterMask!.colorSpace));
-		writeUint16(writer, target.filterMask!.opacity);
-	},
-);
-
-addHandler(
-	'shmd',
-	target => target.metadata !== undefined,
-	(reader, target) => {
-		const count = readUint32(reader);
-		target.metadata = [];
-
-		for (let i = 0; i < count; i++) {
-			const signature = readSignature(reader);
-
-			if (signature !== '8BIM')
-				throw new Error(`Invalid signature: '${signature}'`);
-
-			const key = readSignature(reader);
-			const copy = !!readUint8(reader);
-			skipBytes(reader, 3);
-			const length = readUint32(reader);
-			const data = toArray(readBytes(reader, length));
-			target.metadata.push({ key, copy, data });
-		}
-	},
-	(writer, target) => {
-		writeUint32(writer, target.metadata!.length);
-
-		for (let i = 0; i < target.metadata!.length; i++) {
-			const item = target.metadata![i];
-			writeSignature(writer, '8BIM');
-			writeSignature(writer, item.key);
-			writeUint8(writer, item.copy ? 1 : 0);
-			writeZeros(writer, 3);
-			writeUint32(writer, item.data.length);
-			writeBytes(writer, new Uint8Array(item.data));
-		}
-	},
-);
-
-addHandler(
 	'lyvr',
 	target => target.version !== undefined,
 	(reader, target) => {
@@ -266,72 +466,39 @@ addHandler(
 		writeEffects(writer, target.effects!);
 	},
 );
-/*
+
+// addHandler(
+// 	'Txt2',
+// 	target => !!(target as any)['__Txt2'], // target.text !== undefined,
+// 	(reader, target, left) => {
+// 		const textEngineData = readBytes(reader, left());
+// 		(target as any)['__Txt2'] = Array.from(textEngineData);
+// 		console.log('Txt2:textEngineData', parseEngineData(textEngineData));
+// 	},
+// 	(writer, target) => {
+// 		writeBytes(writer, new Uint8Array((target as any)['__Txt2'])); // new Uint8Array(target.textEngineData!));
+// 	},
+// );
+
 addHandler(
-	'TySh',
-	_target => false, // target.effects !== undefined,
+	'FMsk',
+	target => target.filterMask !== undefined,
 	(reader, target) => {
-		const version = readInt16(reader);
-
-		if (version !== 1) {
-			throw new Error(`Invalid TySh version: ${version}`);
-		}
-
-		const transform = [
-			readFloat64(reader),
-			readFloat64(reader),
-			readFloat64(reader),
-			readFloat64(reader),
-			readFloat64(reader),
-			readFloat64(reader),
-		];
-
-		const textVersion = readInt16(reader);
-		const descriptorVersion = readInt32(reader);
-
-		if (textVersion !== 50 || descriptorVersion !== 16) {
-			throw new Error(`Invalid TySh text version: ${textVersion}/${descriptorVersion}`);
-		}
-
-		const text = readDescriptorStructure(reader);
-
-		// console.log('EngineData:', parseEngineData(text.EngineData));
-
-		const warpVersion = readInt16(reader);
-		const warpDescriptorVersion = readInt32(reader);
-
-		if (warpVersion !== 1 || warpDescriptorVersion !== 16) {
-			throw new Error(`Invalid TySh warp version: ${warpVersion} ${warpDescriptorVersion}`);
-		}
-
-		const warp = readDescriptorStructure(reader);
-
-		const left = readInt32(reader);
-		const top = readInt32(reader);
-		const right = readInt32(reader);
-		const bottom = readInt32(reader);
-
-		target.typeToolObjectSetting = { transform, text, warp, left, top, right, bottom };
-	},
-	(_writer, _target) => {
-		throw new Error('not implemented');
-	},
-);
-
-addHandler(
-	'Txt2',
-	target => target.textEngineData !== undefined,
-	(reader, target, left) => {
-		target.textEngineData = Array.from(readBytes(reader, left()));
+		target.filterMask = {
+			colorSpace: readColor(reader),
+			opacity: readUint16(reader),
+		};
 	},
 	(writer, target) => {
-		writeBytes(writer, new Uint8Array(target.textEngineData!));
+		writeBytes(writer, new Uint8Array(target.filterMask!.colorSpace));
+		writeUint16(writer, target.filterMask!.opacity);
 	},
 );
-*/
+
+// TODO: implement
 addHandler(
 	'lfx2',
-	target => target.objectBasedEffectsLayerInfo !== undefined,
+	target => !target, // target.objectBasedEffectsLayerInfo !== undefined,
 	(reader, _target, left) => {
 		skipBytes(reader, left());
 		// const version = readUint32(reader);
@@ -362,198 +529,3 @@ addHandler(
 		//...
 	},
 );
-
-// Helpers
-
-function readAsciiStringOrClassId(reader: PsdReader) {
-	const length = readInt32(reader);
-	return length === 0 ? readSignature(reader) : readAsciiString(reader, length);
-}
-
-function readDescriptorStructure(reader: PsdReader) {
-	readClassStructure(reader);
-	const itemsCount = readUint32(reader);
-	const object: any = {};
-
-	for (let i = 0; i < itemsCount; i++) {
-		const key = readAsciiStringOrClassId(reader);
-		const type = readSignature(reader);
-		const data = readOSType(reader, type);
-		object[key] = data;
-	}
-
-	return object;
-}
-
-function readOSType(reader: PsdReader, type: string) {
-	switch (type) {
-		case 'obj ': // Reference
-			return readReferenceStructure(reader);
-		case 'Objc': // Descriptor
-		case 'GlbO': // GlobalObject same as Descriptor
-			return readDescriptorStructure(reader);
-		case 'VlLs': // List
-			return readListStructure(reader);
-		case 'doub': // Double
-			return readFloat64(reader);
-		case 'UntF': // Unit double
-			return readUnitDoubleStructure(reader);
-		case 'UnFl': // Unit float
-			return readUnitFloatStructure(reader);
-		case 'TEXT': // String
-			return readUnicodeString(reader);
-		case 'enum': // Enumerated
-			return readEnumerated(reader);
-		case 'long': // Integer
-			return readInt32(reader);
-		case 'comp': // Large Integer
-			return readLargeInteger(reader);
-		case 'bool': // Boolean
-			return !!readUint8(reader);
-		case 'type': // Class
-		case 'GlbC': // Class
-			return readClassStructure(reader);
-		case 'alis': // Alias
-			return readAliasStructure(reader);
-		case 'tdta': // Raw Data
-			return readRawData(reader);
-		case 'ObAr': // Object array
-			throw new Error('not implemented: ObAr');
-		case 'Pth ': // File path
-			return readFilePath(reader);
-		default:
-			throw new Error(`Invalid TySh descriptor OSType: ${type} at ${reader.offset.toString(16)}`);
-	}
-}
-
-function readReferenceStructure(reader: PsdReader) {
-	const itemsCount = readInt32(reader);
-	const items: any[] = [];
-
-	for (let i = 0; i < itemsCount; i++) {
-		const type = readSignature(reader);
-
-		switch (type) {
-			case 'prop': // Property
-				items.push(readPropertyStructure(reader));
-				break;
-			case 'Clss': // Class
-				items.push(readClassStructure(reader));
-				break;
-			case 'Enmr': // Enumerated Reference
-				items.push(readEnumeratedReference(reader));
-				break;
-			case 'rele': // Offset
-				items.push(readOffsetStructure(reader));
-				break;
-			case 'Idnt': // Identifier
-				items.push(readInt32(reader));
-				break;
-			case 'indx': // Index
-				items.push(readInt32(reader));
-				break;
-			case 'name': // Name
-				items.push(readUnicodeString(reader));
-				break;
-			default:
-				throw new Error(`Invalid TySh descriptor Reference type: ${type}`);
-		}
-	}
-
-	return items;
-}
-
-function readPropertyStructure(reader: PsdReader) {
-	const { name, classID } = readClassStructure(reader);
-	const keyID = readAsciiStringOrClassId(reader);
-	return { name, classID, keyID };
-}
-
-const unitsMap: { [key: string]: string; } = {
-	'#Ang': 'Angle',
-	'#Rsl': 'Density',
-	'#Rlt': 'Distance',
-	'#Nne': 'None',
-	'#Prc': 'Percent',
-	'#Pxl': 'Pixels',
-	'#Mlm': 'Millimeters',
-	'#Pnt': 'Points',
-};
-
-function readUnitDoubleStructure(reader: PsdReader) {
-	const units = readSignature(reader);
-	const value = readFloat64(reader);
-	return { units: unitsMap[units], value };
-}
-
-function readUnitFloatStructure(reader: PsdReader) {
-	const units = readSignature(reader);
-	const value = readFloat32(reader);
-	return { units: unitsMap[units], value };
-}
-
-function readClassStructure(reader: PsdReader) {
-	const name = readUnicodeString(reader);
-	const classID = readAsciiStringOrClassId(reader);
-	return { name, classID };
-}
-
-function readEnumeratedReference(reader: PsdReader) {
-	const { name, classID } = readClassStructure(reader);
-	const TypeID = readAsciiStringOrClassId(reader);
-	const value = readAsciiStringOrClassId(reader);
-	return { name, classID, TypeID, value };
-}
-
-function readOffsetStructure(reader: PsdReader) {
-	const { name, classID } = readClassStructure(reader);
-	const value = readUint32(reader);
-	return { name, classID, value };
-}
-
-function readAliasStructure(reader: PsdReader) {
-	const length = readInt32(reader);
-	return readAsciiString(reader, length);
-}
-
-function readListStructure(reader: PsdReader) {
-	const length = readInt32(reader);
-	const type = readSignature(reader);
-	const items: any[] = [];
-
-	for (let i = 0; i < length; i++) {
-		items.push(readOSType(reader, type));
-	}
-
-	return items;
-}
-
-function readLargeInteger(reader: PsdReader) {
-	const low = readUint32(reader);
-	const high = readUint32(reader);
-	return { low, high };
-}
-
-function readEnumerated(reader: PsdReader) {
-	const type = readAsciiStringOrClassId(reader);
-	const value = readAsciiStringOrClassId(reader);
-	return `${type}.${value}`;
-}
-
-function readRawData(reader: PsdReader) {
-	const length = readInt32(reader);
-	return Array.from(readBytes(reader, length));
-}
-
-function readFilePath(reader: PsdReader) {
-	const length = readInt32(reader);
-	const sig = readSignature(reader);
-	const pathSize = readInt32LE(reader);
-	const charsCount = readInt32LE(reader);
-	const path = readUnicodeStringWithLength(reader, charsCount);
-
-	length;
-	pathSize;
-
-	return { sig, path };
-}

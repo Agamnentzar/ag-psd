@@ -1,8 +1,8 @@
 import './common';
 import * as fs from 'fs';
 import * as path from 'path';
-import { parseEngineData, serializeEngineData } from '../engineData';
 import { expect } from 'chai';
+import { parseEngineData, serializeEngineData } from '../engineData';
 
 const testsPath = path.join(__dirname, '..', '..', 'test');
 
@@ -12,7 +12,7 @@ describe('engineData', () => {
 	const dataJSON = JSON.parse(fs.readFileSync(path.join(testsPath, 'engineData.json'), 'utf8'));
 
 	it('parses engine data', () => {
-		const result = parseEngineData(Array.from(dataBin));
+		const result = parseEngineData(dataBin);
 
 		expect(result).eql(dataJSON);
 	});
@@ -27,5 +27,17 @@ describe('engineData', () => {
 				throw new Error(`Different byte at 0x${i.toString(16)}`);
 			}
 		}
+	});
+
+	it.skip('parses engine data (no whitespace)', () => {
+		const dataBin2 = fs.readFileSync(path.join(testsPath, 'engineData2.bin'));
+		const dataJSON = JSON.parse(fs.readFileSync(path.join(testsPath, 'engineData2.json'), 'utf8'));
+		const result = parseEngineData(dataBin2);
+
+		fs.writeFileSync(
+			path.join(__dirname, '..', '..', 'results', 'engineData2.json'),
+			JSON.stringify(result, null, 2), 'utf8');
+
+		expect(result).eql(dataJSON);
 	});
 });

@@ -5,6 +5,7 @@ import {
 import { getChannels, hasAlpha, createCanvas, writeDataRLE, PixelData, getLayerDimentions, LayerChannelData } from './helpers';
 import { getHandlers } from './additionalInfo';
 import { getHandlers as getImageResourceHandlers } from './imageResources';
+// import { encodeString } from './utf8';
 
 export interface PsdWriter {
 	offset: number;
@@ -53,6 +54,11 @@ export function writeInt32At(writer: PsdWriter, value: number, offset: number) {
 	writer.view.setInt32(offset, value, false);
 }
 
+export function writeFloat32(writer: PsdWriter, value: number) {
+	const offset = addSize(writer, 4);
+	writer.view.setFloat32(offset, value, false);
+}
+
 export function writeFloat64(writer: PsdWriter, value: number) {
 	const offset = addSize(writer, 8);
 	writer.view.setFloat64(offset, value, false);
@@ -83,6 +89,11 @@ export function writeSignature(writer: PsdWriter, signature: string) {
 	}
 }
 
+// export function writeUtf8String(writer: PsdWriter, value: string) {
+// 	const buffer = encodeString(value);
+// 	writeBytes(writer, buffer);
+// }
+
 export function writePascalString(writer: PsdWriter, text: string, padTo = 2) {
 	let length = text.length;
 	writeUint8(writer, length);
@@ -103,6 +114,16 @@ export function writeUnicodeString(writer: PsdWriter, text: string) {
 	for (let i = 0; i < text.length; i++) {
 		writeUint16(writer, text.charCodeAt(i));
 	}
+}
+
+export function writeUnicodeStringWithPadding(writer: PsdWriter, text: string) {
+	writeUint32(writer, text.length + 1);
+
+	for (let i = 0; i < text.length; i++) {
+		writeUint16(writer, text.charCodeAt(i));
+	}
+
+	writeUint16(writer, 0);
 }
 
 export function writeBuffer(writer: PsdWriter, buffer: Uint8Array | undefined) {
@@ -312,6 +333,7 @@ function writeLayerBlendingRanges(writer: PsdWriter, psd: Psd) {
 		writeUint32(writer, 65535);
 		writeUint32(writer, 65535);
 
+		// TODO: use always 4 instead ?
 		const channels = psd.channels || 0;
 
 		for (let i = 0; i < channels; i++) {
