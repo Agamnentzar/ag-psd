@@ -135,7 +135,13 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 	for (let i = 0; i < length; i++) {
 		if (expectedData.data[i] !== actualData.data[i]) {
 			saveFailure();
-			throw new Error(`Actual canvas different than expected (${name})`);
+			const expectedNumBytes = expectedData.data.length;
+			const actualNumBytes = actualData.data.length;
+			throw new Error(
+				`Actual canvas (${actualNumBytes} bytes) different ` +
+				`than expected (${name}: ${expectedNumBytes} bytes) ` +
+				`at index ${i}: actual ${actualData.data[i]} vs. expected ${expectedData.data[i]}`
+			);
 		}
 	}
 }
