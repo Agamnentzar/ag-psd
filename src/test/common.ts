@@ -12,6 +12,8 @@ import { Psd, ReadOptions } from '../index';
 import { readPsd, createReader } from '../psdReader';
 export { createCanvas };
 
+const pixelmatch = require('pixelmatch');
+
 const resultsPath = path.join(__dirname, '..', '..', 'results');
 
 export type ImageMap = { [key: string]: HTMLCanvasElement };
@@ -130,13 +132,17 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 
 	const expectedData = expected.getContext('2d')!.getImageData(0, 0, expected.width, expected.height);
 	const actualData = actual.getContext('2d')!.getImageData(0, 0, actual.width, actual.height);
-	const length = expectedData.width * expectedData.height * 4;
 
-	for (let i = 0; i < length; i++) {
-		if (expectedData.data[i] !== actualData.data[i]) {
-			saveFailure();
-			throw new Error(`Actual canvas different than expected (${name})`);
-		}
+	const numDiffPixels = pixelmatch(expectedData.data, actualData.data, null);
+	if (numDiffPixels > 0) {
+		saveFailure();
+		const expectedNumBytes = expectedData.data.length;
+		const actualNumBytes = actualData.data.length;
+		throw new Error(
+			`Actual canvas (${actualNumBytes} bytes) different ` +
+			`than expected (${name}: ${expectedNumBytes} bytes) ` +
+			`numDiffPixels = ${numDiffPixels}`
+		);
 	}
 }
 
