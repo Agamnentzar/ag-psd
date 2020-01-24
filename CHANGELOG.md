@@ -1,5 +1,10 @@
 # Changelog
 
+## v6.3.0
+
+- Added exported byteArrayToBase64 function
+- Updated readme with exampla of usage in web worker
+
 ## v6.2.0
 
 - Added print scale image resource handling
