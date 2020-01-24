@@ -87,6 +87,7 @@ xhr.addEventListener('load', function () {
 
   document.body.appendChild(psd.children[0].canvas);
 }, false);
+xhr.send();
 ```
 
 #### Writing
@@ -120,6 +121,150 @@ saveAs(blob, 'my-file.psd');
   // rest the same as above
 </script>
 ```
+
+### Browser in Web Worker
+
+#### Reading
+
+Browser has to support `OffscreenCanvas` and `bitmaprenderer` context.
+
+```js
+// worker.js
+
+importScripts('bundle.js');
+
+const createCanvas = (width, height) => {
+  const canvas = new OffscreenCanvas(width, height);
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+};
+
+const createCanvasFromData = (data) => {
+  const image = new Image();
+  image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  canvas.width = image.width;
+  canvas.height = image.height;
+  canvas.getContext('2d').drawImage(image, 0, 0);
+  return canvas;
+};
+
+agPsd.initializeCanvas(createCanvas, createCanvasFromData);
+
+onmessage = message => {
+  // skipping thumbnail and layer images here so we don't have to clear and convert them all before posting data back
+  const psd = agPsd.readPsd(message.data, { skipLayerImageData: true, skipThumbnail: true });
+  const bmp = psd.canvas.transferToImageBitmap();
+  delete psd.canvas; // can't post canvases back from workers
+  postMessage({ psd: psd, image: bmp }, [bmp]); // need to mark bitmap for transfer
+};
+
+
+// main script (assumes using bundle)
+
+const worker = new Worker('worker.js');
+worker.onmessage = message => {
+  const psd = message.data.psd;
+  const image = message.data.image;
+  
+  // convert image back to canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  canvas.getContext('bitmaprenderer').transferFromImageBitmap(image);
+
+  document.body.appendChild(canvas);
+  console.log('psd:', psd);
+};
+
+const xhr = new XMLHttpRequest();
+xhr.open('GET', 'src.psd', true);
+xhr.responseType = 'arraybuffer';
+xhr.addEventListener('load', function () {
+  // read using worker
+  worker.postMessage(buffer, [buffer]);
+}, false);
+xhr.send();
+```
+
+#### Writing
+
+```js
+// worker.js
+
+importScripts('bundle.js');
+
+const createCanvas = (width, height) => {
+  const canvas = new OffscreenCanvas(width, height);
+  canvas.width = width;
+  canvas.height = height;
+  return canvas;
+};
+
+const createCanvasFromData = (data) => {
+  const image = new Image();
+  image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  canvas.width = image.width;
+  canvas.height = image.height;
+  canvas.getContext('2d').drawImage(image, 0, 0);
+  return canvas;
+};
+
+agPsd.initializeCanvas(createCanvas, createCanvasFromData);
+
+onmessage = message => {
+  const psd = message.data.psd;
+  const image = message.data.image;
+
+  // convert bitmap back to canvas
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  canvas.getContext('bitmaprenderer').transferFromImageBitmap(image);
+  // need to draw onto new canvas because single canvas can't use both '2d' and 'bitmaprenderer' contexts
+  const canvas2 = new OffscreenCanvas(canvas.width, canvas.height);
+  canvas2.getContext('2d').drawImage(canvas, 0, 0);
+
+  console.log(psd, canvas2);
+  psd.children[0].canvas = canvas2;
+  psd.canvas = canvas2;
+  const data = agPsd.writePsd(psd);
+  postMessage(data, [data]); // mark data as transferable
+};
+
+
+// main script (assumes using bundle)
+
+const worker = new Worker('/test/worker-write.js');
+worker.onmessage = message => {
+  const blob = new Blob([message.data]);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.textContent = 'Download generated PSD';
+  a.download = 'example_psd.psd';
+  document.body.appendChild(a);
+};
+
+const canvas = new OffscreenCanvas(200, 200);
+const context = canvas.getContext('2d');
+context.fillStyle = 'white';
+context.fillRect(0, 0, 200, 200);
+context.fillStyle = 'red';
+context.fillRect(50, 50, 120, 110);
+const bmp = canvas.transferToImageBitmap(); // convert canvas to image bitmap for transfering to worker
+const psd = {
+  width: 200,
+  height: 200,
+  children: [
+    {
+      name: 'Layer 1',
+    }
+  ]
+};
+worker.postMessage({ psd: psd, image: bmp }, [bmp]);
+```
+
+You can see working example in `test/index.html`, `test/worker-read.js` and `test/worker-write.js`.
 
 ### Options
 

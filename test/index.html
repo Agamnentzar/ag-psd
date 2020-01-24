@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browser tests</title>
+</head>
+<body>
+  <script src="/dist/bundle.js"></script>
+  
+  <!-- reading -->
+  <script>
+    const worker = new Worker('/test/worker-read.js');
+    worker.onmessage = message => {
+      const psd = message.data.psd;
+      const image = message.data.image;
+      
+      // convert image back to canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      canvas.getContext('bitmaprenderer').transferFromImageBitmap(image);
+
+      document.body.appendChild(canvas);
+      console.log('psd (worker):', psd);
+    };
+    
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', '/test/read/sai/src.psd', true);
+    xhr.responseType = 'arraybuffer';
+    xhr.addEventListener('load', function () {
+      // read synchronously
+      const buffer = xhr.response;
+      const psd = agPsd.readPsd(buffer);
+      document.body.appendChild(psd.canvas);
+      console.log('psd (sync):', psd);
+      
+      // read using worker
+      worker.postMessage(buffer, [buffer]);
+    }, false);
+    xhr.send();
+  </script>
+  
+  <!-- writing -->
+  <script>
+    const worker2 = new Worker('/test/worker-write.js');
+    worker2.onmessage = message => {
+      const blob = new Blob([message.data]);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.textContent = 'Download generated PSD';
+      a.download = 'example_psd.psd';
+      document.body.appendChild(a);
+    };
+    
+    const canvas = new OffscreenCanvas(200, 200);
+    const context = canvas.getContext('2d');
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, 200, 200);
+    context.fillStyle = 'red';
+    context.fillRect(50, 50, 120, 110);
+    const bmp = canvas.transferToImageBitmap();
+    const psd = {
+      width: 200,
+      height: 200,
+      children: [
+        {
+          name: 'Layer 1',
+        }
+      ]
+    };
+    worker2.postMessage({ psd: psd, image: bmp }, [bmp]);
+  </script>
+</body>
+</html>

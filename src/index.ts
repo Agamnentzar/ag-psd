@@ -7,6 +7,7 @@ export {
 	LayerEffectsInnerGlowInfo, LayerEffectsBevelInfo, LayerEffectsSolidFillInfo, LayerEffectsInfo, LayerAdditionalInfo,
 	ResolutionUnit, SizeUnit, ImageResources, Layer, Psd, ReadOptions, WriteOptions
 } from './psd';
+import { fromByteArray } from 'base64-js';
 export { PsdReader, PsdWriter };
 
 interface BufferLike {
@@ -14,6 +15,8 @@ interface BufferLike {
 	byteOffset: number;
 	byteLength: number;
 }
+
+export const byteArrayToBase64 = fromByteArray;
 
 export function readPsd(buffer: ArrayBuffer | BufferLike, options?: ReadOptions): Psd {
 	const reader = 'buffer' in buffer ?
@@ -33,5 +36,5 @@ export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
 		throw new Error('Buffer not supported on this platform');
 	}
 
-	return new Buffer(writePsd(psd, options));
+	return Buffer.from(writePsd(psd, options));
 }
