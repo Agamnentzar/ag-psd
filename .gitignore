@@ -6,4 +6,5 @@
 /resources
 /coverage
 /coverage-remapped
+/test.js
 .vscode
