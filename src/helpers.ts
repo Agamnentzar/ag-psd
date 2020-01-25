@@ -1,6 +1,7 @@
-import { PsdReader, readBytes, readUint16, skipBytes } from './psdReader';
-import { Layer, ChannelID, Compression, WriteOptions } from './psd';
 import { fromByteArray } from 'base64-js';
+import { Layer, ChannelID, Compression, WriteOptions } from './psd';
+import { PsdReader, readBytes, readUint16, skipBytes } from './psdReader';
+import { PsdWriter, writeUint16 } from './psdWriter';
 
 export interface ChannelData {
 	channelId: ChannelID;
@@ -53,7 +54,21 @@ export function toArray(value: Uint8Array) {
 }
 
 export function readColor(reader: PsdReader) {
-	return toArray(readBytes(reader, 10));
+	const colorSpace = readUint16(reader);
+	if (colorSpace !== 0) console.log('Invalid color space');
+	const r = Math.round(readUint16(reader) / 257);
+	const g = Math.round(readUint16(reader) / 257);
+	const b = Math.round(readUint16(reader) / 257);
+	const a = Math.round(readUint16(reader) / 257);
+	return [r, g, b, a];
+}
+
+export function writeColor(writer: PsdWriter, color: number[]) {
+	writeUint16(writer, 0);
+	writeUint16(writer, Math.round(color[0] * 257));
+	writeUint16(writer, Math.round(color[1] * 257));
+	writeUint16(writer, Math.round(color[2] * 257));
+	writeUint16(writer, Math.round(color[3] * 257));
 }
 
 export function hasAlpha(data: PixelData) {

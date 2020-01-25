@@ -11,7 +11,7 @@
       "bottom": 200,
       "right": 300,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "transparencyProtected": false,
       "visible": true,
       "clipping": false,

@@ -3,8 +3,8 @@ import {
 	WriteOptions, ImageResources, LayerMaskFlags, MaskParameters
 } from './psd';
 import { getChannels, hasAlpha, createCanvas, writeDataRLE, PixelData, getLayerDimentions, LayerChannelData } from './helpers';
-import { getHandlers } from './additionalInfo';
-import { getHandlers as getImageResourceHandlers } from './imageResources';
+import { infoHandlers } from './additionalInfo';
+import { resourceHandlers } from './imageResources';
 // import { encodeString } from './utf8';
 
 export interface PsdWriter {
@@ -13,7 +13,7 @@ export interface PsdWriter {
 	view: DataView;
 }
 
-export function createWriter(size = 1024): PsdWriter {
+export function createWriter(size = 4096): PsdWriter {
 	const buffer = new ArrayBuffer(size);
 	const view = new DataView(buffer);
 	const offset = 0;
@@ -22,6 +22,10 @@ export function createWriter(size = 1024): PsdWriter {
 
 export function getWriterBuffer(writer: PsdWriter) {
 	return writer.buffer.slice(0, writer.offset);
+}
+
+export function getWriterBufferNoCopy(writer: PsdWriter) {
+	return new Uint8Array(writer.buffer, 0, writer.offset);
 }
 
 export function writeUint8(writer: PsdWriter, value: number) {
@@ -62,6 +66,11 @@ export function writeFloat32(writer: PsdWriter, value: number) {
 export function writeFloat64(writer: PsdWriter, value: number) {
 	const offset = addSize(writer, 8);
 	writer.view.setFloat64(offset, value, false);
+}
+
+// 32-bit fixed-point number 16.16
+export function writeFixedPoint32(writer: PsdWriter, value: number) {
+	writeUint32(writer, value * (1 << 16));
 }
 
 export function writeBytes(writer: PsdWriter, buffer: Uint8Array | undefined) {
@@ -208,7 +217,7 @@ function writeColorModeData(writer: PsdWriter, _psd: Psd) {
 
 function writeImageResources(writer: PsdWriter, imageResources: ImageResources) {
 	writeSection(writer, 1, () => {
-		for (const handler of getImageResourceHandlers()) {
+		for (const handler of resourceHandlers) {
 			if (handler.has(imageResources)) {
 				writeSignature(writer, '8BIM');
 				writeUint16(writer, handler.key);
@@ -269,7 +278,7 @@ function writeLayerRecord(writer: PsdWriter, psd: Psd, layerData: LayerChannelDa
 
 	writeSignature(writer, '8BIM');
 	writeSignature(writer, fromBlendMode[layer.blendMode || 'normal']);
-	writeUint8(writer, typeof layer.opacity !== 'undefined' ? layer.opacity : 255);
+	writeUint8(writer, Math.round((layer.opacity ?? 1) * 255));
 	writeUint8(writer, layer.clipping ? 1 : 0);
 
 	const flags = 0 |
@@ -360,7 +369,7 @@ function writeGlobalLayerMaskInfo(writer: PsdWriter) {
 }
 
 function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo) {
-	for (const handler of getHandlers()) {
+	for (const handler of infoHandlers) {
 		if (handler.has(target)) {
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, handler.key);

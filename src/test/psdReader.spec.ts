@@ -4,7 +4,7 @@ import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas } from './common';
 import { Layer, ReadOptions } from '../psd';
-import { readPsd } from '../index';
+import { readPsd, writePsdBuffer } from '../index';
 
 const readFilesPath = path.join(__dirname, '..', '..', 'test', 'read');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
@@ -43,7 +43,7 @@ describe('PsdReader', () => {
 		expect(psd.width).equal(300);
 	});
 
-	fs.readdirSync(readFilesPath).filter(f => !/text/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/text|pattern/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), opts);
@@ -92,16 +92,25 @@ describe('PsdReader', () => {
 			compare.forEach(i => i.skip || compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
 		});
 	});
+
+	it.skip('text layer test', () => {
+		const psd = readPsdFromFile(path.join(readFilesPath, 'text-layer', 'src.psd'), opts);
+
+		const layer = psd.children![1];
+		delete layer.canvas;
+		delete layer.left;
+		delete layer.top;
+		delete layer.right;
+		delete layer.bottom;
+
+		const buffer = writePsdBuffer(psd);
+		fs.writeFileSync(path.join(resultsFilesPath, 'TEXT.psd'), buffer);
+	});
 });
 
 function clearEmptyCanvasFields(layer: Layer | undefined) {
 	if (layer) {
-		if ('canvas' in layer && !layer.canvas) {
-			delete layer.canvas;
-		}
-
-		if (layer.children) {
-			layer.children.forEach(clearEmptyCanvasFields);
-		}
+		if ('canvas' in layer && !layer.canvas) delete layer.canvas;
+		layer.children?.forEach(clearEmptyCanvasFields);
 	}
 }

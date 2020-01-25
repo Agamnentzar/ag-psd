@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "6.3.0",
+  "version": "7.0.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -12,6 +12,7 @@
   },
   "scripts": {
     "test": "gulp test",
+    "test2": "mocha -R dot dist/test",
     "dev": "gulp dev --tests",
     "lint": "tslint -c tslint.json src/ts/**/*.ts",
     "build": "gulp build && browserify dist/index.js --standalone agPsd -o dist/bundle.js",
@@ -52,6 +53,8 @@
   },
   "dependencies": {
     "@types/base64-js": "^1.2.5",
-    "base64-js": "^1.3.1"
+    "base64-js": "^1.3.1",
+    "mkdir": "0.0.2",
+    "parse-engine-data": "^0.1.2"
   }
 }

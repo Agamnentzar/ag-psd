@@ -8,14 +8,15 @@ JavaScript library for reading and writing PSD files (Photoshop Document files)
 Implemented according to [official documentation](https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/)
 and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 
-### Limitations
+## Limitations
 
-* Supports only RGB, Grayscale and Bitmap color modes
-* Supports only 8 bits per channel
+* Does not support Indexed, CMYK, Multichannel, Duotone and LAB color modes
+* Does not support 16 bits per channel
 * Does not support The Large Document Format (8BPB/PSB) 
 * Does not support vector/text layers
 * Does not support color palettes
 * Does not support all metadata fields
+* Does not support "Pattern Overlay" layer effect
 
 ## Installing
 
@@ -25,11 +26,27 @@ npm install ag-psd
 
 ## Usage
 
+### Functions
+
+```ts
+// read PSD from ArrayBuffer, typed array or Node.js Buffer object
+export function readPsd(buffer: Buffer | ArrayBuffer | BufferLike, options?: ReadOptions): Psd;
+
+// write PSD to ArrayBuffer
+export function writePsd(psd: Psd, options?: WriteOptions): ArrayBuffer;
+
+// write PSD to Uint8Array (avoids some memory allocation)
+export function writePsdUint8Array(psd: Psd, options?: WriteOptions): Uint8Array;
+
+// write PSD to Node.js Buffer object
+export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer;
+```
+
 ### Node.js
 
 #### Reading
 
-Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image data or thumbnails
+Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image data and thumbnails.
 
 ```javascript
 import * as fs from 'fs';
@@ -302,7 +319,7 @@ interface WriteOptions {
       "bottom": 200,
       "right": 300,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "transparencyProtected": false,
       "hidden": true,
       "clipping": false,
@@ -315,7 +332,7 @@ interface WriteOptions {
       "bottom": 0,
       "right": 0,
       "blendMode": "multiply",
-      "opacity": 255,
+      "opacity": 1,
       "transparencyProtected": true,
       "hidden": false,
       "clipping": false,

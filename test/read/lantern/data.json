@@ -45,7 +45,6 @@
     ],
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
-      "version": 1,
       "grid": {
         "horizontal": 576,
         "vertical": 576
@@ -72,7 +71,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
@@ -779,7 +778,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -1554,7 +1553,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -2329,7 +2328,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -3104,7 +3103,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -3879,7 +3878,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -4654,7 +4653,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -5361,7 +5360,7 @@
       "bottom": 14,
       "right": 9,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
@@ -6065,17 +6064,11 @@
   ],
   "filterMask": {
     "colorSpace": [
-      0,
-      0,
       255,
-      255,
-      0,
-      0,
-      0,
       0,
       0,
       0
     ],
-    "opacity": 50
+    "opacity": 0.19607843137254902
   }
 }

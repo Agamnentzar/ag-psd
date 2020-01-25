@@ -23,7 +23,6 @@
     "globalAngle": 120,
     "globalAltitude": 30,
     "gridAndGuidesInformation": {
-      "version": 1,
       "grid": {
         "horizontal": 576,
         "vertical": 576
@@ -45,17 +44,11 @@
   },
   "filterMask": {
     "colorSpace": [
-      0,
-      0,
       255,
-      255,
-      0,
-      0,
-      0,
       0,
       0,
       0
     ],
-    "opacity": 50
+    "opacity": 0.19607843137254902
   }
 }

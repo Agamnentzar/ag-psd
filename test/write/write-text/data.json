@@ -35,7 +35,6 @@
       2
     ],
     "gridAndGuidesInformation": {
-      "version": 1,
       "grid": {
         "horizontal": 576,
         "vertical": 576
@@ -62,7 +61,7 @@
       "bottom": 50,
       "right": 100,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": true,
       "hidden": false,
@@ -152,7 +151,7 @@
       "bottom": 28,
       "right": 59,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
@@ -276,6 +275,6 @@
       0,
       0
     ],
-    "opacity": 50
+    "opacity": 0.19607843137254902
   }
 }

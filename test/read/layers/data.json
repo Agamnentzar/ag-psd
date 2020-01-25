@@ -37,7 +37,6 @@
       3
     ],
     "gridAndGuidesInformation": {
-      "version": 1,
       "grid": {
         "horizontal": 576,
         "vertical": 576
@@ -64,7 +63,7 @@
       "bottom": 200,
       "right": 300,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
@@ -154,7 +153,7 @@
       "bottom": 0,
       "right": 0,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
@@ -243,7 +242,7 @@
       "bottom": 200,
       "right": 300,
       "blendMode": "normal",
-      "opacity": 255,
+      "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
@@ -330,17 +329,11 @@
   ],
   "filterMask": {
     "colorSpace": [
-      0,
-      0,
       255,
-      255,
-      0,
-      0,
-      0,
       0,
       0,
       0
     ],
-    "opacity": 50
+    "opacity": 0.19607843137254902
   }
 }

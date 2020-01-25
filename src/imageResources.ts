@@ -2,11 +2,11 @@ import { toByteArray } from 'base64-js';
 import { ImageResources, ReadOptions } from './psd';
 import {
 	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
-	readBytes, skipBytes, readFloat32, readInt16
+	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32
 } from './psdReader';
 import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
-	writeBytes, writeInt16, writeFloat32,
+	writeBytes, writeInt16, writeFloat32, writeFixedPoint32,
 } from './psdWriter';
 import { createCanvasFromData } from './helpers';
 
@@ -17,8 +17,8 @@ export interface ResourceHandler {
 	write: (writer: PsdWriter, target: ImageResources) => void;
 }
 
-const handlers: ResourceHandler[] = [];
-const handlersMap: { [key: number]: ResourceHandler } = {};
+export const resourceHandlers: ResourceHandler[] = [];
+export const resourceHandlersMap: { [key: number]: ResourceHandler } = {};
 
 function addHandler(
 	key: number,
@@ -27,26 +27,8 @@ function addHandler(
 	write: (writer: PsdWriter, target: ImageResources) => void,
 ) {
 	const handler: ResourceHandler = { key, has, read, write };
-	handlers.push(handler);
-	handlersMap[handler.key] = handler;
-}
-
-export function getHandler(key: number, _name?: string) {
-	return handlersMap[key];
-}
-
-export function getHandlers() {
-	return handlers;
-}
-
-// 32-bit fixed-point number 16.16
-function readFixedPoint32(reader: PsdReader): number {
-	return readUint32(reader) / (1 << 16);
-}
-
-// 32-bit fixed-point number 16.16
-function writeFixedPoint32(writer: PsdWriter, value: number) {
-	writeUint32(writer, value * (1 << 16));
+	resourceHandlers.push(handler);
+	resourceHandlersMap[handler.key] = handler;
 }
 
 const RESOLUTION_UNITS = [undefined, 'PPI', 'PPCM'];
@@ -342,18 +324,19 @@ addHandler(
 	1032,
 	target => target.gridAndGuidesInformation !== undefined,
 	(reader, target) => {
+		const version = readUint32(reader);
+		const horizontal = readUint32(reader);
+		const vertical = readUint32(reader);
+		const count = readUint32(reader);
+
+		if (version !== 1) throw new Error(`Invalid 1032 resource version: ${version}`);
+
 		target.gridAndGuidesInformation = {
-			version: readUint32(reader),
-			grid: {
-				horizontal: readUint32(reader),
-				vertical: readUint32(reader),
-			},
+			grid: { horizontal, vertical },
 			guides: [],
 		};
 
-		let count = readUint32(reader);
-
-		while (count--) {
+		for (let i = 0; i < count; i++) {
 			target.gridAndGuidesInformation.guides!.push({
 				location: readUint32(reader) / 32,
 				direction: readUint8(reader) ? 'horizontal' : 'vertical'
@@ -362,19 +345,18 @@ addHandler(
 	},
 	(writer, target) => {
 		const info = target.gridAndGuidesInformation!;
-		const version = info.version || 1;
 		const grid = info.grid || { horizontal: 18 * 32, vertical: 18 * 32 };
 		const guides = info.guides || [];
 
-		writeUint32(writer, version);
+		writeUint32(writer, 1);
 		writeUint32(writer, grid.horizontal);
 		writeUint32(writer, grid.vertical);
 		writeUint32(writer, guides.length);
 
-		guides.forEach(g => {
+		for (const g of guides) {
 			writeUint32(writer, g.location * 32);
 			writeUint8(writer, g.direction === 'horizontal' ? 1 : 0);
-		});
+		}
 	},
 );
 

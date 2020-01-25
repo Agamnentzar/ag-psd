@@ -3,8 +3,8 @@ import {
 	ReadOptions, LayerMaskData, LayerMaskFlags, MaskParameters
 } from './psd';
 import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, createCanvas } from './helpers';
-import { getHandler } from './additionalInfo';
-import { getHandler as getResourceHandler } from './imageResources';
+import { infoHandlersMap } from './additionalInfo';
+import { resourceHandlersMap } from './imageResources';
 // import { decodeString } from './utf8';
 
 interface ChannelInfo {
@@ -12,7 +12,7 @@ interface ChannelInfo {
 	length: number;
 }
 
-const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
+export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
 
 function setupGrayscale(data: PixelData) {
 	const size = data.width * data.height * 4;
@@ -75,6 +75,11 @@ export function readFloat32(reader: PsdReader) {
 export function readFloat64(reader: PsdReader) {
 	reader.offset += 8;
 	return reader.view.getFloat64(reader.offset - 8, false);
+}
+
+// 32-bit fixed-point number 16.16
+export function readFixedPoint32(reader: PsdReader): number {
+	return readUint32(reader) / (1 << 16);
 }
 
 export function readBytes(reader: PsdReader, length: number) {
@@ -211,10 +216,10 @@ function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	checkSignature(reader, '8BIM');
 
 	const id = readUint16(reader);
-	const name = readPascalString(reader);
+	readPascalString(reader); // name
 
 	readSection(reader, 2, left => {
-		const handler = getResourceHandler(id, name);
+		const handler = resourceHandlersMap[id];
 		const skip = id === 1036 && !!options.skipThumbnail;
 
 		if (!psd.imageResources) {
@@ -340,7 +345,7 @@ function readLayerRecord(reader: PsdReader, options: ReadOptions) {
 		throw new Error(`Invalid blend mode: '${blendMode}'`);
 
 	layer.blendMode = toBlendMode[blendMode];
-	layer.opacity = readUint8(reader);
+	layer.opacity = readUint8(reader) / 0xff;
 	layer.clipping = readUint8(reader) === 1;
 
 	const flags = readUint8(reader);
@@ -519,7 +524,7 @@ function readGlobalLayerMaskInfo(reader: PsdReader) {
 			const colorSpace2 = readUint16(reader);
 			const colorSpace3 = readUint16(reader);
 			const colorSpace4 = readUint16(reader);
-			const opacity = readUint16(reader);
+			const opacity = readUint16(reader) / 0xff;
 			const kind = readUint8(reader);
 			skipBytes(reader, left());
 			return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
@@ -532,7 +537,7 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo,
 	const key = readSignature(reader);
 
 	readSection(reader, 2, left => {
-		const handler = getHandler(key);
+		const handler = infoHandlersMap[key];
 
 		if (handler) {
 			handler.read(reader, target, left);

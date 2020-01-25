@@ -1,272 +1,367 @@
 export function parseEngineData(data: number[] | Uint8Array) {
-	const openBracket = '('.charCodeAt(0);
-	const closeBracket = ')'.charCodeAt(0);
-	let text = '';
-
-	for (let i = 0; i < data.length; i++) {
-		if (i < data.length - 3 && data[i] === openBracket && data[i + 1] === 0xfe && data[i + 2] === 0xff) {
-			text += String.fromCharCode(data[i]);
-
-			for (i += 3; i < (data.length - 1) && data[i] !== closeBracket; i += 2) {
-				text += String.fromCharCode((data[i] << 8) | data[i + 1]);
-			}
-
-			i--;
-		} else {
-			text += String.fromCharCode(data[i]);
-		}
-	}
-
-	const nodeStack: any[] = [];
-	const propertyStack: (string | undefined)[] = [];
-
-	let node: any = undefined;
-	let property: string | undefined;
-
-	function updateNode(propertyValue: string, nodeValue: any) {
-		if (Array.isArray(nodeValue)) {
-			nodeValue.push(node);
-		} else if (nodeValue) {
-			nodeValue[propertyValue!] = node;
-		}
-	}
-
 	let index = 0;
 
-	function isWhitespace(char: string) {
-		return char === ' ' || char === '\n' || char === '\r' || char === '\t';
+	function isWhitespace(char: number) {
+		// ' ', '\n', '\r', '\t'
+		return char === 32 || char === 10 || char === 13 || char === 9;
+	}
+
+	function isNumber(char: number) {
+		// 0123456789.-
+		return (char >= 48 && char <= 57) || char == 46 || char == 45;
 	}
 
 	function skipWhitespace() {
-		while (index < text.length && isWhitespace(text.charAt(index))) {
+		while (index < data.length && isWhitespace(data[index])) {
 			index++;
 		}
 	}
 
 	function getToken() {
-		const char = text.charAt(index);
+		const i = index;
+		const char = data[i];
 
-		if (char === '<' && text.charAt(index + 1) === '<') {
+		if (char === 60 && data[i + 1] === 60) { // <<
 			index += 2;
 			return '<<';
-		} else if (char === '>' && text.charAt(index + 1) === '>') {
+		} else if (char === 62 && data[i + 1] === 62) { // >>
 			index += 2;
 			return '>>';
-		} else if (char === '/' || char === '(' || char === '[' || char === ']') {
+		} else if (char === 47 || char === 40 || char === 91 || char === 93) { // / ( [ ]
 			index += 1;
-			return char;
-		} else if (char === 't' && text.substr(index, 4) === 'true') {
+			return String.fromCharCode(char);
+		} else if (char === 110 && data[i + 1] == 117 && data[i + 2] == 108 && data[i + 3] == 108) { // null
+			index += 4;
+			return 'null';
+		} else if (char === 116 && data[i + 1] == 114 && data[i + 2] == 117 && data[i + 3] == 101) { // true
 			index += 4;
 			return 'true';
-		} else if (char === 'f' && text.substr(index, 5) === 'false') {
+		} else if (char === 102 && data[i + 1] == 97 && data[i + 2] == 108 && data[i + 3] == 115 && data[i + 4] == 101) { // false
 			index += 5;
 			return 'false';
-		} else if (/[0-9.-]/.test(char)) {
+		} else if (isNumber(char)) {
 			return '0';
 		} else {
 			index += 1;
-			return `invalid token "${char}" at ${index} around "${text.substring(index - 10, index + 10)}"`;
+			return `invalid token ${String.fromCharCode(char)} at ${index}`/* +
+				` near ${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}` +
+				`data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`*/;
 		}
 	}
 
 	function getName() {
 		const start = index;
 
-		while (index < text.length && !isWhitespace(text.charAt(index))) {
+		while (index < data.length && !isWhitespace(data[index])) {
 			index++;
 		}
 
-		return text.substring(start, index);
+		// TODO: proper decode
+		return String.fromCharCode.apply(null, data.slice(start, index) as any); // text.substring(start, index);
 	}
 
 	function getText() {
-		const start = index;
+		let result = '';
 
-		while (index < text.length && text.charAt(index) !== ')') {
-			if (text.charAt(index) === '\\') {
-				index++;
+		if (data[index] == 41) { // )
+			index++;
+			return result;
+		}
+
+		// Strings start with utf-16 BOM
+		if (data[index] != 0xFE || data[index + 1] != 0xFF) {
+			throw new Error('Invalid utf-16 BOM');
+		}
+
+		index += 2;
+		const begin = index;
+
+		while (index < data.length && data[index] !== 41) { // )
+			const high = data[index];
+			let char = data[index + 1];
+
+			// utf-16be encoded strings have escaped closing parentheses:
+			//       FE FF 00 \ ) 00 ] 00 { ...
+			// which breaks encoding by shifting it by 1 byte.
+
+			// Sometimes they also have space before escape character instead of 00 high byte:
+			//       FE FF 32 \ ) 00 ] 00 { ...
+
+			if (index === begin && high == 32 && char === 92) { // " \"
+				result += ' ';
+			} else {
+				char |= high << 8;
 			}
 
-			index++;
+			index += 2;
+
+			if (char === 92) { // \
+				result += String.fromCharCode(data[index]); // escaped characters are single byte
+				index++;
+			} else {
+				result += String.fromCharCode(char);
+			}
 		}
 
 		index++;
-
-		return text.substring(start, index - 1);
+		return result;
 	}
 
 	function getNumber() {
-		const start = index;
+		let value = '';
 
-		while (index < text.length && /[0-9.-]/.test(text.charAt(index))) {
+		while (index < data.length && isNumber(data[index])) {
+			value += String.fromCharCode(data[index]);
 			index++;
 		}
 
-		return parseFloat(text.substring(start, index));
-	}
-
-	function addValue(value: any) {
-		if (Array.isArray(node)) {
-			node.push(value);
-		} else if (node) {
-			node[property!] = value;
-		}
+		return parseFloat(value);
 	}
 
 	skipWhitespace();
 
-	while (index < text.length) {
+	let root: any = null;
+	const stack: any[] = [];
+
+	function pushValue(value: any) {
+		if (!stack.length) throw new Error('Invalid data');
+
+		const top = stack[stack.length - 1];
+
+		if (typeof top === 'string') {
+			stack[stack.length - 2][top] = value;
+			pop();
+		} else if (Array.isArray(top)) {
+			top.push(value);
+		} else {
+			throw new Error('Invalid data');
+		}
+	}
+
+	function pushContainer(value: any) {
+		if (!stack.length) {
+			stack.push(value);
+			root = value;
+		} else {
+			pushValue(value);
+			stack.push(value);
+		}
+	}
+
+	function pushProperty(name: string) {
+		if (!stack.length) pushContainer({});
+
+		const top = stack[stack.length - 1];
+
+		if (top && typeof top === 'string') {
+			pushValue(`/${name}`);
+		} else if (top && typeof top === 'object') {
+			stack.push(name);
+		} else {
+			throw new Error('Invalid data');
+		}
+	}
+
+	function pop() {
+		if (!stack.length) throw new Error('Invalid data');
+		stack.pop();
+	}
+
+	while (index < data.length) {
 		const token = getToken();
 
 		switch (token) {
-			case '<<': {
-				nodeStack.push(node);
-				propertyStack.push(property);
-				node = {};
-				property = undefined;
-				break;
-			}
-			case '>>': {
-				const nodeValue = nodeStack.pop();
-				const propertyValue = propertyStack.pop();
-
-				if (nodeValue) {
-					updateNode(propertyValue!, nodeValue);
-					node = nodeValue;
-				}
-				break;
-			}
-			case '/': {
-				property = getName();
-				break;
-			}
-			case '(': {
-				const text = getText();
-				addValue(text);
-				break;
-			}
-			case '[': {
-				nodeStack.push(node);
-				propertyStack.push(property);
-				node = [];
-				property = undefined;
-				break;
-			}
-			case ']': {
-				const nodeValue = nodeStack.pop();
-				const propertyValue = propertyStack.pop();
-				updateNode(propertyValue!, nodeValue);
-				node = nodeValue;
-				break;
-			}
-			case '0': {
-				addValue(getNumber());
-				break;
-			}
-			case 'true':
-			case 'false': {
-				addValue(token === 'true');
-				break;
-			}
-			default:
-				console.log('# unhandled token', token);
+			case '<<': pushContainer({}); break;
+			case '>>': pop(); break;
+			case '/': pushProperty(getName()); break;
+			case '(': pushValue(getText()); break;
+			case '[': pushContainer([]); break;
+			case ']': pop(); break;
+			case '0': pushValue(getNumber()); break;
+			case 'null': pushValue(null); break;
+			case 'true': pushValue(true); break;
+			case 'false': pushValue(false); break;
+			default: console.log('unhandled token', token);
 		}
 
 		skipWhitespace();
 	}
 
-	// console.log(JSON.stringify(node, null, 2)); // .substr(0, 1000));
-	// require('fs').writeFileSync('engineData.json', JSON.stringify(node, null, 2), 'utf8');
-
-	return node;
+	return root;
 }
 
-export function serializeEngineData(data: any) {
-	let indent = '';
-	let lines: string[] = ['', ''];
+const floatKeys = [
+	'Axis', 'XY', 'Zone', 'WordSpacing', 'FirstLineIndent', 'GlyphSpacing', 'StartIndent', 'EndIndent', 'SpaceBefore',
+	'SpaceAfter', 'LetterSpacing', 'Values', 'GridSize', 'GridLeading', 'PointBase', 'TransformPoint0', 'TransformPoint1',
+	'TransformPoint2', 'FontSize', 'Leading', 'HorizontalScale', 'VerticalScale', 'BaselineShift', 'Tsume',
+	'OutlineWidth',
+];
 
-	function serializeProperty(key: string, value: any) {
-		const index = lines.length;
-		lines.push(`${indent}/${key}`);
-		const serialized = serializeValue(value);
+// TODO: noWhitespace option
+// TODO: write without root object
+export function serializeEngineData(data: any, condensed = false) {
+	let buffer = new Uint8Array(1024);
+	let offset = 0;
+	let indent = 0;
 
-		if (serialized) {
-			lines[index] += ' ' + serialized;
+	function write(value: number) {
+		if (offset >= buffer.length) {
+			const newBuffer = new Uint8Array(buffer.length * 2);
+			newBuffer.set(buffer);
+			buffer = newBuffer;
+		}
+
+		buffer[offset] = value;
+		offset++;
+	}
+
+	function writeString(value: string) {
+		for (let i = 0; i < value.length; i++) {
+			write(value.charCodeAt(i));
 		}
 	}
 
-	function serializeNumber(value: number) {
-		if ((value | 0) === value) {
-			return value.toString();
+	function writeIndent() {
+		if (condensed) {
+			writeString(' ');
 		} else {
-			return value.toFixed(3).replace(/(\d)0+$/g, '$1');
+			for (let i = 0; i < indent; i++) {
+				writeString('\t');
+			}
 		}
 	}
 
-	function serializeValue(value: any) {
-		if (typeof value === 'number') {
-			return serializeNumber(value);
-		} else if (typeof value === 'boolean') {
-			return value ? 'true' : 'false';
-		} else if (typeof value === 'string') {
-			let encoded = '\u00fe\u00ff';
+	function writeProperty(key: string, value: any) {
+		writeIndent();
+		writeString(`/${key}`);
+		writeValue(value, key, true);
+		if (!condensed) writeString('\n');
+	}
 
-			for (let i = 0; i < value.length; i++) {
-				const charCode = value.charCodeAt(i);
-				encoded += `${String.fromCharCode(charCode >> 8)}${String.fromCharCode(charCode & 0xff)}`;
-			}
+	function serializeInt(value: number) {
+		return value.toString();
+	}
 
-			return `(${encoded})`;
-		} else if (Array.isArray(value)) {
-			if (value.every(x => typeof x === 'number')) {
-				return `[ ${value.map(serializeNumber).join(' ')} ]`;
+	function serializeFloat(value: number) {
+		return value.toFixed(3).replace(/(\d)0+$/g, '$1').replace(/^0+\.([1-9])/g, '.$1');
+	}
+
+	function serializeNumber(value: number, key?: string) {
+		const isFloat = (key && floatKeys.indexOf(key) !== -1) || (value | 0) !== value;
+		return isFloat ? serializeFloat(value) : serializeInt(value);
+	}
+
+	function getKeys(value: any) {
+		const keys = Object.keys(value);
+
+		if (keys.indexOf('98') !== -1)
+			keys.unshift(...keys.splice(keys.indexOf('99'), 1));
+
+		if (keys.indexOf('99') !== -1)
+			keys.unshift(...keys.splice(keys.indexOf('99'), 1));
+
+		return keys;
+	}
+
+	function writeValue(value: any, key?: string, inProperty = false) {
+		function writePrefix() {
+			if (inProperty) {
+				writeString(' ');
 			} else {
-				const temp = indent;
-				indent = indent + '\t';
+				writeIndent();
+			}
+		}
+
+		if (typeof value === null) {
+			writePrefix();
+			writeString('null');
+		} else if (typeof value === 'number') {
+			writePrefix();
+			writeString(serializeNumber(value, key));
+		} else if (typeof value === 'boolean') {
+			writePrefix();
+			writeString(value ? 'true' : 'false');
+		} else if (typeof value === 'string') {
+			writePrefix();
+			
+			if ((key === '99' || key === '98') && value.charAt(0) === '/') {
+				writeString(value);
+			} else {
+				writeString('(');
+				write(0xfe);
+				write(0xff);
 
 				for (let i = 0; i < value.length; i++) {
-					const serialized = serializeValue(value[i]);
+					const code = value.charCodeAt(i);
 
-					if (serialized) {
-						lines.push(`${indent}${serialized}`);
+					if (code === 40 || code === 41) { // ( )
+						write(0);
+						write(92); // \
+						write(code);
+					} else {
+						write((code >> 8) & 0xff);
+						write(code & 0xff);
 					}
 				}
 
-				indent = temp;
-				lines.push(`${indent}]`);
-				return '[';
+				writeString(')');
+			}
+		} else if (Array.isArray(value)) {
+			writePrefix();
+
+			if (value.every(x => typeof x === 'number')) {
+				writeString('[');
+
+				for (const x of value) {
+					writeString(' ');
+					writeString(serializeNumber(x, key));
+				}
+
+				writeString(' ]');
+			} else {
+				writeString('[');
+				if (!condensed) writeString('\n');
+
+				for (const x of value) {
+					writeValue(x, key);
+					if (!condensed) writeString('\n');
+				}
+
+				writeIndent();
+				writeString(']');
 			}
 		} else if (typeof value === 'object') {
-			lines.push(`${indent}<<`);
-			const temp = indent;
-			indent = indent + '\t';
+			if (inProperty && !condensed) writeString('\n');
 
-			for (const key of Object.keys(value)) {
-				serializeProperty(key, value[key]);
+			writeIndent();
+			writeString('<<');
+
+			if (!condensed) writeString('\n');
+
+			indent++;
+
+			for (const key of getKeys(value)) {
+				writeProperty(key, value[key]);
 			}
 
-			indent = temp;
-			lines.push(`${indent}>>`);
+			indent--;
+			writeIndent();
+			writeString('>>');
 		}
 
 		return undefined;
 	}
 
-	serializeValue(data);
-
-	const buffer = new Uint8Array(lines.reduce((sum, line) => sum + line.length + 1, 0) - 1);
-	let offset = 0;
-
-	for (const line of lines) {
-		for (let i = 0; i < line.length; i++ , offset++) {
-			buffer[offset] = line.charCodeAt(i);
+	if (condensed) {
+		if (typeof data === 'object') {
+			for (const key of getKeys(data)) {
+				writeProperty(key, data[key]);
+			}
 		}
-
-		buffer[offset] = '\n'.charCodeAt(0);
-		offset++;
+	} else {
+		writeString('\n\n');
+		writeValue(data);
 	}
 
-	// console.log('serialized:\n', lines.join('\n'));
-
-	return buffer;
+	return buffer.slice(0, offset);
 }

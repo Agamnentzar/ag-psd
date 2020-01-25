@@ -155,12 +155,13 @@ export function compareBuffers(actual: Buffer, expected: Buffer, test: string) {
 		throw new Error(`Actual buffer is null or undefined (${test})`);
 	if (!expected)
 		throw new Error(`Expected buffer is null or undefined (${test})`);
-	if (actual.length !== expected.length)
-		throw new Error(`Buffers differ in size actual: ${actual.length} expected: ${expected.length} (${test})`);
 
 	for (let i = 0; i < actual.length; i++) {
 		if (actual[i] !== expected[i]) {
-			throw new Error(`Buffers differ at byte: ${i} actual: ${actual[i]} expected: ${expected[i]} (${test})`);
+			throw new Error(`Buffers differ at byte: 0x${i.toString(16)} actual: ${actual[i]} expected: ${expected[i]} (${test})`);
 		}
 	}
+
+	if (actual.length !== expected.length)
+		throw new Error(`Buffers differ in size actual: ${actual.length} expected: ${expected.length} (${test})`);
 }

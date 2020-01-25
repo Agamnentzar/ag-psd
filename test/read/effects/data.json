@@ -1,0 +1,1070 @@
+{
+  "width": 200,
+  "height": 200,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "de4d6e53ba306d367985e3f0d5099d3c",
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "alphaChannelNames": [
+      "Transparency"
+    ],
+    "unicodeAlphaNames": [
+      "Transparency"
+    ],
+    "alphaIdentifiers": [
+      0
+    ],
+    "globalAngle": 132,
+    "globalAltitude": 30,
+    "layerState": 0,
+    "layersGroup": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      12
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "version": 2,
+      "aspect": 1
+    },
+    "versionInfo": {
+      "version": 1,
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 54,
+      "left": 157,
+      "bottom": 77,
+      "right": 200,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "other2",
+      "effects": {
+        "scale": 1,
+        "gradientOverlay": {
+          "enabled": true,
+          "blendMode": "normal",
+          "opacity": 0.9,
+          "gradient": {
+            "name": "$$$/DefaultGradient/BlueRedYellow=Blue, Red, Yellow",
+            "type": "solid",
+            "smoothness": 1,
+            "colorStops": [
+              {
+                "color": [
+                  9.57198467105627,
+                  0,
+                  178.00000458955765,
+                  255
+                ],
+                "location": 0,
+                "midpoint": 0.5
+              },
+              {
+                "color": [
+                  255,
+                  0,
+                  0.02334630349650979,
+                  255
+                ],
+                "location": 0.5,
+                "midpoint": 0.5
+              },
+              {
+                "color": [
+                  255,
+                  252.00000017881393,
+                  0,
+                  255
+                ],
+                "location": 1,
+                "midpoint": 0.5
+              }
+            ],
+            "opacityStops": [
+              {
+                "opacity": 1,
+                "location": 0,
+                "midpoint": 0.5
+              },
+              {
+                "opacity": 1,
+                "location": 1,
+                "midpoint": 0.5
+              }
+            ]
+          },
+          "angle": 90,
+          "type": "radial",
+          "reverse": false,
+          "dither": true,
+          "align": true,
+          "scale": 1.12,
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "id": 12,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            238,
+            92,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 93,
+      "left": 11,
+      "bottom": 121,
+      "right": 76,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "other",
+      "effects": {
+        "scale": 1,
+        "gradientOverlay": {
+          "enabled": true,
+          "blendMode": "normal",
+          "opacity": 1,
+          "gradient": {
+            "name": "Custom",
+            "type": "noise",
+            "roughness": 0.5,
+            "colorModel": "lab",
+            "randomSeed": 43487260,
+            "restrictColors": true,
+            "addTransparency": false,
+            "min": [
+              0,
+              0,
+              0,
+              0
+            ],
+            "max": [
+              1,
+              1,
+              1,
+              1
+            ]
+          },
+          "angle": 90,
+          "type": "linear",
+          "reverse": false,
+          "dither": false,
+          "align": true,
+          "scale": 1,
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "satin": {
+          "enabled": true,
+          "blendMode": "multiply",
+          "color": [
+            204.00000303983688,
+            92.00000211596489,
+            92.00000211596489,
+            255
+          ],
+          "antialiased": false,
+          "invert": true,
+          "opacity": 0.5,
+          "angle": 19,
+          "distance": 11,
+          "size": 14,
+          "contour": {
+            "name": "Gaussian",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 32,
+                "y": 7
+              },
+              {
+                "x": 64,
+                "y": 38
+              },
+              {
+                "x": 96,
+                "y": 101
+              },
+              {
+                "x": 128,
+                "y": 166
+              },
+              {
+                "x": 159,
+                "y": 209
+              },
+              {
+                "x": 191,
+                "y": 235
+              },
+              {
+                "x": 223,
+                "y": 248
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          }
+        }
+      },
+      "id": 10,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            238,
+            143,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": -56,
+        "y": 7
+      }
+    },
+    {
+      "top": 117,
+      "left": 22,
+      "bottom": 180,
+      "right": 176,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "drop shadow",
+      "effects": {
+        "scale": 1,
+        "dropShadow": {
+          "size": 5,
+          "angle": 120,
+          "distance": 5,
+          "color": [
+            144.00000661611557,
+            58.16342577338219,
+            58.16342577338219,
+            255
+          ],
+          "blendMode": "multiply",
+          "enabled": true,
+          "useGlobalLight": true,
+          "opacity": 0.75,
+          "choke": 2,
+          "noise": 0,
+          "antialiased": false,
+          "contour": {
+            "name": "Linear",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "layerConceals": true
+        }
+      },
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            238,
+            174,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": -1,
+        "y": 49
+      }
+    },
+    {
+      "top": 6,
+      "left": 9,
+      "bottom": 89,
+      "right": 163,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "inner shadow",
+      "effects": {
+        "scale": 1,
+        "innerShadow": {
+          "size": 4,
+          "angle": 61,
+          "distance": 14,
+          "color": [
+            50.194554179906845,
+            200.00000327825546,
+            67.81711935997009,
+            255
+          ],
+          "blendMode": "multiply",
+          "enabled": true,
+          "useGlobalLight": false,
+          "opacity": 0.63,
+          "choke": 11,
+          "noise": 0,
+          "antialiased": false,
+          "contour": {
+            "name": "Linear",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          }
+        }
+      },
+      "id": 5,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            238,
+            201,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": -16,
+        "y": -10
+      }
+    },
+    {
+      "top": 80,
+      "left": 121,
+      "bottom": 113,
+      "right": 184,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "inner outer glow",
+      "effects": {
+        "scale": 1,
+        "outerGlow": {
+          "size": 5,
+          "color": [
+            255,
+            93.00000205636024,
+            226.42801076173782,
+            255
+          ],
+          "blendMode": "screen",
+          "enabled": true,
+          "opacity": 0.75,
+          "technique": "softer",
+          "choke": 0,
+          "noise": 0,
+          "jitter": 0,
+          "antialiased": false,
+          "contour": {
+            "name": "Linear",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "range": 0.5
+        },
+        "innerGlow": {
+          "size": 4,
+          "color": [
+            251.67612075805664,
+            251.67612075805664,
+            251.67612075805664,
+            255
+          ],
+          "blendMode": "normal",
+          "enabled": true,
+          "opacity": 0.75,
+          "technique": "softer",
+          "choke": 2,
+          "jitter": 0.09,
+          "noise": 0.03,
+          "antialiased": false,
+          "source": "edge",
+          "contour": {
+            "name": "Linear",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "range": 0.5
+        }
+      },
+      "id": 6,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            238,
+            229,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 166,
+      "left": 4,
+      "bottom": 196,
+      "right": 64,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "bevel",
+      "effects": {
+        "scale": 1,
+        "bevel": {
+          "angle": 120,
+          "strength": 1,
+          "size": 5,
+          "highlightBlendMode": "screen",
+          "shadowBlendMode": "multiply",
+          "highlightColor": [
+            255,
+            255,
+            255,
+            255
+          ],
+          "shadowColor": [
+            0.00043148465920239687,
+            0.00043148465920239687,
+            0.00043148465920239687,
+            255
+          ],
+          "style": "inner bevel",
+          "highlightOpacity": 0.75,
+          "shadowOpacity": 0.75,
+          "enabled": true,
+          "useGlobalLight": true,
+          "direction": "up",
+          "technique": "smooth",
+          "altitude": 30,
+          "contour": {
+            "name": "Linear",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "antialiasGloss": false,
+          "soften": 0,
+          "useShape": false,
+          "useTexture": false
+        }
+      },
+      "id": 7,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            239,
+            1,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 7,
+      "left": 19,
+      "bottom": 34,
+      "right": 96,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "solid fill",
+      "effects": {
+        "disabled": true,
+        "scale": 1,
+        "solidFill": {
+          "blendMode": "normal",
+          "color": [
+            42.062257155776024,
+            91.36575534939766,
+            173.00000488758087,
+            255
+          ],
+          "opacity": 1,
+          "enabled": true
+        }
+      },
+      "id": 8,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            30,
+            39,
+            127,
+            239,
+            31,
+            0
+          ]
+        }
+      ],
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "filterMask": {
+    "colorSpace": [
+      255,
+      0,
+      0,
+      0
+    ],
+    "opacity": 0.19607843137254902
+  }
+}

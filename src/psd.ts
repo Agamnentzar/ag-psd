@@ -74,75 +74,165 @@ export const enum SectionDividerType {
 	BoundingSectionDivider = 3,
 }
 
-export type Color = number[]; // TEMP: add color parsing into better structure
+export type Color = number[]; // [r, g, b, a]
 
-export interface LayerEffectsShadowInfo {
-	blur: number;
-	intensity: number;
+export interface EffectContour {
+	name: string;
+	curve: { x: number; y: number; }[];
+}
+
+export interface EffectPattern {
+	name: string;
+	id: string;
+}
+
+export interface LayerEffectsShadow {
+	size: number;
 	angle: number;
 	distance: number;
 	color: Color;
 	blendMode: string;
 	enabled: boolean;
-	useAngleInAllEffects: boolean;
 	opacity: number;
-	nativeColor?: Color;
+	useGlobalLight?: boolean;
+	antialiased?: boolean;
+	contour?: EffectContour;
+	layerConceals?: boolean; // only drop shadow
 }
 
-export interface LayerEffectsOuterGlowInfo {
-	blur: number;
-	intensity: number;
+export interface LayerEffectsOuterGlow {
+	size: number;
 	color: Color;
 	blendMode: string;
 	enabled: boolean;
 	opacity: number;
-	nativeColor?: Color;
+
+	source?: GlowSource;
+	antialiased?: boolean;
+	noise?: number;
+	range?: number;
+	choke?: number;
+	jitter?: number;
+	contour?: EffectContour;
 }
 
-export interface LayerEffectsInnerGlowInfo {
-	blur: number;
-	intensity: number;
+export interface LayerEffectsInnerGlow {
+	size: number;
 	color: Color;
 	blendMode: string;
 	enabled: boolean;
 	opacity: number;
-	invert?: boolean;
-	nativeColor?: Color;
+
+	source?: GlowSource;
+	technique?: GlowTechnique;
+	antialiased?: boolean;
+	noise?: number;
+	range?: number;
+	choke?: number;
+	jitter?: number;
+	contour?: EffectContour;
 }
 
-export interface LayerEffectsBevelInfo {
+export interface LayerEffectsBevel {
 	angle: number;
-	strength: number;
-	blur: number;
+	strength: number; // depth (rename ?)
+	size: number;
 	highlightBlendMode: string;
 	shadowBlendMode: string;
 	highlightColor: Color;
 	shadowColor: Color;
-	bevelStyle: number;
+	style: BevelStyle;
 	highlightOpacity: number;
 	shadowOpacity: number;
 	enabled: boolean;
-	useAngleInAllEffects: boolean;
-	up: boolean;
-	realHighlightColor?: Color;
-	realShadowColor?: Color;
+
+	soften?: number;
+	useGlobalLight?: boolean;
+	altitude?: number;
+	technique?: BevelTechnique;
+	direction?: BevelDirection;
+	useTexture?: boolean;
+	useShape?: boolean;
+	antialiasGloss?: boolean;
+	contour?: EffectContour;
 }
 
-export interface LayerEffectsSolidFillInfo {
+export interface LayerEffectsSolidFill {
 	blendMode: string;
 	color: Color;
 	opacity: number;
 	enabled: boolean;
-	nativeColor?: Color;
+}
+
+export interface LayerEffectSatin {
+	enabled?: boolean;
+	blendMode?: string;
+	color?: Color;
+	antialiased?: boolean;
+	opacity?: number;
+	distance?: number;
+	size?: number;
+	invert?: boolean;
+	angle?: number;
+	contour?: EffectContour;
+}
+
+// not supported yet because of `Patt` section not implemented
+export interface LayerEffectPatternOverlay {
+	enabled?: boolean;
+	blendMode?: string;
+	opacity?: number;
+	scale?: number;
+	pattern?: EffectPattern;
+	phase?: { x: number; y: number; };
+	align?: boolean;
+}
+
+export interface EffectSolidGradient {
+	name: string;
+	type: 'solid';
+	smoothness?: number;
+	colorStops: { color: Color; location: number; midpoint: number; }[];
+	opacityStops: { opacity: number; location: number; midpoint: number; }[];
+}
+
+export interface EffectNoiseGradient {
+	name: string;
+	type: 'noise';
+	roughness?: number;
+	colorModel?: 'rgb' | 'hsb' | 'lab';
+	randomSeed?: number;
+	restrictColors?: boolean;
+	addTransparency?: boolean;
+	min: number[];
+	max: number[];
+}
+
+export interface LayerEffectGradientOverlay {
+	enabled?: boolean;
+	blendMode?: string;
+	opacity?: number;
+	align?: boolean;
+	scale?: number;
+	dither?: boolean;
+	reverse?: boolean;
+	type?: GradientType;
+	offset?: { x: number; y: number; };
+	gradient?: EffectSolidGradient | EffectNoiseGradient;
 }
 
 export interface LayerEffectsInfo {
-	dropShadow?: LayerEffectsShadowInfo;
-	innerShadow?: LayerEffectsShadowInfo;
-	outerGlow?: LayerEffectsOuterGlowInfo;
-	innerGlow?: LayerEffectsInnerGlowInfo;
-	bevel?: LayerEffectsBevelInfo;
-	solidFill?: LayerEffectsSolidFillInfo;
+	disabled?: boolean;
+	scale?: number;
+	dropShadow?: LayerEffectsShadow;
+	innerShadow?: LayerEffectsShadow;
+	outerGlow?: LayerEffectsOuterGlow;
+	innerGlow?: LayerEffectsInnerGlow;
+	bevel?: LayerEffectsBevel;
+	solidFill?: LayerEffectsSolidFill;
+	satin?: LayerEffectSatin;
+	gradientOverlay?: LayerEffectGradientOverlay;
+	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
 }
 
 export interface LayerMaskData {
@@ -166,6 +256,12 @@ export type Antialias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
 export type WarpStyle =
 	'none' | 'arc' | 'arcLower' | 'arcUpper' | 'arch' | 'bulge' | 'shellLower' | 'shellUpper' | 'flag' |
 	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist';
+export type BevelStyle = 'outer bevel' | 'inner bevel' | 'emboss' | 'pillow emboss' | 'stroke emboss';
+export type BevelTechnique = 'smooth' | 'chisel hard' | 'chisel soft';
+export type BevelDirection = 'up' | 'down';
+export type GlowTechnique = 'softer' | 'precise';
+export type GlowSource = 'edge' | 'center';
+export type GradientType = 'linear' | 'radial' | 'angle' | 'reflected' | 'diamond';
 
 export interface LayerTextWarp {
 	style?: WarpStyle;
@@ -187,6 +283,14 @@ export interface LayerTextData {
 	left?: number;
 	bottom?: number;
 	right?: number;
+}
+
+export interface PatternInfo {
+	name: string;
+	id: string;
+	colorMode: ColorMode;
+	x: number;
+	y: number;
 }
 
 export interface LayerAdditionalInfo {
@@ -226,8 +330,8 @@ export interface LayerAdditionalInfo {
 		data: number[];
 	}[];
 	effects?: LayerEffectsInfo;
-	objectBasedEffectsLayerInfo?: any;
-	text?: LayerTextData;
+	text?: LayerTextData; // not supported yet
+	patterns?: PatternInfo[]; // not supported yet
 }
 
 export type ResolutionUnit = 'PPI' | 'PPCM';
@@ -256,7 +360,6 @@ export interface ImageResources {
 	};
 	urlsList?: any[];
 	gridAndGuidesInformation?: {
-		version?: number;
 		grid?: {
 			horizontal: number;
 			vertical: number;
