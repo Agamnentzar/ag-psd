@@ -428,7 +428,7 @@ const outuptBuffer = writePsd(psd, { invalidateTextLayers: true }); // needs `in
 
 When you add text layer to PSD file it is missing image data and additional text engine information. When you open file created this way in Photoshop it will display this error message, prompting you to update layer image data. You should choose "Update" which will prompt Photoshop to redraw text layers from text data. Clicking "OK" will result in text layers being left in broken state.
 
-![](https://github.com/Agamnentzar/ag-psd/tree/master/files/update-text-layers.png)
+![](https://raw.githubusercontent.com/Agamnentzar/ag-psd/master/files/update-text-layers.png)
 
 ### Text layer issues
 
