@@ -177,7 +177,8 @@ const createCanvasFromData = (data) => {
 agPsd.initializeCanvas(createCanvas, createCanvasFromData);
 
 onmessage = message => {
-  // skipping thumbnail and layer images here so we don't have to clear and convert them all before posting data back
+  // skipping thumbnail and layer images here so we don't have to clear and convert them all
+  // before posting data back
   const psd = agPsd.readPsd(message.data, { skipLayerImageData: true, skipThumbnail: true });
   const bmp = psd.canvas.transferToImageBitmap();
   delete psd.canvas; // can't post canvases back from workers
@@ -423,7 +424,9 @@ psd.children[0].text.text = 'New text here';
 
 psd.children[0].canvas = undefined; // optionally remove outdated image data
 
-const outuptBuffer = writePsd(psd, { invalidateTextLayers: true }); // needs `invalidateTextLayers` option to force Photoshop to redraw text layer on load, otherwise it will keep the old image data
+// needs `invalidateTextLayers` option to force Photoshop to redraw text layer on load,
+// otherwise it will keep the old image data
+const outuptBuffer = writePsd(psd, { invalidateTextLayers: true }); 
 ```
 
 When you add text layer to PSD file it is missing image data and additional text engine information. When you open file created this way in Photoshop it will display this error message, prompting you to update layer image data. You should choose "Update" which will prompt Photoshop to redraw text layers from text data. Clicking "OK" will result in text layers being left in broken state.
