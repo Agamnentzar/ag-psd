@@ -165,3 +165,15 @@ export function compareBuffers(actual: Buffer, expected: Buffer, test: string) {
 	if (actual.length !== expected.length)
 		throw new Error(`Buffers differ in size actual: ${actual.length} expected: ${expected.length} (${test})`);
 }
+
+
+export function expectBuffersEqual(actual: Uint8Array, expected: Uint8Array, name: string) {
+	const length = Math.max(actual.length, expected.length);
+
+	for (let i = 0; i < length; i++) {
+		if (actual[i] !== expected[i]) {
+			fs.writeFileSync(path.join(__dirname, '..', '..', 'results', name), Buffer.from(actual));
+			throw new Error(`Different byte at 0x${i.toString(16)} in (${name})`);
+		}
+	}
+}

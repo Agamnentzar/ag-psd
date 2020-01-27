@@ -13,12 +13,19 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 * Does not support Indexed, CMYK, Multichannel, Duotone and LAB color modes
 * Does not support 16 bits per channel
 * Does not support The Large Document Format (8BPB/PSB) 
-* Does not support vector/text layers
+* Does not support vector layers
 * Does not support color palettes
-* Does not support all metadata fields
+* Does not support timeline
+* Does not support patterns
+* Does not support some metadata fields
 * Does not support "Pattern Overlay" layer effect
+* Text layers implementation is incomplete
+  * Writing text layer with "vertical" orientation may result in broken PSD file
+  * Does not support writing or reading predefined "Paragraph Styles" or "Character Styles"
+  * The library does not redraw bitmap data for the text layer, so files with updated/written text layers will result in a warning prompt when opening the file in Photoshop. [see more below](#updating-text-layers)
+  * Some properties may not read or write properly
 
-## Installing
+## Installation
 
 ```bash
 npm install ag-psd
@@ -51,7 +58,7 @@ Needs [node-canvas](https://github.com/Automattic/node-canvas) to read image dat
 ```javascript
 import * as fs from 'fs';
 import 'ag-psd/initialize-canvas'; // only needed for reading image data and thumbnails
-import { readPsd, initializeCanvas } from 'ag-psd';
+import { readPsd } from 'ag-psd';
 
 const buffer = fs.readFileSync('my-file.psd');
 
@@ -344,7 +351,90 @@ interface WriteOptions {
 }
 ```
 
-## Developing
+### Writing text layers
+
+```js
+// simple example
+const psd = {
+  width: 200,
+  height: 200,
+  children: [
+    name: 'text layer',
+    text: {
+      text: 'Hello world', // text you want to draw
+      transform: [1, 0, 0, 1, 50, 50], // move text 50px horizontally and 50px vertically
+      style: {
+        font: { name: 'ArialMT' }, // need to provide full name here
+        fontSize: 30,
+        fillColor: [255, 0, 0, 255], // opaque red
+      },
+    },
+  ],
+};
+
+const buffer = writePsd(psd);
+```
+
+```js
+// advanced example
+const psd = {
+  width: 200,
+  height: 200,
+  children: [
+    name: 'text layer',
+    text: {
+      text: 'Hello world\nanother line', // text you want to draw
+      transform: [1, 0, 0, 1, 50, 50], // move text 50px horizontally and 50px vertically
+      style: {
+        font: { name: 'ArialMT' }, // need to provide full name here
+        fontSize: 30,
+      },
+      styleRuns: [
+        {
+          length: 5, // length of 'Hello'
+          style: { fillColor: [255, 0, 0, 255] }, // make 'Hello' red
+        },
+        {
+          length: 7, // length of ' world\n'
+          style: { fillColor: [0, 0, 255, 255] }, // make 'world' blue
+        },
+        {
+          length: 12, // length of 'another line'
+          style: { fillColor: [0, 255, 0, 255], underline: true }, // make 'another line' green and underlined
+        },
+      ],
+      paragraphStyle: {
+        justification: 'center', // center justify whole block of text
+      },
+    },
+  ],
+};
+
+const buffer = writePsd(psd);
+```
+
+### Updating text layers
+
+```js
+const psd = readPsd(inputBuffer);
+
+// assuming first layer is the one you want to update and has text already present
+psd.children[0].text.text = 'New text here';
+
+psd.children[0].canvas = undefined; // optionally remove outdated image data
+
+const outuptBuffer = writePsd(psd, { invalidateTextLayers: true }); // needs `invalidateTextLayers` option to force Photoshop to redraw text layer on load, otherwise it will keep the old image data
+```
+
+When you add text layer to PSD file it is missing image data and additional text engine information. When you open file created this way in Photoshop it will display this error message, prompting you to update layer image data. You should choose "Update" which will prompt Photoshop to redraw text layers from text data. Clicking "OK" will result in text layers being left in broken state.
+
+![](https://github.com/Agamnentzar/ag-psd/tree/master/files/update-text-layers.png)
+
+### Text layer issues
+
+Writing or updating layer orientation to vertical can end up creating broken PSD file that will crash Photoshop on opening. This is result of incomplete text layer implementation.
+
+## Development
 
 ### Building
 

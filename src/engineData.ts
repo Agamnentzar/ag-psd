@@ -1,63 +1,20 @@
+function isWhitespace(char: number) {
+	// ' ', '\n', '\r', '\t'
+	return char === 32 || char === 10 || char === 13 || char === 9;
+}
+
+function isNumber(char: number) {
+	// 0123456789.-
+	return (char >= 48 && char <= 57) || char == 46 || char == 45;
+}
+
 export function parseEngineData(data: number[] | Uint8Array) {
 	let index = 0;
-
-	function isWhitespace(char: number) {
-		// ' ', '\n', '\r', '\t'
-		return char === 32 || char === 10 || char === 13 || char === 9;
-	}
-
-	function isNumber(char: number) {
-		// 0123456789.-
-		return (char >= 48 && char <= 57) || char == 46 || char == 45;
-	}
 
 	function skipWhitespace() {
 		while (index < data.length && isWhitespace(data[index])) {
 			index++;
 		}
-	}
-
-	function getToken() {
-		const i = index;
-		const char = data[i];
-
-		if (char === 60 && data[i + 1] === 60) { // <<
-			index += 2;
-			return '<<';
-		} else if (char === 62 && data[i + 1] === 62) { // >>
-			index += 2;
-			return '>>';
-		} else if (char === 47 || char === 40 || char === 91 || char === 93) { // / ( [ ]
-			index += 1;
-			return String.fromCharCode(char);
-		} else if (char === 110 && data[i + 1] == 117 && data[i + 2] == 108 && data[i + 3] == 108) { // null
-			index += 4;
-			return 'null';
-		} else if (char === 116 && data[i + 1] == 114 && data[i + 2] == 117 && data[i + 3] == 101) { // true
-			index += 4;
-			return 'true';
-		} else if (char === 102 && data[i + 1] == 97 && data[i + 2] == 108 && data[i + 3] == 115 && data[i + 4] == 101) { // false
-			index += 5;
-			return 'false';
-		} else if (isNumber(char)) {
-			return '0';
-		} else {
-			index += 1;
-			return `invalid token ${String.fromCharCode(char)} at ${index}`/* +
-				` near ${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}` +
-				`data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`*/;
-		}
-	}
-
-	function getName() {
-		const start = index;
-
-		while (index < data.length && !isWhitespace(data[index])) {
-			index++;
-		}
-
-		// TODO: proper decode
-		return String.fromCharCode.apply(null, data.slice(start, index) as any); // text.substring(start, index);
 	}
 
 	function getText() {
@@ -107,21 +64,18 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		return result;
 	}
 
-	function getNumber() {
-		let value = '';
-
-		while (index < data.length && isNumber(data[index])) {
-			value += String.fromCharCode(data[index]);
-			index++;
-		}
-
-		return parseFloat(value);
-	}
-
-	skipWhitespace();
-
 	let root: any = null;
 	const stack: any[] = [];
+
+	function pushContainer(value: any) {
+		if (!stack.length) {
+			stack.push(value);
+			root = value;
+		} else {
+			pushValue(value);
+			stack.push(value);
+		}
+	}
 
 	function pushValue(value: any) {
 		if (!stack.length) throw new Error('Invalid data');
@@ -138,23 +92,17 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		}
 	}
 
-	function pushContainer(value: any) {
-		if (!stack.length) {
-			stack.push(value);
-			root = value;
-		} else {
-			pushValue(value);
-			stack.push(value);
-		}
-	}
-
 	function pushProperty(name: string) {
 		if (!stack.length) pushContainer({});
 
 		const top = stack[stack.length - 1];
 
 		if (top && typeof top === 'string') {
-			pushValue(`/${name}`);
+			if (name === 'nil') {
+				pushValue(null);
+			} else {
+				pushValue(`/${name}`);
+			}
 		} else if (top && typeof top === 'object') {
 			stack.push(name);
 		} else {
@@ -167,21 +115,65 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		stack.pop();
 	}
 
-	while (index < data.length) {
-		const token = getToken();
+	skipWhitespace();
 
-		switch (token) {
-			case '<<': pushContainer({}); break;
-			case '>>': pop(); break;
-			case '/': pushProperty(getName()); break;
-			case '(': pushValue(getText()); break;
-			case '[': pushContainer([]); break;
-			case ']': pop(); break;
-			case '0': pushValue(getNumber()); break;
-			case 'null': pushValue(null); break;
-			case 'true': pushValue(true); break;
-			case 'false': pushValue(false); break;
-			default: console.log('unhandled token', token);
+	while (index < data.length) {
+		const i = index;
+		const char = data[i];
+
+		if (char === 60 && data[i + 1] === 60) { // <<
+			index += 2;
+			pushContainer({});
+		} else if (char === 62 && data[i + 1] === 62) { // >>
+			index += 2;
+			pop();
+		} else if (char === 47) { // /
+			index += 1;
+			const start = index;
+
+			while (index < data.length && !isWhitespace(data[index])) {
+				index++;
+			}
+
+			let name = '';
+
+			for (let i = start; i < index; i++) {
+				name += String.fromCharCode(data[i]);
+			}
+
+			pushProperty(name);
+		} else if (char === 40) { // (
+			index += 1;
+			pushValue(getText());
+		} else if (char === 91) { // [
+			index += 1;
+			pushContainer([]);
+		} else if (char === 93) { // ]
+			index += 1;
+			pop();
+		} else if (char === 110 && data[i + 1] === 117 && data[i + 2] === 108 && data[i + 3] === 108) { // null
+			index += 4;
+			pushValue(null);
+		} else if (char === 116 && data[i + 1] === 114 && data[i + 2] === 117 && data[i + 3] === 101) { // true
+			index += 4;
+			pushValue(true);
+		} else if (char === 102 && data[i + 1] === 97 && data[i + 2] === 108 && data[i + 3] === 115 && data[i + 4] === 101) { // false
+			index += 5;
+			pushValue(false);
+		} else if (isNumber(char)) {
+			let value = '';
+
+			while (index < data.length && isNumber(data[index])) {
+				value += String.fromCharCode(data[index]);
+				index++;
+			}
+
+			pushValue(parseFloat(value));
+		} else {
+			index += 1;
+			console.log(`Invalid token ${String.fromCharCode(char)} at ${index}`);
+			// ` near ${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}` +
+			// `data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`
 		}
 
 		skipWhitespace();
@@ -197,8 +189,9 @@ const floatKeys = [
 	'OutlineWidth',
 ];
 
-// TODO: noWhitespace option
-// TODO: write without root object
+const intArrays = ['RunLengthArray'];
+
+// TODO: handle /nil
 export function serializeEngineData(data: any, condensed = false) {
 	let buffer = new Uint8Array(1024);
 	let offset = 0;
@@ -243,7 +236,10 @@ export function serializeEngineData(data: any, condensed = false) {
 	}
 
 	function serializeFloat(value: number) {
-		return value.toFixed(3).replace(/(\d)0+$/g, '$1').replace(/^0+\.([1-9])/g, '.$1');
+		return value.toFixed(5)
+			.replace(/(\d)0+$/g, '$1')
+			.replace(/^0+\.([1-9])/g, '.$1')
+			.replace(/^-0+\.0(\d)/g, '-.0$1');
 	}
 
 	function serializeNumber(value: number, key?: string) {
@@ -272,9 +268,9 @@ export function serializeEngineData(data: any, condensed = false) {
 			}
 		}
 
-		if (typeof value === null) {
+		if (value === null) {
 			writePrefix();
-			writeString('null');
+			writeString(condensed ? '/nil' : 'null');
 		} else if (typeof value === 'number') {
 			writePrefix();
 			writeString(serializeNumber(value, key));
@@ -283,7 +279,7 @@ export function serializeEngineData(data: any, condensed = false) {
 			writeString(value ? 'true' : 'false');
 		} else if (typeof value === 'string') {
 			writePrefix();
-			
+
 			if ((key === '99' || key === '98') && value.charAt(0) === '/') {
 				writeString(value);
 			} else {
@@ -291,13 +287,19 @@ export function serializeEngineData(data: any, condensed = false) {
 				write(0xfe);
 				write(0xff);
 
+				let lastCode = 0;
+
 				for (let i = 0; i < value.length; i++) {
 					const code = value.charCodeAt(i);
 
 					if (code === 40 || code === 41) { // ( )
-						write(0);
+						write(lastCode); // \0 or space
 						write(92); // \
 						write(code);
+						lastCode = 0;
+					} else if (code === 32 && (value.charCodeAt(i + 1) === 40 || value.charCodeAt(i + 1) === 41)) {
+						// space followed by ( ) is encoded as " \)"
+						lastCode = 32; // space
 					} else {
 						write((code >> 8) & 0xff);
 						write(code & 0xff);
@@ -312,9 +314,11 @@ export function serializeEngineData(data: any, condensed = false) {
 			if (value.every(x => typeof x === 'number')) {
 				writeString('[');
 
+				const intArray = intArrays.indexOf(key!) !== -1;
+
 				for (const x of value) {
 					writeString(' ');
-					writeString(serializeNumber(x, key));
+					writeString(intArray ? serializeNumber(x) : serializeFloat(x));
 				}
 
 				writeString(' ]');

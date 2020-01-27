@@ -1,5 +1,10 @@
 # Changelog
 
+## v8.0.0
+- Added handling for reading and writing text layer data (with some limitations)
+- Added `invalidateTextLayers` write options for forcing Photoshop to redraw updated text layer.
+- Removed unnecessary `version` fields from `pixelAspectRatio` and `versionInfo` image resources.
+
 ## v7.0.0
 - **BREAKING CHANGE:** Normalized handling of opacity (now all opacity fields are in 0-1 range, instead of 0-255)
 - **BREAKING CHANGE:** Fixed handling for colors (colors are now represented by an array of 4 values in 0-255 range as [R, G, B, A], for example: `[255, 0, 0, 255]` for opaque red color)

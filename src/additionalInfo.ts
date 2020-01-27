@@ -1,7 +1,7 @@
 import { readEffects, writeEffects } from './effectsHelpers';
 import { readColor, toArray, writeColor } from './helpers';
 import {
-	LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, Antialias, BevelStyle, BevelTechnique,
+	LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, AntiAlias, BevelStyle, BevelTechnique,
 	LayerEffectsShadow, LayerEffectsOuterGlow, LayerEffectsInnerGlow, LayerEffectsBevel,
 	LayerEffectsSolidFill, BevelDirection, GlowTechnique, GlowSource, LayerEffectPatternOverlay,
 	LayerEffectGradientOverlay, LayerEffectSatin, GradientType, EffectContour, EffectSolidGradient,
@@ -9,13 +9,16 @@ import {
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readInt32, readInt16, checkSignature
+	readBytes, readInt32, readInt16, checkSignature, readFloat32
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeUnicodeString, writeSignature, writeBytes, writeUint32, writeUint16,
-	writeFloat64, writeUint8, writeInt16, writeInt32,
+	writeFloat64, writeUint8, writeInt16, writeInt32, writeFloat32,
 } from './psdWriter';
 import { readDescriptorStructure, writeDescriptorStructure } from './descriptor';
+import { serializeEngineData, parseEngineData } from './engineData';
+import { encodeEngineData, decodeEngineData } from './text';
+import { fromByteArray, toByteArray } from 'base64-js';
 
 export interface InfoHandler {
 	key: string;
@@ -93,7 +96,7 @@ function toOrientation(value: string): Orientation {
 }
 
 function fromOrientation(value: Orientation | undefined) {
-	return `textGridding.${Ornt[value!] || 'Hrzn'}`;
+	return `Ornt.${Ornt[value!] || 'Hrzn'}`;
 }
 
 // Annt.antiAliasSharp | Annt.Anno | ...
@@ -107,12 +110,12 @@ const Annt: Dict = {
 
 const AnntRev = revMap(Annt);
 
-function toAntialias(value: string): Antialias {
-	return (AnntRev[value.split('.')[1]] as any) || 'none';
+function toAntialias(value: string): AntiAlias {
+	return (AnntRev[value.split('.')[1]] as any) || 'sharp';
 }
 
-function fromAntialias(value: Antialias | undefined) {
-	return `Annt.${Annt[value!] || 'Anno'}`;
+function fromAntialias(value: AntiAlias | undefined) {
+	return `Annt.${Annt[value!] || 'antiAliasSharp'}`;
 }
 
 // warpStyle.warpNone | warpStyle.warpArc | ...
@@ -270,6 +273,7 @@ function fromGlowSource(value: GlowSource | undefined) {
 	return `IGSr.${IGSr[value!] || 'SrcE'}`;
 }
 
+// GrdT.Lnr | ...
 const GrdT: Dict = {
 	'linear': 'Lnr ',
 	'radial': 'Rdl ',
@@ -288,6 +292,7 @@ function fromGradientType(value: GradientType | undefined) {
 	return `GrdT.${GrdT[value!] || 'Lnr '}`;
 }
 
+// ClrS.RGBC | ...
 const ClrS: Dict = {
 	'rgb': 'ClrS.RGBC',
 	'hsb': 'ClrS.HSBl',
@@ -296,6 +301,7 @@ const ClrS: Dict = {
 
 const ClrSRev = revMap(ClrS);
 
+// GrdF.CstS | ...
 const GrdF: Dict = {
 	'solid': 'GrdF.CstS',
 	'noise': 'GrdF.ClNs',
@@ -306,12 +312,10 @@ const GrdFRev = revMap(GrdF);
 addHandler(
 	'TySh',
 	target => target.text !== undefined,
-	(reader, target) => {
+	(reader, target, leftBytes) => {
 		const version = readInt16(reader);
 
-		if (version !== 1) {
-			throw new Error(`Invalid TySh version: ${version}`);
-		}
+		if (version !== 1) throw new Error(`Invalid TySh version: ${version}`);
 
 		const transform = [
 			readFloat64(reader),
@@ -331,8 +335,6 @@ addHandler(
 
 		const text: TextDescriptor = readDescriptorStructure(reader);
 
-		// console.log('EngineData:', JSON.stringify(parseEngineData(text.EngineData), null, 2), '\n');
-
 		const warpVersion = readInt16(reader);
 		const warpDescriptorVersion = readInt32(reader);
 
@@ -342,52 +344,62 @@ addHandler(
 
 		const warp: WarpDescriptor = readDescriptorStructure(reader);
 
-		const left = readInt32(reader);
-		const top = readInt32(reader);
-		const right = readInt32(reader);
-		const bottom = readInt32(reader);
+		const left = readFloat32(reader);
+		const top = readFloat32(reader);
+		const right = readFloat32(reader);
+		const bottom = readFloat32(reader);
 
 		target.text = {
 			transform, left, top, right, bottom,
-			text: text['Txt '],
-			index: text.TextIndex || 0,
+			text: text['Txt '].replace(/\r/g, '\n'),
+			index: text.TextIndex ?? 0,
 			gridding: toTextGridding(text.textGridding),
-			antialias: toAntialias(text.AntA),
+			antiAlias: toAntialias(text.AntA),
 			orientation: toOrientation(text.Ornt),
 			warp: {
 				style: toWarpStyle(warp.warpStyle),
-				value: warp.warpValue || 0,
-				perspective: warp.warpPerspective || 0,
-				perspectiveOther: warp.warpPerspectiveOther || 0,
+				value: warp.warpValue ?? 0,
+				perspective: warp.warpPerspective ?? 0,
+				perspectiveOther: warp.warpPerspectiveOther ?? 0,
 				rotate: toOrientation(warp.warpRotate),
 			},
 		};
+
+		if (text.EngineData) {
+			const engineData = decodeEngineData(parseEngineData(text.EngineData));
+			// console.log(require('util').inspect(parseEngineData(text.EngineData), false, 99, true));
+			target.text = { ...target.text, ...engineData };
+			// console.log(require('util').inspect(target.text, false, 99, true));
+		}
+
+		skipBytes(reader, leftBytes());
 	},
 	(writer, target) => {
 		const text = target.text!;
-		const warp = text.warp || {};
-		const transform = text.transform || [1, 0, 0, 1, 0, 0];
+		const warp = text.warp ?? {};
+		const transform = text.transform ?? [1, 0, 0, 1, 0, 0];
 
 		const textDescriptor: TextDescriptor = {
-			'Txt ': text.text,
+			'Txt ': (text.text ?? '').replace(/\r?\n/g, '\r'),
 			textGridding: fromTextGridding(text.gridding),
 			Ornt: fromOrientation(text.orientation),
-			AntA: fromAntialias(text.antialias),
-			TextIndex: text.index || 0,
+			AntA: fromAntialias(text.antiAlias),
+			TextIndex: text.index ?? 0,
+			EngineData: serializeEngineData(encodeEngineData(text)),
 		};
 
 		const warpDescriptor: WarpDescriptor = {
 			warpStyle: fromWarpStyle(warp.style),
-			warpValue: warp.value || 0,
-			warpPerspective: warp.perspective || 0,
-			warpPerspectiveOther: warp.perspectiveOther || 0,
+			warpValue: warp.value ?? 0,
+			warpPerspective: warp.perspective ?? 0,
+			warpPerspectiveOther: warp.perspectiveOther ?? 0,
 			warpRotate: fromOrientation(warp.rotate),
 		};
 
 		writeInt16(writer, 1); // version
 
 		for (let i = 0; i < 6; i++) {
-			writeFloat64(writer, transform[i] || 0);
+			writeFloat64(writer, transform[i] ?? 0);
 		}
 
 		writeInt16(writer, 50); // text version
@@ -400,10 +412,10 @@ addHandler(
 
 		writeDescriptorStructure(writer, '', 'warp', warpDescriptor);
 
-		writeInt32(writer, text.left || 0);
-		writeInt32(writer, text.top || 0);
-		writeInt32(writer, text.right || 0);
-		writeInt32(writer, text.bottom || 0);
+		writeFloat32(writer, text.left ?? 0);
+		writeFloat32(writer, text.top ?? 0);
+		writeFloat32(writer, text.right ?? 0);
+		writeFloat32(writer, text.bottom ?? 0);
 	},
 );
 
@@ -516,11 +528,7 @@ addHandler(
 		target.metadata = [];
 
 		for (let i = 0; i < count; i++) {
-			const signature = readSignature(reader);
-
-			if (signature !== '8BIM')
-				throw new Error(`Invalid signature: '${signature}'`);
-
+			checkSignature(reader, '8BIM');
 			const key = readSignature(reader);
 			const copy = !!readUint8(reader);
 			skipBytes(reader, 3);
@@ -620,28 +628,22 @@ addHandler(
 	},
 );
 
-/*addHandler(
+addHandler(
 	'Txt2',
-	target => !!(target as any)['__Txt2'], // target.text !== undefined,
+	target => target.engineData !== undefined,
 	(reader, target, left) => {
 		const data = readBytes(reader, left());
-		const engineData = parseEngineData(data);
-		(target as any)['__Txt2'] = engineData;
-		// (target as any)['__Txt2'] = Array.from(textEngineData);
-		// const ed2 = require('parse-engine-data')(textEngineData);
-		// console.log(ed2);
-
+		target.engineData = fromByteArray(data);
+		// const engineData = parseEngineData(data);
+		// console.log(require('util').inspect(engineData, false, 99, true));
+		// require('fs').writeFileSync('resources/engineData2Simple.txt', require('util').inspect(engineData, false, 99, false), 'utf8');
 		// require('fs').writeFileSync('test_data.json', JSON.stringify(ed, null, 2), 'utf8');
-		// require('fs').writeFileSync('test_data2.json', JSON.stringify(ed2, null, 2), 'utf8');
-		
-		if (!Date.now()) console.log('Txt2:textEngineData', JSON.stringify(engineData, null, 2));
 	},
 	(writer, target) => {
-		// const buffer = new Uint8Array((target as any)['__Txt2']);
-		const buffer = serializeEngineData((target as any)['__Txt2'], true);
+		const buffer = toByteArray(target.engineData!);
 		writeBytes(writer, buffer);
 	},
-);*/
+);
 
 addHandler(
 	'FMsk',

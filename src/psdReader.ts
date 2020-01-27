@@ -5,7 +5,6 @@ import {
 import { resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData, createCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
-// import { decodeString } from './utf8';
 
 interface ChannelInfo {
 	id: ChannelID;
@@ -156,27 +155,10 @@ function readShortString(reader: PsdReader, length: number) {
 }
 
 export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
-	const psd = readHeader(reader);
-	readColorModeData(reader, psd, options);
-	readImageResources(reader, psd, options);
-	const globalAlpha = readLayerAndMaskInfo(reader, psd, options);
-
-	const hasChildren = psd.children && psd.children.length;
-	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
-
-	if (!skipComposite) {
-		readImageData(reader, psd, globalAlpha);
-	}
-
-	return psd;
-}
-
-function readHeader(reader: PsdReader): Psd {
+	// header
 	checkSignature(reader, '8BPS');
-
 	const version = readUint16(reader);
 
-	/* istanbul ignore if */
 	if (version !== 1)
 		throw new Error(`Invalid PSD file version: ${version}`);
 
@@ -187,14 +169,12 @@ function readHeader(reader: PsdReader): Psd {
 	const bitsPerChannel = readUint16(reader);
 	const colorMode = readUint16(reader);
 
-	/* istanbul ignore if */
 	if (supportedColorModes.indexOf(colorMode) === -1)
 		throw new Error(`Color mode not supported: ${colorMode}`);
 
-	return { width, height, channels, bitsPerChannel, colorMode };
-}
+	const psd: Psd = { width, height, channels, bitsPerChannel, colorMode };
 
-function readColorModeData(reader: PsdReader, _psd: Psd, options: ReadOptions) {
+	// color mode data
 	readSection(reader, 1, left => {
 		if (options.throwForMissingFeatures) {
 			throw new Error('Not Implemented: color mode data');
@@ -202,40 +182,15 @@ function readColorModeData(reader: PsdReader, _psd: Psd, options: ReadOptions) {
 			skipBytes(reader, left());
 		}
 	});
-}
 
-function readImageResources(reader: PsdReader, psd: Psd, options: ReadOptions) {
+	// image resources
 	readSection(reader, 1, left => {
 		while (left()) {
 			readImageResource(reader, psd, options);
 		}
 	});
-}
 
-function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
-	checkSignature(reader, '8BIM');
-
-	const id = readUint16(reader);
-	readPascalString(reader); // name
-
-	readSection(reader, 2, left => {
-		const handler = resourceHandlersMap[id];
-		const skip = id === 1036 && !!options.skipThumbnail;
-
-		if (!psd.imageResources) {
-			psd.imageResources = {};
-		}
-
-		if (handler && !skip) {
-			handler.read(reader, psd.imageResources, left, options);
-		} else {
-			// console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
-			skipBytes(reader, left());
-		}
-	});
-}
-
-function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, options: ReadOptions) {
+	// layer and mask info 
 	let globalAlpha = false;
 
 	readSection(reader, 1, left => {
@@ -263,7 +218,37 @@ function readLayerAndMaskInfo(reader: PsdReader, psd: Psd, options: ReadOptions)
 		}
 	});
 
-	return globalAlpha;
+	const hasChildren = psd.children && psd.children.length;
+	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
+
+	if (!skipComposite) {
+		readImageData(reader, psd, globalAlpha);
+	}
+
+	return psd;
+}
+
+function readImageResource(reader: PsdReader, psd: Psd, options: ReadOptions) {
+	checkSignature(reader, '8BIM');
+
+	const id = readUint16(reader);
+	readPascalString(reader); // name
+
+	readSection(reader, 2, left => {
+		const handler = resourceHandlersMap[id];
+		const skip = id === 1036 && !!options.skipThumbnail;
+
+		if (!psd.imageResources) {
+			psd.imageResources = {};
+		}
+
+		if (handler && !skip) {
+			handler.read(reader, psd.imageResources, left, options);
+		} else {
+			// console.log(`Image resource: ${id} ${name} ${getImageResourceName(id).substr(0, 90) }`);
+			skipBytes(reader, left());
+		}
+	});
 }
 
 function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptions) {

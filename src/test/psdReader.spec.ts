@@ -3,10 +3,11 @@ import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas } from './common';
-import { Layer, ReadOptions } from '../psd';
+import { Layer, ReadOptions, Psd } from '../psd';
 import { readPsd, writePsdBuffer } from '../index';
 
-const readFilesPath = path.join(__dirname, '..', '..', 'test', 'read');
+const testFilesPath = path.join(__dirname, '..', '..', 'test');
+const readFilesPath = path.join(testFilesPath, 'read');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
 const opts: ReadOptions = { throwForMissingFeatures: true, logMissingFeatures: true };
 
@@ -28,7 +29,7 @@ describe('PsdReader', () => {
 	});
 
 	it.skip('can read a PSD with layer masks (only if throw on missing features is not set)', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, '../layer-mask', 'src.psd'));
+		const psd = readPsdFromFile(path.join(readFilesPath, '..', 'layer-mask', 'src.psd'));
 		expect(psd.children![0].canvas).ok;
 	});
 
@@ -43,7 +44,7 @@ describe('PsdReader', () => {
 		expect(psd.width).equal(300);
 	});
 
-	fs.readdirSync(readFilesPath).filter(f => !/text|pattern/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), opts);
@@ -57,7 +58,7 @@ describe('PsdReader', () => {
 			let i = 0;
 
 			function pushLayerCanvases(layers: Layer[]) {
-				layers.forEach(l => {
+				for (const l of layers) {
 					if (l.children) {
 						pushLayerCanvases(l.children);
 					} else {
@@ -70,10 +71,10 @@ describe('PsdReader', () => {
 							delete l.mask.canvas;
 						}
 					}
-				});
+				}
 			}
 
-			pushLayerCanvases(psd.children || []);
+			pushLayerCanvases(psd.children ?? []);
 			mkdirp.sync(path.join(resultsFilesPath, f));
 
 			if (psd.imageResources && psd.imageResources.thumbnail) {
@@ -93,18 +94,74 @@ describe('PsdReader', () => {
 		});
 	});
 
-	it.skip('text layer test', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, 'text-layer', 'src.psd'), opts);
+	it.skip('write text layer test', () => {
+		const psd: Psd = {
+			width: 200,
+			height: 200,
+			children: [
+				{
+					name: 'text layer',
+					text: {
+						text: 'Hello World\n• c • tiny!\r\ntest',
+						// orientation: 'vertical',
+						transform: [1, 0, 0, 1, 70, 70],
+						style: {
+							font: { name: 'ArialMT' },
+							fontSize: 30,
+							fillColor: [0, 128, 0, 255],
+						},
+						styleRuns: [
+							{ length: 12, style: { fillColor: [255, 0, 0, 255] } },
+							{ length: 12, style: { fillColor: [0, 0, 255, 255] } },
+							{ length: 4, style: { underline: true } },
+						],
+						paragraphStyle: {
+							justification: 'center',
+						},
+						warp: {
+							style: 'arc',
+							value: 50,
+							perspective: 0,
+							perspectiveOther: 0,
+							rotate: 'horizontal',
+						},
+					},
+				},
+				{
+					name: '2nd layer',
+					text: {
+						text: 'Aaaaa',
+						transform: [1, 0, 0, 1, 70, 70],
+					},
+				},
+			],
+		};
 
-		const layer = psd.children![1];
-		delete layer.canvas;
-		delete layer.left;
-		delete layer.top;
-		delete layer.right;
-		delete layer.bottom;
+		fs.writeFileSync(path.join(resultsFilesPath, 'TEXT2.psd'), writePsdBuffer(psd));
+	});
 
+	it.skip('read text layer test', () => {
+		const psd = readPsdFromFile(path.join(testFilesPath, 'text-test.psd'), opts);
+		// const layer = psd.children![1];
+
+		// layer.text!.text = 'Foo bar';
 		const buffer = writePsdBuffer(psd);
 		fs.writeFileSync(path.join(resultsFilesPath, 'TEXT.psd'), buffer);
+
+		// console.log(require('util').inspect(psd.children![0].text, false, 99, true));
+		// console.log(require('util').inspect(psd.children![1].text, false, 99, true));
+		// console.log(require('util').inspect(psd.engineData, false, 99, true));
+	});
+
+	it.skip('decode engine data 2', () => {
+		// const fileData = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'engineData2Vertical.txt'));
+		const fileData = fs.readFileSync(path.join(__dirname, '..', '..', 'resources', 'engineData2Simple.txt'));
+		const func = new Function(`return ${fileData};`);
+		const data = func();
+		const result = decodeEngineData2(data);
+		fs.writeFileSync(
+			path.join(__dirname, '..', '..', 'resources', 'temp.js'),
+			'var x = ' + require('util').inspect(result, false, 99, false), 'utf8');
 	});
 });
 
@@ -113,4 +170,326 @@ function clearEmptyCanvasFields(layer: Layer | undefined) {
 		if ('canvas' in layer && !layer.canvas) delete layer.canvas;
 		layer.children?.forEach(clearEmptyCanvasFields);
 	}
+}
+
+/// Engine data 2 experiments
+
+const keysColor = {
+	'0': {
+		uproot: true,
+		children: {
+			'0': { name: 'Type' },
+			'1': { name: 'Values' },
+		},
+	},
+};
+
+const keysStyleSheet = {
+	'0': { name: 'Font' },
+	'1': { name: 'FontSize' },
+	'2': { name: 'FauxBold' },
+	'3': { name: 'FauxItalic' },
+	'4': { name: 'AutoLeading' },
+	'5': { name: 'Leading' },
+	'6': { name: 'HorizontalScale' },
+	'7': { name: 'VerticalScale' },
+	'8': { name: 'Tracking' },
+	'9': { name: 'BaselineShift' },
+
+	'11': { name: 'Kerning?' }, // different value than EngineData
+	'12': { name: 'FontCaps' },
+	'13': { name: 'FontBaseline' },
+
+	'15': { name: 'Strikethrough?' }, // number instead of bool
+	'16': { name: 'Underline?' }, // number instead of bool
+
+	'18': { name: 'Ligatures' },
+	'19': { name: 'DLigatures' },
+
+	'23': { name: 'Fractions' }, // not present in EngineData
+	'24': { name: 'Ordinals' }, // not present in EngineData
+
+	'28': { name: 'StylisticAlternates' }, // not present in EngineData
+
+	'30': { name: 'OldStyle?' }, // OpenType > OldStyle, number instead of bool, not present in EngineData
+
+	'35': { name: 'BaselineDirection' },
+
+	'38': { name: 'Language' },
+
+	'52': { name: 'NoBreak' },
+	'53': { name: 'FillColor', children: keysColor },
+};
+
+const keysParagraph = {
+	'0': { name: 'Justification' },
+	'1': { name: 'FirstLineIndent' },
+	'2': { name: 'StartIndent' },
+	'3': { name: 'EndIndent' },
+	'4': { name: 'SpaceBefore' },
+	'5': { name: 'SpaceAfter' },
+
+	'7': { name: 'AutoLeading' },
+
+	'9': { name: 'AutoHyphenate' },
+	'10': { name: 'HyphenatedWordSize' },
+	'11': { name: 'PreHyphen' },
+	'12': { name: 'PostHyphen' },
+	'13': { name: 'ConsecutiveHyphens?' }, // different value than EngineData
+	'14': { name: 'Zone' },
+	'15': { name: 'HypenateCapitalizedWords' }, // not present in EngineData
+
+	'17': { name: 'WordSpacing' },
+	'18': { name: 'LetterSpacing' },
+	'19': { name: 'GlyphSpacing' },
+
+	'32': { name: 'StyleSheet', children: keysStyleSheet },
+};
+
+const keysStyleSheetData = {
+	name: 'StyleSheetData',
+	children: keysStyleSheet,
+};
+
+const keys = {
+	'0': {
+		name: 'ResourceDict',
+		children: {
+			'1': {
+				name: 'FontSet',
+				children: {
+					'0': {
+						uproot: true,
+						children: {
+							'0': {
+								uproot: true,
+								children: {
+									'0': {
+										uproot: true,
+										children: {
+											'0': { name: 'Name' },
+											'2': { name: 'FontType' },
+										},
+									},
+								},
+							}
+						},
+					},
+				},
+			},
+			'2': {
+				name: '2',
+				children: {},
+			},
+			'3': {
+				name: 'MojiKumiSet',
+				children: {
+					'0': {
+						uproot: true,
+						children: {
+							'0': {
+								uproot: true,
+								children: {
+									'0': { name: 'InternalName' },
+								},
+							},
+						},
+					},
+				},
+			},
+			'4': {
+				name: 'KinsokuSet',
+				children: {
+					'0': {
+						uproot: true,
+						children: {
+							'0': {
+								uproot: true,
+								children: {
+									'0': { name: 'Name' },
+									'5': {
+										uproot: true,
+										children: {
+											'0': { name: 'NoStart' },
+											'1': { name: 'NoEnd' },
+											'2': { name: 'Keep' },
+											'3': { name: 'Hanging' },
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			'5': {
+				name: 'StyleSheetSet',
+				children: {
+					'0': {
+						uproot: true,
+						children: {
+							'0': {
+								uproot: true,
+								children: {
+									'0': { name: 'Name' },
+									'6': keysStyleSheetData,
+								},
+							},
+						},
+					},
+				},
+			},
+			'6': {
+				name: 'ParagraphSheetSet',
+				children: {
+					'0': {
+						uproot: true,
+						children: {
+							'0': {
+								uproot: true,
+								children: {
+									'0': { name: 'Name' },
+									'5': {
+										name: 'Properties',
+										children: keysParagraph,
+									},
+									'6': { name: 'DefaultStyleSheet' },
+								},
+							},
+						},
+					},
+				},
+			},
+			'8': {
+				name: '8',
+				children: {},
+			},
+			'9': {
+				name: 'Predefined',
+				children: {},
+			},
+		},
+	},
+	'1': {
+		name: 'EngineDict',
+		children: {
+			'0': {
+				name: '0',
+				children: {
+					'0': {
+						name: '0',
+						children: {
+						},
+					},
+					'3': { name: 'SuperscriptSize' },
+					'4': { name: 'SuperscriptPosition' },
+					'5': { name: 'SubscriptSize' },
+					'6': { name: 'SubscriptPosition' },
+					'7': { name: 'SmallCapSize' },
+					'8': { name: 'UseFractionalGlyphWidths' }, // ???
+				},
+			},
+			'1': {
+				name: 'Editors?',
+				children: {
+					'0': {
+						name: 'Editor',
+						children: {
+							'0': { name: 'Text' },
+							'5': {
+								name: 'ParagraphRun',
+								children: {
+									'0': {
+										name: 'RunArray',
+										children: {
+											'0': {
+												name: 'ParagraphSheet',
+												children: {
+													'0': {
+														uproot: true,
+														children: {
+															'0': { name: '0' },
+															'5': {
+																name: '5',
+																children: keysParagraph,
+															},
+															'6': { name: '6' },
+														},
+													},
+												},
+											},
+											'1': { name: 'RunLength' },
+										},
+									},
+								},
+							},
+							'6': {
+								name: 'StyleRun',
+								children: {
+									'0': {
+										name: 'RunArray',
+										children: {
+											'0': {
+												name: 'StyleSheet',
+												children: {
+													'0': {
+														uproot: true,
+														children: {
+															'6': keysStyleSheetData,
+														},
+													},
+												},
+											},
+											'1': { name: 'RunLength' },
+										},
+									},
+								},
+							},
+						},
+					},
+					'1': {
+						name: 'FontVectorData ???',
+					},
+				},
+			},
+			'2': {
+				name: 'StyleSheet',
+				children: keysStyleSheet,
+			},
+			'3': {
+				name: 'ParagraphSheet',
+				children: keysParagraph,
+			},
+		},
+	},
+};
+
+function decodeObj(obj: any, keys: any): any {
+	if (obj === null || !keys) return obj;
+
+	if (Array.isArray(obj)) {
+		return obj.map(x => decodeObj(x, keys));
+	}
+
+	if (typeof obj !== 'object') return obj;
+
+	const result: any = {};
+
+	for (const key of Object.keys(obj)) {
+		if (keys[key]) {
+			if (keys[key].uproot) {
+				return decodeObj(obj[key], keys[key].children);
+			} else {
+				result[keys[key].name] = decodeObj(obj[key], keys[key].children);
+			}
+		} else {
+			result[key] = obj[key];
+		}
+	}
+
+	return result;
+}
+
+function decodeEngineData2(data: any) {
+	return decodeObj(data, keys);
 }

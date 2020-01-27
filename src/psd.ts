@@ -250,9 +250,9 @@ export interface LayerMaskData {
 	canvas?: HTMLCanvasElement;
 }
 
-export type TextGridding = 'none';
+export type TextGridding = 'none'; // TODO: other values
 export type Orientation = 'horizontal' | 'vertical';
-export type Antialias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
+export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
 export type WarpStyle =
 	'none' | 'arc' | 'arcLower' | 'arcUpper' | 'arch' | 'bulge' | 'shellLower' | 'shellUpper' | 'flag' |
 	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist';
@@ -262,6 +262,7 @@ export type BevelDirection = 'up' | 'down';
 export type GlowTechnique = 'softer' | 'precise';
 export type GlowSource = 'edge' | 'center';
 export type GradientType = 'linear' | 'radial' | 'angle' | 'reflected' | 'diamond';
+export type Justification = 'left' | 'right' | 'center';
 
 export interface LayerTextWarp {
 	style?: WarpStyle;
@@ -271,18 +272,121 @@ export interface LayerTextWarp {
 	rotate?: Orientation;
 }
 
+export interface Font {
+	name: string;
+	script?: number;
+	type?: number;
+	synthetic?: number;
+}
+
+export interface ParagraphStyle {
+	justification?: Justification;
+	firstLineIndent?: number;
+	startIndent?: number;
+	endIndent?: number;
+	spaceBefore?: number;
+	spaceAfter?: number;
+	autoHyphenate?: boolean;
+	hyphenatedWordSize?: number;
+	preHyphen?: number;
+	postHyphen?: number;
+	consecutiveHyphens?: number;
+	zone?: number;
+	wordSpacing?: number[];
+	letterSpacing?: number[];
+	glyphSpacing?: number[];
+	autoLeading?: number;
+	leadingType?: number;
+	hanging?: boolean;
+	burasagari?: boolean;
+	kinsokuOrder?: number;
+	everyLineComposer?: boolean;
+}
+
+export interface ParagraphStyleRun {
+	length: number;
+	style: ParagraphStyle;
+	// adjustments?: { axis: number[]; xy: number[]; };
+}
+
+export interface TextStyle {
+	font?: Font;
+	fontSize?: number;
+	fauxBold?: boolean;
+	fauxItalic?: boolean;
+	autoLeading?: boolean;
+	leading?: number;
+	horizontalScale?: number;
+	verticalScale?: number;
+	tracking?: number;
+	autoKerning?: boolean;
+	kerning?: number;
+	baselineShift?: number;
+	fontCaps?: number; // 0 - none, 1 - small caps, 2 - all caps
+	fontBaseline?: number; // 0 - normal, 1 - superscript, 2 - subscript
+	underline?: boolean;
+	strikethrough?: boolean;
+	ligatures?: boolean;
+	dLigatures?: boolean;
+	baselineDirection?: number;
+	tsume?: number;
+	styleRunAlignment?: number;
+	language?: number;
+	noBreak?: boolean;
+	fillColor?: Color;
+	strokeColor?: Color;
+	fillFlag?: boolean;
+	strokeFlag?: boolean;
+	fillFirst?: boolean;
+	yUnderline?: number;
+	outlineWidth?: number;
+	characterDirection?: number;
+	hindiNumbers?: boolean;
+	kashida?: number;
+	diacriticPos?: number;
+}
+
+export interface TextStyleRun {
+	length: number;
+	style: TextStyle;
+}
+
+export interface TextGridInfo {
+	isOn?: boolean;
+	show?: boolean;
+	size?: number;
+	leading?: number;
+	color?: Color;
+	leadingFillColor?: Color;
+	alignLineHeightToGridFlags?: boolean;
+}
+
 export interface LayerTextData {
-	transform?: number[];
 	text: string;
+	transform?: number[];
+	antiAlias?: AntiAlias;
+
 	gridding?: TextGridding;
 	orientation?: Orientation;
-	antialias?: Antialias;
 	index?: number;
 	warp?: LayerTextWarp;
 	top?: number;
 	left?: number;
 	bottom?: number;
 	right?: number;
+
+	gridInfo?: TextGridInfo;
+	useFractionalGlyphWidths?: boolean;
+	style?: TextStyle; // base style
+	styleRuns?: TextStyleRun[]; // spans of different style
+	paragraphStyle?: ParagraphStyle; // base paragraph style
+	paragraphStyleRuns?: ParagraphStyleRun[]; // style for each line
+
+	superscriptSize?: number;
+	superscriptPosition?: number;
+	subscriptSize?: number;
+	subscriptPosition?: number;
+	smallCapSize?: number;
 }
 
 export interface PatternInfo {
@@ -330,8 +434,12 @@ export interface LayerAdditionalInfo {
 		data: number[];
 	}[];
 	effects?: LayerEffectsInfo;
-	text?: LayerTextData; // not supported yet
+	text?: LayerTextData;
 	patterns?: PatternInfo[]; // not supported yet
+
+	// Base64 encoded raw EngineData, currently just kept in original state to support
+	// loading and modifying PSD file without breaking text layers.
+	engineData?: string; 
 }
 
 export type ResolutionUnit = 'PPI' | 'PPCM';
@@ -343,7 +451,6 @@ export interface ImageResources {
 	layerSelectionIds?: number[];
 	layerGroupsEnabledId?: number[];
 	versionInfo?: {
-		version: number;
 		hasRealMergedData: boolean;
 		writerName: string;
 		readerName: string;
@@ -355,7 +462,6 @@ export interface ImageResources {
 	globalAngle?: number;
 	globalAltitude?: number;
 	pixelAspectRatio?: {
-		version: number;
 		aspect: number;
 	};
 	urlsList?: any[];
@@ -440,6 +546,9 @@ export interface WriteOptions {
 	generateThumbnail?: boolean;
 	/** trims transparent pixels from layer image data */
 	trimImageData?: boolean;
+	/** invalidates text layer data, forcing Photoshop to redraw them on load.
+	 *  Use this option if you're updating loaded text layer properties. */
+	invalidateTextLayers?: boolean;
 }
 
 export const enum LayerMaskFlags {

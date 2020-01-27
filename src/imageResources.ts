@@ -430,13 +430,13 @@ addHandler(
 	1064,
 	target => target.pixelAspectRatio !== undefined,
 	(reader, target) => {
-		target.pixelAspectRatio = {
-			version: readUint32(reader),
-			aspect: readFloat64(reader),
-		};
+		const version = readUint32(reader);
+		if (version > 2) throw new Error('Invalid pixelAspectRatio version');
+
+		target.pixelAspectRatio = { aspect: readFloat64(reader) };
 	},
 	(writer, target) => {
-		writeUint32(writer, target.pixelAspectRatio!.version);
+		writeUint32(writer, 2); // version
 		writeFloat64(writer, target.pixelAspectRatio!.aspect);
 	},
 );
@@ -517,18 +517,21 @@ addHandler(
 	1057,
 	target => target.versionInfo !== undefined,
 	(reader, target, left) => {
+		const version = readUint32(reader);
+		if (version !== 1) throw new Error('Invalid versionInfo version');
+
 		target.versionInfo = {
-			version: readUint32(reader),
 			hasRealMergedData: !!readUint8(reader),
 			writerName: readUnicodeString(reader),
 			readerName: readUnicodeString(reader),
 			fileVersion: readUint32(reader),
 		};
+
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const versionInfo = target.versionInfo!;
-		writeUint32(writer, versionInfo.version);
+		writeUint32(writer, 1); // version
 		writeUint8(writer, versionInfo.hasRealMergedData ? 1 : 0);
 		writeUnicodeString(writer, versionInfo.writerName);
 		writeUnicodeString(writer, versionInfo.readerName);
