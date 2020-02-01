@@ -134,7 +134,7 @@ export function readAsciiStringOrClassId(reader: PsdReader) {
 }
 
 function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
-	if (value.length === 4) {
+	if (value.length === 4 && value !== 'warp') {
 		// write classId
 		writeInt32(writer, 0);
 		writeSignature(writer, value);

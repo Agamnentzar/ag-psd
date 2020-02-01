@@ -1,5 +1,8 @@
 # Changelog
 
+## v9.1.1
+- Fixed saved PSD files broken in some cases
+
 ## v9.1.0
 - Added missing support for "stroke" blending option
 

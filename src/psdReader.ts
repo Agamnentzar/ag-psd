@@ -3,7 +3,7 @@ import {
 	LayerMaskFlags, MaskParameters
 } from './psd';
 import {
-	resetCanvas, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData,
+	resetImageData, offsetForChannel, readDataRLE, decodeBitmap, readDataRaw, PixelData,
 	createCanvas, createImageData, toBlendMode, ChannelID, Compression
 } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
@@ -223,18 +223,21 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 			readGlobalLayerMaskInfo(reader);
 		} else {
 			// revert back to end of section if exceeded section limits
+			// options.logMissingFeatures && console.log('reverting to end of section');
 			skipBytes(reader, left());
 		}
 
 		while (left() > 0) {
 			// sometimes there are empty bytes here
 			while (left() && peekUint8(reader) === 0) {
+				// options.logMissingFeatures && console.log('skipping 0 byte');
 				skipBytes(reader, 1);
 			}
 
 			if (left() >= 12) {
 				readAdditionalLayerInfo(reader, psd, psd, !!options.logMissingFeatures);
 			} else {
+				// options.logMissingFeatures && console.log('skipping leftover bytes', left());
 				skipBytes(reader, left());
 			}
 		}
@@ -417,7 +420,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 
 	if (layerWidth && layerHeight) {
 		imageData = createImageData(layerWidth, layerHeight);
-		resetCanvas(imageData);
+		resetImageData(imageData);
 	}
 
 	for (const channel of channels) {
@@ -435,7 +438,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 
 			if (maskWidth && maskHeight) {
 				const maskData = createImageData(maskWidth, maskHeight);
-				resetCanvas(maskData);
+				resetImageData(maskData);
 				readData(reader, maskData, compression, maskWidth, maskHeight, 0);
 				setupGrayscale(maskData);
 
@@ -537,7 +540,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 		throw new Error(`Compression type not supported: ${compression}`);
 
 	const imageData = createImageData(psd.width, psd.height);
-	resetCanvas(imageData);
+	resetImageData(imageData);
 
 	if (psd.colorMode === ColorMode.Bitmap) {
 		let bytes: Uint8Array;

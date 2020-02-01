@@ -13,6 +13,7 @@ import { readPsd as readPsdInternal } from '../psdReader';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'read');
+const readWriteFilesPath = path.join(testFilesPath, 'read-write');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
 const opts: ReadOptions = { throwForMissingFeatures: true, logMissingFeatures: true };
 
@@ -105,6 +106,16 @@ describe('PsdReader', () => {
 		});
 	});
 
+	fs.readdirSync(readWriteFilesPath).forEach(f => {
+		it(`reads-write PSD file (${f})`, () => {
+			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, 'src.psd'), { ...opts, useImageData: true, useRawThumbnail: true });
+			const actual = writePsdBuffer(psd);
+			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
+			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.psd`), actual);
+			compareBuffers(actual, expected, `read-write-${f}`);
+		});
+	});
+
 	it.skip('write text layer test', () => {
 		const psd: Psd = {
 			width: 200,
@@ -175,7 +186,8 @@ describe('PsdReader', () => {
 		const buffer = writePsdBuffer(originalPsd);
 		fs.writeFileSync('temp.psd', buffer);
 		// fs.writeFileSync('temp.bin', buffer);
-		return;
+		// fs.writeFileSync('temp.json', JSON.stringify(originalPsd, null, 2), 'utf8');
+
 		console.log('READING WRITTEN');
 		const psd = readPsdInternal(createReaderFromBuffer(buffer), { logMissingFeatures: true });
 

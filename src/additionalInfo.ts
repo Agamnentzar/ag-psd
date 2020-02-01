@@ -20,6 +20,8 @@ import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
 import { fromByteArray, toByteArray } from 'base64-js';
 
+const MOCK_HANDLERS = false;
+
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
 type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd) => void;
 type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd) => void;
@@ -294,6 +296,8 @@ addHandler(
 		writeFloat32(writer, text.top ?? 0);
 		writeFloat32(writer, text.right ?? 0);
 		writeFloat32(writer, text.bottom ?? 0);
+
+		writeZeros(writer, 2);
 	},
 );
 
@@ -497,7 +501,7 @@ addHandler(
 	},
 	(writer, target) => {
 		writeUnicodeString(writer, target.name!);
-		writeUint16(writer, 0); // padding (but not extending string length)
+		// writeUint16(writer, 0); // padding (but not extending string length)
 	},
 );
 
@@ -676,15 +680,15 @@ addHandler(
 	},
 );
 
-// addHandler(
-// 	'Patt',
-// 	target => (target as any)._Patt !== undefined,
-// 	(reader, target, left) => {
-// 		console.log('additional info: Patt');
-// 		(target as any)._Patt = readBytes(reader, left());
-// 	},
-// 	(writer, target) => writeBytes(writer, (target as any)._Patt),
-// );
+MOCK_HANDLERS && addHandler(
+	'Patt',
+	target => 'children' in target, // (target as any)._Patt !== undefined,
+	(reader, target, left) => {
+		console.log('additional info: Patt');
+		(target as any)._Patt = readBytes(reader, left());
+	},
+	(writer, target) => false && writeBytes(writer, (target as any)._Patt),
+);
 /*addHandler(
 	'Patt', // TODO: handle also Pat2 & Pat3
 	target => !target,
@@ -758,21 +762,6 @@ addHandler(
 );*/
 
 addHandler(
-	'FMsk',
-	target => target.filterMask !== undefined,
-	(reader, target) => {
-		target.filterMask = {
-			colorSpace: readColor(reader),
-			opacity: readUint16(reader) / 0xff,
-		};
-	},
-	(writer, target) => {
-		writeColor(writer, target.filterMask!.colorSpace);
-		writeUint16(writer, clamp(target.filterMask!.opacity ?? 1, 0, 1) * 0xff);
-	},
-);
-
-addHandler(
 	'pths',
 	target => target.pathList !== undefined,
 	(reader, target) => {
@@ -828,6 +817,21 @@ addHandler(
 	(writer, target) => {
 		const buffer = toByteArray(target.engineData!);
 		writeBytes(writer, buffer);
+	},
+);
+
+addHandler(
+	'FMsk',
+	target => target.filterMask !== undefined,
+	(reader, target) => {
+		target.filterMask = {
+			colorSpace: readColor(reader),
+			opacity: readUint16(reader) / 0xff,
+		};
+	},
+	(writer, target) => {
+		writeColor(writer, target.filterMask!.colorSpace);
+		writeUint16(writer, clamp(target.filterMask!.opacity ?? 1, 0, 1) * 0xff);
 	},
 );
 

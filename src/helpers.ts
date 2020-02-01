@@ -138,7 +138,7 @@ export function hasAlpha(data: PixelData) {
 	return false;
 }
 
-export function resetCanvas({ width, height, data }: PixelData) {
+export function resetImageData({ width, height, data }: PixelData) {
 	const size = (width * height) | 0;
 	const buffer = new Uint32Array(data.buffer);
 

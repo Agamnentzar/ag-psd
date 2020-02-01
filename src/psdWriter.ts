@@ -297,8 +297,8 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			}
 		}
 
-		writeUint16(writer, 0);
-	});
+		// writeUint16(writer, 0);
+	}, true);
 }
 
 function writeLayerMaskData(writer: PsdWriter, { mask, vectorMask }: Layer, layerData: LayerChannelData) {
@@ -368,7 +368,9 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		if (handler.has(target)) {
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, handler.key);
-			writeSection(writer, 2, () => handler.write(writer, target, psd), true);
+			writeSection(writer, 2, () => handler.write(writer, target, psd), handler.key !== 'Txt2');
+
+			if (handler.key === 'Txt2') writeZeros(writer, 2);
 		}
 	}
 }
