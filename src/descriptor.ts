@@ -51,6 +51,7 @@ const fieldToExtType: ExtTypeDict = {
 	IrGl: { name: '', classID: 'IrGl' },
 	TrnS: { name: '', classID: 'ShpC' },
 	Ptrn: { name: '', classID: 'Ptrn' },
+	FrFX: { name: '', classID: 'FrFX' },
 	strokeStyleContent: { name: '', classID: 'solidColorLayer' },
 	patternFill: { name: '', classID: 'patternFill' },
 	phase: { name: '', classID: 'Pnt ' },
@@ -72,7 +73,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
 		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'Type', 'glwS', 'GrdF', 'GlwT',
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
-		'strokeStyleBlendMode',
+		'strokeStyleBlendMode', 'PntT', 'Styl',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss', 'useShape', 'useTexture',
@@ -87,7 +88,7 @@ const typeToField: { [key: string]: string[]; } = {
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl', 'Ckmt',
 		'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset', 'strokeStyleOpacity',
-
+		'Sz  ',
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet',
@@ -159,10 +160,6 @@ export function readDescriptorStructure(reader: PsdReader) {
 		const type = readSignature(reader);
 		// console.log('>', key, type);
 		const data = readOSType(reader, type);
-
-		// if (typeof data === 'object' && 'units' in data)
-		// 	console.log(key, data);
-
 		object[key] = data;
 	}
 

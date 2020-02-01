@@ -1,4 +1,4 @@
-import { LayerEffectsInfo, BevelStyle, LayerEffectsShadow } from './psd';
+import { LayerEffectsInfo, BevelStyle, LayerEffectShadow } from './psd';
 import { readColor, writeColor, toBlendMode, fromBlendMode } from './helpers';
 import { PsdReader, checkSignature, readSignature, skipBytes, readUint16, readUint8, readUint32, readFixedPoint32 } from './psdReader';
 import { PsdWriter, writeSignature, writeUint16, writeZeros, writeFixedPoint32, writeUint8, writeUint32 } from './psdWriter';
@@ -12,9 +12,9 @@ function readBlendMode(reader: PsdReader) {
 	return toBlendMode[readSignature(reader)] || 'normal';
 }
 
-function writeBlendMode(writer: PsdWriter, mode: string) {
+function writeBlendMode(writer: PsdWriter, mode: string | undefined) {
 	writeSignature(writer, '8BIM');
-	writeSignature(writer, fromBlendMode[mode] || 'norm');
+	writeSignature(writer, fromBlendMode[mode!] || 'norm');
 }
 
 function readFixedPoint8(reader: PsdReader) {
@@ -66,7 +66,7 @@ export function readEffects(reader: PsdReader) {
 				const useGlobalLight = !!readUint8(reader);
 				const opacity = readFixedPoint8(reader);
 				if (blockSize >= 51) readColor(reader); // native color
-				const shadowInfo: LayerEffectsShadow = {
+				const shadowInfo: LayerEffectShadow = {
 					size: { units: 'Pixels', value: size },
 					distance: { units: 'Pixels', value: distance },
 					angle, color, blendMode, enabled, useGlobalLight, opacity
@@ -182,7 +182,7 @@ export function readEffects(reader: PsdReader) {
 	return effects;
 }
 
-function writeShadowInfo(writer: PsdWriter, shadow: LayerEffectsShadow) {
+function writeShadowInfo(writer: PsdWriter, shadow: LayerEffectShadow) {
 	writeUint32(writer, 51);
 	writeUint32(writer, 2);
 	writeFixedPoint32(writer, shadow.size?.value || 0);
@@ -193,7 +193,7 @@ function writeShadowInfo(writer: PsdWriter, shadow: LayerEffectsShadow) {
 	writeBlendMode(writer, shadow.blendMode);
 	writeUint8(writer, shadow.enabled ? 1 : 0);
 	writeUint8(writer, shadow.useGlobalLight ? 1 : 0);
-	writeFixedPoint8(writer, shadow.opacity || 0);
+	writeFixedPoint8(writer, shadow.opacity ?? 1);
 	writeColor(writer, shadow.color); // native color
 }
 
@@ -270,7 +270,7 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 		writeBlendMode(writer, effects.bevel.shadowBlendMode);
 		writeColor(writer, effects.bevel.highlightColor);
 		writeColor(writer, effects.bevel.shadowColor);
-		const style = bevelStyles.indexOf(effects.bevel.style);
+		const style = bevelStyles.indexOf(effects.bevel.style!);
 		writeUint8(writer, style <= 0 ? 1 : style);
 		writeFixedPoint8(writer, effects.bevel.highlightOpacity || 0);
 		writeFixedPoint8(writer, effects.bevel.shadowOpacity || 0);

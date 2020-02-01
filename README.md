@@ -18,6 +18,7 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 * Does not support patterns
 * Does not support some metadata fields
 * Does not support "Pattern Overlay" layer effect
+* Does not support some new features from latest versions of Photoshop
 * Text layers implementation is incomplete
   * Writing text layer with "vertical" orientation may result in broken PSD file
   * Does not support writing or reading predefined "Paragraph Styles" or "Character Styles"

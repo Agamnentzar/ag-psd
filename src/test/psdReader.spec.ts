@@ -173,9 +173,9 @@ describe('PsdReader', () => {
 
 		console.log('WRITING');
 		const buffer = writePsdBuffer(originalPsd);
-		// fs.writeFileSync('temp.psd', buffer);
+		fs.writeFileSync('temp.psd', buffer);
 		// fs.writeFileSync('temp.bin', buffer);
-
+		return;
 		console.log('READING WRITTEN');
 		const psd = readPsdInternal(createReaderFromBuffer(buffer), { logMissingFeatures: true });
 

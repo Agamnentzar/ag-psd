@@ -1,5 +1,8 @@
 # Changelog
 
+## v9.1.0
+- Added missing support for "stroke" blending option
+
 ## v9.0.0
 - **BREAKING CHANGE:** Changed some numerical fields in effects objects to value+units fields
 - Added handling for vector layers

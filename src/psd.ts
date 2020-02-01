@@ -40,16 +40,17 @@ export interface EffectContour {
 export interface EffectPattern {
 	name: string;
 	id: string;
+	// TODO: add fields
 }
 
-export interface LayerEffectsShadow {
-	size: UnitsValue;
-	angle: number;
-	distance: UnitsValue;
-	color: Color;
-	blendMode: BlendMode;
-	enabled: boolean;
-	opacity: number;
+export interface LayerEffectShadow {
+	enabled?: boolean;
+	size?: UnitsValue;
+	angle?: number;
+	distance?: UnitsValue;
+	color?: Color;
+	blendMode?: BlendMode;
+	opacity?: number;
 	useGlobalLight?: boolean;
 	antialiased?: boolean;
 	contour?: EffectContour;
@@ -57,12 +58,11 @@ export interface LayerEffectsShadow {
 }
 
 export interface LayerEffectsOuterGlow {
-	size: UnitsValue;
-	color: Color;
-	blendMode: BlendMode;
-	enabled: boolean;
-	opacity: number;
-
+	enabled?: boolean;
+	size?: UnitsValue;
+	color?: Color;
+	blendMode?: BlendMode;
+	opacity?: number;
 	source?: GlowSource;
 	antialiased?: boolean;
 	noise?: number;
@@ -72,13 +72,12 @@ export interface LayerEffectsOuterGlow {
 	contour?: EffectContour;
 }
 
-export interface LayerEffectsInnerGlow {
-	size: UnitsValue;
-	color: Color;
-	blendMode: BlendMode;
-	enabled: boolean;
-	opacity: number;
-
+export interface LayerEffectInnerGlow {
+	enabled?: boolean;
+	size?: UnitsValue;
+	color?: Color;
+	blendMode?: BlendMode;
+	opacity?: number;
 	source?: GlowSource;
 	technique?: GlowTechnique;
 	antialiased?: boolean;
@@ -89,18 +88,18 @@ export interface LayerEffectsInnerGlow {
 	contour?: EffectContour;
 }
 
-export interface LayerEffectsBevel {
-	size: UnitsValue;
-	angle: number;
-	strength: number; // depth
-	highlightBlendMode: BlendMode;
-	shadowBlendMode: BlendMode;
-	highlightColor: Color;
-	shadowColor: Color;
-	style: BevelStyle;
-	highlightOpacity: number;
-	shadowOpacity: number;
-	enabled: boolean;
+export interface LayerEffectBevel {
+	enabled?: boolean;
+	size?: UnitsValue;
+	angle?: number;
+	strength?: number; // depth
+	highlightBlendMode?: BlendMode;
+	shadowBlendMode?: BlendMode;
+	highlightColor?: Color;
+	shadowColor?: Color;
+	style?: BevelStyle;
+	highlightOpacity?: number;
+	shadowOpacity?: number;
 	soften?: UnitsValue;
 	useGlobalLight?: boolean;
 	altitude?: number;
@@ -112,16 +111,28 @@ export interface LayerEffectsBevel {
 	contour?: EffectContour;
 }
 
-export interface LayerEffectsSolidFill {
-	blendMode: BlendMode;
-	color: Color;
-	opacity: number;
-	enabled: boolean;
+export interface LayerEffectSolidFill {
+	enabled?: boolean;
+	blendMode?: BlendMode;
+	color?: Color;
+	opacity?: number;
+}
+
+export interface LayerEffectStroke {
+	enabled?: boolean;
+	size?: UnitsValue;
+	position?: 'inside' | 'center' | 'outside';
+	fillType?: 'color' | 'gradient' | 'pattern';
+	blendMode?: BlendMode;
+	opacity?: number;
+	color?: Color;
+	gradient?: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
+	pattern?: EffectPattern & {}; // TODO: additional pattern info
 }
 
 export interface LayerEffectSatin {
-	size?: UnitsValue;
 	enabled?: boolean;
+	size?: UnitsValue;
 	blendMode?: BlendMode;
 	color?: Color;
 	antialiased?: boolean;
@@ -179,13 +190,14 @@ export interface LayerEffectGradientOverlay {
 export interface LayerEffectsInfo {
 	disabled?: boolean;
 	scale?: number;
-	dropShadow?: LayerEffectsShadow;
-	innerShadow?: LayerEffectsShadow;
+	dropShadow?: LayerEffectShadow;
+	innerShadow?: LayerEffectShadow;
 	outerGlow?: LayerEffectsOuterGlow;
-	innerGlow?: LayerEffectsInnerGlow;
-	bevel?: LayerEffectsBevel;
-	solidFill?: LayerEffectsSolidFill;
+	innerGlow?: LayerEffectInnerGlow;
+	bevel?: LayerEffectBevel;
+	solidFill?: LayerEffectSolidFill;
 	satin?: LayerEffectSatin;
+	stroke?: LayerEffectStroke;
 	gradientOverlay?: LayerEffectGradientOverlay;
 	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
 }
@@ -364,18 +376,25 @@ export interface BezierPath {
 	knots: BezierKnot[];
 }
 
-export interface ExtraContentInfo {
+export interface ExtraGradientInfo {
 	style?: GradientStyle;
 	scale?: number;
 	angle?: number;
 	dither?: boolean;
 	reverse?: boolean;
+	align?: boolean;
+	offset?: { x: number; y: number; };
+}
+
+export interface ExtraPatternInfo {
+	linked?: boolean;
+	phase?: { x: number; y: number; };
 }
 
 export type VectorContent = { type: 'color'; color: Color; } |
-	(EffectSolidGradient & ExtraContentInfo) |
-	(EffectNoiseGradient & ExtraContentInfo) |
-	(EffectPattern & { type: 'pattern'; });
+	(EffectSolidGradient & ExtraGradientInfo) |
+	(EffectNoiseGradient & ExtraGradientInfo) |
+	(EffectPattern & { type: 'pattern'; } & ExtraPatternInfo);
 
 export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None';
 

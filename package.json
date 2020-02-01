@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -33,7 +33,7 @@
   "devDependencies": {
     "@types/mkdirp": "^0.5.2",
     "@types/mocha": "^7.0.1",
-    "@types/node": "^13.5.3",
+    "@types/node": "^13.7.0",
     "browserify": "^16.5.0",
     "canvas": "^2.6.1",
     "chai": "^4.2.0",

@@ -2,10 +2,10 @@ import { readEffects, writeEffects } from './effectsHelpers';
 import { readColor, toArray, writeColor, hsv2rgb, clamp } from './helpers';
 import {
 	LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, AntiAlias, BevelStyle, BevelTechnique,
-	LayerEffectsShadow, LayerEffectsOuterGlow, LayerEffectsInnerGlow, LayerEffectsBevel,
-	LayerEffectsSolidFill, BevelDirection, GlowTechnique, GlowSource, LayerEffectPatternOverlay,
+	LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
+	LayerEffectSolidFill, BevelDirection, GlowTechnique, GlowSource, LayerEffectPatternOverlay,
 	LayerEffectGradientOverlay, LayerEffectSatin, GradientStyle, EffectContour, EffectSolidGradient,
-	EffectNoiseGradient, BezierPath, Psd, BlendMode, LineCapType, LineJoinType, LineAlignment, VectorContent, UnitsValue, Color
+	EffectNoiseGradient, BezierPath, Psd, BlendMode, LineCapType, LineJoinType, LineAlignment, VectorContent, UnitsValue, Color, LayerEffectStroke, ExtraGradientInfo, EffectPattern, ExtraPatternInfo
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -170,6 +170,18 @@ const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {
 	lab: 'LbCl',
 });
 
+const FStl = createEnum<'inside' | 'center' | 'outside'>('FStl', 'outside', {
+	outside: 'OutF',
+	center: 'CtrF',
+	inside: 'InsF'
+});
+
+const FrFl = createEnum<'color' | 'gradient' | 'pattern'>('FrFl', 'color', {
+	color: 'SClr',
+	gradient: 'GrFl',
+	pattern: 'Ptrn',
+});
+
 const strokeStyleLineCapType = createEnum<LineCapType>('strokeStyleLineCapType', 'butt', {
 	butt: 'strokeStyleButtCap',
 	round: 'strokeStyleRoundCap',
@@ -296,7 +308,7 @@ addHandler(
 		target.vectorFill = parseVectorContent(descriptor);
 	},
 	(writer, target) => {
-		const descriptor = serializeVectorContent(target.vectorFill!).descriptor;
+		const { descriptor } = serializeVectorContent(target.vectorFill!);
 		writeVersionAndDescriptor(writer, '', 'null', descriptor);
 	},
 );
@@ -310,7 +322,7 @@ addHandler(
 		target.vectorFill = parseVectorContent(descriptor);
 	},
 	(writer, target) => {
-		const descriptor = serializeVectorContent(target.vectorFill!).descriptor;
+		const { descriptor } = serializeVectorContent(target.vectorFill!);
 		writeVersionAndDescriptor(writer, '', 'null', descriptor);
 	},
 );
@@ -324,7 +336,7 @@ addHandler(
 		target.vectorFill = parseVectorContent(descriptor);
 	},
 	(writer, target) => {
-		const descriptor = serializeVectorContent(target.vectorFill!).descriptor;
+		const { descriptor } = serializeVectorContent(target.vectorFill!);
 		writeVersionAndDescriptor(writer, '', 'null', descriptor);
 	},
 );
@@ -893,6 +905,20 @@ addHandler(
 		if (info.patternFill) target.effects.patternOverlay = parseEffectObject(info.patternFill);
 		if (info.GrFl) target.effects.gradientOverlay = parseEffectObject(info.GrFl);
 		if (info.ChFX) target.effects.satin = parseEffectObject(info.ChFX);
+		if (info.FrFX) {
+			target.effects.stroke = {
+				enabled: !!info.FrFX.enab,
+				position: FStl.decode(info.FrFX.Styl),
+				fillType: FrFl.decode(info.FrFX.PntT),
+				blendMode: BlnM.decode(info.FrFX['Md  ']),
+				opacity: parsePercent(info.FrFX.Opct),
+				size: parseUnits(info.FrFX['Sz  ']),
+			};
+
+			if (info.FrFX['Clr ']) target.effects.stroke.color = parseColor(info.FrFX['Clr ']);
+			if (info.FrFX.Grad) target.effects.stroke.gradient = parseGradientContent(info.FrFX);
+			if (info.FrFX.Ptrn) target.effects.stroke.pattern = parsePatternContent(info.FrFX);
+		}
 
 		skipBytes(reader, left());
 	},
@@ -912,11 +938,53 @@ addHandler(
 		if (effects.patternOverlay) info.patternFill = serializeEffectObject(effects.patternOverlay, 'patternOverlay');
 		if (effects.gradientOverlay) info.GrFl = serializeEffectObject(effects.gradientOverlay, 'gradientOverlay');
 		if (effects.satin) info.ChFX = serializeEffectObject(effects.satin, 'satin');
+		if (effects.stroke) {
+			info.FrFX = {
+				enab: !!effects.stroke.enabled,
+				Styl: FStl.encode(effects.stroke.position),
+				PntT: FrFl.encode(effects.stroke.fillType),
+				'Md  ': BlnM.encode(effects.stroke.blendMode),
+				Opct: unitsPercent(effects.stroke.opacity),
+				'Sz  ': unitsValue(effects.stroke.size, 'size'),
+			};
+
+			if (effects.stroke.color)
+				info.FrFX['Clr '] = serializeColor(effects.stroke.color);
+			if (effects.stroke.gradient)
+				info.FrFX = { ...info.FrFX, ...serializeGradientContent(effects.stroke.gradient) };
+			if (effects.stroke.pattern)
+				info.FrFX = { ...info.FrFX, ...serializePatternContent(effects.stroke.pattern) };
+		}
 
 		writeUint32(writer, 0); // version
 		writeVersionAndDescriptor(writer, '', 'null', info);
 	},
 );
+
+// addHandler(
+// 	'lmfx',
+// 	target => !target,
+// 	(reader, _target) => {
+// 		const version = readUint32(reader);
+// 		if (version !== 0) throw new Error('Invalid lmfx version');
+
+// 		const descriptor = readVersionAndDescriptor(reader);
+// 		console.log(require('util').inspect(descriptor, false, 99, true));
+// 	},
+// 	(_writer, _target) => {
+// 	},
+// );
+
+// addHandler(
+// 	'cinf',
+// 	target => !target,
+// 	(reader, _target) => {
+// 		const descriptor = readVersionAndDescriptor(reader);
+// 		console.log(require('util').inspect(descriptor, false, 99, true));
+// 	},
+// 	(_writer, _target) => {
+// 	},
+// );
 
 // descriptor helpers
 
@@ -969,18 +1037,28 @@ type DesciptorGradient = {
 	'Mxm ': number[];
 };
 
-type DescriptorVectorContent = {
+interface DescriptorColorContent {
 	'Clr ': DescriptorColor;
-} | {
+}
+
+interface DescriptorGradientContent {
 	Grad: DesciptorGradient;
 	Type: string;
 	Dthr?: boolean;
 	Rvrs?: boolean;
 	Angl?: DescriptorUnitsValue;
 	'Scl '?: DescriptorUnitsValue;
-} | {
+	Algn?: boolean;
+	Ofst?: { Hrzn: DescriptorUnitsValue; Vrtc: DescriptorUnitsValue; };
+}
+
+interface DescriptorPatternContent {
 	Ptrn: DesciptorPattern;
-};
+	Lnkd?: boolean;
+	phase?: { Hrzn: number; Vrtc: number; };
+}
+
+type DescriptorVectorContent = DescriptorColorContent | DescriptorGradientContent | DescriptorPatternContent;
 
 interface StrokeDescriptor {
 	strokeStyleVersion: number;
@@ -1087,74 +1165,96 @@ function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): Des
 	}
 }
 
+function parseGradientContent(descriptor: DescriptorGradientContent) {
+	const result = parseGradient(descriptor.Grad) as (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
+	result.style = GrdT.decode(descriptor.Type);
+	if (descriptor.Dthr !== undefined) result.dither = descriptor.Dthr;
+	if (descriptor.Rvrs !== undefined) result.reverse = descriptor.Rvrs;
+	if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
+	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
+	if (descriptor.Algn !== undefined) result.align = descriptor.Algn;
+	if (descriptor.Ofst !== undefined) {
+		result.offset = {
+			x: parsePercent(descriptor.Ofst.Hrzn),
+			y: parsePercent(descriptor.Ofst.Vrtc)
+		};
+	}
+	return result;
+}
+
+function parsePatternContent(descriptor: DescriptorPatternContent) {
+	const result: EffectPattern & ExtraPatternInfo = {
+		name: descriptor.Ptrn['Nm  '],
+		id: descriptor.Ptrn.Idnt,
+	};
+	if (descriptor.Lnkd !== undefined) result.linked = descriptor.Lnkd;
+	if (descriptor.phase !== undefined) result.phase = { x: descriptor.phase.Hrzn, y: descriptor.phase.Vrtc };
+	return result;
+}
+
 function parseVectorContent(descriptor: DescriptorVectorContent): VectorContent {
-	let result: VectorContent;
-
-	if ('Clr ' in descriptor) {
-		result = {
-			type: 'color',
-			color: parseColor(descriptor['Clr ']),
-		};
-	} else if ('Grad' in descriptor) {
-		result = parseGradient(descriptor.Grad);
-		result.style = GrdT.decode(descriptor.Type);
-
-		if (descriptor.Dthr !== undefined) result.dither = descriptor.Dthr;
-		if (descriptor.Rvrs !== undefined) result.reverse = descriptor.Rvrs;
-		if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
-		if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
+	if ('Grad' in descriptor) {
+		return parseGradientContent(descriptor);
 	} else if ('Ptrn' in descriptor) {
-		result = {
-			type: 'pattern',
-			name: descriptor.Ptrn['Nm  '],
-			id: descriptor.Ptrn.Idnt,
-		};
+		return { type: 'pattern', ...parsePatternContent(descriptor) };
+	} else if ('Clr ' in descriptor) {
+		return { type: 'color', color: parseColor(descriptor['Clr ']) };
 	} else {
 		throw new Error('Invalid vector content');
 	}
+}
 
+function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo) {
+	const result: DescriptorGradientContent = {
+		Grad: serializeGradient(content),
+		Type: GrdT.encode(content.style),
+	};
+	if (content.dither !== undefined) result.Dthr = content.dither;
+	if (content.reverse !== undefined) result.Rvrs = content.reverse;
+	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
+	if (content.scale !== undefined) result['Scl '] = unitsPercent(content.scale);
+	if (content.align !== undefined) result.Algn = content.align;
+	if (content.offset) {
+		result.Ofst = {
+			Hrzn: unitsPercent(content.offset.x),
+			Vrtc: unitsPercent(content.offset.y),
+		};
+	}
+	return result;
+}
+
+function serializePatternContent(content: EffectPattern & ExtraPatternInfo) {
+	const result: DescriptorPatternContent = {
+		Ptrn: {
+			'Nm  ': content.name ?? '',
+			Idnt: content.id ?? '',
+		}
+	};
+	if (content.linked !== undefined) result.Lnkd = !!content.linked;
+	if (content.phase !== undefined) result.phase = { Hrzn: content.phase.x, Vrtc: content.phase.y };
 	return result;
 }
 
 function serializeVectorContent(content: VectorContent): { descriptor: DescriptorVectorContent; key: string; } {
-	let descriptor: DescriptorVectorContent;
-	let key: string;
-
 	if (content.type === 'color') {
-		key = 'SoCo';
-		descriptor = { 'Clr ': serializeColor(content.color) };
+		return { key: 'SoCo', descriptor: { 'Clr ': serializeColor(content.color) } };
 	} else if (content.type === 'pattern') {
-		key = 'PtFl'
-		descriptor = {
-			Ptrn: {
-				'Nm  ': content.name ?? '',
-				Idnt: content.id ?? '',
-			}
-		};;
+		return { key: 'PtFl', descriptor: serializePatternContent(content) };
 	} else {
-		key = 'GdFl';
-		descriptor = {
-			Grad: serializeGradient(content),
-			Type: GrdT.encode(content.style),
-		};
-
-		if (content.dither !== undefined) descriptor.Dthr = content.dither;
-		if (content.reverse !== undefined) descriptor.Rvrs = content.reverse;
-		if (content.angle !== undefined) descriptor.Angl = unitsAngle(content.angle);
-		if (content.scale !== undefined) descriptor['Scl '] = unitsPercent(content.scale);
+		return { key: 'GdFl', descriptor: serializeGradientContent(content) };
 	}
-
-	return { descriptor, key };
 }
 
-function parseAngle({ units, value }: DescriptorUnitsValue) {
-	if (units !== 'Angle') throw new Error(`Invalid units: ${units}`);
-	return value;
+function parseAngle(x: DescriptorUnitsValue) {
+	if (x === undefined) return 0;
+	if (x.units !== 'Angle') throw new Error(`Invalid units: ${x.units}`);
+	return x.value;
 }
 
-function parsePercent({ units, value }: DescriptorUnitsValue) {
-	if (units !== 'Percent') throw new Error(`Invalid units: ${units}`);
-	return value / 100;
+function parsePercent(x: DescriptorUnitsValue | undefined) {
+	if (x === undefined) return 1;
+	if (x.units !== 'Percent') throw new Error(`Invalid units: ${x.units}`);
+	return x.value / 100;
 }
 
 function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
@@ -1211,8 +1311,8 @@ function serializeColor(value: number[] | undefined): DescriptorColor {
 	return { 'Rd  ': value[0] || 0, 'Grn ': value[1] || 0, 'Bl  ': value[2] || 0 };
 }
 
-type AllEffects = LayerEffectsShadow & LayerEffectsOuterGlow &
-	LayerEffectsInnerGlow & LayerEffectsBevel & LayerEffectsSolidFill &
+type AllEffects = LayerEffectShadow & LayerEffectsOuterGlow & LayerEffectStroke &
+	LayerEffectInnerGlow & LayerEffectBevel & LayerEffectSolidFill &
 	LayerEffectPatternOverlay & LayerEffectSatin & LayerEffectGradientOverlay;
 
 function parseEffectObject(obj: any) {
@@ -1232,6 +1332,7 @@ function parseEffectObject(obj: any) {
 			case 'Clr ': result.color = parseColor(val); break;
 			case 'hglC': result.highlightColor = parseColor(val); break;
 			case 'sdwC': result.shadowColor = parseColor(val); break;
+			case 'Styl': result.position = FStl.decode(val); break;
 			case 'Md  ': result.blendMode = BlnM.decode(val); break;
 			case 'hglM': result.highlightBlendMode = BlnM.decode(val); break;
 			case 'sdwM': result.shadowBlendMode = BlnM.decode(val); break;
@@ -1296,6 +1397,7 @@ function serializeEffectObject(obj: any, objName: string) {
 			case 'color': result['Clr '] = serializeColor(val); break;
 			case 'highlightColor': result.hglC = serializeColor(val); break;
 			case 'shadowColor': result.sdwC = serializeColor(val); break;
+			case 'position': result.Styl = FStl.encode(val); break;
 			case 'blendMode': result['Md  '] = BlnM.encode(val); break;
 			case 'highlightBlendMode': result.hglM = BlnM.encode(val); break;
 			case 'shadowBlendMode': result.sdwM = BlnM.encode(val); break;
