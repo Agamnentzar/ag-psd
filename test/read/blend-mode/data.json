@@ -57,6 +57,24 @@
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "backgroundColor": [
+      255,
+      255,
+      255,
+      0
+    ],
+    "idsSeedNumber": 3,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -74,9 +92,15 @@
       "effects": {
         "scale": 1,
         "dropShadow": {
-          "size": 5,
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "angle": 120,
-          "distance": 5,
+          "distance": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "color": [
             0,
             0,
@@ -87,7 +111,10 @@
           "enabled": true,
           "useGlobalLight": true,
           "opacity": 0.75,
-          "choke": 0,
+          "choke": {
+            "value": 0,
+            "units": "Pixels"
+          },
           "noise": 0,
           "antialiased": false,
           "contour": {
@@ -106,7 +133,10 @@
           "layerConceals": true
         },
         "outerGlow": {
-          "size": 5,
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "color": [
             255,
             255,
@@ -117,7 +147,10 @@
           "enabled": true,
           "opacity": 0.75,
           "technique": "softer",
-          "choke": 0,
+          "choke": {
+            "value": 0,
+            "units": "Pixels"
+          },
           "noise": 0,
           "jitter": 0,
           "antialiased": false,

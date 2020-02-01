@@ -6,9 +6,11 @@ import {
 } from './psdReader';
 import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
-	writeBytes, writeInt16, writeFloat32, writeFixedPoint32,
+	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding,
 } from './psdWriter';
-import { createCanvasFromData } from './helpers';
+import { createCanvasFromData, readColor, writeColor } from './helpers';
+import { decodeString, encodeString } from './utf8';
+// import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface ResourceHandler {
 	key: number;
@@ -31,6 +33,7 @@ function addHandler(
 	resourceHandlersMap[handler.key] = handler;
 }
 
+const MOCK_HANDLERS = false;
 const RESOLUTION_UNITS = [undefined, 'PPI', 'PPCM'];
 const MEASUREMENT_UNITS = [undefined, 'Inches', 'Centimeters', 'Points', 'Picas', 'Columns'];
 const hex = '0123456789abcdef';
@@ -42,6 +45,28 @@ function charToNibble(code: number) {
 function byteAt(value: string, index: number) {
 	return (charToNibble(value.charCodeAt(index)) << 4) | charToNibble(value.charCodeAt(index + 1));
 }
+
+function readUtf8String(reader: PsdReader, length: number) {
+	const buffer = readBytes(reader, length);
+	return decodeString(buffer);
+}
+
+function writeUtf8String(writer: PsdWriter, value: string) {
+	const buffer = encodeString(value);
+	writeBytes(writer, buffer);
+}
+
+MOCK_HANDLERS && addHandler(
+	1028,
+	target => (target as any)._ir1028 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1028', left());
+		(target as any)._ir1028 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1028);
+	},
+);
 
 addHandler(
 	1061,
@@ -64,28 +89,29 @@ addHandler(
 	},
 );
 
-// addHandler(
-// 	1060,
-// 	target => target.xmpMetadata !== undefined,
-// 	(reader, target, left) => {
-// 		target.xmpMetadata = readUtf8String(reader, left());
-// 	},
-// 	(writer, target) => {
-// 		writeUtf8String(writer, target.xmpMetadata!);
-// 	},
-// );
+addHandler(
+	1060,
+	target => target.xmpMetadata !== undefined,
+	(reader, target, left) => target.xmpMetadata = readUtf8String(reader, left()),
+	(writer, target) => writeUtf8String(writer, target.xmpMetadata!),
+);
 
+MOCK_HANDLERS && addHandler(
+	1082,
+	target => (target as any)._ir1082 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1082', left());
+		(target as any)._ir1082 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1082);
+	},
+);
 // addHandler(
 // 	1082,
 // 	target => target.printInformation !== undefined,
 // 	(reader, target) => {
-// 		const descriptorVersion = readInt32(reader);
-
-// 		if (descriptorVersion !== 16) {
-// 			throw new Error(`Invalid descriptor version`);
-// 		}
-
-// 		const value = readDescriptorStructure(reader);
+// 		const value = readVersionAndDescriptor(reader);
 
 // 		target.printInformation = {
 // 			printerName: value.printerName,
@@ -94,12 +120,11 @@ addHandler(
 // 	(writer, target) => {
 // 		const value = target.printInformation!;
 
-// 		writeInt32(writer, 16); // descriptor version
-// 		writeDescriptorStructure(writer, '', 'printOutput', {
+// 		writeVersionAndDescriptor(writer, '', 'printOutput', {
 // 			PstS: true,
 // 			Inte: 'Inte.Clrm',
 // 			printSixteenBit: false,
-// 			printerName: value.printerName || '',
+// 			printerName: value.printerName ?? '',
 // 			printProofSetup: {
 // 				Bltn: 'builtinProof.proofCMYK',
 // 			},
@@ -107,16 +132,17 @@ addHandler(
 // 	},
 // );
 
-// addHandler(
-// 	1083,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1083] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1083]); target;
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	1083,
+	target => (target as any)._ir1083 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1083', left());
+		(target as any)._ir1083 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1083);
+	},
+);
 
 addHandler(
 	1005,
@@ -179,91 +205,155 @@ addHandler(
 		target.alphaChannelNames = [];
 
 		while (left()) {
-			target.alphaChannelNames.push(readPascalString(reader, 1));
+			const value = readPascalString(reader, 1);
+			target.alphaChannelNames.push(value);
 		}
 	},
 	(writer, target) => {
 		for (const name of target.alphaChannelNames!) {
-			writePascalString(writer, name);
+			writePascalString(writer, name, 1);
 		}
 	},
+);
+
+addHandler(
+	1045,
+	target => target.unicodeAlphaNames !== undefined,
+	(reader, target, left) => {
+		target.unicodeAlphaNames = [];
+
+		while (left()) {
+			target.unicodeAlphaNames.push(readUnicodeString(reader));
+		}
+	},
+	(writer, target) => {
+		for (const name of target.unicodeAlphaNames!) {
+			writeUnicodeStringWithPadding(writer, name);
+		}
+	},
+);
+
+MOCK_HANDLERS && addHandler(
+	1077,
+	target => (target as any)._ir1077 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1077', left());
+		(target as any)._ir1077 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1077);
+	},
+);
+
+addHandler(
+	1053,
+	target => target.alphaIdentifiers !== undefined,
+	(reader, target, left) => {
+		target.alphaIdentifiers = [];
+
+		while (left() >= 4) {
+			target.alphaIdentifiers.push(readUint32(reader));
+		}
+	},
+	(writer, target) => {
+		for (const id of target.alphaIdentifiers!) {
+			writeUint32(writer, id);
+		}
+	},
+);
+
+addHandler(
+	1010,
+	target => target.backgroundColor !== undefined,
+	(reader, target) => target.backgroundColor = readColor(reader),
+	(writer, target) => writeColor(writer, target.backgroundColor!),
 );
 
 addHandler(
 	1037,
 	target => target.globalAngle !== undefined,
-	(reader, target) => {
-		target.globalAngle = readUint32(reader);
-	},
-	(writer, target) => {
-		writeUint32(writer, target.globalAngle!);
-	},
+	(reader, target) => target.globalAngle = readUint32(reader),
+	(writer, target) => writeUint32(writer, target.globalAngle!),
 );
 
 addHandler(
 	1049,
 	target => target.globalAltitude !== undefined,
+	(reader, target) => target.globalAltitude = readUint32(reader),
+	(writer, target) => writeUint32(writer, target.globalAltitude!),
+);
+
+addHandler(
+	1011,
+	target => target.printFlags !== undefined,
 	(reader, target) => {
-		target.globalAltitude = readUint32(reader);
+		target.printFlags = {
+			labels: !!readUint8(reader),
+			cropMarks: !!readUint8(reader),
+			colorBars: !!readUint8(reader),
+			registrationMarks: !!readUint8(reader),
+			negative: !!readUint8(reader),
+			flip: !!readUint8(reader),
+			interpolate: !!readUint8(reader),
+			caption: !!readUint8(reader),
+			printFlags: !!readUint8(reader),
+		};
 	},
 	(writer, target) => {
-		writeUint32(writer, target.globalAltitude!);
+		const flags = target.printFlags!;
+		writeUint8(writer, flags.labels ? 1 : 0);
+		writeUint8(writer, flags.cropMarks ? 1 : 0);
+		writeUint8(writer, flags.colorBars ? 1 : 0);
+		writeUint8(writer, flags.registrationMarks ? 1 : 0);
+		writeUint8(writer, flags.negative ? 1 : 0);
+		writeUint8(writer, flags.flip ? 1 : 0);
+		writeUint8(writer, flags.interpolate ? 1 : 0);
+		writeUint8(writer, flags.caption ? 1 : 0);
+		writeUint8(writer, flags.printFlags ? 1 : 0);
 	},
 );
 
-// addHandler(
-// 	1011,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1011] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1011]); target;
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	10000,
+	target => (target as any)._ir10000 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 10000', left());
+		(target as any)._ir10000 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir10000);
+	},
+);
 
-// addHandler(
-// 	10000,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[10000] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[10000]); target;
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	1013,
+	target => (target as any)._ir1013 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1013', left());
+		(target as any)._ir1013 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1013);
+	},
+);
 
-// addHandler(
-// 	1013,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1013] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1013]); target;
-// 	},
-// );
-
-// addHandler(
-// 	1016,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1016] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1016]); target;
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	1016,
+	target => (target as any)._ir1016 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1016', left());
+		(target as any)._ir1016 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1016);
+	},
+);
 
 addHandler(
 	1024,
 	target => target.layerState !== undefined,
-	(reader, target) => {
-		target.layerState = readUint16(reader);
-	},
-	(writer, target) => {
-		writeUint16(writer, target.layerState!);
-	},
+	(reader, target) => target.layerState = readUint16(reader),
+	(writer, target) => writeUint16(writer, target.layerState!),
 );
 
 addHandler(
@@ -361,40 +451,6 @@ addHandler(
 );
 
 addHandler(
-	1045,
-	target => target.unicodeAlphaNames !== undefined,
-	(reader, target, left) => {
-		target.unicodeAlphaNames = [];
-
-		while (left()) {
-			target.unicodeAlphaNames.push(readUnicodeString(reader));
-		}
-	},
-	(writer, target) => {
-		for (const name of target.unicodeAlphaNames!) {
-			writeUnicodeString(writer, name);
-		}
-	},
-);
-
-addHandler(
-	1053,
-	target => target.alphaIdentifiers !== undefined,
-	(reader, target, left) => {
-		target.alphaIdentifiers = [];
-
-		while (left() >= 4) {
-			target.alphaIdentifiers.push(readUint32(reader));
-		}
-	},
-	(writer, target) => {
-		for (const id of target.alphaIdentifiers!) {
-			writeUint32(writer, id);
-		}
-	},
-);
-
-addHandler(
 	1054,
 	target => target.urlsList !== undefined,
 	(reader, target, _, options) => {
@@ -405,26 +461,30 @@ addHandler(
 			throw new Error('Not implemented: URL List');
 		}
 
+		// TODO: read actual URL list
 		target.urlsList = [];
 	},
 	(writer, target) => {
 		writeUint32(writer, target.urlsList!.length);
 
-		if (target.urlsList!.length)
+		// TODO: write actual URL list
+		if (target.urlsList!.length) {
 			throw new Error('Not implemented: URL List');
+		}
 	},
 );
 
-// addHandler(
-// 	1050,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1050] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1050]); target;
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	1050,
+	target => (target as any)._ir1050 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1050', left());
+		(target as any)._ir1050 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1050);
+	},
+);
 
 addHandler(
 	1064,
@@ -441,69 +501,77 @@ addHandler(
 	},
 );
 
-// addHandler(
-// 	1039,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1039] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1039]); target;
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	1039,
+	target => (target as any)._ir1039 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1039', left());
+		(target as any)._ir1039 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1039);
+	},
+);
 
-// addHandler(
-// 	1044,
-// 	target => !!target,
-// 	(reader, target, left) => {
-// 		__data[1044] = readBytes(reader, left()); target;
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, __data[1044]); target;
-// 	},
-// );
+addHandler(
+	1044,
+	target => target.idsSeedNumber !== undefined,
+	(reader, target) => target.idsSeedNumber = readUint32(reader),
+	(writer, target) => writeUint32(writer, target.idsSeedNumber!),
+);
 
 addHandler(
 	1036,
-	target => target.thumbnail !== undefined,
-	(reader, target, left) => {
+	target => target.thumbnail !== undefined || target.thumbnailRaw !== undefined,
+	(reader, target, left, options) => {
 		const format = readUint32(reader); // 1 = kJpegRGB, 0 = kRawRGB
 		const width = readUint32(reader);
 		const height = readUint32(reader);
-		const widthBytes = readUint32(reader); // = (width * bits_per_pixel + 31) / 32 * 4.
-		const totalSize = readUint32(reader); // = widthBytes * height * planes
-		const sizeAfterCompression = readUint32(reader);
+		readUint32(reader); // widthBytes = (width * bits_per_pixel + 31) / 32 * 4.
+		readUint32(reader); // totalSize = widthBytes * height * planes
+		readUint32(reader); // sizeAfterCompression
 		const bitsPerPixel = readUint16(reader); // 24
 		const planes = readUint16(reader); // 1
 
 		if (format !== 1 || bitsPerPixel !== 24 || planes !== 1) {
-			console.log(`invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
+			console.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
 			skipBytes(reader, left());
 			return;
 		}
 
-		width;
-		height;
-		widthBytes;
-		totalSize;
-		sizeAfterCompression;
-
 		const size = left();
-		const bytes = readBytes(reader, size);
-		target.thumbnail = createCanvasFromData(bytes);
+		const data = readBytes(reader, size);
+
+		if (options.useRawThumbnail) {
+			target.thumbnailRaw = { width, height, data };
+		} else {
+			target.thumbnail = createCanvasFromData(data);
+		}
 	},
 	(writer, target) => {
-		const thumb = target.thumbnail!;
-		const data = toByteArray(thumb.toDataURL('image/jpeg', 1).substr('data:image/jpeg;base64,'.length));
+		let width = 0;
+		let height = 0;
+		let data: Uint8Array;
+
+		if (target.thumbnailRaw) {
+			width = target.thumbnailRaw.width;
+			height = target.thumbnailRaw.height;
+			data = target.thumbnailRaw.data;
+		} else {
+			width = target.thumbnail!.width;
+			height = target.thumbnail!.height;
+			data = toByteArray(target.thumbnail!.toDataURL('image/jpeg', 1).substr('data:image/jpeg;base64,'.length));
+		}
+
 		const bitsPerPixel = 24;
-		const widthBytes = (thumb.width * bitsPerPixel + 31) / 32 * 4;
+		const widthBytes = Math.floor((width * bitsPerPixel + 31) / 32) * 4;
 		const planes = 1;
-		const totalSize = widthBytes * thumb.height * planes;
+		const totalSize = widthBytes * height * planes;
 		const sizeAfterCompression = data.length;
 
 		writeUint32(writer, 1); // 1 = kJpegRGB
-		writeUint32(writer, thumb.width);
-		writeUint32(writer, thumb.height);
+		writeUint32(writer, width);
+		writeUint32(writer, height);
 		writeUint32(writer, widthBytes);
 		writeUint32(writer, totalSize);
 		writeUint32(writer, sizeAfterCompression);
@@ -539,13 +607,26 @@ addHandler(
 	},
 );
 
+MOCK_HANDLERS && addHandler(
+	1058,
+	target => (target as any)._ir1058 !== undefined,
+	(reader, target, left) => {
+		console.log('image resource 1058', left());
+		(target as any)._ir1058 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1058);
+	},
+);
+
 // addHandler(
-// 	1058,
-// 	target => !!target,
+// 	1025,
+// 	target => (target as any)._ir1025 !== undefined,
 // 	(reader, target, left) => {
-// 		__data[1058] = readBytes(reader, left()); target;
+// 		console.log('image resource 1025', left());
+// 		(target as any)._ir1025 = readBytes(reader, left());
 // 	},
 // 	(writer, target) => {
-// 		writeBytes(writer, __data[1058]); target;
+// 		writeBytes(writer, (target as any)._ir1025);
 // 	},
 // );

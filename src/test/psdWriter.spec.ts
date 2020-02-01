@@ -59,15 +59,21 @@ describe('PsdWriter', () => {
 		const psd: Psd = {
 			width: 300,
 			height: 200,
-			children: [
-				{
-					children: [],
-					canvas: createCanvas(300, 300),
-				}
-			]
+			children: [{ children: [], canvas: createCanvas(300, 300) }]
 		};
 
-		expect(() => writePsd(writer, psd)).throw(`Invalid layer: cannot have both 'canvas' and 'children' properties set`);
+		expect(() => writePsd(writer, psd)).throw(`Invalid layer, cannot have both 'canvas' and 'children' properties`);
+	});
+
+	it('throws exception if has layer with both children and imageData properties set', () => {
+		const writer = createWriter();
+		const psd: Psd = {
+			width: 300,
+			height: 200,
+			children: [{ children: [], imageData: {} as any }]
+		};
+
+		expect(() => writePsd(writer, psd)).throw(`Invalid layer, cannot have both 'imageData' and 'children' properties`);
 	});
 
 	it('throws if psd has invalid width or height', () => {
@@ -322,7 +328,7 @@ describe('PsdWriter', () => {
 		});
 	});
 
-	fs.readdirSync(writeFilesPath).filter(f => !/text/.test(f)).forEach(f => {
+	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);
 			const psd = loadPsdFromJSONAndPNGFiles(basePath);
@@ -338,8 +344,8 @@ describe('PsdWriter', () => {
 			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
 
 			const reader = createReader(buffer.buffer);
-			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true });
-			fs.writeFileSync(path.join(resultsFilesPath, f + '-composite.png'), result.canvas!.toBuffer());
+			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
+			fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBuffer());
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
 
 			const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));

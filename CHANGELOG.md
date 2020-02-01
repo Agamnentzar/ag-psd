@@ -1,5 +1,19 @@
 # Changelog
 
+## v9.0.0
+- **BREAKING CHANGE:** Changed some numerical fields in effects objects to value+units fields
+- Added handling for vector layers
+- Added option for reading and writing raw image data using `imageData` fields corresponding to `canvas` fields on layer objects. (use `useImageData` option for reading raw data instead of using canvas objects, for writing initialize `imageData` fields instead of `canvas` fields)
+- Added option for reading and writing raw, compressed thumbnail image data using `thumbnailRaw` field. (use `useRawThumbnail` option for reading raw data instead of using canvas object)
+- Added `backgroundColor` image resource
+- Added `xmpMetadata` image resource
+- Added `printFlags` image resource
+- Added `idsSeedNumber` image resource
+- Added typescript type for blendModes
+- Fixed writing incorrect binary data in some cases
+- Fixed field name for `sectionDivider.subType`
+- Fixed reading mask parameters
+
 ## v8.0.0
 - Added handling for reading and writing text layer data (with some limitations)
 - Added `invalidateTextLayers` write options for forcing Photoshop to redraw updated text layer.
@@ -13,27 +27,22 @@
 - Removed unnecessary `version` field from `gridAndGuidesInformation` field
 
 ## v6.3.0
-
 - Added exported byteArrayToBase64 function
 - Updated readme with exampla of usage in web worker
 
 ## v6.2.0
-
 - Added print scale image resource handling
 - Added caption digest image resource handling
 
 ## v6.1.0
-
 - Added loading and saving layer masks
 
 ## v6.0.0
-
 - Changed reading to ignore not implemented features by default instead of throwing
 - Removed logging missing handling for layer info
 - Added `throwForMissingFeatures` and `logMissingFeatures` read options for previous behavior
 
 ## v5.0.0
-
 - Simplified canvas initialization on NodeJS
 
   before:

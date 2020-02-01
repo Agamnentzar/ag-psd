@@ -1,36 +1,8 @@
-export const fromBlendMode: { [key: string]: string } = {};
-export const toBlendMode: { [key: string]: string } = {
-	'pass': 'pass through',
-	'norm': 'normal',
-	'diss': 'dissolve',
-	'dark': 'darken',
-	'mul ': 'multiply',
-	'idiv': 'color burn',
-	'lbrn': 'linear burn',
-	'dkCl': 'darker color',
-	'lite': 'lighten',
-	'scrn': 'screen',
-	'div ': 'color dodge',
-	'lddg': 'linear dodge',
-	'lgCl': 'lighter color',
-	'over': 'overlay',
-	'sLit': 'soft light',
-	'hLit': 'hard light',
-	'vLit': 'vivid light',
-	'lLit': 'linear light',
-	'pLit': 'pin light',
-	'hMix': 'hard mix',
-	'diff': 'difference',
-	'smud': 'exclusion',
-	'fsub': 'subtract',
-	'fdiv': 'divide',
-	'hue ': 'hue',
-	'sat ': 'saturation',
-	'colr': 'color',
-	'lum ': 'luminosity',
-};
-
-Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
+export type BlendMode = 'pass through' | 'normal' | 'dissolve' | 'darken' | 'multiply' |
+	'color burn' | 'linear burn' | 'darker color' | 'lighten' | 'screen' | 'color dodge' |
+	'linear dodge' | 'lighter color' | 'overlay' | 'soft light' | 'hard light' |
+	'vivid light' | 'linear light' | 'pin light' | 'hard mix' | 'difference' | 'exclusion'
+	| 'subtract' | 'divide' | 'hue' | 'saturation' | 'color' | 'luminosity';
 
 // export const enum ColorSpace {
 // 	RGB = 0,
@@ -49,22 +21,6 @@ export const enum ColorMode {
 	Multichannel = 7,
 	Duotone = 8,
 	Lab = 9,
-}
-
-export const enum ChannelID {
-	Red = 0,
-	Green = 1,
-	Blue = 2,
-	Transparency = -1,
-	UserMask = -2,
-	RealUserMask = -3,
-}
-
-export const enum Compression {
-	RawData = 0,
-	RleCompressed = 1,
-	ZipWithoutPrediction = 2,
-	ZipWithPrediction = 3,
 }
 
 export const enum SectionDividerType {
@@ -87,11 +43,11 @@ export interface EffectPattern {
 }
 
 export interface LayerEffectsShadow {
-	size: number;
+	size: UnitsValue;
 	angle: number;
-	distance: number;
+	distance: UnitsValue;
 	color: Color;
-	blendMode: string;
+	blendMode: BlendMode;
 	enabled: boolean;
 	opacity: number;
 	useGlobalLight?: boolean;
@@ -101,9 +57,9 @@ export interface LayerEffectsShadow {
 }
 
 export interface LayerEffectsOuterGlow {
-	size: number;
+	size: UnitsValue;
 	color: Color;
-	blendMode: string;
+	blendMode: BlendMode;
 	enabled: boolean;
 	opacity: number;
 
@@ -111,15 +67,15 @@ export interface LayerEffectsOuterGlow {
 	antialiased?: boolean;
 	noise?: number;
 	range?: number;
-	choke?: number;
+	choke?: UnitsValue;
 	jitter?: number;
 	contour?: EffectContour;
 }
 
 export interface LayerEffectsInnerGlow {
-	size: number;
+	size: UnitsValue;
 	color: Color;
-	blendMode: string;
+	blendMode: BlendMode;
 	enabled: boolean;
 	opacity: number;
 
@@ -128,25 +84,24 @@ export interface LayerEffectsInnerGlow {
 	antialiased?: boolean;
 	noise?: number;
 	range?: number;
-	choke?: number;
+	choke?: UnitsValue;
 	jitter?: number;
 	contour?: EffectContour;
 }
 
 export interface LayerEffectsBevel {
+	size: UnitsValue;
 	angle: number;
-	strength: number; // depth (rename ?)
-	size: number;
-	highlightBlendMode: string;
-	shadowBlendMode: string;
+	strength: number; // depth
+	highlightBlendMode: BlendMode;
+	shadowBlendMode: BlendMode;
 	highlightColor: Color;
 	shadowColor: Color;
 	style: BevelStyle;
 	highlightOpacity: number;
 	shadowOpacity: number;
 	enabled: boolean;
-
-	soften?: number;
+	soften?: UnitsValue;
 	useGlobalLight?: boolean;
 	altitude?: number;
 	technique?: BevelTechnique;
@@ -158,20 +113,20 @@ export interface LayerEffectsBevel {
 }
 
 export interface LayerEffectsSolidFill {
-	blendMode: string;
+	blendMode: BlendMode;
 	color: Color;
 	opacity: number;
 	enabled: boolean;
 }
 
 export interface LayerEffectSatin {
+	size?: UnitsValue;
 	enabled?: boolean;
-	blendMode?: string;
+	blendMode?: BlendMode;
 	color?: Color;
 	antialiased?: boolean;
 	opacity?: number;
-	distance?: number;
-	size?: number;
+	distance?: UnitsValue;
 	invert?: boolean;
 	angle?: number;
 	contour?: EffectContour;
@@ -180,7 +135,7 @@ export interface LayerEffectSatin {
 // not supported yet because of `Patt` section not implemented
 export interface LayerEffectPatternOverlay {
 	enabled?: boolean;
-	blendMode?: string;
+	blendMode?: BlendMode;
 	opacity?: number;
 	scale?: number;
 	pattern?: EffectPattern;
@@ -216,7 +171,7 @@ export interface LayerEffectGradientOverlay {
 	scale?: number;
 	dither?: boolean;
 	reverse?: boolean;
-	type?: GradientType;
+	type?: GradientStyle;
 	offset?: { x: number; y: number; };
 	gradient?: EffectSolidGradient | EffectNoiseGradient;
 }
@@ -248,6 +203,7 @@ export interface LayerMaskData {
 	vectorMaskDensity?: number;
 	vectorMaskFeather?: number;
 	canvas?: HTMLCanvasElement;
+	imageData?: ImageData;
 }
 
 export type TextGridding = 'none'; // TODO: other values
@@ -261,8 +217,11 @@ export type BevelTechnique = 'smooth' | 'chisel hard' | 'chisel soft';
 export type BevelDirection = 'up' | 'down';
 export type GlowTechnique = 'softer' | 'precise';
 export type GlowSource = 'edge' | 'center';
-export type GradientType = 'linear' | 'radial' | 'angle' | 'reflected' | 'diamond';
+export type GradientStyle = 'linear' | 'radial' | 'angle' | 'reflected' | 'diamond';
 export type Justification = 'left' | 'right' | 'center';
+export type LineCapType = 'butt' | 'round' | 'square';
+export type LineJoinType = 'miter' | 'round' | 'bevel';
+export type LineAlignment = 'inside' | 'center' | 'outside';
 
 export interface LayerTextWarp {
 	style?: WarpStyle;
@@ -306,7 +265,6 @@ export interface ParagraphStyle {
 export interface ParagraphStyleRun {
 	length: number;
 	style: ParagraphStyle;
-	// adjustments?: { axis: number[]; xy: number[]; };
 }
 
 export interface TextStyle {
@@ -365,7 +323,6 @@ export interface LayerTextData {
 	text: string;
 	transform?: number[];
 	antiAlias?: AntiAlias;
-
 	gridding?: TextGridding;
 	orientation?: Orientation;
 	index?: number;
@@ -397,6 +354,36 @@ export interface PatternInfo {
 	y: number;
 }
 
+export interface BezierKnot {
+	linked: boolean;
+	points: number[]; // x0, y0, x1, y1, x2, y2
+}
+
+export interface BezierPath {
+	open: boolean;
+	knots: BezierKnot[];
+}
+
+export interface ExtraContentInfo {
+	style?: GradientStyle;
+	scale?: number;
+	angle?: number;
+	dither?: boolean;
+	reverse?: boolean;
+}
+
+export type VectorContent = { type: 'color'; color: Color; } |
+	(EffectSolidGradient & ExtraContentInfo) |
+	(EffectNoiseGradient & ExtraContentInfo) |
+	(EffectPattern & { type: 'pattern'; });
+
+export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None';
+
+export interface UnitsValue {
+	units: Units;
+	value: number;
+}
+
 export interface LayerAdditionalInfo {
 	name?: string; // layer name
 	nameSource?: string; // layer name source
@@ -422,7 +409,7 @@ export interface LayerAdditionalInfo {
 	sectionDivider?: {
 		type: SectionDividerType;
 		key?: string;
-		subtype?: number;
+		subType?: number;
 	};
 	filterMask?: {
 		colorSpace: Color;
@@ -436,14 +423,46 @@ export interface LayerAdditionalInfo {
 	effects?: LayerEffectsInfo;
 	text?: LayerTextData;
 	patterns?: PatternInfo[]; // not supported yet
+	vectorFill?: VectorContent;
+	vectorStroke?: {
+		strokeEnabled?: boolean;
+		fillEnabled?: boolean;
+		lineWidth?: UnitsValue;
+		lineDashOffset?: UnitsValue;
+		miterLimit?: number;
+		lineCapType?: LineCapType;
+		lineJoinType?: LineJoinType;
+		lineAlignment?: LineAlignment;
+		scaleLock?: boolean;
+		strokeAdjust?: boolean;
+		lineDashSet?: UnitsValue[];
+		blendMode?: BlendMode;
+		opacity?: number;
+		content?: VectorContent;
+		resolution?: number;
+	};
+	vectorMask?: {
+		invert?: boolean;
+		notLink?: boolean;
+		disable?: boolean;
+		fillStartsWithAllPixels?: boolean;
+		clipboard?: {
+			top: number;
+			left: number;
+			bottom: number;
+			right: number;
+			resolution: number;
+		};
+		paths: BezierPath[];
+	};
+	usingAlignedRendering?: boolean;
+	pathList?: {
+	}[];
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
-	engineData?: string; 
+	engineData?: string;
 }
-
-export type ResolutionUnit = 'PPI' | 'PPCM';
-export type SizeUnit = 'Inches' | 'Centimeters' | 'Points' | 'Picas' | 'Columns';
 
 export interface ImageResources {
 	layerState?: number;
@@ -458,7 +477,7 @@ export interface ImageResources {
 	};
 	alphaIdentifiers?: number[];
 	alphaChannelNames?: string[];
-	unicodeAlphaNames?: string[];
+	unicodeAlphaNames?: string[]; // TODO: remove
 	globalAngle?: number;
 	globalAltitude?: number;
 	pixelAspectRatio?: {
@@ -477,13 +496,14 @@ export interface ImageResources {
 	};
 	resolutionInfo?: {
 		horizontalResolution: number;
-		horizontalResolutionUnit: ResolutionUnit;
-		widthUnit: SizeUnit;
+		horizontalResolutionUnit: 'PPI' | 'PPCM';
+		widthUnit: 'Inches' | 'Centimeters' | 'Points' | 'Picas' | 'Columns';
 		verticalResolution: number;
-		verticalResolutionUnit: ResolutionUnit;
-		heightUnit: SizeUnit;
+		verticalResolutionUnit: 'PPI' | 'PPCM';
+		heightUnit: 'Inches' | 'Centimeters' | 'Points' | 'Picas' | 'Columns';
 	};
 	thumbnail?: HTMLCanvasElement;
+	thumbnailRaw?: { width: number; height: number; data: Uint8Array; };
 	captionDigest?: string;
 	xmpMetadata?: string;
 	printScale?: {
@@ -493,12 +513,25 @@ export interface ImageResources {
 		scale?: number;
 	};
 	// printInformation?: {
-	// 	// psts?: boolean;
-	// 	// inte?: string;
-	// 	// printSixteenBit?: boolean;
 	// 	printerName?: string;
-	// 	// bltn?: string;
+	//  psts?: boolean;
+	//  inte?: string;
+	//  printSixteenBit?: boolean;
+	//  bltn?: string;
 	// };
+	backgroundColor?: Color;
+	idsSeedNumber?: number;
+	printFlags?: {
+		labels?: boolean;
+		cropMarks?: boolean;
+		colorBars?: boolean;
+		registrationMarks?: boolean;
+		negative?: boolean;
+		flip?: boolean;
+		interpolate?: boolean;
+		caption?: boolean;
+		printFlags?: boolean;
+	};
 }
 
 export interface Layer extends LayerAdditionalInfo {
@@ -506,12 +539,13 @@ export interface Layer extends LayerAdditionalInfo {
 	left?: number;
 	bottom?: number;
 	right?: number;
-	blendMode?: string;
+	blendMode?: BlendMode;
 	opacity?: number;
 	transparencyProtected?: boolean;
 	hidden?: boolean;
 	clipping?: boolean;
 	canvas?: HTMLCanvasElement;
+	imageData?: ImageData;
 	children?: Layer[];
 	/** applies only for layer groups */
 	opened?: boolean;
@@ -525,28 +559,36 @@ export interface Psd extends LayerAdditionalInfo {
 	colorMode?: ColorMode;
 	children?: Layer[];
 	canvas?: HTMLCanvasElement;
+	imageData?: ImageData;
 	imageResources?: ImageResources;
 }
 
 export interface ReadOptions {
-	/** does not load layer image data */
+	/** Does not load layer image data. */
 	skipLayerImageData?: boolean;
-	/** does not load composite image data */
+	/** Does not load composite image data. */
 	skipCompositeImageData?: boolean;
-	/** does not load thumbnail */
+	/** Does not load thumbnail. */
 	skipThumbnail?: boolean;
-	/** throws exception if features are missing */
+	/** Throws exception if features are missing. */
 	throwForMissingFeatures?: boolean;
-	/** logs if features are missing */
+	/** Logs if features are missing. */
 	logMissingFeatures?: boolean;
+	/** Keep image data as byte array instead of canvas.
+	 * (image data will appear in `imageData` fields instead of `canvas` fields)
+	 * This avoids issues with canvas premultiplied alpha corrupting image data. */
+	useImageData?: boolean;
+	/** Loads thumbnail raw data instead of decoding it's content into canvas. 
+	 * `thumnailRaw` field is used instead. */
+	useRawThumbnail?: boolean;
 }
 
 export interface WriteOptions {
-	/** automatically generates thumbnail from composite image */
+	/** Automatically generates thumbnail from composite image. */
 	generateThumbnail?: boolean;
-	/** trims transparent pixels from layer image data */
+	/** Trims transparent pixels from layer image data. */
 	trimImageData?: boolean;
-	/** invalidates text layer data, forcing Photoshop to redraw them on load.
+	/** Invalidates text layer data, forcing Photoshop to redraw them on load.
 	 *  Use this option if you're updating loaded text layer properties. */
 	invalidateTextLayers?: boolean;
 }

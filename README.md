@@ -414,6 +414,18 @@ const psd = {
 const buffer = writePsd(psd);
 ```
 
+### Updating document without corrupting image data
+
+If you read and write the same document, image data can get corrupted by automatic alpha channel pre-multiplication that happens when you load data into the canvas element. To avoid that use raw image data (set `useImageData` option to `true` in `ReadOptions`. you can also use `useRawThumbnail` option to preserve original thumbnail data)
+
+```js
+const psd = readPsd(inputBuffer, { useImageData: true });
+
+// TODO: update psd document here
+
+const outuptBuffer = writePsd(psd); 
+```
+
 ### Updating text layers
 
 ```js
@@ -422,7 +434,8 @@ const psd = readPsd(inputBuffer);
 // assuming first layer is the one you want to update and has text already present
 psd.children[0].text.text = 'New text here';
 
-psd.children[0].canvas = undefined; // optionally remove outdated image data
+// optionally remove outdated image data
+psd.children[0].canvas = undefined;
 
 // needs `invalidateTextLayers` option to force Photoshop to redraw text layer on load,
 // otherwise it will keep the old image data

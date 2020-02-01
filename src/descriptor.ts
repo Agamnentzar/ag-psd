@@ -7,9 +7,9 @@ import {
 	writeUnicodeStringWithPadding, writeInt32, writeFloat32
 } from './psdWriter';
 
-interface Dict {
-	[key: string]: string;
-}
+interface Dict { [key: string]: string; }
+interface NameClassID { name: string; classID: string; };
+interface ExtTypeDict { [key: string]: NameClassID; };
 
 function revMap(map: Dict) {
 	const result: Dict = {};
@@ -26,70 +26,78 @@ const unitsMap: Dict = {
 	'#Pxl': 'Pixels',
 	'#Mlm': 'Millimeters',
 	'#Pnt': 'Points',
+	'RrPi': 'Picas',
+	'RrIn': 'Inches',
+	'RrCm': 'Centimeters',
 };
 
 const unitsMapRev = revMap(unitsMap);
 
-type ExtTypeDict = { [key: string]: { name: string; classId: string; }; };
-
 const fieldToExtType: ExtTypeDict = {
-	printProofSetup: { name: 'Proof Setup', classId: 'proofSetup' },
-	Grad: { name: 'Gradient', classId: 'Grdn' },
-	ebbl: { name: '', classId: 'ebbl' },
-	SoFi: { name: '', classId: 'SoFi' },
-	GrFl: { name: '', classId: 'GrFl' },
-	sdwC: { name: '', classId: 'RGBC' },
-	hglC: { name: '', classId: 'RGBC' },
-	'Clr ': { name: '', classId: 'RGBC' },
-	Ofst: { name: '', classId: 'Pnt ' },
-	ChFX: { name: '', classId: 'ChFX' },
-	MpgS: { name: '', classId: 'ShpC' },
-	DrSh: { name: '', classId: 'DrSh' },
-	IrSh: { name: '', classId: 'IrSh' },
-	OrGl: { name: '', classId: 'OrGl' },
-	IrGl: { name: '', classId: 'IrGl' },
-	TrnS: { name: '', classId: 'ShpC' },
+	printProofSetup: { name: 'Proof Setup', classID: 'proofSetup' },
+	Grad: { name: 'Gradient', classID: 'Grdn' },
+	ebbl: { name: '', classID: 'ebbl' },
+	SoFi: { name: '', classID: 'SoFi' },
+	GrFl: { name: '', classID: 'GrFl' },
+	sdwC: { name: '', classID: 'RGBC' },
+	hglC: { name: '', classID: 'RGBC' },
+	'Clr ': { name: '', classID: 'RGBC' },
+	Ofst: { name: '', classID: 'Pnt ' },
+	ChFX: { name: '', classID: 'ChFX' },
+	MpgS: { name: '', classID: 'ShpC' },
+	DrSh: { name: '', classID: 'DrSh' },
+	IrSh: { name: '', classID: 'IrSh' },
+	OrGl: { name: '', classID: 'OrGl' },
+	IrGl: { name: '', classID: 'IrGl' },
+	TrnS: { name: '', classID: 'ShpC' },
+	Ptrn: { name: '', classID: 'Ptrn' },
+	strokeStyleContent: { name: '', classID: 'solidColorLayer' },
+	patternFill: { name: '', classID: 'patternFill' },
+	phase: { name: '', classID: 'Pnt ' },
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
-	'Crv ': { name: '', classId: 'CrPt' },
-	'Clrs': { name: '', classId: 'Clrt' },
-	'Trns': { name: '', classId: 'TrnS' },
+	'Crv ': { name: '', classID: 'CrPt' },
+	'Clrs': { name: '', classID: 'Clrt' },
+	'Trns': { name: '', classID: 'TrnS' },
 };
 
 const typeToField: { [key: string]: string[]; } = {
-	'TEXT': ['Txt ', 'printerName', 'Nm  '],
+	'TEXT': ['Txt ', 'printerName', 'Nm  ', 'Idnt'],
 	'tdta': ['EngineData'],
 	'long': [
-		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn',
+		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
 		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'Type', 'glwS', 'GrdF', 'GlwT',
+		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
+		'strokeStyleBlendMode',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss', 'useShape', 'useTexture',
 		'masterFXSwitch', 'uglg', 'antialiasGloss', 'useShape', 'useTexture', 'Algn', 'Rvrs', 'Dthr',
-		'Invr', 'VctC', 'ShTr', 'layerConceals',
+		'Invr', 'VctC', 'ShTr', 'layerConceals', 'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock',
+		'strokeStyleStrokeAdjust',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Rd  ', 'Grn ', 'Bl  ',
+		'strokeStyleMiterLimit', 'strokeStyleResolution',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl', 'Ckmt',
-		'Nose', 'Inpr', 'ShdN',
+		'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset', 'strokeStyleOpacity',
+
 	],
-	'VlLs': ['Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns'],
+	'VlLs': [
+		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet',
+	],
 };
 
-// special handling for: 'AntA', 'Hrzn', 'Vrtc'
-
 const fieldToArrayType: Dict = {
-	'Crv ': 'Objc',
-	'Clrs': 'Objc',
-	'Trns': 'Objc',
 	'Mnm ': 'long',
 	'Mxm ': 'long',
+	'strokeStyleLineDashSet': 'UntF',
 };
 
 const fieldToType: Dict = {};
@@ -102,6 +110,10 @@ for (const type of Object.keys(typeToField)) {
 
 for (const field of Object.keys(fieldToExtType)) {
 	fieldToType[field] = 'Objc';
+}
+
+for (const field of Object.keys(fieldToArrayExtType)) {
+	fieldToArrayType[field] = 'Objc';
 }
 
 function getTypeByKey(key: string, value: any) {
@@ -136,16 +148,25 @@ function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 }
 
 export function readDescriptorStructure(reader: PsdReader) {
+	// const struct =
 	readClassStructure(reader);
+	// console.log(struct);
 	const itemsCount = readUint32(reader);
 	const object: any = {};
 
 	for (let i = 0; i < itemsCount; i++) {
 		const key = readAsciiStringOrClassId(reader);
 		const type = readSignature(reader);
+		// console.log('>', key, type);
 		const data = readOSType(reader, type);
+
+		// if (typeof data === 'object' && 'units' in data)
+		// 	console.log(key, data);
+
 		object[key] = data;
 	}
+
+	// console.log('//', struct);
 
 	return object;
 }
@@ -164,7 +185,22 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		const type = getTypeByKey(key, value[key]);
 		writeAsciiStringOrClassId(writer, key);
 		writeSignature(writer, type || 'long');
-		writeOSType(writer, type || 'long', value[key], key, fieldToExtType[key]);
+
+		let extType = fieldToExtType[key];
+
+		if (key === 'strokeStyleContent') {
+			if (value[key]['Clr ']) {
+				extType = { name: '', classID: 'solidColorLayer' };
+			} else if (value[key].Grad) {
+				extType = { name: '', classID: 'gradientLayer' };
+			} else if (value[key].Ptrn) {
+				extType = { name: '', classID: 'patternLayer' };
+			} else {
+				console.log('Invalid strokeStyleContent value', value[key]);
+			}
+		}
+
+		writeOSType(writer, type || 'long', value[key], key, extType);
 		if (!type) console.log(`Missing descriptor field type for: '${key}' in`, value);
 	}
 }
@@ -182,7 +218,11 @@ function readOSType(reader: PsdReader, type: string) {
 
 			for (let i = 0; i < length; i++) {
 				const type = readSignature(reader);
+				// console.log('  >', type);
 				items.push(readOSType(reader, type));
+
+				// if (typeof items[items.length - 1] === 'object' && 'units' in items[items.length - 1])
+				// 	console.log('[]', items[items.length - 1]);
 			}
 
 			return items;
@@ -192,11 +232,13 @@ function readOSType(reader: PsdReader, type: string) {
 		case 'UntF': { // Unit double
 			const units = readSignature(reader);
 			const value = readFloat64(reader);
+			if (!unitsMap[units]) throw new Error(`Invalid units: ${units}`);
 			return { units: unitsMap[units], value };
 		}
 		case 'UnFl': { // Unit float
 			const units = readSignature(reader);
 			const value = readFloat32(reader);
+			if (!unitsMap[units]) throw new Error(`Invalid units: ${units}`);
 			return { units: unitsMap[units], value };
 		}
 		case 'TEXT': // String
@@ -241,14 +283,14 @@ function readOSType(reader: PsdReader, type: string) {
 	}
 }
 
-function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType?: { name: string; classId: string; }) {
+function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType?: NameClassID) {
 	switch (type) {
 		// case 'obj ': // Reference
 		// 	writeReferenceStructure(reader);
 		case 'Objc': // Descriptor
 		case 'GlbO': // GlobalObject same as Descriptor
 			if (!extType) throw new Error(`Missing ext type for: ${key} (${JSON.stringify(value)})`);
-			writeDescriptorStructure(writer, extType.name, extType.classId, value);
+			writeDescriptorStructure(writer, extType.name, extType.classID, value);
 			break;
 		case 'VlLs': // List
 			writeInt32(writer, value.length);
@@ -264,11 +306,13 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeFloat64(writer, value);
 			break;
 		case 'UntF': // Unit double
-			writeSignature(writer, unitsMapRev[value.units] || '#Nne');
+			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units}`);
+			writeSignature(writer, unitsMapRev[value.units]);
 			writeFloat64(writer, value.value);
 			break;
 		case 'UnFl': // Unit float
-			writeSignature(writer, unitsMapRev[value.units] || '#Nne');
+			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units}`);
+			writeSignature(writer, unitsMapRev[value.units]);
 			writeFloat32(writer, value.value);
 			break;
 		case 'TEXT': // String
@@ -357,4 +401,15 @@ function readClassStructure(reader: PsdReader) {
 	const name = readUnicodeString(reader);
 	const classID = readAsciiStringOrClassId(reader);
 	return { name, classID };
+}
+
+export function readVersionAndDescriptor(reader: PsdReader) {
+	const version = readUint32(reader);
+	if (version !== 16) throw new Error('Invalid descriptor version');
+	return readDescriptorStructure(reader);
+}
+
+export function writeVersionAndDescriptor(writer: PsdWriter, name: string, classID: string, descriptor: any) {
+	writeUint32(writer, 16); // version
+	writeDescriptorStructure(writer, name, classID, descriptor);
 }

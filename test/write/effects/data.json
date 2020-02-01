@@ -290,8 +290,14 @@
           "invert": true,
           "opacity": 0.5,
           "angle": 19,
-          "distance": 11,
-          "size": 14,
+          "distance": {
+            "value": 11,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 14,
+            "units": "Pixels"
+          },
           "contour": {
             "name": "Gaussian",
             "curve": [
@@ -438,9 +444,18 @@
           "opacity": 0.75,
           "useGlobalLight": true,
           "angle": 120,
-          "distance": 5,
-          "choke": 2,
-          "size": 5,
+          "distance": {
+            "value": 5,
+            "units": "Pixels"
+          },
+          "choke": {
+            "value": 2,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "noise": 0,
           "antialiased": false,
           "contour": {
@@ -562,9 +577,18 @@
           "opacity": 0.63,
           "useGlobalLight": false,
           "angle": 61,
-          "distance": 14,
-          "choke": 11,
-          "size": 4,
+          "distance": {
+            "value": 14,
+            "units": "Pixels"
+          },
+          "choke": {
+            "value": 11,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 4,
+            "units": "Pixels"
+          },
           "noise": 0,
           "antialiased": false,
           "contour": {
@@ -684,8 +708,14 @@
           ],
           "opacity": 0.75,
           "technique": "softer",
-          "choke": 0,
-          "size": 5,
+          "choke": {
+            "value": 0,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "noise": 0,
           "jitter": 0,
           "antialiased": false,
@@ -715,8 +745,14 @@
           ],
           "opacity": 0.75,
           "technique": "softer",
-          "choke": 2,
-          "size": 4,
+          "choke": {
+            "value": 2,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 4,
+            "units": "Pixels"
+          },
           "jitter": 0.09,
           "noise": 0.03,
           "antialiased": false,
@@ -852,7 +888,10 @@
           "angle": 120,
           "altitude": 30,
           "strength": 1,
-          "size": 5,
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "direction": "up",
           "contour": {
             "name": "Linear",
@@ -868,7 +907,10 @@
             ]
           },
           "antialiasGloss": false,
-          "soften": 0,
+          "soften": {
+            "value": 0,
+            "units": "Pixels"
+          },
           "useShape": false,
           "useTexture": false
         }

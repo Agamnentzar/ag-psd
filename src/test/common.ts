@@ -70,9 +70,13 @@ export function loadImagesFromDirectory(dirName: string) {
 	return images;
 }
 
+export function createReaderFromBuffer(buffer: Buffer) {
+	return createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
 export function readPsdFromFile(fileName: string, options?: ReadOptions): Psd {
 	const buffer = fs.readFileSync(fileName);
-	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	const reader = createReaderFromBuffer(buffer);
 	return readPsd(reader, options);
 }
 

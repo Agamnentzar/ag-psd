@@ -1,7 +1,57 @@
 import { fromByteArray } from 'base64-js';
-import { Layer, ChannelID, Compression, WriteOptions } from './psd';
+import { Layer, Color, BlendMode } from './psd';
 import { PsdReader, readBytes, readUint16, skipBytes } from './psdReader';
 import { PsdWriter, writeUint16 } from './psdWriter';
+
+export const fromBlendMode: { [key: string]: string } = {};
+export const toBlendMode: { [key: string]: BlendMode } = {
+	'pass': 'pass through',
+	'norm': 'normal',
+	'diss': 'dissolve',
+	'dark': 'darken',
+	'mul ': 'multiply',
+	'idiv': 'color burn',
+	'lbrn': 'linear burn',
+	'dkCl': 'darker color',
+	'lite': 'lighten',
+	'scrn': 'screen',
+	'div ': 'color dodge',
+	'lddg': 'linear dodge',
+	'lgCl': 'lighter color',
+	'over': 'overlay',
+	'sLit': 'soft light',
+	'hLit': 'hard light',
+	'vLit': 'vivid light',
+	'lLit': 'linear light',
+	'pLit': 'pin light',
+	'hMix': 'hard mix',
+	'diff': 'difference',
+	'smud': 'exclusion',
+	'fsub': 'subtract',
+	'fdiv': 'divide',
+	'hue ': 'hue',
+	'sat ': 'saturation',
+	'colr': 'color',
+	'lum ': 'luminosity',
+};
+
+Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
+
+export const enum ChannelID {
+	Red = 0,
+	Green = 1,
+	Blue = 2,
+	Transparency = -1,
+	UserMask = -2,
+	RealUserMask = -3,
+}
+
+export const enum Compression {
+	RawData = 0,
+	RleCompressed = 1,
+	ZipWithoutPrediction = 2,
+	ZipWithPrediction = 3,
+}
 
 export interface ChannelData {
 	channelId: ChannelID;
@@ -43,6 +93,10 @@ export function offsetForChannel(channelId: ChannelID) {
 	}
 }
 
+export function clamp(value: number, min: number, max: number) {
+	return value < min ? min : (value > max ? max : value);
+}
+
 export function toArray(value: Uint8Array) {
 	const result = new Array(value.length);
 
@@ -63,7 +117,8 @@ export function readColor(reader: PsdReader) {
 	return [r, g, b, a];
 }
 
-export function writeColor(writer: PsdWriter, color: number[]) {
+export function writeColor(writer: PsdWriter, color: number[] | undefined) {
+	if (!color) color = [0, 0, 0, 0];
 	writeUint16(writer, 0);
 	writeUint16(writer, Math.round(color[0] * 257));
 	writeUint16(writer, Math.round(color[1] * 257));
@@ -81,162 +136,6 @@ export function hasAlpha(data: PixelData) {
 	}
 
 	return false;
-}
-
-function isRowEmpty({ data, width }: PixelData, y: number, left: number, right: number) {
-	const start = ((y * width + left) * 4 + 3) | 0;
-	const end = (start + (right - left) * 4) | 0;
-
-	for (let i = start; i < end; i = (i + 4) | 0) {
-		if (data[i] !== 0) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-function isColEmpty({ data, width }: PixelData, x: number, top: number, bottom: number) {
-	const stride = (width * 4) | 0;
-	const start = (top * stride + x * 4 + 3) | 0;
-
-	for (let y = top, i = start; y < bottom; y++ , i = (i + stride) | 0) {
-		if (data[i] !== 0) {
-			return false;
-		}
-	}
-
-	return true;
-}
-
-function trimData(data: PixelData) {
-	let top = 0;
-	let left = 0;
-	let right = data.width;
-	let bottom = data.height;
-
-	while (top < bottom && isRowEmpty(data, top, left, right))
-		top++;
-	while (bottom > top && isRowEmpty(data, bottom - 1, left, right))
-		bottom--;
-	while (left < right && isColEmpty(data, left, top, bottom))
-		left++;
-	while (right > left && isColEmpty(data, right - 1, top, bottom))
-		right--;
-
-	return { top, left, right, bottom };
-}
-
-export function getLayerDimentions({ canvas }: { canvas?: HTMLCanvasElement; }) {
-	if (canvas && canvas.width && canvas.height) {
-		return { width: canvas.width, height: canvas.height };
-	} else {
-		return { width: 0, height: 0 };
-	}
-}
-
-export function getChannels(
-	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
-): LayerChannelData {
-	const layerData = getLayerChannels(tempBuffer, layer, background, options);
-	const mask = layer.mask;
-
-	if (mask && mask.canvas) {
-		let { top = 0, left = 0, right = 0, bottom = 0 } = mask;
-		let { width, height } = getLayerDimentions(mask);
-
-		if (width && height) {
-			right = left + width;
-			bottom = top + height;
-
-			const context = mask.canvas.getContext('2d')!;
-			const data = context.getImageData(0, 0, width, height);
-			const buffer = writeDataRLE(tempBuffer, data, width, height, [0])!;
-
-			layerData.mask = { top, left, right, bottom };
-			layerData.channels.push({
-				channelId: ChannelID.UserMask,
-				compression: Compression.RleCompressed,
-				buffer: buffer,
-				length: 2 + buffer.length,
-			});
-		}
-	}
-
-	return layerData;
-}
-
-export function getLayerChannels(
-	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
-): LayerChannelData {
-	let canvas = layer.canvas;
-
-	let { top = 0, left = 0, right = 0, bottom = 0 } = layer;
-	let channels: ChannelData[] = [
-		{
-			channelId: ChannelID.Transparency,
-			compression: Compression.RawData,
-			buffer: undefined,
-			length: 2,
-		}
-	];
-
-	let { width, height } = getLayerDimentions(layer);
-
-	if (!canvas || !width || !height) {
-		right = left;
-		bottom = top;
-		return { layer, top, left, right, bottom, channels };
-	}
-
-	right = left + width;
-	bottom = top + height;
-
-	const context = canvas.getContext('2d')!;
-	let data = context.getImageData(0, 0, width, height);
-
-	if (options.trimImageData) {
-		const trimmed = trimData(data);
-
-		if (trimmed.left !== 0 || trimmed.top !== 0 || trimmed.right !== data.width || trimmed.bottom !== data.height) {
-			left += trimmed.left;
-			top += trimmed.top;
-			right -= (data.width - trimmed.right);
-			bottom -= (data.height - trimmed.bottom);
-			width = right - left;
-			height = bottom - top;
-
-			if (!width || !height) {
-				return { layer, top, left, right, bottom, channels };
-			}
-
-			data = context.getImageData(trimmed.left, trimmed.top, width, height);
-		}
-	}
-
-	const channelIds = [
-		ChannelID.Red,
-		ChannelID.Green,
-		ChannelID.Blue,
-	];
-
-	if (!background || hasAlpha(data) || layer.mask) {
-		channelIds.unshift(ChannelID.Transparency);
-	}
-
-	channels = channelIds.map(channel => {
-		const offset = offsetForChannel(channel);
-		const buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
-
-		return {
-			channelId: channel,
-			compression: Compression.RleCompressed,
-			buffer: buffer,
-			length: 2 + buffer.length,
-		};
-	});
-
-	return { layer, top, left, right, bottom, channels };
 }
 
 export function resetCanvas({ width, height, data }: PixelData) {
@@ -438,6 +337,65 @@ export function readDataRLE(
 	}
 }
 
+// h = <0, 360>; s, v = <0, 100>
+export function hsv2rgb(h: number, s: number, v: number): Color {
+	h = Math.max(0, Math.min(360, h === 360 ? 0 : h));
+	s = Math.max(0, Math.min(1, s / 100));
+	v = Math.max(0, Math.min(1, v / 100));
+
+	let r = v;
+	let g = v;
+	let b = v;
+
+	if (s !== 0) {
+		h /= 60;
+		const i = Math.floor(h);
+		const f = h - i;
+		const p = v * (1 - s);
+		const q = v * (1 - s * f);
+		const t = v * (1 - s * (1 - f));
+
+		switch (i) {
+			case 0:
+				r = v;
+				g = t;
+				b = p;
+				break;
+			case 1:
+				r = q;
+				g = v;
+				b = p;
+				break;
+			case 2:
+				r = p;
+				g = v;
+				b = t;
+				break;
+			case 3:
+				r = p;
+				g = q;
+				b = v;
+				break;
+			case 4:
+				r = t;
+				g = p;
+				b = v;
+				break;
+			default:
+				r = v;
+				g = p;
+				b = q;
+		}
+	}
+
+	return [
+		r * 255,
+		g * 255,
+		b * 255,
+		255,
+	];
+}
+
 /* istanbul ignore next */
 export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');
@@ -446,6 +404,13 @@ export let createCanvas: (width: number, height: number) => HTMLCanvasElement = 
 /* istanbul ignore next */
 export let createCanvasFromData: (data: Uint8Array) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvasFromData method');
+};
+
+let tempCanvas: HTMLCanvasElement | undefined = undefined;
+
+export let createImageData: (width: number, height: number) => ImageData = (width, height) => {
+	if (!tempCanvas) tempCanvas = createCanvas(1, 1);
+	return tempCanvas.getContext('2d')!.createImageData(width, height);
 };
 
 /* istanbul ignore if */
@@ -471,7 +436,9 @@ if (typeof document !== 'undefined') {
 export function initializeCanvas(
 	createCanvasMethod: (width: number, height: number) => HTMLCanvasElement,
 	createCanvasFromDataMethod?: (data: Uint8Array) => HTMLCanvasElement,
+	createImageDataMethod?: (width: number, height: number) => ImageData
 ) {
 	createCanvas = createCanvasMethod;
-	createCanvasFromData = createCanvasFromDataMethod || createCanvasFromData;
+	createCanvasFromData = createCanvasFromDataMethod ?? createCanvasFromData;
+	createImageData = createImageDataMethod ?? createImageData;
 }

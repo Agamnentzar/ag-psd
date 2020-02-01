@@ -2,9 +2,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
-import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas } from './common';
+import {
+	readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas,
+	createReaderFromBuffer,
+	compareBuffers
+} from './common';
 import { Layer, ReadOptions, Psd } from '../psd';
 import { readPsd, writePsdBuffer } from '../index';
+import { readPsd as readPsdInternal } from '../psdReader';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'read');
@@ -47,13 +52,15 @@ describe('PsdReader', () => {
 	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
-			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), opts);
+			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), { ...opts });
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; skip?: boolean; }[] = [];
 
 			compare.push({ name: `canvas.png`, canvas: psd.canvas });
 			psd.canvas = undefined;
+			delete psd.imageData;
+			delete psd.imageResources!.xmpMetadata;
 
 			let i = 0;
 
@@ -65,10 +72,12 @@ describe('PsdReader', () => {
 						const layerId = i++;
 						compare.push({ name: `layer-${layerId}.png`, canvas: l.canvas });
 						l.canvas = undefined;
+						delete l.imageData;
 
 						if (l.mask) {
 							compare.push({ name: `layer-${layerId}-mask.png`, canvas: l.mask.canvas });
 							delete l.mask.canvas;
+							delete l.mask.imageData;
 						}
 					}
 				}
@@ -77,10 +86,12 @@ describe('PsdReader', () => {
 			pushLayerCanvases(psd.children ?? []);
 			mkdirp.sync(path.join(resultsFilesPath, f));
 
-			if (psd.imageResources && psd.imageResources.thumbnail) {
+			if (psd.imageResources?.thumbnail) {
 				compare.push({ name: 'thumb.png', canvas: psd.imageResources.thumbnail, skip: true });
 				delete psd.imageResources.thumbnail;
 			}
+
+			if (psd.imageResources) delete psd.imageResources.thumbnailRaw;
 
 			compare.forEach(i => saveCanvas(path.join(resultsFilesPath, f, i.name), i.canvas));
 
@@ -137,7 +148,7 @@ describe('PsdReader', () => {
 			],
 		};
 
-		fs.writeFileSync(path.join(resultsFilesPath, 'TEXT2.psd'), writePsdBuffer(psd));
+		fs.writeFileSync(path.join(resultsFilesPath, '_TEXT2.psd'), writePsdBuffer(psd));
 	});
 
 	it.skip('read text layer test', () => {
@@ -146,11 +157,42 @@ describe('PsdReader', () => {
 
 		// layer.text!.text = 'Foo bar';
 		const buffer = writePsdBuffer(psd);
-		fs.writeFileSync(path.join(resultsFilesPath, 'TEXT.psd'), buffer);
+		fs.writeFileSync(path.join(resultsFilesPath, '_TEXT.psd'), buffer);
 
 		// console.log(require('util').inspect(psd.children![0].text, false, 99, true));
 		// console.log(require('util').inspect(psd.children![1].text, false, 99, true));
 		// console.log(require('util').inspect(psd.engineData, false, 99, true));
+	});
+
+	it.skip('READ TEST', () => {
+		const originalBuffer = fs.readFileSync(path.join(testFilesPath, 'test.psd'));
+
+		console.log('READING ORIGINAL');
+		const opts = { logMissingFeatures: true, useImageData: true, useRawThumbnail: true };
+		const originalPsd = readPsdInternal(createReaderFromBuffer(originalBuffer), opts);
+
+		console.log('WRITING');
+		const buffer = writePsdBuffer(originalPsd);
+		// fs.writeFileSync('temp.psd', buffer);
+		// fs.writeFileSync('temp.bin', buffer);
+
+		console.log('READING WRITTEN');
+		const psd = readPsdInternal(createReaderFromBuffer(buffer), { logMissingFeatures: true });
+
+		clearCanvasFields(originalPsd);
+		clearCanvasFields(psd);
+		delete originalPsd.imageResources!.thumbnail;
+		delete psd.imageResources!.thumbnail;
+		delete originalPsd.imageResources!.thumbnailRaw;
+		delete psd.imageResources!.thumbnailRaw;
+		// console.log(require('util').inspect(originalPsd, false, 99, true));
+
+		// fs.writeFileSync('original.json', JSON.stringify(originalPsd, null, 2));
+		// fs.writeFileSync('after.json', JSON.stringify(psd, null, 2));
+
+		compareBuffers(buffer, originalBuffer, 'test');
+
+		expect(psd).eql(originalPsd);
 	});
 
 	it.skip('decode engine data 2', () => {
@@ -168,7 +210,18 @@ describe('PsdReader', () => {
 function clearEmptyCanvasFields(layer: Layer | undefined) {
 	if (layer) {
 		if ('canvas' in layer && !layer.canvas) delete layer.canvas;
+		if ('imageData' in layer && !layer.imageData) delete layer.imageData;
 		layer.children?.forEach(clearEmptyCanvasFields);
+	}
+}
+
+function clearCanvasFields(layer: Layer | undefined) {
+	if (layer) {
+		delete layer.canvas;
+		delete layer.imageData;
+		if (layer.mask) delete layer.mask.canvas;
+		if (layer.mask) delete layer.mask.imageData;
+		layer.children?.forEach(clearCanvasFields);
 	}
 }
 

@@ -2,11 +2,7 @@ import { Psd, ReadOptions, WriteOptions } from './psd';
 import { PsdWriter, writePsd as writePsdInternal, getWriterBuffer, createWriter, getWriterBufferNoCopy } from './psdWriter';
 import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
 export { initializeCanvas } from './helpers';
-export {
-	ColorMode, ChannelID, Compression, SectionDividerType, Color, LayerEffectsShadow as LayerEffectsShadowInfo, LayerEffectsOuterGlow as LayerEffectsOuterGlowInfo,
-	LayerEffectsInnerGlow as LayerEffectsInnerGlowInfo, LayerEffectsBevel as LayerEffectsBevelInfo, LayerEffectsSolidFill as LayerEffectsSolidFillInfo, LayerEffectsInfo, LayerAdditionalInfo,
-	ResolutionUnit, SizeUnit, ImageResources, Layer, Psd, ReadOptions, WriteOptions
-} from './psd';
+export * from './psd';
 import { fromByteArray } from 'base64-js';
 export { PsdReader, PsdWriter };
 

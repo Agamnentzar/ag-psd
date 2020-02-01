@@ -69,6 +69,18 @@
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "idsSeedNumber": 12,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -290,8 +302,14 @@
           "invert": true,
           "opacity": 0.5,
           "angle": 19,
-          "distance": 11,
-          "size": 14,
+          "distance": {
+            "value": 11,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 14,
+            "units": "Pixels"
+          },
           "contour": {
             "name": "Gaussian",
             "curve": [
@@ -427,9 +445,15 @@
       "effects": {
         "scale": 1,
         "dropShadow": {
-          "size": 5,
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "angle": 120,
-          "distance": 5,
+          "distance": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "color": [
             144.00000661611557,
             58.16342577338219,
@@ -440,7 +464,10 @@
           "enabled": true,
           "useGlobalLight": true,
           "opacity": 0.75,
-          "choke": 2,
+          "choke": {
+            "value": 2,
+            "units": "Pixels"
+          },
           "noise": 0,
           "antialiased": false,
           "contour": {
@@ -551,9 +578,15 @@
       "effects": {
         "scale": 1,
         "innerShadow": {
-          "size": 4,
+          "size": {
+            "value": 4,
+            "units": "Pixels"
+          },
           "angle": 61,
-          "distance": 14,
+          "distance": {
+            "value": 14,
+            "units": "Pixels"
+          },
           "color": [
             50.194554179906845,
             200.00000327825546,
@@ -564,7 +597,10 @@
           "enabled": true,
           "useGlobalLight": false,
           "opacity": 0.63,
-          "choke": 11,
+          "choke": {
+            "value": 11,
+            "units": "Pixels"
+          },
           "noise": 0,
           "antialiased": false,
           "contour": {
@@ -674,7 +710,10 @@
       "effects": {
         "scale": 1,
         "outerGlow": {
-          "size": 5,
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "color": [
             255,
             93.00000205636024,
@@ -685,7 +724,10 @@
           "enabled": true,
           "opacity": 0.75,
           "technique": "softer",
-          "choke": 0,
+          "choke": {
+            "value": 0,
+            "units": "Pixels"
+          },
           "noise": 0,
           "jitter": 0,
           "antialiased": false,
@@ -705,7 +747,10 @@
           "range": 0.5
         },
         "innerGlow": {
-          "size": 4,
+          "size": {
+            "value": 4,
+            "units": "Pixels"
+          },
           "color": [
             251.67612075805664,
             251.67612075805664,
@@ -716,7 +761,10 @@
           "enabled": true,
           "opacity": 0.75,
           "technique": "softer",
-          "choke": 2,
+          "choke": {
+            "value": 2,
+            "units": "Pixels"
+          },
           "jitter": 0.09,
           "noise": 0.03,
           "antialiased": false,
@@ -831,7 +879,10 @@
         "bevel": {
           "angle": 120,
           "strength": 1,
-          "size": 5,
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "highlightBlendMode": "screen",
           "shadowBlendMode": "multiply",
           "highlightColor": [
@@ -868,7 +919,10 @@
             ]
           },
           "antialiasGloss": false,
-          "soften": 0,
+          "soften": {
+            "value": 0,
+            "units": "Pixels"
+          },
           "useShape": false,
           "useTexture": false
         }

@@ -1,5 +1,5 @@
-import { LayerEffectsInfo, toBlendMode, fromBlendMode, BevelStyle, LayerEffectsShadow } from './psd';
-import { readColor, writeColor } from './helpers';
+import { LayerEffectsInfo, BevelStyle, LayerEffectsShadow } from './psd';
+import { readColor, writeColor, toBlendMode, fromBlendMode } from './helpers';
 import { PsdReader, checkSignature, readSignature, skipBytes, readUint16, readUint8, readUint32, readFixedPoint32 } from './psdReader';
 import { PsdWriter, writeSignature, writeUint16, writeZeros, writeFixedPoint32, writeUint8, writeUint32 } from './psdWriter';
 
@@ -67,7 +67,9 @@ export function readEffects(reader: PsdReader) {
 				const opacity = readFixedPoint8(reader);
 				if (blockSize >= 51) readColor(reader); // native color
 				const shadowInfo: LayerEffectsShadow = {
-					size, angle, distance, color, blendMode, enabled, useGlobalLight, opacity
+					size: { units: 'Pixels', value: size },
+					distance: { units: 'Pixels', value: distance },
+					angle, color, blendMode, enabled, useGlobalLight, opacity
 				};
 
 				if (type === 'dsdw') {
@@ -92,7 +94,10 @@ export function readEffects(reader: PsdReader) {
 				const opacity = readFixedPoint8(reader);
 				if (blockSize >= 42) readColor(reader); // native color
 
-				effects.outerGlow = { size, color, blendMode, enabled, opacity };
+				effects.outerGlow = {
+					size: { units: 'Pixels', value: size },
+					color, blendMode, enabled, opacity
+				};
 				break;
 			}
 			case 'iglw': { // inner glow (see See Effects layer, inner glow info)
@@ -114,7 +119,10 @@ export function readEffects(reader: PsdReader) {
 					readColor(reader); // native color
 				}
 
-				effects.innerGlow = { size, color, blendMode, enabled, opacity };
+				effects.innerGlow = {
+					size: { units: 'Pixels', value: size },
+					color, blendMode, enabled, opacity
+				};
 				break;
 			}
 			case 'bevl': { // bevel (see See Effects layer, bevel info)
@@ -144,7 +152,8 @@ export function readEffects(reader: PsdReader) {
 				}
 
 				effects.bevel = {
-					angle, strength, size, highlightBlendMode, shadowBlendMode, highlightColor, shadowColor,
+					size: { units: 'Pixels', value: size },
+					angle, strength, highlightBlendMode, shadowBlendMode, highlightColor, shadowColor,
 					style, highlightOpacity, shadowOpacity, enabled, useGlobalLight, direction,
 				};
 				break;
@@ -176,16 +185,16 @@ export function readEffects(reader: PsdReader) {
 function writeShadowInfo(writer: PsdWriter, shadow: LayerEffectsShadow) {
 	writeUint32(writer, 51);
 	writeUint32(writer, 2);
-	writeFixedPoint32(writer, shadow.size || 0);
+	writeFixedPoint32(writer, shadow.size?.value || 0);
 	writeFixedPoint32(writer, 0); // intensity
 	writeFixedPoint32(writer, shadow.angle || 0);
-	writeFixedPoint32(writer, shadow.distance || 0);
-	writeColor(writer, shadow.color || [0, 0, 0, 0]);
+	writeFixedPoint32(writer, shadow.distance?.value || 0);
+	writeColor(writer, shadow.color);
 	writeBlendMode(writer, shadow.blendMode);
 	writeUint8(writer, shadow.enabled ? 1 : 0);
 	writeUint8(writer, shadow.useGlobalLight ? 1 : 0);
 	writeFixedPoint8(writer, shadow.opacity || 0);
-	writeColor(writer, shadow.color || [0, 0, 0, 0]); // native color
+	writeColor(writer, shadow.color); // native color
 }
 
 export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
@@ -225,13 +234,13 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 		writeSignature(writer, 'oglw');
 		writeUint32(writer, 42);
 		writeUint32(writer, 2);
-		writeFixedPoint32(writer, effects.outerGlow.size || 0);
+		writeFixedPoint32(writer, effects.outerGlow.size?.value || 0);
 		writeFixedPoint32(writer, 0); // intensity
-		writeColor(writer, effects.outerGlow.color || [0, 0, 0, 0]);
+		writeColor(writer, effects.outerGlow.color);
 		writeBlendMode(writer, effects.outerGlow.blendMode);
 		writeUint8(writer, effects.outerGlow.enabled ? 1 : 0);
 		writeFixedPoint8(writer, effects.outerGlow.opacity || 0);
-		writeColor(writer, effects.outerGlow.color || [0, 0, 0, 0]);
+		writeColor(writer, effects.outerGlow.color);
 	}
 
 	if (effects.innerGlow) {
@@ -239,14 +248,14 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 		writeSignature(writer, 'iglw');
 		writeUint32(writer, 43);
 		writeUint32(writer, 2);
-		writeFixedPoint32(writer, effects.innerGlow.size || 0);
+		writeFixedPoint32(writer, effects.innerGlow.size?.value || 0);
 		writeFixedPoint32(writer, 0); // intensity
-		writeColor(writer, effects.innerGlow.color || [0, 0, 0, 0]);
+		writeColor(writer, effects.innerGlow.color);
 		writeBlendMode(writer, effects.innerGlow.blendMode);
 		writeUint8(writer, effects.innerGlow.enabled ? 1 : 0);
 		writeFixedPoint8(writer, effects.innerGlow.opacity || 0);
 		writeUint8(writer, 0); // inverted
-		writeColor(writer, effects.innerGlow.color || [0, 0, 0, 0]);
+		writeColor(writer, effects.innerGlow.color);
 	}
 
 	if (effects.bevel) {
@@ -256,11 +265,11 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 		writeUint32(writer, 2);
 		writeFixedPoint32(writer, effects.bevel.angle || 0);
 		writeFixedPoint32(writer, effects.bevel.strength || 0);
-		writeFixedPoint32(writer, effects.bevel.size || 0);
+		writeFixedPoint32(writer, effects.bevel.size?.value || 0);
 		writeBlendMode(writer, effects.bevel.highlightBlendMode);
 		writeBlendMode(writer, effects.bevel.shadowBlendMode);
-		writeColor(writer, effects.bevel.highlightColor || [0, 0, 0, 0]);
-		writeColor(writer, effects.bevel.shadowColor || [0, 0, 0, 0]);
+		writeColor(writer, effects.bevel.highlightColor);
+		writeColor(writer, effects.bevel.shadowColor);
 		const style = bevelStyles.indexOf(effects.bevel.style);
 		writeUint8(writer, style <= 0 ? 1 : style);
 		writeFixedPoint8(writer, effects.bevel.highlightOpacity || 0);
@@ -268,8 +277,8 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 		writeUint8(writer, effects.bevel.enabled ? 1 : 0);
 		writeUint8(writer, effects.bevel.useGlobalLight ? 1 : 0);
 		writeUint8(writer, effects.bevel.direction === 'down' ? 1 : 0);
-		writeColor(writer, effects.bevel.highlightColor || [0, 0, 0, 0]);
-		writeColor(writer, effects.bevel.shadowColor || [0, 0, 0, 0]);
+		writeColor(writer, effects.bevel.highlightColor);
+		writeColor(writer, effects.bevel.shadowColor);
 	}
 
 	if (effects.solidFill) {
@@ -278,9 +287,9 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 		writeUint32(writer, 34);
 		writeUint32(writer, 2);
 		writeBlendMode(writer, effects.solidFill.blendMode);
-		writeColor(writer, effects.solidFill.color || [0, 0, 0, 0]);
+		writeColor(writer, effects.solidFill.color);
 		writeFixedPoint8(writer, effects.solidFill.opacity || 0);
 		writeUint8(writer, effects.solidFill.enabled ? 1 : 0);
-		writeColor(writer, effects.solidFill.color || [0, 0, 0, 0]);
+		writeColor(writer, effects.solidFill.color);
 	}
 }

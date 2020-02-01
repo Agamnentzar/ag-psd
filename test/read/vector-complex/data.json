@@ -1,0 +1,332 @@
+{
+  "width": 200,
+  "height": 200,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "cdcffa7da8c7be09057076aeaf05c34e",
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "alphaChannelNames": [
+      "Transparency"
+    ],
+    "unicodeAlphaNames": [
+      "Transparency"
+    ],
+    "alphaIdentifiers": [
+      0
+    ],
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "layerState": 0,
+    "layersGroup": [
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1
+    ],
+    "layerSelectionIds": [
+      7
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    },
+    "backgroundColor": [
+      255,
+      255,
+      255,
+      0
+    ],
+    "idsSeedNumber": 7,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
+    }
+  },
+  "children": [
+    {
+      "top": 53,
+      "left": 26,
+      "bottom": 142,
+      "right": 173,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "mask": {
+        "top": 53,
+        "left": 26,
+        "bottom": 142,
+        "right": 173,
+        "defaultColor": 0,
+        "disabled": false,
+        "positionRelativeToLayer": false
+      },
+      "name": "Shape 1",
+      "vectorFill": {
+        "type": "color",
+        "color": [
+          186.15175276994705,
+          65.15175238251686,
+          65.15175238251686,
+          255
+        ]
+      },
+      "vectorMask": {
+        "paths": [
+          {
+            "open": false,
+            "knots": [
+              {
+                "linked": false,
+                "points": [
+                  27.060890197753906,
+                  90.03442525863647,
+                  27.060890197753906,
+                  90.03442525863647,
+                  27.060890197753906,
+                  90.03442525863647
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  134.4090223312378,
+                  90.03442525863647,
+                  134.4090223312378,
+                  90.03442525863647,
+                  129.23636436462402,
+                  76.22720003128052
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  126.66172981262207,
+                  67.22264289855957,
+                  126.39728784561157,
+                  54.94804382324219,
+                  138.16256523132324,
+                  76.11062526702881
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  153.45677137374878,
+                  87.129807472229,
+                  171.9390869140625,
+                  97.4921464920044,
+                  153.45677137374878,
+                  107.41733312606812
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  138.836407661438,
+                  119.53127384185791,
+                  126.39728784561157,
+                  140.05194902420044,
+                  127.1910309791565,
+                  126.71175003051758
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  129.33655977249146,
+                  118.65547895431519,
+                  134.56957340240479,
+                  103.97244691848755,
+                  134.56957340240479,
+                  103.97244691848755
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  27.060890197753906,
+                  103.97244691848755,
+                  27.060890197753906,
+                  103.97244691848755,
+                  27.060890197753906,
+                  103.97244691848755
+                ]
+              }
+            ]
+          }
+        ],
+        "invert": false,
+        "notLink": false,
+        "disable": false,
+        "fillStartsWithAllPixels": false
+      },
+      "nameSource": "shap",
+      "id": 7,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "sheetColors": {
+        "color1": 0,
+        "color2": 0
+      },
+      "metadata": [
+        {
+          "key": "cust",
+          "copy": false,
+          "data": [
+            0,
+            0,
+            0,
+            16,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            8,
+            109,
+            101,
+            116,
+            97,
+            100,
+            97,
+            116,
+            97,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            9,
+            108,
+            97,
+            121,
+            101,
+            114,
+            84,
+            105,
+            109,
+            101,
+            100,
+            111,
+            117,
+            98,
+            65,
+            215,
+            139,
+            239,
+            76,
+            61,
+            118,
+            119,
+            0
+          ]
+        }
+      ],
+      "vectorStroke": {
+        "strokeEnabled": true,
+        "fillEnabled": true,
+        "lineWidth": {
+          "value": 4.38,
+          "units": "Points"
+        },
+        "lineDashOffset": {
+          "value": 0,
+          "units": "Points"
+        },
+        "miterLimit": 100,
+        "lineCapType": "butt",
+        "lineJoinType": "miter",
+        "lineAlignment": "inside",
+        "scaleLock": false,
+        "strokeAdjust": false,
+        "lineDashSet": [
+          {
+            "value": 4,
+            "units": "None"
+          },
+          {
+            "value": 2,
+            "units": "None"
+          }
+        ],
+        "blendMode": "normal",
+        "opacity": 1,
+        "content": {
+          "type": "color",
+          "color": [
+            0,
+            165.76101332902908,
+            80.5257274210453,
+            255
+          ]
+        },
+        "resolution": 72
+      },
+      "usingAlignedRendering": true,
+      "referencePoint": {
+        "x": -1,
+        "y": 10
+      },
+      "version": 130
+    }
+  ],
+  "filterMask": {
+    "colorSpace": [
+      255,
+      0,
+      0,
+      0
+    ],
+    "opacity": 0.19607843137254902
+  },
+  "pathList": []
+}
