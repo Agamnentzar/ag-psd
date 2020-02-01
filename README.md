@@ -13,7 +13,6 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 * Does not support Indexed, CMYK, Multichannel, Duotone and LAB color modes
 * Does not support 16 bits per channel
 * Does not support The Large Document Format (8BPB/PSB) 
-* Does not support vector layers
 * Does not support color palettes
 * Does not support timeline
 * Does not support patterns
