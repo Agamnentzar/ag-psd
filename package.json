@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "10.0.0",
+  "version": "11.0.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -26,7 +26,8 @@
     }
   },
   "keywords": [
-    "psd"
+    "psd",
+    "photoshop"
   ],
   "author": "Agamnentzar",
   "license": "MIT",

@@ -64,12 +64,11 @@
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
     },
-    "backgroundColor": [
-      255,
-      255,
-      255,
-      0
-    ],
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
     "idsSeedNumber": 3,
     "printFlags": {
       "caption": false,
@@ -108,12 +107,11 @@
             "value": 5,
             "units": "Pixels"
           },
-          "color": [
-            0,
-            0,
-            0,
-            255
-          ],
+          "color": {
+            "r": 0,
+            "g": 0,
+            "b": 0
+          },
           "blendMode": "multiply",
           "enabled": true,
           "useGlobalLight": true,
@@ -144,12 +142,11 @@
             "value": 5,
             "units": "Pixels"
           },
-          "color": [
-            255,
-            255,
-            189.99710083007812,
-            255
-          ],
+          "color": {
+            "r": 255,
+            "g": 255,
+            "b": 189.99710083007812
+          },
           "blendMode": "screen",
           "enabled": true,
           "opacity": 0.75,
@@ -178,12 +175,11 @@
         },
         "solidFill": {
           "blendMode": "normal",
-          "color": [
-            255,
-            0,
-            0,
-            255
-          ],
+          "color": {
+            "r": 255,
+            "g": 0,
+            "b": 0
+          },
           "opacity": 1,
           "enabled": true
         }
@@ -205,12 +201,11 @@
     }
   ],
   "filterMask": {
-    "colorSpace": [
-      255,
-      0,
-      0,
-      0
-    ],
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
     "opacity": 0.19607843137254902
   }
 }

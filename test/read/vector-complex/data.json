@@ -64,12 +64,11 @@
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
     },
-    "backgroundColor": [
-      255,
-      255,
-      255,
-      0
-    ],
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
     "idsSeedNumber": 7,
     "printFlags": {
       "caption": false,
@@ -107,12 +106,11 @@
       "name": "Shape 1",
       "vectorFill": {
         "type": "color",
-        "color": [
-          186.15175276994705,
-          65.15175238251686,
-          65.15175238251686,
-          255
-        ]
+        "color": {
+          "r": 186.15175276994705,
+          "g": 65.15175238251686,
+          "b": 65.15175238251686
+        }
       },
       "vectorMask": {
         "paths": [
@@ -246,12 +244,11 @@
         "opacity": 1,
         "content": {
           "type": "color",
-          "color": [
-            0,
-            165.76101332902908,
-            80.5257274210453,
-            255
-          ]
+          "color": {
+            "r": 0,
+            "g": 165.76101332902908,
+            "b": 80.5257274210453
+          }
         },
         "resolution": 72
       },
@@ -264,12 +261,11 @@
     }
   ],
   "filterMask": {
-    "colorSpace": [
-      255,
-      0,
-      0,
-      0
-    ],
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
     "opacity": 0.19607843137254902
   },
   "pathList": []

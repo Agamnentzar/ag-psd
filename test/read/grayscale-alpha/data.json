@@ -64,12 +64,11 @@
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
     },
-    "backgroundColor": [
-      255,
-      255,
-      255,
-      0
-    ],
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
     "idsSeedNumber": 4,
     "printFlags": {
       "caption": false,
@@ -114,12 +113,11 @@
     }
   ],
   "filterMask": {
-    "colorSpace": [
-      255,
-      0,
-      0,
-      0
-    ],
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
     "opacity": 0.19607843137254902
   }
 }

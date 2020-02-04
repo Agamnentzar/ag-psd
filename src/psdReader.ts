@@ -1,7 +1,7 @@
-import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, RGBA, LABA } from './psd';
+import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color } from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
-	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, lab2rgb
+	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace
 } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
@@ -12,6 +12,7 @@ interface ChannelInfo {
 }
 
 export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
+const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
 
 function setupGrayscale(data: PixelData) {
 	const size = data.width * data.height * 4;
@@ -168,7 +169,7 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	const colorMode = readUint16(reader);
 
 	if (supportedColorModes.indexOf(colorMode) === -1)
-		throw new Error(`Color mode not supported: ${colorMode}`);
+		throw new Error(`Color mode not supported: ${colorModes[colorMode] ?? colorMode}`);
 
 	const psd: Psd = { width, height, channels, bitsPerChannel, colorMode };
 
@@ -550,11 +551,12 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 		}
 
 		decodeBitmap(bytes, imageData.data, psd.width, psd.height);
-	} else { // Grayscale | RGB
-		const channels = psd.colorMode === ColorMode.RGB ? [0, 1, 2] : [0];
+	} else {
+		const channels = psd.colorMode === ColorMode.Grayscale ? [0] : [0, 1, 2];
 
 		if (psd.channels && psd.channels > 3) {
 			for (let i = 3; i < psd.channels; i++) {
+				// TODO: store these channels in additional image data
 				channels.push(i);
 			}
 		} else if (globalAlpha) {
@@ -670,7 +672,7 @@ export function readSection<T>(reader: PsdReader, round: number, func: (left: ()
 	return result;
 }
 
-export function readColor(reader: PsdReader) {
+export function readColor(reader: PsdReader): Color {
 	const colorSpace = readUint16(reader) as ColorSpace;
 
 	switch (colorSpace) {
@@ -678,47 +680,35 @@ export function readColor(reader: PsdReader) {
 			const r = readUint16(reader) / 257;
 			const g = readUint16(reader) / 257;
 			const b = readUint16(reader) / 257;
-			const alpha = readUint16(reader) / 257;
-			return [r, g, b, alpha];
+			skipBytes(reader, 2);
+			return { r, g, b };
 		}
 		case ColorSpace.Lab: {
 			const l = readInt16(reader) / 100;
 			const a = readInt16(reader) / 100;
 			const b = readInt16(reader) / 100;
-			const alpha = readUint16(reader) / 257;
-			return lab2rgb(l, a, b, alpha);
+			skipBytes(reader, 2);
+			return { l, a, b };
 		}
-		case ColorSpace.CMYK:
-		case ColorSpace.Grayscale:
-		case ColorSpace.HSB:
-			throw new Error('Color space not implemented');
-		default:
-			throw new Error('Invalid color space');
-	}
-}
-
-export function readColor2(reader: PsdReader): RGBA | LABA {
-	const colorSpace = readUint16(reader) as ColorSpace;
-
-	switch (colorSpace) {
-		case ColorSpace.RGB: {
-			const r = readUint16(reader) / 257;
-			const g = readUint16(reader) / 257;
-			const b = readUint16(reader) / 257;
-			const alpha = readUint16(reader) / 257;
-			return { r, g, b, alpha };
+		case ColorSpace.CMYK: {
+			const c = readInt16(reader);
+			const m = readInt16(reader);
+			const y = readInt16(reader);
+			const k = readInt16(reader);
+			return { c, m, y, k };
 		}
-		case ColorSpace.Lab: {
-			const l = readInt16(reader) / 100;
-			const a = readInt16(reader) / 100;
-			const b = readInt16(reader) / 100;
-			const alpha = readUint16(reader) / 257;
-			return { l, a, b, alpha };
+		case ColorSpace.Grayscale: {
+			const k = readInt16(reader);
+			skipBytes(reader, 6);
+			return { k };
 		}
-		case ColorSpace.CMYK:
-		case ColorSpace.Grayscale:
-		case ColorSpace.HSB:
-			throw new Error('Color space not implemented');
+		case ColorSpace.HSB: {
+			const h = readInt16(reader);
+			const s = readInt16(reader);
+			const b = readInt16(reader);
+			skipBytes(reader, 2);
+			return { h, s, b };
+		}
 		default:
 			throw new Error('Invalid color space');
 	}

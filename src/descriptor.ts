@@ -96,7 +96,7 @@ const typeToField: { [key: string]: string[]; } = {
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
 		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
-		'strokeStyleOpacity', 'Sz  ',
+		'strokeStyleOpacity', 'Sz  ', 'H   ',
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
@@ -104,7 +104,9 @@ const typeToField: { [key: string]: string[]; } = {
 	],
 };
 
-const channels = ['Rd  ', 'Grn ', 'Bl  ', 'Yllw', 'Cyn ', 'Mgnt'];
+const channels = [
+	'Rd  ', 'Grn ', 'Bl  ', 'Yllw', 'Ylw ', 'Cyn ', 'Mgnt', 'Blck', 'Gry ', 'Lmnc', 'A   ', 'B   ',
+];
 
 const fieldToArrayType: Dict = {
 	'Mnm ': 'long',

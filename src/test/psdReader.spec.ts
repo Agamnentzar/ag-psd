@@ -133,11 +133,11 @@ describe('PsdReader', () => {
 						style: {
 							font: { name: 'ArialMT' },
 							fontSize: 30,
-							fillColor: [0, 128, 0, 255],
+							fillColor: { r: 0, g: 128, b: 0 },
 						},
 						styleRuns: [
-							{ length: 12, style: { fillColor: [255, 0, 0, 255] } },
-							{ length: 12, style: { fillColor: [0, 0, 255, 255] } },
+							{ length: 12, style: { fillColor: { r: 255, g: 0, b: 0 } } },
+							{ length: 12, style: { fillColor: { r: 0, g: 0, b: 255 } } },
 							{ length: 4, style: { underline: true } },
 						],
 						paragraphStyle: {

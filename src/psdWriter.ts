@@ -1,4 +1,4 @@
-import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, RGBA, LABA } from './psd';
+import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color } from './psd';
 import {
 	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
@@ -641,27 +641,37 @@ function trimData(data: PixelData) {
 	return { top, left, right, bottom };
 }
 
-export function writeColor(writer: PsdWriter, color: number[] | undefined) {
-	if (!color) color = [0, 0, 0, 0];
-	writeUint16(writer, ColorSpace.RGB);
-	writeUint16(writer, Math.round(color[0] * 257));
-	writeUint16(writer, Math.round(color[1] * 257));
-	writeUint16(writer, Math.round(color[2] * 257));
-	writeUint16(writer, Math.round(color[3] * 257));
-}
-
-export function writeColor2(writer: PsdWriter, color: RGBA | LABA) {
-	if ('r' in color) {
+export function writeColor(writer: PsdWriter, color: Color | undefined) {
+	if (!color) {
+		writeUint16(writer, ColorSpace.RGB);
+		writeZeros(writer, 8);
+	} else if ('r' in color) {
 		writeUint16(writer, ColorSpace.RGB);
 		writeUint16(writer, Math.round(color.r * 257));
 		writeUint16(writer, Math.round(color.g * 257));
 		writeUint16(writer, Math.round(color.b * 257));
-		writeUint16(writer, Math.round(color.alpha * 257));
-	} else {
+		writeUint16(writer, 0);
+	} else if ('l' in color) {
 		writeUint16(writer, ColorSpace.Lab);
 		writeUint16(writer, Math.round(color.l * 100));
 		writeUint16(writer, Math.round(color.a * 100));
 		writeUint16(writer, Math.round(color.b * 100));
-		writeUint16(writer, Math.round(color.alpha * 257));
+		writeUint16(writer, 0);
+	} else if ('h' in color) {
+		writeUint16(writer, ColorSpace.HSB);
+		writeUint16(writer, Math.round(color.h));
+		writeUint16(writer, Math.round(color.s));
+		writeUint16(writer, Math.round(color.b));
+		writeUint16(writer, 0);
+	} else if ('c' in color) {
+		writeUint16(writer, ColorSpace.CMYK);
+		writeUint16(writer, Math.round(color.c));
+		writeUint16(writer, Math.round(color.m));
+		writeUint16(writer, Math.round(color.y));
+		writeUint16(writer, Math.round(color.k));
+	} else {
+		writeUint16(writer, ColorSpace.Grayscale);
+		writeUint16(writer, Math.round(color.k));
+		writeZeros(writer, 6);
 	}
 }

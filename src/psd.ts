@@ -22,9 +22,12 @@ export const enum SectionDividerType {
 	BoundingSectionDivider = 3,
 }
 
-export type Color = number[]; // [r, g, b, a]
-export type RGBA = { r: number; g: number; b: number; alpha: number };
-export type LABA = { l: number; a: number; b: number; alpha: number };
+export type Color = RGB | HSB | CMYK | LAB | Grayscale;
+export type RGB = { r: number; g: number; b: number; };
+export type HSB = { h: number; s: number; b: number; };
+export type CMYK = { c: number; m: number; y: number; k: number; };
+export type LAB = { l: number; a: number; b: number; };
+export type Grayscale = { k: number };
 
 export interface EffectContour {
 	name: string;
@@ -417,35 +420,34 @@ export interface LevelsAdjustmentChannel {
 	midtoneInput: number;
 }
 
-export interface LevelsAdjustment {
+export interface PresetInfo {
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export interface LevelsAdjustment extends PresetInfo {
 	type: 'levels';
 	rgb?: LevelsAdjustmentChannel;
 	red?: LevelsAdjustmentChannel;
 	green?: LevelsAdjustmentChannel;
 	blue?: LevelsAdjustmentChannel;
-	presetKind?: number;
-	presetFileName?: string;
 }
 
 export type CurvesAdjustmentChannel = { input: number; output: number; }[];
 
-export interface CurvesAdjustment {
+export interface CurvesAdjustment extends PresetInfo {
 	type: 'curves';
 	rgb?: CurvesAdjustmentChannel;
 	red?: CurvesAdjustmentChannel;
 	green?: CurvesAdjustmentChannel;
 	blue?: CurvesAdjustmentChannel;
-	presetKind?: number;
-	presetFileName?: string;
 }
 
-export interface ExposureAdjustment {
+export interface ExposureAdjustment extends PresetInfo {
 	type: 'exposure';
 	exposure?: number;
 	offset?: number;
 	gamma?: number;
-	presetKind?: number;
-	presetFileName?: string;
 }
 
 export interface VibranceAdjustment {
@@ -464,7 +466,7 @@ export interface HueSaturationAdjustmentChannel {
 	lightness: number;
 }
 
-export interface HueSaturationAdjustment {
+export interface HueSaturationAdjustment extends PresetInfo {
 	type: 'hue/saturation';
 	master?: HueSaturationAdjustmentChannel;
 	reds?: HueSaturationAdjustmentChannel;
@@ -473,8 +475,6 @@ export interface HueSaturationAdjustment {
 	cyans?: HueSaturationAdjustmentChannel;
 	blues?: HueSaturationAdjustmentChannel;
 	magentas?: HueSaturationAdjustmentChannel;
-	presetKind?: number;
-	presetFileName?: string;
 }
 
 export interface ColorBalanceAdjustment {
@@ -485,7 +485,7 @@ export interface ColorBalanceAdjustment {
 	preserveLuminosity?: boolean;
 }
 
-export interface BlackAndWhiteAdjustment {
+export interface BlackAndWhiteAdjustment extends PresetInfo {
 	type: 'black & white';
 	reds?: number;
 	yellows?: number;
@@ -495,13 +495,11 @@ export interface BlackAndWhiteAdjustment {
 	magentas?: number;
 	useTint?: boolean;
 	tintColor?: Color;
-	presetKind?: number;
-	presetFileName?: string;
 }
 
 export interface PhotoFilterAdjustment {
 	type: 'photo filter';
-	color?: RGBA | LABA;
+	color?: Color;
 	density?: number;
 	preserveLuminosity?: boolean;
 }
@@ -513,15 +511,13 @@ export interface ChannelMixerChannel {
 	constant: number;
 }
 
-export interface ChannelMixerAdjustment {
+export interface ChannelMixerAdjustment extends PresetInfo {
 	type: 'channel mixer';
 	monochrome?: boolean;
 	red?: ChannelMixerChannel;
 	green?: ChannelMixerChannel;
 	blue?: ChannelMixerChannel;
 	gray?: ChannelMixerChannel;
-	presetKind?: number;
-	presetFileName?: string;
 }
 
 export interface ColorLookupAdjustment {
@@ -581,13 +577,6 @@ export interface GradientMapAdjustment {
 	addTransparency?: boolean;
 	min?: number[];
 	max?: number[];
-}
-
-export interface CMYK {
-	cyan: number;
-	magenta: number;
-	yellow: number;
-	black: number;
 }
 
 export interface SelectiveColorAdjustment {

@@ -2,7 +2,8 @@ import { toByteArray } from 'base64-js';
 import { ImageResources, ReadOptions, RenderingIntent } from './psd';
 import {
 	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
-	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor
+	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature,
+	readSection, readColor
 } from './psdReader';
 import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,

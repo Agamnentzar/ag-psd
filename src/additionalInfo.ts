@@ -1,24 +1,26 @@
 import { readEffects, writeEffects } from './effectsHelpers';
-import { hsv2rgb, clamp, createEnum, layerColors } from './helpers';
+import { clamp, createEnum, layerColors } from './helpers';
 import {
 	LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, AntiAlias, BevelStyle, BevelTechnique,
 	LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
 	LayerEffectSolidFill, BevelDirection, GlowTechnique, GlowSource, LayerEffectPatternOverlay,
 	LayerEffectGradientOverlay, LayerEffectSatin, GradientStyle, EffectContour, EffectSolidGradient,
 	EffectNoiseGradient, BezierPath, Psd, BlendMode, LineCapType, LineJoinType, LineAlignment,
-	VectorContent, UnitsValue, Color, LayerEffectStroke, ExtraGradientInfo, EffectPattern,
+	VectorContent, UnitsValue, LayerEffectStroke, ExtraGradientInfo, EffectPattern,
 	ExtraPatternInfo, ReadOptions, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment,
 	ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel,
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
-	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, RGBA, LABA
+	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
+	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
+	PresetInfo, Color,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readColor, readSection, readColor2, readInt32
+	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8,
-	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeColor, writeSection, writeUnicodeStringWithPadding, writeColor2,
+	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor,
 } from './psdWriter';
 import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
@@ -882,13 +884,13 @@ addHandler(
 		if (readUint16(reader) !== 2) throw new Error('Invalid levl version');
 
 		target.adjustment = {
+			...target.adjustment as PresetInfo,
 			type: 'levels',
 			rgb: readLevelsChannel(reader),
 			red: readLevelsChannel(reader),
 			green: readLevelsChannel(reader),
 			blue: readLevelsChannel(reader),
-			...target.adjustment,
-		} as LevelsAdjustment;
+		};
 
 		skipBytes(reader, left());
 	},
@@ -949,9 +951,9 @@ addHandler(
 		if (channels & 8) info.blue = readCurveChannel(reader);
 
 		target.adjustment = {
-			...target.adjustment,
+			...target.adjustment as PresetInfo,
 			...info,
-		} as CurvesAdjustment;
+		};
 
 		// ignoring, duplicate information
 		// checkSignature(reader, 'Crv ');
@@ -1013,12 +1015,12 @@ addHandler(
 		if (readUint16(reader) !== 1) throw new Error('Invalid expA version');
 
 		target.adjustment = {
+			...target.adjustment as PresetInfo,
 			type: 'exposure',
 			exposure: readFloat32(reader),
 			offset: readFloat32(reader),
 			gamma: readFloat32(reader),
-			...target.adjustment,
-		} as ExposureAdjustment;
+		};
 
 		skipBytes(reader, left());
 	},
@@ -1086,6 +1088,7 @@ addHandler(
 		if (readUint16(reader) !== 2) throw new Error('Invalid hue2 version');
 
 		target.adjustment = {
+			...target.adjustment as PresetInfo,
 			type: 'hue/saturation',
 			master: readHueChannel(reader),
 			reds: readHueChannel(reader),
@@ -1094,8 +1097,7 @@ addHandler(
 			cyans: readHueChannel(reader),
 			blues: readHueChannel(reader),
 			magentas: readHueChannel(reader),
-			...target.adjustment,
-		} as HueSaturationAdjustment;
+		};
 
 		skipBytes(reader, left());
 	},
@@ -1216,17 +1218,16 @@ addHandler(
 		const version = readUint16(reader);
 		if (version !== 2 && version !== 3) throw new Error('Invalid phfl version');
 
-		let color: RGBA | LABA;
+		let color: Color;
 
 		if (version === 2) {
-			color = readColor2(reader);
+			color = readColor(reader);
 		} else { // version 3
-			// TODO: test this, this is almost certainly wrong
+			// TODO: test this, this is probably wrong
 			color = {
 				l: readInt32(reader) / 100,
 				a: readInt32(reader) / 100,
 				b: readInt32(reader) / 100,
-				alpha: 255,
 			};
 		}
 
@@ -1242,7 +1243,7 @@ addHandler(
 	(writer, target) => {
 		const info = target.adjustment as PhotoFilterAdjustment;
 		writeUint16(writer, 2); // version
-		writeColor2(writer, info.color ?? { l: 0, a: 0, b: 0, alpha: 0 });
+		writeColor(writer, info.color ?? { l: 0, a: 0, b: 0 });
 		writeUint32(writer, (info.density ?? 0) * 100);
 		writeUint8(writer, info.preserveLuminosity ? 1 : 0);
 		writeZeros(writer, 3);
@@ -1273,10 +1274,10 @@ addHandler(
 		if (readUint16(reader) !== 1) throw new Error('Invalid mixr version');
 
 		target.adjustment = {
+			...target.adjustment as PresetInfo,
 			type: 'channel mixer',
 			monochrome: !!readUint16(reader),
-			...target.adjustment,
-		} as ChannelMixerAdjustment;
+		};
 
 		if (!target.adjustment.monochrome) {
 			target.adjustment.red = readMixrChannel(reader);
@@ -1546,18 +1547,18 @@ addHandler(
 );
 
 function readSelectiveColors(reader: PsdReader): CMYK {
-	const cyan = readInt16(reader);
-	const magenta = readInt16(reader);
-	const yellow = readInt16(reader);
-	const black = readInt16(reader);
-	return { cyan, magenta, yellow, black };
+	const c = readInt16(reader);
+	const m = readInt16(reader);
+	const y = readInt16(reader);
+	const k = readInt16(reader);
+	return { c, m, y, k };
 }
 
 function writeSelectiveColors(writer: PsdWriter, cmyk: CMYK | undefined) {
-	writeInt16(writer, cmyk?.cyan ?? 0);
-	writeInt16(writer, cmyk?.magenta ?? 0);
-	writeInt16(writer, cmyk?.yellow ?? 0);
-	writeInt16(writer, cmyk?.black ?? 0);
+	writeInt16(writer, cmyk?.c ?? 0);
+	writeInt16(writer, cmyk?.m ?? 0);
+	writeInt16(writer, cmyk?.y ?? 0);
+	writeInt16(writer, cmyk?.k ?? 0);
 }
 
 addHandler(
@@ -1645,22 +1646,22 @@ addHandler(
 		// this section can specify preset file name for other adjustment types
 		if ('presetFileName' in desc) {
 			target.adjustment = {
-				...target.adjustment,
+				...target.adjustment as LevelsAdjustment | ExposureAdjustment | HueSaturationAdjustment,
 				presetKind: desc.presetKind,
 				presetFileName: desc.presetFileName,
-			} as LevelsAdjustment | ExposureAdjustment | HueSaturationAdjustment;
+			};
 		} else if ('curvesPresetFileName' in desc) {
 			target.adjustment = {
-				...target.adjustment,
+				...target.adjustment as CurvesAdjustment,
 				presetKind: desc.curvesPresetKind,
 				presetFileName: desc.curvesPresetFileName,
-			} as CurvesAdjustment;
+			};
 		} else if ('mixerPresetFileName' in desc) {
 			target.adjustment = {
-				...target.adjustment,
+				...target.adjustment as CurvesAdjustment,
 				presetKind: desc.mixerPresetKind,
 				presetFileName: desc.mixerPresetFileName,
-			} as CurvesAdjustment;
+			};
 		} else {
 			target.adjustment = {
 				type: 'brightness/contrast',
@@ -1792,7 +1793,7 @@ addHandler(
 			strokeStyleBlendMode: BlnM.encode(stroke.blendMode),
 			strokeStyleOpacity: unitsPercent(stroke.opacity ?? 1),
 			strokeStyleContent: serializeVectorContent(
-				stroke.content ?? { type: 'color', color: [0, 0, 0, 0] }).descriptor,
+				stroke.content ?? { type: 'color', color: { r: 0, g: 0, b: 0 } }).descriptor,
 			strokeStyleResolution: stroke.resolution ?? 72,
 		};
 
@@ -1921,6 +1922,17 @@ type DescriptorColor = {
 	'H   ': DescriptorUnitsValue;
 	Strt: number;
 	Brgh: number;
+} | {
+	'Cyn ': number;
+	Mgnt: number;
+	'Ylw ': number;
+	Blck: number;
+} | {
+	'Gry ': number;
+} | {
+	Lmnc: number;
+	'A   ': number;
+	'B   ': number;
 };
 
 interface DesciptorPattern {
@@ -2056,7 +2068,7 @@ function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): Des
 			'Nm  ': grad.name,
 			Intr: samples,
 			Clrs: grad.colorStops.map(s => ({
-				'Clr ': serializeColor(s.color || [0, 0, 0, 0]),
+				'Clr ': serializeColor(s.color),
 				Type: 'Clry.UsrS',
 				Lctn: Math.round(s.location * samples),
 				Mdpn: Math.round((s.midpoint ?? 0.5) * 100),
@@ -2213,19 +2225,40 @@ function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUnitsValu
 	return { units, value };
 }
 
-function parseColor(value: DescriptorColor): Color {
-	if ('H   ' in value) {
-		return hsv2rgb(parsePercent(value['H   ']), value.Strt, value.Brgh);
-	} else if ('Rd  ' in value) {
-		return [value['Rd  '], value['Grn '], value['Bl  '], 255];
+function parseColor(color: DescriptorColor): Color {
+	if ('H   ' in color) {
+		return { h: parsePercent(color['H   ']), s: color.Strt, b: color.Brgh };
+	} else if ('Rd  ' in color) {
+		return { r: color['Rd  '], g: color['Grn '], b: color['Bl  '] };
+	} else if ('Cyn ' in color) {
+		return { c: color['Cyn '], m: color.Mgnt, y: color['Ylw '], k: color.Blck };
+	} else if ('Gry ' in color) {
+		return { k: color['Gry '] };
+	} else if ('Lmnc' in color) {
+		console.log({ l: color.Lmnc, a: color['A   '], b: color['B   '] });
+		return { l: color.Lmnc, a: color['A   '], b: color['B   '] };
 	} else {
+		console.log(color);
 		throw new Error('Unsupported color descriptor');
 	}
 }
 
-function serializeColor(value: number[] | undefined): DescriptorColor {
-	if (!value) value = [0, 0, 0, 0];
-	return { 'Rd  ': value[0] || 0, 'Grn ': value[1] || 0, 'Bl  ': value[2] || 0 };
+function serializeColor(color: Color | undefined): DescriptorColor {
+	if (!color) {
+		return { 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
+	} else if ('r' in color) {
+		return { 'Rd  ': color.r ?? 0, 'Grn ': color.g ?? 0, 'Bl  ': color.b ?? 0 };
+	} else if ('h' in color) {
+		return { 'H   ': unitsPercent(color.h), Strt: color.s ?? 0, Brgh: color.b ?? 0 };
+	} else if ('c' in color) {
+		return { 'Cyn ': color.c ?? 0, Mgnt: color.m ?? 0, 'Ylw ': color.y ?? 0, Blck: color.k ?? 0 };
+	} else if ('l' in color) {
+		return { Lmnc: color.l ?? 0, 'A   ': color.a ?? 0, 'B   ': color.b ?? 0 };
+	} else if ('k' in color) {
+		return { 'Gry ': color.k };
+	} else {
+		throw new Error('Invalid color value');
+	}
 }
 
 type AllEffects = LayerEffectShadow & LayerEffectsOuterGlow & LayerEffectStroke &

@@ -1,5 +1,39 @@
 # Changelog
 
+## v11.0.0
+- **BREAKING CHANGE:** Changed all color fields from r, g, b, a array to color mode specific objects
+  ```js
+  // old
+  var color = [red, green, blue, alpha];
+  
+  // new
+  var rgbColor = { r: red, g: green, b: blue };
+  var hsbColor = { h: hue, s: saturation, b: brightness };
+  var labColor = { l: L, a: A, b: B };
+  var cmykColor = { c: cyan, m: magenta, y: yellow, k: black };
+  var grayscaleColor = { k: grayscaleValue };
+  
+  // reading new colors
+  if ('r' in color) {
+    // read RGB color
+  } else if ('h' in color) {
+    // read HSB color
+  } else if ('l' in color) {
+    // read Lab color
+  } else if ('c' in color) {
+    // read CMYK color
+  } else {
+    // read grayscale color
+  }
+  
+  // almost all color in PSD document follow main document color mode, so you can use this shortcut in your code
+  if ('r' in color) {
+    // read RGB color
+  } else {
+    // error or use default
+  }
+  ```
+
 ## v10.0.0
 - **BREAKING CHANGE:** Removed `unicodeAlphaNames` image resource (use `alphaChannelNames` instead)
 - **BREAKING CHANGE:** Replaced `sheetColors` layer field with `layerColor` field

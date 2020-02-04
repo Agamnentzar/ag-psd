@@ -1,4 +1,4 @@
-import { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification } from './psd';
+import { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color } from './psd';
 
 interface Adjustments {
   Axis: number[];
@@ -195,8 +195,8 @@ const defaultStyle: TextStyle = {
   styleRunAlignment: 2,
   language: 0,
   noBreak: false,
-  fillColor: [0, 0, 0, 255],
-  strokeColor: [0, 0, 0, 255],
+  fillColor: { r: 0, g: 0, b: 0 },
+  strokeColor: { r: 0, g: 0, b: 0 },
   fillFlag: true,
   strokeFlag: false,
   fillFirst: true,
@@ -213,8 +213,8 @@ const defaultGridInfo: TextGridInfo = {
   show: false,
   size: 18,
   leading: 22,
-  color: [0, 0, 255, 0],
-  leadingFillColor: [0, 0, 255, 0],
+  color: { r: 0, g: 0, b: 255 },
+  leadingFillColor: { r: 0, g: 0, b: 255 },
   alignLineHeightToGridFlags: false,
 };
 
@@ -241,24 +241,35 @@ function upperFirst(value: string) {
   return value.substr(0, 1).toUpperCase() + value.substr(1);
 }
 
-function decodeColor(color: { Type: number; Values: number[]; }) {
+function decodeColor(color: { Type: number; Values: number[]; }): Color {
   const c = color.Values;
 
-  if (color.Type === 0) {
-    return [c[1] * 255, c[1] * 255, c[1] * 255, c[0] * 255];
-  } else {
-    return [c[1] * 255, c[2] * 255, c[3] * 255, c[0] * 255];
+  if (color.Type === 0) { // grayscale
+    return { r: c[1] * 255, g: c[1] * 255, b: c[1] * 255 }; // , c[0] * 255];
+  } else { // rgb
+    return { r: c[1] * 255, g: c[2] * 255, b: c[3] * 255 }; // , c[0] * 255];
   }
 }
 
-function encodeColor(c: number[]) {
-  return [c[3] / 255, c[0] / 255, c[1] / 255, c[2] / 255];
+function encodeColor(color: Color | undefined) {
+  if (color && 'r' in color) {
+    return [255 * 255, color.r / 255, color.g / 255, color.b / 255];
+  } else {
+    return [255 * 255, 0, 0, 0];
+  }
 }
 
 function arraysEqual(a: any[], b: any[]) {
   if (!a || !b) return false;
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function objectsEqual(a: any, b: any) {
+  if (!a || !b) return false;
+  for (const key of Object.keys(a)) if (a[key] !== b[key]) return false;
+  for (const key of Object.keys(b)) if (a[key] !== b[key]) return false;
   return true;
 }
 
@@ -338,9 +349,15 @@ function deduplicateValues<T>(base: T, runs: { style: T; }[], keys: (keyof T)[])
     const value = runs[0].style[key];
 
     if (value !== undefined) {
-      const identical = Array.isArray(value) ?
-        runs.every(r => arraysEqual(r.style[key] as any, value)) :
-        runs.every(r => r.style[key] === value);
+      let identical = false;
+
+      if (Array.isArray(value)) {
+        identical = runs.every(r => arraysEqual(r.style[key] as any, value));
+      } else if (typeof value === 'object') {
+        identical = runs.every(r => objectsEqual(r.style[key] as any, value));
+      } else {
+        identical = runs.every(r => r.style[key] === value);
+      }
 
       if (identical) {
         base[key] = value as any;
@@ -351,9 +368,15 @@ function deduplicateValues<T>(base: T, runs: { style: T; }[], keys: (keyof T)[])
 
     if (styleValue !== undefined) {
       for (const r of runs) {
-        const same = Array.isArray(styleValue) ?
-          arraysEqual(r.style[key] as any, styleValue) :
-          r.style[key] === styleValue;
+        let same = false;
+
+        if (Array.isArray(value)) {
+          same = arraysEqual(r.style[key] as any, value);
+        } else if (typeof value === 'object') {
+          same = objectsEqual(r.style[key] as any, value);
+        } else {
+          same = r.style[key] === value;
+        }
 
         if (same) delete r.style[key];
       }
@@ -491,7 +514,7 @@ export function encodeEngineData(data: LayerTextData) {
         StyleSheetData: encodeStyle({
           kerning: 0,
           autoKerning: true,
-          fillColor: [0, 0, 0, 255],
+          fillColor: { r: 0, g: 0, b: 0 },
           ...data.style,
           ...run.style,
         }, fonts),
@@ -577,8 +600,8 @@ export function encodeEngineData(data: LayerTextData) {
         ShowGrid: !!gridInfo.show,
         GridSize: gridInfo.size ?? 18,
         GridLeading: gridInfo.leading ?? 22,
-        GridColor: { Type: 1, Values: encodeColor(gridInfo.color ?? [0, 0, 0, 0]) },
-        GridLeadingFillColor: { Type: 1, Values: encodeColor(gridInfo.color ?? [0, 0, 0, 0]) },
+        GridColor: { Type: 1, Values: encodeColor(gridInfo.color) },
+        GridLeadingFillColor: { Type: 1, Values: encodeColor(gridInfo.color) },
         AlignLineHeightToGridFlags: !!gridInfo.alignLineHeightToGridFlags,
       },
       AntiAlias: antialias.indexOf(data.antiAlias ?? 'sharp'),

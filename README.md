@@ -381,7 +381,7 @@ const psd = {
       style: {
         font: { name: 'ArialMT' }, // need to provide full name here
         fontSize: 30,
-        fillColor: [255, 0, 0, 255], // opaque red
+        fillColor: { r: 255, g: 0, b: 0 }, // opaque red
       },
     },
   ],
@@ -407,15 +407,15 @@ const psd = {
       styleRuns: [
         {
           length: 5, // length of 'Hello'
-          style: { fillColor: [255, 0, 0, 255] }, // make 'Hello' red
+          style: { fillColor: { r: 255, g: 0, b: 0 } }, // make 'Hello' red
         },
         {
           length: 7, // length of ' world\n'
-          style: { fillColor: [0, 0, 255, 255] }, // make 'world' blue
+          style: { fillColor: { r: 0, g: 0, b: 255 } }, // make 'world' blue
         },
         {
           length: 12, // length of 'another line'
-          style: { fillColor: [0, 255, 0, 255], underline: true }, // make 'another line' green and underlined
+          style: { fillColor: { r: 0, g: 255, b: 0 }, underline: true }, // make 'another line' green and underlined
         },
       ],
       paragraphStyle: {
