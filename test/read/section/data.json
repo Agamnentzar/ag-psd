@@ -14,6 +14,15 @@
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
     },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "Canon MP540 series Printer",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
+    },
     "printScale": {
       "style": "centered",
       "x": 0,
@@ -21,9 +30,6 @@
       "scale": 1
     },
     "alphaChannelNames": [
-      "Alpha 1"
-    ],
-    "unicodeAlphaNames": [
       "Alpha 1"
     ],
     "alphaIdentifiers": [

@@ -14,6 +14,15 @@
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
     },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
+    },
     "printScale": {
       "style": "centered",
       "x": 0,

@@ -1,7 +1,5 @@
 import { fromByteArray } from 'base64-js';
-import { Layer, Color, BlendMode } from './psd';
-import { PsdReader, readBytes, readUint16, skipBytes } from './psdReader';
-import { PsdWriter, writeUint16 } from './psdWriter';
+import { Layer, Color, BlendMode, LayerColor } from './psd';
 
 export const fromBlendMode: { [key: string]: string } = {};
 export const toBlendMode: { [key: string]: BlendMode } = {
@@ -36,6 +34,50 @@ export const toBlendMode: { [key: string]: BlendMode } = {
 };
 
 Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
+
+export const layerColors: LayerColor[] = [
+	'none', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray'
+];
+
+export interface Dict {
+	[key: string]: string;
+}
+
+export function revMap(map: Dict) {
+	const result: Dict = {};
+	Object.keys(map).forEach(key => result[map[key]] = key);
+	return result;
+}
+
+export function createEnum<T>(prefix: string, def: string, map: Dict) {
+	const rev = revMap(map);
+	const decode = (val: string): T => (rev[val.split('.')[1]] as any) || def;
+	const encode = (val: T | undefined): string => `${prefix}.${map[val as any] || map[def]}`;
+	return { decode, encode };
+}
+
+export const enum ColorSpace {
+	RGB = 0,
+	HSB = 1,
+	CMYK = 2,
+	Lab = 7,
+	Grayscale = 8,
+}
+
+export const enum LayerMaskFlags {
+	PositionRelativeToLayer = 1,
+	LayerMaskDisabled = 2,
+	InvertLayerMaskWhenBlending = 4, // obsolete
+	LayerMaskFromRenderingOtherData = 8,
+	MaskHasParametersAppliedToIt = 16,
+}
+
+export const enum MaskParams {
+	UserMaskDensity = 1,
+	UserMaskFeather = 2,
+	VectorMaskDensity = 4,
+	VectorMaskFeather = 8,
+}
 
 export const enum ChannelID {
 	Red = 0,
@@ -97,35 +139,6 @@ export function clamp(value: number, min: number, max: number) {
 	return value < min ? min : (value > max ? max : value);
 }
 
-export function toArray(value: Uint8Array) {
-	const result = new Array(value.length);
-
-	for (let i = 0; i < value.length; i++) {
-		result[i] = value[i];
-	}
-
-	return result;
-}
-
-export function readColor(reader: PsdReader) {
-	const colorSpace = readUint16(reader);
-	if (colorSpace !== 0) console.log('Invalid color space');
-	const r = Math.round(readUint16(reader) / 257);
-	const g = Math.round(readUint16(reader) / 257);
-	const b = Math.round(readUint16(reader) / 257);
-	const a = Math.round(readUint16(reader) / 257);
-	return [r, g, b, a];
-}
-
-export function writeColor(writer: PsdWriter, color: number[] | undefined) {
-	if (!color) color = [0, 0, 0, 0];
-	writeUint16(writer, 0);
-	writeUint16(writer, Math.round(color[0] * 257));
-	writeUint16(writer, Math.round(color[1] * 257));
-	writeUint16(writer, Math.round(color[2] * 257));
-	writeUint16(writer, Math.round(color[3] * 257));
-}
-
 export function hasAlpha(data: PixelData) {
 	const size = data.width * data.height * 4;
 
@@ -175,19 +188,6 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	}
 
 	return array;
-}
-
-export function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset: number, width: number, height: number) {
-	const size = width * height;
-	const buffer = readBytes(reader, size);
-
-	if (pixelData && offset < 4) {
-		const data = pixelData.data;
-
-		for (let i = 0, p = offset | 0; i < size; i++ , p = (p + 4) | 0) {
-			data[p] = buffer[i];
-		}
-	}
 }
 
 export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]) {
@@ -284,59 +284,6 @@ export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: num
 	return buffer.slice(0, o);
 }
 
-export function readDataRLE(
-	reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, step: number, offsets: number[]
-) {
-	const lengths = new Uint16Array(offsets.length * height);
-	const data = pixelData && pixelData.data;
-
-	for (let o = 0, li = 0; o < offsets.length; o++) {
-		for (let y = 0; y < height; y++ , li++) {
-			lengths[li] = readUint16(reader);
-		}
-	}
-
-	for (let c = 0, li = 0; c < offsets.length; c++) {
-		const offset = offsets[c] | 0;
-		const extra = c > 3 || offset > 3;
-
-		if (!data || extra) {
-			for (let y = 0; y < height; y++ , li++) {
-				skipBytes(reader, lengths[li]);
-			}
-		} else {
-			for (let y = 0, p = offset | 0; y < height; y++ , li++) {
-				const length = lengths[li];
-				const buffer = readBytes(reader, length);
-
-				for (let i = 0; i < length; i++) {
-					let header = buffer[i];
-
-					if (header >= 128) {
-						const value = buffer[++i];
-						header = (256 - header) | 0;
-
-						for (let j = 0; j <= header; j = (j + 1) | 0) {
-							data[p] = value;
-							p = (p + step) | 0;
-						}
-					} else { // header < 128
-						for (let j = 0; j <= header; j = (j + 1) | 0) {
-							data[p] = buffer[++i];
-							p = (p + step) | 0;
-						}
-					}
-
-					/* istanbul ignore if */
-					if (i >= length) {
-						throw new Error(`Invalid RLE data: exceeded buffer size ${i}/${length}`);
-					}
-				}
-			}
-		}
-	}
-}
-
 // h = <0, 360>; s, v = <0, 100>
 export function hsv2rgb(h: number, s: number, v: number): Color {
 	h = Math.max(0, Math.min(360, h === 360 ? 0 : h));
@@ -393,6 +340,31 @@ export function hsv2rgb(h: number, s: number, v: number): Color {
 		g * 255,
 		b * 255,
 		255,
+	];
+}
+
+export function lab2rgb(l: number, a: number, bb: number, alpha = 255) {
+	let y = (l + 16) / 116;
+	let x = a / 500 + y;
+	let z = y - bb / 200;
+
+	x = 0.95047 * ((x * x * x > 0.008856) ? x * x * x : (x - 16 / 116) / 7.787);
+	y = 1.00000 * ((y * y * y > 0.008856) ? y * y * y : (y - 16 / 116) / 7.787);
+	z = 1.08883 * ((z * z * z > 0.008856) ? z * z * z : (z - 16 / 116) / 7.787);
+
+	let r = x * 3.2406 + y * -1.5372 + z * -0.4986;
+	let g = x * -0.9689 + y * 1.8758 + z * 0.0415;
+	let b = x * 0.0557 + y * -0.2040 + z * 1.0570;
+
+	r = (r > 0.0031308) ? (1.055 * Math.pow(r, 1 / 2.4) - 0.055) : 12.92 * r;
+	g = (g > 0.0031308) ? (1.055 * Math.pow(g, 1 / 2.4) - 0.055) : 12.92 * g;
+	b = (b > 0.0031308) ? (1.055 * Math.pow(b, 1 / 2.4) - 0.055) : 12.92 * b;
+
+	return [
+		clamp(r, 0, 1) * 255,
+		clamp(g, 0, 1) * 255,
+		clamp(b, 0, 1) * 255,
+		alpha,
 	];
 }
 

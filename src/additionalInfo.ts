@@ -1,19 +1,24 @@
 import { readEffects, writeEffects } from './effectsHelpers';
-import { readColor, toArray, writeColor, hsv2rgb, clamp } from './helpers';
+import { hsv2rgb, clamp, createEnum, layerColors } from './helpers';
 import {
 	LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, AntiAlias, BevelStyle, BevelTechnique,
 	LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
 	LayerEffectSolidFill, BevelDirection, GlowTechnique, GlowSource, LayerEffectPatternOverlay,
 	LayerEffectGradientOverlay, LayerEffectSatin, GradientStyle, EffectContour, EffectSolidGradient,
-	EffectNoiseGradient, BezierPath, Psd, BlendMode, LineCapType, LineJoinType, LineAlignment, VectorContent, UnitsValue, Color, LayerEffectStroke, ExtraGradientInfo, EffectPattern, ExtraPatternInfo
+	EffectNoiseGradient, BezierPath, Psd, BlendMode, LineCapType, LineJoinType, LineAlignment,
+	VectorContent, UnitsValue, Color, LayerEffectStroke, ExtraGradientInfo, EffectPattern,
+	ExtraPatternInfo, ReadOptions, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment,
+	ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel,
+	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
+	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, RGBA, LABA
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32
+	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readColor, readSection, readColor2, readInt32
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8,
-	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString,
+	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeColor, writeSection, writeUnicodeStringWithPadding, writeColor2,
 } from './psdWriter';
 import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
@@ -23,7 +28,7 @@ import { fromByteArray, toByteArray } from 'base64-js';
 const MOCK_HANDLERS = false;
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
-type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd) => void;
+type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, options: ReadOptions) => void;
 type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd) => void;
 
 export interface InfoHandler {
@@ -44,23 +49,6 @@ function addHandler(key: string, has: HasMethod, read: ReadMethod, write: WriteM
 
 function addHandlerAlias(key: string, target: string) {
 	infoHandlersMap[key] = infoHandlersMap[target];
-}
-
-interface Dict {
-	[key: string]: string;
-}
-
-function revMap(map: Dict) {
-	const result: Dict = {};
-	Object.keys(map).forEach(key => result[map[key]] = key);
-	return result;
-}
-
-function createEnum<T>(prefix: string, def: string, map: Dict) {
-	const rev = revMap(map);
-	const decode = (val: string): T => (rev[val.split('.')[1]] as any) || def;
-	const encode = (val: T | undefined): string => `${prefix}.${map[val as any] || map[def]}`;
-	return { decode, encode };
 }
 
 const textGridding = createEnum<TextGridding>('textGridding', 'none', {
@@ -166,7 +154,7 @@ const GrdT = createEnum<GradientStyle>('GrdT', 'linear', {
 	diamond: 'Dmnd',
 });
 
-const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {
+export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {
 	rgb: 'RGBC',
 	hsb: 'HSBl',
 	lab: 'LbCl',
@@ -206,8 +194,7 @@ addHandler(
 	'TySh',
 	target => target.text !== undefined,
 	(reader, target, leftBytes) => {
-		const version = readInt16(reader);
-		if (version !== 1) throw new Error(`Invalid TySh version`);
+		if (readInt16(reader) !== 1) throw new Error(`Invalid TySh version`);
 
 		const transform = [
 			readFloat64(reader),
@@ -218,14 +205,10 @@ addHandler(
 			readFloat64(reader),
 		];
 
-		const textVersion = readInt16(reader);
-		if (textVersion !== 50) throw new Error(`Invalid TySh text version`);
-
+		if (readInt16(reader) !== 50) throw new Error(`Invalid TySh text version`);
 		const text: TextDescriptor = readVersionAndDescriptor(reader);
 
-		const warpVersion = readInt16(reader);
-		if (warpVersion !== 1) throw new Error(`Invalid TySh warp version`);
-
+		if (readInt16(reader) !== 1) throw new Error(`Invalid TySh warp version`);
 		const warp: WarpDescriptor = readVersionAndDescriptor(reader);
 
 		const left = readFloat32(reader);
@@ -375,8 +358,7 @@ addHandler(
 	'vmsk',
 	target => target.vectorMask !== undefined,
 	(reader, target, left, { width, height }) => {
-		const version = readUint32(reader);
-		if (version !== 3) throw new Error('Invalid vmsk version');
+		if (readUint32(reader) !== 3) throw new Error('Invalid vmsk version');
 
 		target.vectorMask = { paths: [] };
 
@@ -581,49 +563,89 @@ addHandler(
 
 addHandler(
 	'lclr',
-	target => target.sheetColors !== undefined,
+	target => target.layerColor !== undefined,
 	(reader, target) => {
-		// TODO: is this 32bit color or color index ?
-		target.sheetColors = {
-			color1: readUint32(reader),
-			color2: readUint32(reader),
-		};
+		const color = readUint16(reader);
+		skipBytes(reader, 6);
+		target.layerColor = layerColors[color];
 	},
 	(writer, target) => {
-		writeUint32(writer, target.sheetColors!.color1);
-		writeUint32(writer, target.sheetColors!.color2);
+		const index = layerColors.indexOf(target.layerColor!);
+		writeUint16(writer, index === -1 ? 0 : index);
+		writeZeros(writer, 6);
 	},
 );
 
+interface CustomDescriptor {
+	layerTime?: number;
+}
+
+interface FrameListDescriptor {
+	LaID: number;
+	LaSt: {
+		enab?: boolean;
+		IMsk?: { Ofst: { Hrzn: number; Vrtc: number; } };
+		VMsk?: { Ofst: { Hrzn: number; Vrtc: number; } };
+		FXRf?: { Hrzn: number; Vrtc: number; };
+		FrLs: number[];
+	}[];
+}
+
 addHandler(
 	'shmd',
-	target => target.metadata !== undefined,
-	(reader, target) => {
+	target => target.timestamp !== undefined,
+	(reader, target, left, _, options) => {
 		const count = readUint32(reader);
-		target.metadata = [];
 
 		for (let i = 0; i < count; i++) {
 			checkSignature(reader, '8BIM');
 			const key = readSignature(reader);
-			const copy = !!readUint8(reader);
+			readUint8(reader); // copy
 			skipBytes(reader, 3);
-			const length = readUint32(reader);
-			const data = toArray(readBytes(reader, length));
-			target.metadata.push({ key, copy, data });
+
+			readSection(reader, 1, left => {
+				if (key === 'cust') {
+					const desc = readVersionAndDescriptor(reader) as CustomDescriptor;
+					if (desc.layerTime !== undefined) target.timestamp = desc.layerTime;
+				} else if (key === 'mlst') {
+					const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
+					options.logDevFeatures && console.log('mlst', require('util').inspect(desc, false, 99, true));
+				} else if (key === 'mdyn') {
+					// frame flags
+					const unknown = readUint16(reader);
+					const propagate = readUint8(reader);
+					const flags = readUint8(reader);
+					const unifyLayerPosition = (flags & 1) !== 0;
+					const unifyLayerStyle = (flags & 2) !== 0;
+					const unifyLayerVisibility = (flags & 4) !== 0;
+					options.logDevFeatures && console.log(
+						'mdyn', 'unknown:', unknown, 'propagate:', propagate,
+						'flags:', flags, { unifyLayerPosition, unifyLayerStyle, unifyLayerVisibility });
+
+					// const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
+					// console.log('mdyn', require('util').inspect(desc, false, 99, true));
+				} else {
+					options.logDevFeatures && console.log('Unhandled metadata', key);
+				}
+
+				skipBytes(reader, left());
+			});
 		}
+
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		writeUint32(writer, target.metadata!.length);
+		const desc: CustomDescriptor = {
+			layerTime: target.timestamp!,
+		};
 
-		for (let i = 0; i < target.metadata!.length; i++) {
-			const item = target.metadata![i];
-			writeSignature(writer, '8BIM');
-			writeSignature(writer, item.key);
-			writeUint8(writer, item.copy ? 1 : 0);
-			writeZeros(writer, 3);
-			writeUint32(writer, item.data.length);
-			writeBytes(writer, new Uint8Array(item.data));
-		}
+		writeUint32(writer, 1); // count
+
+		writeSignature(writer, '8BIM');
+		writeSignature(writer, 'cust');
+		writeUint8(writer, 0); // copy (always false)
+		writeZeros(writer, 3);
+		writeSection(writer, 1, () => writeVersionAndDescriptor(writer, '', 'metadata', desc));
 	},
 );
 
@@ -689,10 +711,15 @@ MOCK_HANDLERS && addHandler(
 	},
 	(writer, target) => false && writeBytes(writer, (target as any)._Patt),
 );
-/*addHandler(
+
+addHandler(
 	'Patt', // TODO: handle also Pat2 & Pat3
 	target => !target,
-	(reader, target, left) => {
+	(reader, _target, left) => {
+		if (!left()) return;
+
+		skipBytes(reader, left()); return; // not supported yet
+		/*
 		const length = readUint32(reader);
 		const version = readUint32(reader);
 
@@ -756,10 +783,11 @@ MOCK_HANDLERS && addHandler(
 		target.patterns.push({ name, id, colorMode, x, y });
 
 		skipBytes(reader, left());
+		*/
 	},
 	(_writer, _target) => {
 	},
-);*/
+);
 
 addHandler(
 	'pths',
@@ -800,6 +828,891 @@ addHandler(
 	},
 	(writer, target) => {
 		writeEffects(writer, target.effects!);
+	},
+);
+
+addHandler(
+	'brit',
+	target => target.adjustment?.type === 'brightness/contrast',
+	(reader, target, left) => {
+		if (!target.adjustment) { // ignore if got one from CgEd block
+			target.adjustment = {
+				type: 'brightness/contrast',
+				brightness: readInt16(reader),
+				contrast: readInt16(reader),
+				meanValue: readInt16(reader),
+				labColorOnly: !!readUint8(reader),
+				useLegacy: true,
+			};
+		}
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as BrightnessAdjustment;
+		writeInt16(writer, info.brightness ?? 0);
+		writeInt16(writer, info.contrast ?? 0);
+		writeInt16(writer, info.meanValue ?? 127);
+		writeUint8(writer, info.labColorOnly ? 1 : 0);
+		writeZeros(writer, 1);
+	},
+);
+
+function readLevelsChannel(reader: PsdReader): LevelsAdjustmentChannel {
+	const shadowInput = readInt16(reader);
+	const highlightInput = readInt16(reader);
+	const shadowOutput = readInt16(reader);
+	const highlightOutput = readInt16(reader);
+	const midtoneInput = readInt16(reader) / 100;
+	return { shadowInput, highlightInput, shadowOutput, highlightOutput, midtoneInput };
+}
+
+function writeLevelsChannel(writer: PsdWriter, channel: LevelsAdjustmentChannel) {
+	writeInt16(writer, channel.shadowInput);
+	writeInt16(writer, channel.highlightInput);
+	writeInt16(writer, channel.shadowOutput);
+	writeInt16(writer, channel.highlightOutput);
+	writeInt16(writer, Math.round(channel.midtoneInput * 100));
+}
+
+addHandler(
+	'levl',
+	target => target.adjustment?.type === 'levels',
+	(reader, target, left) => {
+		if (readUint16(reader) !== 2) throw new Error('Invalid levl version');
+
+		target.adjustment = {
+			type: 'levels',
+			rgb: readLevelsChannel(reader),
+			red: readLevelsChannel(reader),
+			green: readLevelsChannel(reader),
+			blue: readLevelsChannel(reader),
+			...target.adjustment,
+		} as LevelsAdjustment;
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as LevelsAdjustment;
+		const defaultChannel = {
+			shadowInput: 0,
+			highlightInput: 255,
+			shadowOutput: 0,
+			highlightOutput: 255,
+			midtoneInput: 1,
+		};
+
+		writeUint16(writer, 2); // version
+		writeLevelsChannel(writer, info.rgb ?? defaultChannel);
+		writeLevelsChannel(writer, info.red ?? defaultChannel);
+		writeLevelsChannel(writer, info.blue ?? defaultChannel);
+		writeLevelsChannel(writer, info.green ?? defaultChannel);
+		for (let i = 0; i < 59; i++) writeLevelsChannel(writer, defaultChannel);
+	},
+);
+
+function readCurveChannel(reader: PsdReader) {
+	const nodes = readUint16(reader);
+	const channel: CurvesAdjustmentChannel = [];
+
+	for (let j = 0; j < nodes; j++) {
+		const output = readInt16(reader);
+		const input = readInt16(reader);
+		channel.push({ input, output });
+	}
+
+	return channel;
+}
+
+function writeCurveChannel(writer: PsdWriter, channel: CurvesAdjustmentChannel) {
+	writeUint16(writer, channel.length);
+
+	for (const n of channel) {
+		writeUint16(writer, n.output);
+		writeUint16(writer, n.input);
+	}
+}
+
+addHandler(
+	'curv',
+	target => target.adjustment?.type === 'curves',
+	(reader, target, left) => {
+		readUint8(reader);
+		if (readUint16(reader) !== 1) throw new Error('Invalid curv version');
+		readUint16(reader);
+		const channels = readUint16(reader);
+		const info: CurvesAdjustment = { type: 'curves' };
+
+		if (channels & 1) info.rgb = readCurveChannel(reader);
+		if (channels & 2) info.red = readCurveChannel(reader);
+		if (channels & 4) info.green = readCurveChannel(reader);
+		if (channels & 8) info.blue = readCurveChannel(reader);
+
+		target.adjustment = {
+			...target.adjustment,
+			...info,
+		} as CurvesAdjustment;
+
+		// ignoring, duplicate information
+		// checkSignature(reader, 'Crv ');
+
+		// const cVersion = readUint16(reader);
+		// readUint16(reader);
+		// const channelCount = readUint16(reader);
+
+		// for (let i = 0; i < channelCount; i++) {
+		// 	const index = readUint16(reader);
+		// 	const nodes = readUint16(reader);
+
+		// 	for (let j = 0; j < nodes; j++) {
+		// 		const output = readInt16(reader);
+		// 		const input = readInt16(reader);
+		// 	}
+		// }
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as CurvesAdjustment;
+
+		let channels = 0;
+		let channelCount = 0;
+		if (info.rgb?.length) { channels |= 1; channelCount++; }
+		if (info.red?.length) { channels |= 2; channelCount++; }
+		if (info.green?.length) { channels |= 4; channelCount++; }
+		if (info.blue?.length) { channels |= 8; channelCount++; }
+
+		writeUint8(writer, 0);
+		writeUint16(writer, 1); // version
+		writeUint16(writer, 0);
+		writeUint16(writer, channels);
+
+		if (info.rgb?.length) writeCurveChannel(writer, info.rgb);
+		if (info.red?.length) writeCurveChannel(writer, info.red);
+		if (info.green?.length) writeCurveChannel(writer, info.green);
+		if (info.blue?.length) writeCurveChannel(writer, info.blue);
+
+		writeSignature(writer, 'Crv ');
+		writeUint16(writer, 4); // version
+		writeUint16(writer, 0);
+		writeUint16(writer, channelCount);
+
+		if (info.rgb?.length) { writeUint16(writer, 0); writeCurveChannel(writer, info.rgb); }
+		if (info.red?.length) { writeUint16(writer, 1); writeCurveChannel(writer, info.red); }
+		if (info.green?.length) { writeUint16(writer, 2); writeCurveChannel(writer, info.green); }
+		if (info.blue?.length) { writeUint16(writer, 3); writeCurveChannel(writer, info.blue); }
+
+		writeZeros(writer, 2);
+	},
+);
+
+addHandler(
+	'expA',
+	target => target.adjustment?.type === 'exposure',
+	(reader, target, left) => {
+		if (readUint16(reader) !== 1) throw new Error('Invalid expA version');
+
+		target.adjustment = {
+			type: 'exposure',
+			exposure: readFloat32(reader),
+			offset: readFloat32(reader),
+			gamma: readFloat32(reader),
+			...target.adjustment,
+		} as ExposureAdjustment;
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as ExposureAdjustment;
+		writeUint16(writer, 1); // version
+		writeFloat32(writer, info.exposure ?? 0);
+		writeFloat32(writer, info.offset ?? 0);
+		writeFloat32(writer, info.gamma ?? 0);
+		writeZeros(writer, 2);
+	},
+);
+
+interface VibranceDescriptor {
+	vibrance?: number;
+	Strt?: number;
+}
+
+addHandler(
+	'vibA',
+	target => target.adjustment?.type === 'vibrance',
+	(reader, target, left) => {
+		const desc: VibranceDescriptor = readVersionAndDescriptor(reader);
+		target.adjustment = { type: 'vibrance' };
+		if (desc.vibrance !== undefined) target.adjustment.vibrance = desc.vibrance;
+		if (desc.Strt !== undefined) target.adjustment.saturation = desc.Strt;
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as VibranceAdjustment;
+		const desc: VibranceDescriptor = {};
+		if (info.vibrance !== undefined) desc.vibrance = info.vibrance;
+		if (info.saturation !== undefined) desc.Strt = info.saturation;
+
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
+function readHueChannel(reader: PsdReader): HueSaturationAdjustmentChannel {
+	const a = readInt16(reader);
+	const b = readInt16(reader);
+	const c = readInt16(reader);
+	const d = readInt16(reader);
+	const hue = readInt16(reader);
+	const saturation = readInt16(reader);
+	const lightness = readInt16(reader);
+	return { a, b, c, d, hue, saturation, lightness };
+}
+
+function writeHueChannel(writer: PsdWriter, channel: HueSaturationAdjustmentChannel | undefined) {
+	writeInt16(writer, channel?.a ?? 0);
+	writeInt16(writer, channel?.b ?? 0);
+	writeInt16(writer, channel?.c ?? 0);
+	writeInt16(writer, channel?.d ?? 0);
+	writeInt16(writer, channel?.hue ?? 0);
+	writeInt16(writer, channel?.saturation ?? 0);
+	writeInt16(writer, channel?.lightness ?? 0);
+}
+
+addHandler(
+	'hue2',
+	target => target.adjustment?.type === 'hue/saturation',
+	(reader, target, left) => {
+		if (readUint16(reader) !== 2) throw new Error('Invalid hue2 version');
+
+		target.adjustment = {
+			type: 'hue/saturation',
+			master: readHueChannel(reader),
+			reds: readHueChannel(reader),
+			yellows: readHueChannel(reader),
+			greens: readHueChannel(reader),
+			cyans: readHueChannel(reader),
+			blues: readHueChannel(reader),
+			magentas: readHueChannel(reader),
+			...target.adjustment,
+		} as HueSaturationAdjustment;
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as HueSaturationAdjustment;
+
+		writeUint16(writer, 2); // version
+		writeHueChannel(writer, info.master);
+		writeHueChannel(writer, info.reds);
+		writeHueChannel(writer, info.yellows);
+		writeHueChannel(writer, info.greens);
+		writeHueChannel(writer, info.cyans);
+		writeHueChannel(writer, info.blues);
+		writeHueChannel(writer, info.magentas);
+	},
+);
+
+addHandler(
+	'blnc',
+	target => target.adjustment?.type === 'color balance',
+	(reader, target, left) => {
+		target.adjustment = {
+			type: 'color balance',
+			shadows: {
+				cyanRed: readInt16(reader),
+				magentaGreen: readInt16(reader),
+				yellowBlue: readInt16(reader),
+			},
+			midtones: {
+				cyanRed: readInt16(reader),
+				magentaGreen: readInt16(reader),
+				yellowBlue: readInt16(reader),
+			},
+			highlights: {
+				cyanRed: readInt16(reader),
+				magentaGreen: readInt16(reader),
+				yellowBlue: readInt16(reader),
+			},
+			preserveLuminosity: !!readUint8(reader),
+		};
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as ColorBalanceAdjustment;
+		writeInt16(writer, info.shadows?.cyanRed ?? 0);
+		writeInt16(writer, info.shadows?.magentaGreen ?? 0);
+		writeInt16(writer, info.shadows?.yellowBlue ?? 0);
+		writeInt16(writer, info.midtones?.cyanRed ?? 0);
+		writeInt16(writer, info.midtones?.magentaGreen ?? 0);
+		writeInt16(writer, info.midtones?.yellowBlue ?? 0);
+		writeInt16(writer, info.highlights?.cyanRed ?? 0);
+		writeInt16(writer, info.highlights?.magentaGreen ?? 0);
+		writeInt16(writer, info.highlights?.yellowBlue ?? 0);
+		writeUint8(writer, info.preserveLuminosity ? 1 : 0);
+		writeZeros(writer, 1);
+	},
+);
+
+interface BlackAndWhiteDescriptor {
+	'Rd  ': number;
+	Yllw: number;
+	'Grn ': number;
+	'Cyn ': number;
+	'Bl  ': number;
+	Mgnt: number;
+	useTint: boolean;
+	tintColor?: DescriptorColor,
+	bwPresetKind: number;
+	blackAndWhitePresetFileName: string;
+}
+
+addHandler(
+	'blwh',
+	target => target.adjustment?.type === 'black & white',
+	(reader, target, left) => {
+		const desc: BlackAndWhiteDescriptor = readVersionAndDescriptor(reader);
+		target.adjustment = {
+			type: 'black & white',
+			reds: desc['Rd  '],
+			yellows: desc.Yllw,
+			greens: desc['Grn '],
+			cyans: desc['Cyn '],
+			blues: desc['Bl  '],
+			magentas: desc.Mgnt,
+			useTint: !!desc.useTint,
+			presetKind: desc.bwPresetKind,
+			presetFileName: desc.blackAndWhitePresetFileName,
+		};
+
+		if (desc.tintColor !== undefined) target.adjustment.tintColor = parseColor(desc.tintColor);
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as BlackAndWhiteAdjustment;
+		const desc: BlackAndWhiteDescriptor = {
+			'Rd  ': info.reds ?? 0,
+			Yllw: info.yellows ?? 0,
+			'Grn ': info.greens ?? 0,
+			'Cyn ': info.cyans ?? 0,
+			'Bl  ': info.blues ?? 0,
+			Mgnt: info.magentas ?? 0,
+			useTint: !!info.useTint,
+			tintColor: serializeColor(info.tintColor),
+			bwPresetKind: info.presetKind ?? 0,
+			blackAndWhitePresetFileName: info.presetFileName ?? '',
+		};
+
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
+addHandler(
+	'phfl',
+	target => target.adjustment?.type === 'photo filter',
+	(reader, target, left) => {
+		const version = readUint16(reader);
+		if (version !== 2 && version !== 3) throw new Error('Invalid phfl version');
+
+		let color: RGBA | LABA;
+
+		if (version === 2) {
+			color = readColor2(reader);
+		} else { // version 3
+			// TODO: test this, this is almost certainly wrong
+			color = {
+				l: readInt32(reader) / 100,
+				a: readInt32(reader) / 100,
+				b: readInt32(reader) / 100,
+				alpha: 255,
+			};
+		}
+
+		target.adjustment = {
+			type: 'photo filter',
+			color,
+			density: readUint32(reader) / 100,
+			preserveLuminosity: !!readUint8(reader),
+		};
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as PhotoFilterAdjustment;
+		writeUint16(writer, 2); // version
+		writeColor2(writer, info.color ?? { l: 0, a: 0, b: 0, alpha: 0 });
+		writeUint32(writer, (info.density ?? 0) * 100);
+		writeUint8(writer, info.preserveLuminosity ? 1 : 0);
+		writeZeros(writer, 3);
+	},
+);
+
+function readMixrChannel(reader: PsdReader): ChannelMixerChannel {
+	const red = readInt16(reader);
+	const green = readInt16(reader);
+	const blue = readInt16(reader);
+	skipBytes(reader, 2);
+	const constant = readInt16(reader);
+	return { red, green, blue, constant };
+}
+
+function writeMixrChannel(writer: PsdWriter, channel: ChannelMixerChannel | undefined) {
+	writeInt16(writer, channel?.red ?? 0);
+	writeInt16(writer, channel?.green ?? 0);
+	writeInt16(writer, channel?.blue ?? 0);
+	writeZeros(writer, 2);
+	writeInt16(writer, channel?.constant ?? 0);
+}
+
+addHandler(
+	'mixr',
+	target => target.adjustment?.type === 'channel mixer',
+	(reader, target, left) => {
+		if (readUint16(reader) !== 1) throw new Error('Invalid mixr version');
+
+		target.adjustment = {
+			type: 'channel mixer',
+			monochrome: !!readUint16(reader),
+			...target.adjustment,
+		} as ChannelMixerAdjustment;
+
+		if (!target.adjustment.monochrome) {
+			target.adjustment.red = readMixrChannel(reader);
+			target.adjustment.green = readMixrChannel(reader);
+			target.adjustment.blue = readMixrChannel(reader);
+		}
+
+		target.adjustment.gray = readMixrChannel(reader);
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as ChannelMixerAdjustment;
+		writeUint16(writer, 1); // version
+		writeUint16(writer, info.monochrome ? 1 : 0);
+
+		if (info.monochrome) {
+			writeMixrChannel(writer, info.gray);
+			writeZeros(writer, 3 * 5 * 2);
+		} else {
+			writeMixrChannel(writer, info.red);
+			writeMixrChannel(writer, info.green);
+			writeMixrChannel(writer, info.blue);
+			writeMixrChannel(writer, info.gray);
+		}
+	},
+);
+
+const colorLookupType = createEnum<'3dlut' | 'abstractProfile' | 'deviceLinkProfile'>('colorLookupType', '3DLUT', {
+	'3dlut': '3DLUT',
+	abstractProfile: 'abstractProfile',
+	deviceLinkProfile: 'deviceLinkProfile',
+});
+
+const LUTFormatType = createEnum<'look' | 'cube' | '3dl'>('LUTFormatType', 'look', {
+	look: 'LUTFormatLOOK',
+	cube: 'LUTFormatCUBE',
+	'3dl': 'LUTFormat3DL',
+});
+
+const colorLookupOrder = createEnum<'rgb' | 'bgr'>('colorLookupOrder', 'rgb', {
+	rgb: 'rgbOrder',
+	bgr: 'bgrOrder',
+});
+
+interface ColorLookupDescriptor {
+	lookupType?: string;
+	'Nm  '?: string;
+	Dthr?: boolean;
+	profile?: Uint8Array;
+	LUTFormat?: string;
+	dataOrder?: string;
+	tableOrder?: string;
+	LUT3DFileData?: Uint8Array;
+	LUT3DFileName?: string;
+}
+
+addHandler(
+	'clrL',
+	target => target.adjustment?.type === 'color lookup',
+	(reader, target, left) => {
+		if (readUint16(reader) !== 1) throw new Error('Invalid clrL version');
+
+		const desc: ColorLookupDescriptor = readVersionAndDescriptor(reader);
+		target.adjustment = { type: 'color lookup' };
+		const info = target.adjustment;
+
+		if (desc.lookupType !== undefined) info.lookupType = colorLookupType.decode(desc.lookupType);
+		if (desc['Nm  '] !== undefined) info.name = desc['Nm  '];
+		if (desc.Dthr !== undefined) info.dither = desc.Dthr;
+		if (desc.profile !== undefined) info.profile = desc.profile;
+		if (desc.LUTFormat !== undefined) info.lutFormat = LUTFormatType.decode(desc.LUTFormat);
+		if (desc.dataOrder !== undefined) info.dataOrder = colorLookupOrder.decode(desc.dataOrder);
+		if (desc.tableOrder !== undefined) info.tableOrder = colorLookupOrder.decode(desc.tableOrder);
+		if (desc.LUT3DFileData !== undefined) info.lut3DFileData = desc.LUT3DFileData;
+		if (desc.LUT3DFileName !== undefined) info.lut3DFileName = desc.LUT3DFileName;
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as ColorLookupAdjustment;
+		const desc: ColorLookupDescriptor = {};
+
+		if (info.lookupType !== undefined) desc.lookupType = colorLookupType.encode(info.lookupType);
+		if (info.name !== undefined) desc['Nm  '] = info.name
+		if (info.dither !== undefined) desc.Dthr = info.dither;
+		if (info.profile !== undefined) desc.profile = info.profile;
+		if (info.lutFormat !== undefined) desc.LUTFormat = LUTFormatType.encode(info.lutFormat);
+		if (info.dataOrder !== undefined) desc.dataOrder = colorLookupOrder.encode(info.dataOrder);
+		if (info.tableOrder !== undefined) desc.tableOrder = colorLookupOrder.encode(info.tableOrder);
+		if (info.lut3DFileData !== undefined) desc.LUT3DFileData = info.lut3DFileData;
+		if (info.lut3DFileName !== undefined) desc.LUT3DFileName = info.lut3DFileName;
+
+		writeUint16(writer, 1); // version
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
+addHandler(
+	'nvrt',
+	target => target.adjustment?.type === 'invert',
+	(reader, target, left) => {
+		target.adjustment = { type: 'invert' };
+		skipBytes(reader, left());
+	},
+	() => {
+		// nothing to write here
+	},
+);
+
+addHandler(
+	'post',
+	target => target.adjustment?.type === 'posterize',
+	(reader, target, left) => {
+		target.adjustment = {
+			type: 'posterize',
+			levels: readUint16(reader),
+		};
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as PosterizeAdjustment;
+		writeUint16(writer, info.levels ?? 4);
+		writeZeros(writer, 2);
+	},
+);
+
+addHandler(
+	'thrs',
+	target => target.adjustment?.type === 'threshold',
+	(reader, target, left) => {
+		target.adjustment = {
+			type: 'threshold',
+			level: readUint16(reader),
+		};
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment as ThresholdAdjustment;
+		writeUint16(writer, info.level ?? 128);
+		writeZeros(writer, 2);
+	},
+);
+
+const grdmColorModels = ['', '', '', 'rgb', 'hsb', '', 'lab'];
+
+addHandler(
+	'grdm',
+	target => target.adjustment?.type === 'gradient map',
+	(reader, target, left) => {
+		if (readUint16(reader) !== 1) throw new Error('Invalid grdm version');
+
+		const info: GradientMapAdjustment = {
+			type: 'gradient map',
+			gradientType: 'solid',
+		};
+
+		info.reverse = !!readUint8(reader);
+		info.dither = !!readUint8(reader);
+		info.name = readUnicodeString(reader);
+		info.colorStops = [];
+		info.opacityStops = [];
+
+		const stopsCount = readUint16(reader);
+
+		for (let i = 0; i < stopsCount; i++) {
+			info.colorStops.push({
+				location: readUint32(reader),
+				midpoint: readUint32(reader) / 100,
+				color: readColor(reader),
+			});
+			skipBytes(reader, 2);
+		}
+
+		const opacityStopsCount = readUint16(reader);
+
+		for (let i = 0; i < opacityStopsCount; i++) {
+			info.opacityStops.push({
+				location: readUint32(reader),
+				midpoint: readUint32(reader) / 100,
+				opacity: readUint16(reader) / 0xff,
+			});
+		}
+
+		const expansionCount = readUint16(reader);
+		if (expansionCount !== 2) throw new Error('Invalid grdm expansion count');
+
+		const interpolation = readUint16(reader);
+		info.smoothness = interpolation / 4096;
+
+		const length = readUint16(reader);
+		if (length !== 32) throw new Error('Invalid grdm length');
+
+		info.gradientType = readUint16(reader) ? 'noise' : 'solid';
+		info.randomSeed = readUint32(reader);
+		info.addTransparency = !!readUint16(reader);
+		info.restrictColors = !!readUint16(reader);
+		info.roughness = readUint32(reader) / 4096;
+		info.colorModel = (grdmColorModels[readUint16(reader)] || 'rgb') as 'rgb' | 'hsb' | 'lab';
+
+		info.min = [
+			readUint16(reader) / 0x8000,
+			readUint16(reader) / 0x8000,
+			readUint16(reader) / 0x8000,
+			readUint16(reader) / 0x8000,
+		];
+
+		info.max = [
+			readUint16(reader) / 0x8000,
+			readUint16(reader) / 0x8000,
+			readUint16(reader) / 0x8000,
+			readUint16(reader) / 0x8000,
+		];
+
+		skipBytes(reader, left());
+
+		for (const s of info.colorStops) s.location /= interpolation;
+		for (const s of info.opacityStops) s.location /= interpolation;
+
+		target.adjustment = info;
+	},
+	(writer, target) => {
+		const info = target.adjustment as GradientMapAdjustment;
+
+		writeUint16(writer, 1); // version
+		writeUint8(writer, info.reverse ? 1 : 0);
+		writeUint8(writer, info.dither ? 1 : 0);
+		writeUnicodeStringWithPadding(writer, info.name ?? '');
+		writeUint16(writer, info.colorStops?.length ?? 0);
+
+		const interpolation = Math.round((info.smoothness ?? 1) * 4096);
+
+		for (const s of info.colorStops ?? []) {
+			writeUint32(writer, Math.round(s.location * interpolation));
+			writeUint32(writer, Math.round(s.midpoint * 100));
+			writeColor(writer, s.color);
+			writeZeros(writer, 2);
+		}
+
+		writeUint16(writer, info.opacityStops?.length ?? 0);
+
+		for (const s of info.opacityStops ?? []) {
+			writeUint32(writer, Math.round(s.location * interpolation));
+			writeUint32(writer, Math.round(s.midpoint * 100));
+			writeUint16(writer, Math.round(s.opacity * 0xff));
+		}
+
+		writeUint16(writer, 2); // expansion count
+		writeUint16(writer, interpolation);
+		writeUint16(writer, 32); // length
+		writeUint16(writer, info.gradientType === 'noise' ? 1 : 0);
+		writeUint32(writer, info.randomSeed ?? 0);
+		writeUint16(writer, info.addTransparency ? 1 : 0);
+		writeUint16(writer, info.restrictColors ? 1 : 0);
+		writeUint32(writer, Math.round((info.roughness ?? 1) * 4096));
+		const colorModel = grdmColorModels.indexOf(info.colorModel ?? 'rgb');
+		writeUint16(writer, colorModel === -1 ? 3 : colorModel);
+
+		for (let i = 0; i < 4; i++)
+			writeUint16(writer, Math.round((info.min?.[i] ?? 0) * 0x8000));
+
+		for (let i = 0; i < 4; i++)
+			writeUint16(writer, Math.round((info.max?.[i] ?? 0) * 0x8000));
+
+		writeZeros(writer, 4);
+	},
+);
+
+function readSelectiveColors(reader: PsdReader): CMYK {
+	const cyan = readInt16(reader);
+	const magenta = readInt16(reader);
+	const yellow = readInt16(reader);
+	const black = readInt16(reader);
+	return { cyan, magenta, yellow, black };
+}
+
+function writeSelectiveColors(writer: PsdWriter, cmyk: CMYK | undefined) {
+	writeInt16(writer, cmyk?.cyan ?? 0);
+	writeInt16(writer, cmyk?.magenta ?? 0);
+	writeInt16(writer, cmyk?.yellow ?? 0);
+	writeInt16(writer, cmyk?.black ?? 0);
+}
+
+addHandler(
+	'selc',
+	target => target.adjustment?.type === 'selective color',
+	(reader, target) => {
+		if (readUint16(reader) !== 1) throw new Error('Invalid selc version');
+
+		const mode = readUint16(reader) ? 'absolute' : 'relative';
+		skipBytes(reader, 8);
+
+		target.adjustment = {
+			type: 'selective color',
+			mode,
+			reds: readSelectiveColors(reader),
+			yellows: readSelectiveColors(reader),
+			greens: readSelectiveColors(reader),
+			cyans: readSelectiveColors(reader),
+			blues: readSelectiveColors(reader),
+			magentas: readSelectiveColors(reader),
+			whites: readSelectiveColors(reader),
+			neutrals: readSelectiveColors(reader),
+			blacks: readSelectiveColors(reader),
+		};
+	},
+	(writer, target) => {
+		const info = target.adjustment as SelectiveColorAdjustment;
+
+		writeUint16(writer, 1); // version
+		writeUint16(writer, info.mode === 'absolute' ? 1 : 0);
+		writeZeros(writer, 8);
+		writeSelectiveColors(writer, info.reds);
+		writeSelectiveColors(writer, info.yellows);
+		writeSelectiveColors(writer, info.greens);
+		writeSelectiveColors(writer, info.cyans);
+		writeSelectiveColors(writer, info.blues);
+		writeSelectiveColors(writer, info.magentas);
+		writeSelectiveColors(writer, info.whites);
+		writeSelectiveColors(writer, info.neutrals);
+		writeSelectiveColors(writer, info.blacks);
+	},
+);
+
+interface BrightnessContrastDescriptor {
+	Vrsn: number;
+	Brgh: number;
+	Cntr: number;
+	means: number;
+	'Lab ': boolean;
+	useLegacy: boolean;
+	Auto: boolean;
+}
+
+interface PresetDescriptor {
+	Vrsn: number;
+	presetKind: number;
+	presetFileName: string;
+}
+
+interface CurvesPresetDescriptor {
+	Vrsn: number;
+	curvesPresetKind: number;
+	curvesPresetFileName: string;
+}
+
+interface MixerPresetDescriptor {
+	Vrsn: number;
+	mixerPresetKind: number;
+	mixerPresetFileName: string;
+}
+
+addHandler(
+	'CgEd',
+	t => (t.adjustment?.type === 'brightness/contrast' && !t.adjustment?.useLegacy)
+		|| (t.adjustment?.type === 'levels' && t.adjustment.presetFileName !== undefined)
+		|| (t.adjustment?.type === 'curves' && t.adjustment.presetFileName !== undefined)
+		|| (t.adjustment?.type === 'exposure' && t.adjustment.presetFileName !== undefined)
+		|| (t.adjustment?.type === 'channel mixer' && t.adjustment.presetFileName !== undefined)
+		|| (t.adjustment?.type === 'hue/saturation' && t.adjustment.presetFileName !== undefined),
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as
+			BrightnessContrastDescriptor | PresetDescriptor | CurvesPresetDescriptor | MixerPresetDescriptor;
+		if (desc.Vrsn !== 1) throw new Error('Invalid CgEd version');
+
+		// this section can specify preset file name for other adjustment types
+		if ('presetFileName' in desc) {
+			target.adjustment = {
+				...target.adjustment,
+				presetKind: desc.presetKind,
+				presetFileName: desc.presetFileName,
+			} as LevelsAdjustment | ExposureAdjustment | HueSaturationAdjustment;
+		} else if ('curvesPresetFileName' in desc) {
+			target.adjustment = {
+				...target.adjustment,
+				presetKind: desc.curvesPresetKind,
+				presetFileName: desc.curvesPresetFileName,
+			} as CurvesAdjustment;
+		} else if ('mixerPresetFileName' in desc) {
+			target.adjustment = {
+				...target.adjustment,
+				presetKind: desc.mixerPresetKind,
+				presetFileName: desc.mixerPresetFileName,
+			} as CurvesAdjustment;
+		} else {
+			target.adjustment = {
+				type: 'brightness/contrast',
+				brightness: desc.Brgh,
+				contrast: desc.Cntr,
+				meanValue: desc.means,
+				useLegacy: !!desc.useLegacy,
+				labColorOnly: !!desc['Lab '],
+				auto: !!desc.Auto,
+			};
+		}
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const info = target.adjustment!;
+
+		if (info.type === 'levels' || info.type === 'exposure' || info.type === 'hue/saturation') {
+			const desc: PresetDescriptor = {
+				Vrsn: 1,
+				presetKind: info.presetKind ?? 1,
+				presetFileName: info.presetFileName ?? '',
+			};
+			writeVersionAndDescriptor(writer, '', 'null', desc);
+		} else if (info.type === 'curves') {
+			const desc: CurvesPresetDescriptor = {
+				Vrsn: 1,
+				curvesPresetKind: info.presetKind ?? 1,
+				curvesPresetFileName: info.presetFileName ?? '',
+			};
+			writeVersionAndDescriptor(writer, '', 'null', desc);
+		} else if (info.type === 'channel mixer') {
+			const desc: MixerPresetDescriptor = {
+				Vrsn: 1,
+				mixerPresetKind: info.presetKind ?? 1,
+				mixerPresetFileName: info.presetFileName ?? '',
+			};
+			writeVersionAndDescriptor(writer, '', 'null', desc);
+		} else if (info.type === 'brightness/contrast') {
+			const desc: BrightnessContrastDescriptor = {
+				Vrsn: 1,
+				Brgh: info.brightness ?? 0,
+				Cntr: info.contrast ?? 0,
+				means: info.meanValue ?? 127,
+				'Lab ': !!info.labColorOnly,
+				useLegacy: !!info.useLegacy,
+				Auto: !!info.auto,
+			};
+			writeVersionAndDescriptor(writer, '', 'null', desc);
+		} else {
+			throw new Error('Unhandled CgEd case');
+		}
 	},
 );
 

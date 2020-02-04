@@ -6,7 +6,7 @@
 JavaScript library for reading and writing PSD files (Photoshop Document files)
 
 Implemented according to [official documentation](https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/)
-and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
+, [fileformat.info](http://www.fileformat.info/format/psd/egff.htm) and a lot of trial and error.
 
 ## Limitations
 
@@ -14,16 +14,16 @@ and [fileformat.info](http://www.fileformat.info/format/psd/egff.htm).
 * Does not support 16 bits per channel
 * Does not support The Large Document Format (8BPB/PSB) 
 * Does not support color palettes
-* Does not support timeline
-* Does not support patterns
+* Does not support animations
+* Does not support patterns (or "Pattern Overlay" layer effect)
 * Does not support some metadata fields
-* Does not support "Pattern Overlay" layer effect
+* Does not support smart objects
+* Does not support 3d effects
 * Does not support some new features from latest versions of Photoshop
 * Text layers implementation is incomplete
   * Writing text layer with "vertical" orientation may result in broken PSD file
   * Does not support writing or reading predefined "Paragraph Styles" or "Character Styles"
   * The library does not redraw bitmap data for the text layer, so files with updated/written text layers will result in a warning prompt when opening the file in Photoshop. [see more below](#updating-text-layers)
-  * Some properties may not read or write properly
 
 ## Installation
 
@@ -313,6 +313,8 @@ interface WriteOptions {
 
 ### Sample PSD document
 
+Below is a simple example of document structure returned from `readPsd`. You can see full document structure in [psd.ts file](https://github.com/Agamnentzar/ag-psd/blob/master/src/psd.ts)
+
 ```json
 {
   "width": 300,
@@ -350,6 +352,18 @@ interface WriteOptions {
   ],
   "canvas": [Canvas]
 }
+```
+
+### Updating document without corrupting image data
+
+If you read and write the same document, image data can get corrupted by automatic alpha channel pre-multiplication that happens when you load data into the canvas element. To avoid that use raw image data (set `useImageData` option to `true` in `ReadOptions`. you can also use `useRawThumbnail` option to preserve original thumbnail data)
+
+```js
+const psd = readPsd(inputBuffer, { useImageData: true });
+
+// TODO: update psd document here
+
+const outuptBuffer = writePsd(psd); 
 ```
 
 ### Writing text layers
@@ -412,18 +426,6 @@ const psd = {
 };
 
 const buffer = writePsd(psd);
-```
-
-### Updating document without corrupting image data
-
-If you read and write the same document, image data can get corrupted by automatic alpha channel pre-multiplication that happens when you load data into the canvas element. To avoid that use raw image data (set `useImageData` option to `true` in `ReadOptions`. you can also use `useRawThumbnail` option to preserve original thumbnail data)
-
-```js
-const psd = readPsd(inputBuffer, { useImageData: true });
-
-// TODO: update psd document here
-
-const outuptBuffer = writePsd(psd); 
 ```
 
 ### Updating text layers

@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { writeDataRaw, readDataRLE, offsetForChannel, PixelData, PixelArray, writeDataRLE } from '../helpers';
-import { createReader } from '../psdReader';
+import { writeDataRaw, offsetForChannel, PixelData, PixelArray, writeDataRLE } from '../helpers';
+import { createReader, readDataRLE } from '../psdReader';
 import { range, repeat } from './common';
 
 function toData(data: number[]) {

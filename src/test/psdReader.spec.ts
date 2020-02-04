@@ -15,7 +15,10 @@ const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'read');
 const readWriteFilesPath = path.join(testFilesPath, 'read-write');
 const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
-const opts: ReadOptions = { throwForMissingFeatures: true, logMissingFeatures: true };
+const opts: ReadOptions = {
+	throwForMissingFeatures: true,
+	logMissingFeatures: true,
+};
 
 describe('PsdReader', () => {
 	it('reads width and height properly', () => {
@@ -107,7 +110,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		it(`reads-write PSD file (${f})`, () => {
+		it(`reads-writes PSD file (${f})`, () => {
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, 'src.psd'), { ...opts, useImageData: true, useRawThumbnail: true });
 			const actual = writePsdBuffer(psd);
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
@@ -179,7 +182,13 @@ describe('PsdReader', () => {
 		const originalBuffer = fs.readFileSync(path.join(testFilesPath, 'test.psd'));
 
 		console.log('READING ORIGINAL');
-		const opts = { logMissingFeatures: true, useImageData: true, useRawThumbnail: true };
+		const opts = {
+			logMissingFeatures: true,
+			throwForMissingFeatures: true,
+			useImageData: true,
+			useRawThumbnail: true,
+			logDevFeatures: true,
+		};
 		const originalPsd = readPsdInternal(createReaderFromBuffer(originalBuffer), opts);
 
 		console.log('WRITING');
@@ -187,9 +196,11 @@ describe('PsdReader', () => {
 		fs.writeFileSync('temp.psd', buffer);
 		// fs.writeFileSync('temp.bin', buffer);
 		// fs.writeFileSync('temp.json', JSON.stringify(originalPsd, null, 2), 'utf8');
+		// fs.writeFileSync('temp.xml', originalPsd.imageResources?.xmpMetadata, 'utf8');
 
 		console.log('READING WRITTEN');
-		const psd = readPsdInternal(createReaderFromBuffer(buffer), { logMissingFeatures: true });
+		const psd = readPsdInternal(
+			createReaderFromBuffer(buffer), { logMissingFeatures: true, throwForMissingFeatures: true });
 
 		clearCanvasFields(originalPsd);
 		clearCanvasFields(psd);

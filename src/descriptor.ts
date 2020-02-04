@@ -34,7 +34,9 @@ const unitsMap: Dict = {
 const unitsMapRev = revMap(unitsMap);
 
 const fieldToExtType: ExtTypeDict = {
+	strokeStyleContent: { name: '', classID: 'solidColorLayer' },
 	printProofSetup: { name: 'Proof Setup', classID: 'proofSetup' },
+	patternFill: { name: '', classID: 'patternFill' },
 	Grad: { name: 'Gradient', classID: 'Grdn' },
 	ebbl: { name: '', classID: 'ebbl' },
 	SoFi: { name: '', classID: 'SoFi' },
@@ -42,6 +44,7 @@ const fieldToExtType: ExtTypeDict = {
 	sdwC: { name: '', classID: 'RGBC' },
 	hglC: { name: '', classID: 'RGBC' },
 	'Clr ': { name: '', classID: 'RGBC' },
+	'tintColor': { name: '', classID: 'RGBC' },
 	Ofst: { name: '', classID: 'Pnt ' },
 	ChFX: { name: '', classID: 'ChFX' },
 	MpgS: { name: '', classID: 'ShpC' },
@@ -52,8 +55,6 @@ const fieldToExtType: ExtTypeDict = {
 	TrnS: { name: '', classID: 'ShpC' },
 	Ptrn: { name: '', classID: 'Ptrn' },
 	FrFX: { name: '', classID: 'FrFX' },
-	strokeStyleContent: { name: '', classID: 'solidColorLayer' },
-	patternFill: { name: '', classID: 'patternFill' },
 	phase: { name: '', classID: 'Pnt ' },
 };
 
@@ -64,40 +65,51 @@ const fieldToArrayExtType: ExtTypeDict = {
 };
 
 const typeToField: { [key: string]: string[]; } = {
-	'TEXT': ['Txt ', 'printerName', 'Nm  ', 'Idnt'],
-	'tdta': ['EngineData'],
+	'TEXT': [
+		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
+		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName',
+	],
+	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
-		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion',
+		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn',
+		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind',
+		'curvesPresetKind', 'mixerPresetKind',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
 		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'Type', 'glwS', 'GrdF', 'GlwT',
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
-		'strokeStyleBlendMode', 'PntT', 'Styl',
+		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
+		'tableOrder'
 	],
 	'bool': [
-		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss', 'useShape', 'useTexture',
-		'masterFXSwitch', 'uglg', 'antialiasGloss', 'useShape', 'useTexture', 'Algn', 'Rvrs', 'Dthr',
-		'Invr', 'VctC', 'ShTr', 'layerConceals', 'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock',
-		'strokeStyleStrokeAdjust',
+		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
+		'useShape', 'useTexture', 'masterFXSwitch', 'uglg', 'antialiasGloss', 'useShape',
+		'useTexture', 'Algn', 'Rvrs', 'Dthr', 'Invr', 'VctC', 'ShTr', 'layerConceals',
+		'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock', 'strokeStyleStrokeAdjust',
+		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint',
 	],
 	'doub': [
-		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Rd  ', 'Grn ', 'Bl  ',
-		'strokeStyleMiterLimit', 'strokeStyleResolution',
+		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr',
+		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime',
 	],
 	'UntF': [
-		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl', 'Ckmt',
-		'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset', 'strokeStyleOpacity',
-		'Sz  ',
+		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
+		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
+		'strokeStyleOpacity', 'Sz  ',
 	],
 	'VlLs': [
-		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet',
+		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
+		'LaSt',
 	],
 };
+
+const channels = ['Rd  ', 'Grn ', 'Bl  ', 'Yllw', 'Cyn ', 'Mgnt'];
 
 const fieldToArrayType: Dict = {
 	'Mnm ': 'long',
 	'Mxm ': 'long',
+	'FrLs': 'long',
 	'strokeStyleLineDashSet': 'UntF',
 };
 
@@ -162,9 +174,7 @@ export function readDescriptorStructure(reader: PsdReader) {
 		const data = readOSType(reader, type);
 		object[key] = data;
 	}
-
 	// console.log('//', struct);
-
 	return object;
 }
 
@@ -179,13 +189,14 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	writeUint32(writer, keys.length);
 
 	for (const key of keys) {
-		const type = getTypeByKey(key, value[key]);
-		writeAsciiStringOrClassId(writer, key);
-		writeSignature(writer, type || 'long');
-
+		let type = getTypeByKey(key, value[key]);
 		let extType = fieldToExtType[key];
 
-		if (key === 'strokeStyleContent') {
+		if (channels.indexOf(key) !== -1) {
+			type = classId === 'RGBC' ? 'doub' : 'long';
+		} else if (key === 'profile') {
+			type = classId === 'printOutput' ? 'TEXT' : 'tdta';
+		} else if (key === 'strokeStyleContent') {
 			if (value[key]['Clr ']) {
 				extType = { name: '', classID: 'solidColorLayer' };
 			} else if (value[key].Grad) {
@@ -197,6 +208,8 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			}
 		}
 
+		writeAsciiStringOrClassId(writer, key);
+		writeSignature(writer, type || 'long');
 		writeOSType(writer, type || 'long', value[key], key, extType);
 		if (!type) console.log(`Missing descriptor field type for: '${key}' in`, value);
 	}

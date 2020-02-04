@@ -1,5 +1,15 @@
 # Changelog
 
+## v10.0.0
+- **BREAKING CHANGE:** Removed `unicodeAlphaNames` image resource (use `alphaChannelNames` instead)
+- **BREAKING CHANGE:** Replaced `sheetColors` layer field with `layerColor` field
+- **BREAKING CHANGE:** Changed mask density fields to be in 0-1 range (instead of 0-255)
+- Removed `metadata` field from layers
+- Fixed incorrectly writing layer masks information in some cases
+- Added handling for adjustment layers
+- Added `timestamp` field to layers
+- Added `printInformation` image resource
+
 ## v9.1.1
 - Fixed saved PSD files broken in some cases
 

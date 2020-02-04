@@ -1,0 +1,10 @@
+{
+	"width": 300,
+	"height": 200,
+	"children": [
+		{
+			"name": "Layer #1",
+			"layerColor": "green"
+		}
+	]
+}

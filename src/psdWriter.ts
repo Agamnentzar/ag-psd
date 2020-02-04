@@ -1,10 +1,8 @@
+import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, RGBA, LABA } from './psd';
 import {
-	Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions,
-	LayerMaskFlags, MaskParameters
-} from './psd';
-import {
-	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData,
-	ChannelData, offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp
+	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
+	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
+	LayerMaskFlags, MaskParams, ColorSpace
 } from './helpers';
 import { infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
@@ -149,7 +147,7 @@ function getLargestLayerSize(layers: Layer[] = []): number {
 	return max;
 }
 
-function writeSection(writer: PsdWriter, round: number, func: () => void, writeTotalLength = false) {
+export function writeSection(writer: PsdWriter, round: number, func: () => void, writeTotalLength = false) {
 	const offset = writer.offset;
 	writeInt32(writer, 0);
 
@@ -303,40 +301,40 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 
 function writeLayerMaskData(writer: PsdWriter, { mask, vectorMask }: Layer, layerData: LayerChannelData) {
 	writeSection(writer, 1, () => {
-		if (mask && layerData.mask) {
-			writeInt32(writer, layerData.mask.top);
-			writeInt32(writer, layerData.mask.left);
-			writeInt32(writer, layerData.mask.bottom);
-			writeInt32(writer, layerData.mask.right);
-			writeUint8(writer, mask.defaultColor || 0);
+		if (!mask) return;
 
-			let flags = 0;
+		writeInt32(writer, layerData.mask?.top ?? 0);
+		writeInt32(writer, layerData.mask?.left ?? 0);
+		writeInt32(writer, layerData.mask?.bottom ?? 0);
+		writeInt32(writer, layerData.mask?.right ?? 0);
+		writeUint8(writer, mask.defaultColor ?? 0);
 
-			if (mask.disabled) flags |= LayerMaskFlags.LayerMaskDisabled;
-			if (mask.positionRelativeToLayer) flags |= LayerMaskFlags.PositionRelativeToLayer;
-			if (vectorMask) flags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
+		let params = 0;
+		if (mask.userMaskDensity !== undefined) params |= MaskParams.UserMaskDensity;
+		if (mask.userMaskFeather !== undefined) params |= MaskParams.UserMaskFeather;
+		if (mask.vectorMaskDensity !== undefined) params |= MaskParams.VectorMaskDensity;
+		if (mask.vectorMaskFeather !== undefined) params |= MaskParams.VectorMaskFeather;
 
-			writeUint8(writer, flags);
+		let flags = 0;
+		if (mask.disabled) flags |= LayerMaskFlags.LayerMaskDisabled;
+		if (mask.positionRelativeToLayer) flags |= LayerMaskFlags.PositionRelativeToLayer;
+		if (vectorMask) flags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
+		if (params) flags |= LayerMaskFlags.MaskHasParametersAppliedToIt;
 
-			const parameters = 0 |
-				(mask.userMaskDensity !== undefined ? MaskParameters.UserMaskDensity : 0) |
-				(mask.userMaskFeather !== undefined ? MaskParameters.UserMaskFeather : 0) |
-				(mask.vectorMaskDensity !== undefined ? MaskParameters.VectorMaskDensity : 0) |
-				(mask.vectorMaskFeather !== undefined ? MaskParameters.VectorMaskFeather : 0);
+		writeUint8(writer, flags);
 
-			if (parameters) {
-				writeUint8(writer, parameters);
+		if (params) {
+			writeUint8(writer, params);
 
-				if (mask.userMaskDensity !== undefined) writeUint8(writer, mask.userMaskDensity);
-				if (mask.userMaskFeather !== undefined) writeFloat64(writer, mask.userMaskFeather);
-				if (mask.vectorMaskDensity !== undefined) writeUint8(writer, mask.vectorMaskDensity);
-				if (mask.vectorMaskFeather !== undefined) writeFloat64(writer, mask.vectorMaskFeather);
-			}
-
-			// TODO: handle rest of the fields
-
-			writeZeros(writer, 2);
+			if (mask.userMaskDensity !== undefined) writeUint8(writer, Math.round(mask.userMaskDensity * 0xff));
+			if (mask.userMaskFeather !== undefined) writeFloat64(writer, mask.userMaskFeather);
+			if (mask.vectorMaskDensity !== undefined) writeUint8(writer, Math.round(mask.vectorMaskDensity * 0xff));
+			if (mask.vectorMaskFeather !== undefined) writeFloat64(writer, mask.vectorMaskFeather);
 		}
+
+		// TODO: handle rest of the fields
+
+		writeZeros(writer, 2);
 	});
 }
 
@@ -470,28 +468,32 @@ function getChannels(
 	if (mask) {
 		let { top = 0, left = 0, right = 0, bottom = 0 } = mask;
 		let { width, height } = getLayerDimentions(mask);
+		let imageData = mask.imageData;
 
-		if (width && height) {
+		if (!imageData && mask.canvas && width && height) {
+			imageData = mask.canvas.getContext('2d')!.getImageData(0, 0, width, height);
+		}
+
+		if (width && height && imageData) {
 			right = left + width;
 			bottom = top + height;
 
-			let imageData = mask.imageData;
-
-			if (!imageData && mask.canvas) {
-				imageData = mask.canvas.getContext('2d')!.getImageData(0, 0, width, height);
-			}
-
-			if (imageData) {
-				const buffer = writeDataRLE(tempBuffer, imageData, width, height, [0])!;
-
-				layerData.mask = { top, left, right, bottom };
-				layerData.channels.push({
-					channelId: ChannelID.UserMask,
-					compression: Compression.RleCompressed,
-					buffer: buffer,
-					length: 2 + buffer.length,
-				});
-			}
+			const buffer = writeDataRLE(tempBuffer, imageData, width, height, [0])!;
+			layerData.mask = { top, left, right, bottom };
+			layerData.channels.push({
+				channelId: ChannelID.UserMask,
+				compression: Compression.RleCompressed,
+				buffer: buffer,
+				length: 2 + buffer.length,
+			});
+		} else {
+			layerData.mask = { top: 0, left: 0, right: 0, bottom: 0 };
+			layerData.channels.push({
+				channelId: ChannelID.UserMask,
+				compression: Compression.RawData,
+				buffer: new Uint8Array(0),
+				length: 0,
+			});
 		}
 	}
 
@@ -637,4 +639,29 @@ function trimData(data: PixelData) {
 		right--;
 
 	return { top, left, right, bottom };
+}
+
+export function writeColor(writer: PsdWriter, color: number[] | undefined) {
+	if (!color) color = [0, 0, 0, 0];
+	writeUint16(writer, ColorSpace.RGB);
+	writeUint16(writer, Math.round(color[0] * 257));
+	writeUint16(writer, Math.round(color[1] * 257));
+	writeUint16(writer, Math.round(color[2] * 257));
+	writeUint16(writer, Math.round(color[3] * 257));
+}
+
+export function writeColor2(writer: PsdWriter, color: RGBA | LABA) {
+	if ('r' in color) {
+		writeUint16(writer, ColorSpace.RGB);
+		writeUint16(writer, Math.round(color.r * 257));
+		writeUint16(writer, Math.round(color.g * 257));
+		writeUint16(writer, Math.round(color.b * 257));
+		writeUint16(writer, Math.round(color.alpha * 257));
+	} else {
+		writeUint16(writer, ColorSpace.Lab);
+		writeUint16(writer, Math.round(color.l * 100));
+		writeUint16(writer, Math.round(color.a * 100));
+		writeUint16(writer, Math.round(color.b * 100));
+		writeUint16(writer, Math.round(color.alpha * 257));
+	}
 }

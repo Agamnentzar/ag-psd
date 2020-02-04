@@ -1,16 +1,8 @@
 export type BlendMode = 'pass through' | 'normal' | 'dissolve' | 'darken' | 'multiply' |
 	'color burn' | 'linear burn' | 'darker color' | 'lighten' | 'screen' | 'color dodge' |
 	'linear dodge' | 'lighter color' | 'overlay' | 'soft light' | 'hard light' |
-	'vivid light' | 'linear light' | 'pin light' | 'hard mix' | 'difference' | 'exclusion'
-	| 'subtract' | 'divide' | 'hue' | 'saturation' | 'color' | 'luminosity';
-
-// export const enum ColorSpace {
-// 	RGB = 0,
-// 	HSB = 1,
-// 	CMYK = 2,
-// 	Lab = 7,
-// 	Grayscale = 8,
-// }
+	'vivid light' | 'linear light' | 'pin light' | 'hard mix' | 'difference' | 'exclusion' |
+	'subtract' | 'divide' | 'hue' | 'saturation' | 'color' | 'luminosity';
 
 export const enum ColorMode {
 	Bitmap = 0,
@@ -31,6 +23,8 @@ export const enum SectionDividerType {
 }
 
 export type Color = number[]; // [r, g, b, a]
+export type RGBA = { r: number; g: number; b: number; alpha: number };
+export type LABA = { l: number; a: number; b: number; alpha: number };
 
 export interface EffectContour {
 	name: string;
@@ -158,8 +152,8 @@ export interface EffectSolidGradient {
 	name: string;
 	type: 'solid';
 	smoothness?: number;
-	colorStops: { color: Color; location: number; midpoint: number; }[];
-	opacityStops: { opacity: number; location: number; midpoint: number; }[];
+	colorStops: ColorStop[];
+	opacityStops: OpacityStop[];
 }
 
 export interface EffectNoiseGradient {
@@ -211,7 +205,7 @@ export interface LayerMaskData {
 	disabled?: boolean;
 	positionRelativeToLayer?: boolean;
 	userMaskDensity?: number;
-	userMaskFeather?: number;
+	userMaskFeather?: number; // px
 	vectorMaskDensity?: number;
 	vectorMaskFeather?: number;
 	canvas?: HTMLCanvasElement;
@@ -396,12 +390,227 @@ export type VectorContent = { type: 'color'; color: Color; } |
 	(EffectNoiseGradient & ExtraGradientInfo) |
 	(EffectPattern & { type: 'pattern'; } & ExtraPatternInfo);
 
+export type RenderingIntent = 'perceptual' | 'saturation' | 'relative colorimetric' | 'absolute colorimetric';
+
 export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None';
 
 export interface UnitsValue {
 	units: Units;
 	value: number;
 }
+
+export interface BrightnessAdjustment {
+	type: 'brightness/contrast';
+	brightness?: number;
+	contrast?: number;
+	meanValue?: number;
+	useLegacy?: boolean;
+	labColorOnly?: boolean;
+	auto?: boolean;
+}
+
+export interface LevelsAdjustmentChannel {
+	shadowInput: number;
+	highlightInput: number;
+	shadowOutput: number;
+	highlightOutput: number;
+	midtoneInput: number;
+}
+
+export interface LevelsAdjustment {
+	type: 'levels';
+	rgb?: LevelsAdjustmentChannel;
+	red?: LevelsAdjustmentChannel;
+	green?: LevelsAdjustmentChannel;
+	blue?: LevelsAdjustmentChannel;
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export type CurvesAdjustmentChannel = { input: number; output: number; }[];
+
+export interface CurvesAdjustment {
+	type: 'curves';
+	rgb?: CurvesAdjustmentChannel;
+	red?: CurvesAdjustmentChannel;
+	green?: CurvesAdjustmentChannel;
+	blue?: CurvesAdjustmentChannel;
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export interface ExposureAdjustment {
+	type: 'exposure';
+	exposure?: number;
+	offset?: number;
+	gamma?: number;
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export interface VibranceAdjustment {
+	type: 'vibrance';
+	vibrance?: number;
+	saturation?: number;
+}
+
+export interface HueSaturationAdjustmentChannel {
+	a: number;
+	b: number;
+	c: number;
+	d: number;
+	hue: number;
+	saturation: number;
+	lightness: number;
+}
+
+export interface HueSaturationAdjustment {
+	type: 'hue/saturation';
+	master?: HueSaturationAdjustmentChannel;
+	reds?: HueSaturationAdjustmentChannel;
+	yellows?: HueSaturationAdjustmentChannel;
+	greens?: HueSaturationAdjustmentChannel;
+	cyans?: HueSaturationAdjustmentChannel;
+	blues?: HueSaturationAdjustmentChannel;
+	magentas?: HueSaturationAdjustmentChannel;
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export interface ColorBalanceAdjustment {
+	type: 'color balance';
+	shadows?: { cyanRed: number; magentaGreen: number; yellowBlue: number; };
+	midtones?: { cyanRed: number; magentaGreen: number; yellowBlue: number; };
+	highlights?: { cyanRed: number; magentaGreen: number; yellowBlue: number; };
+	preserveLuminosity?: boolean;
+}
+
+export interface BlackAndWhiteAdjustment {
+	type: 'black & white';
+	reds?: number;
+	yellows?: number;
+	greens?: number;
+	cyans?: number;
+	blues?: number;
+	magentas?: number;
+	useTint?: boolean;
+	tintColor?: Color;
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export interface PhotoFilterAdjustment {
+	type: 'photo filter';
+	color?: RGBA | LABA;
+	density?: number;
+	preserveLuminosity?: boolean;
+}
+
+export interface ChannelMixerChannel {
+	red: number;
+	green: number;
+	blue: number;
+	constant: number;
+}
+
+export interface ChannelMixerAdjustment {
+	type: 'channel mixer';
+	monochrome?: boolean;
+	red?: ChannelMixerChannel;
+	green?: ChannelMixerChannel;
+	blue?: ChannelMixerChannel;
+	gray?: ChannelMixerChannel;
+	presetKind?: number;
+	presetFileName?: string;
+}
+
+export interface ColorLookupAdjustment {
+	type: 'color lookup';
+	lookupType?: '3dlut' | 'abstractProfile' | 'deviceLinkProfile';
+	name?: string;
+	dither?: boolean;
+	profile?: Uint8Array;
+	lutFormat?: 'look' | 'cube' | '3dl';
+	dataOrder?: 'rgb' | 'bgr';
+	tableOrder?: 'rgb' | 'bgr';
+	lut3DFileData?: Uint8Array;
+	lut3DFileName?: string;
+}
+
+export interface InvertAdjustment {
+	type: 'invert';
+}
+
+export interface PosterizeAdjustment {
+	type: 'posterize';
+	levels?: number;
+}
+
+export interface ThresholdAdjustment {
+	type: 'threshold';
+	level?: number;
+}
+
+export interface ColorStop {
+	color: Color;
+	location: number;
+	midpoint: number;
+};
+
+export interface OpacityStop {
+	opacity: number;
+	location: number;
+	midpoint: number;
+};
+
+export interface GradientMapAdjustment {
+	type: 'gradient map';
+	name?: string;
+	gradientType: 'solid' | 'noise';
+	dither?: boolean;
+	reverse?: boolean;
+	// solid
+	smoothness?: number;
+	colorStops?: ColorStop[];
+	opacityStops?: OpacityStop[];
+	// noise
+	roughness?: number;
+	colorModel?: 'rgb' | 'hsb' | 'lab';
+	randomSeed?: number;
+	restrictColors?: boolean;
+	addTransparency?: boolean;
+	min?: number[];
+	max?: number[];
+}
+
+export interface CMYK {
+	cyan: number;
+	magenta: number;
+	yellow: number;
+	black: number;
+}
+
+export interface SelectiveColorAdjustment {
+	type: 'selective color';
+	mode?: 'relative' | 'absolute';
+	reds?: CMYK;
+	yellows?: CMYK;
+	greens?: CMYK;
+	cyans?: CMYK;
+	blues?: CMYK;
+	magentas?: CMYK;
+	whites?: CMYK;
+	neutrals?: CMYK;
+	blacks?: CMYK;
+}
+
+export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAdjustment |
+	ExposureAdjustment | VibranceAdjustment | HueSaturationAdjustment | ColorBalanceAdjustment |
+	BlackAndWhiteAdjustment | PhotoFilterAdjustment | ChannelMixerAdjustment | ColorLookupAdjustment |
+	InvertAdjustment | PosterizeAdjustment | ThresholdAdjustment | GradientMapAdjustment |
+	SelectiveColorAdjustment;
+
+export type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray';
 
 export interface LayerAdditionalInfo {
 	name?: string; // layer name
@@ -417,10 +626,7 @@ export interface LayerAdditionalInfo {
 		composite?: boolean;
 		position?: boolean;
 	};
-	sheetColors?: {
-		color1: number;
-		color2: number;
-	};
+	layerColor?: LayerColor;
 	referencePoint?: {
 		x: number;
 		y: number;
@@ -434,11 +640,6 @@ export interface LayerAdditionalInfo {
 		colorSpace: Color;
 		opacity: number;
 	};
-	metadata?: {
-		key: string;
-		copy: boolean;
-		data: number[];
-	}[];
 	effects?: LayerEffectsInfo;
 	text?: LayerTextData;
 	patterns?: PatternInfo[]; // not supported yet
@@ -475,8 +676,10 @@ export interface LayerAdditionalInfo {
 		paths: BezierPath[];
 	};
 	usingAlignedRendering?: boolean;
+	timestamp?: number; // seconds
 	pathList?: {
 	}[];
+	adjustment?: AdjustmentLayer;
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
@@ -496,7 +699,6 @@ export interface ImageResources {
 	};
 	alphaIdentifiers?: number[];
 	alphaChannelNames?: string[];
-	unicodeAlphaNames?: string[]; // TODO: remove
 	globalAngle?: number;
 	globalAltitude?: number;
 	pixelAspectRatio?: {
@@ -531,13 +733,23 @@ export interface ImageResources {
 		y?: number;
 		scale?: number;
 	};
-	// printInformation?: {
-	// 	printerName?: string;
-	//  psts?: boolean;
-	//  inte?: string;
-	//  printSixteenBit?: boolean;
-	//  bltn?: string;
-	// };
+	printInformation?: {
+		printerManagesColors?: boolean;
+		printerName?: string;
+		printerProfile?: string;
+		printSixteenBit?: boolean;
+		renderingIntent?: RenderingIntent;
+		hardProof?: boolean;
+		blackPointCompensation?: boolean;
+		proofSetup?: {
+			builtin: string;
+		} | {
+			profile: string;
+			renderingIntent?: RenderingIntent;
+			blackPointCompensation?: boolean;
+			paperWhite?: boolean;
+		};
+	};
 	backgroundColor?: Color;
 	idsSeedNumber?: number;
 	printFlags?: {
@@ -600,6 +812,8 @@ export interface ReadOptions {
 	/** Loads thumbnail raw data instead of decoding it's content into canvas. 
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;
+	/** Usend only for development */
+	logDevFeatures?: boolean;
 }
 
 export interface WriteOptions {
@@ -610,19 +824,4 @@ export interface WriteOptions {
 	/** Invalidates text layer data, forcing Photoshop to redraw them on load.
 	 *  Use this option if you're updating loaded text layer properties. */
 	invalidateTextLayers?: boolean;
-}
-
-export const enum LayerMaskFlags {
-	PositionRelativeToLayer = 1,
-	LayerMaskDisabled = 2,
-	InvertLayerMaskWhenBlending = 4, // obsolete
-	LayerMaskFromRenderingOtherData = 8,
-	MaskHasParametersAppliedToIt = 16,
-}
-
-export const enum MaskParameters {
-	UserMaskDensity = 1,
-	UserMaskFeather = 2,
-	VectorMaskDensity = 4,
-	VectorMaskFeather = 8,
 }

@@ -1,16 +1,16 @@
 import { toByteArray } from 'base64-js';
-import { ImageResources, ReadOptions } from './psd';
+import { ImageResources, ReadOptions, RenderingIntent } from './psd';
 import {
 	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
-	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32
+	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor
 } from './psdReader';
 import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
-	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding,
+	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor,
 } from './psdWriter';
-import { createCanvasFromData, readColor, writeColor } from './helpers';
+import { createCanvasFromData, createEnum } from './helpers';
 import { decodeString, encodeString } from './utf8';
-// import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface ResourceHandler {
 	key: number;
@@ -57,7 +57,7 @@ function writeUtf8String(writer: PsdWriter, value: string) {
 }
 
 MOCK_HANDLERS && addHandler(
-	1028,
+	1028, // IPTC-NAA record
 	target => (target as any)._ir1028 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1028', left());
@@ -96,48 +96,109 @@ addHandler(
 	(writer, target) => writeUtf8String(writer, target.xmpMetadata!),
 );
 
-MOCK_HANDLERS && addHandler(
+const Inte = createEnum<RenderingIntent>('Inte', 'perceptual', {
+	'perceptual': 'Img ',
+	'saturation': 'Grp ',
+	'relative colorimetric': 'Clrm',
+	'absolute colorimetric': 'AClr',
+});
+
+interface PrintInformationDescriptor {
+	'Nm  '?: string;
+	ClrS?: string;
+	PstS?: boolean;
+	MpBl?: boolean;
+	Inte?: string;
+	hardProof?: boolean;
+	printSixteenBit?: boolean;
+	printerName?: string;
+	printProofSetup?: {
+		Bltn: string;
+	} | {
+		profile: string;
+		Inte: string;
+		MpBl: boolean;
+		paperWhite: boolean;
+	};
+}
+
+addHandler(
 	1082,
-	target => (target as any)._ir1082 !== undefined,
-	(reader, target, left) => {
-		console.log('image resource 1082', left());
-		(target as any)._ir1082 = readBytes(reader, left());
+	target => target.printInformation !== undefined,
+	(reader, target) => {
+		const desc: PrintInformationDescriptor = readVersionAndDescriptor(reader);
+
+		target.printInformation = {
+			printerName: desc.printerName ?? '',
+			renderingIntent: Inte.decode(desc.Inte ?? 'Inte.Img '),
+		};
+
+		const info = target.printInformation;
+
+		if (desc.PstS !== undefined) info.printerManagesColors = desc.PstS;
+		if (desc['Nm  '] !== undefined) info.printerProfile = desc['Nm  '];
+		if (desc.MpBl !== undefined) info.blackPointCompensation = desc.MpBl;
+		if (desc.printSixteenBit !== undefined) info.printSixteenBit = desc.printSixteenBit;
+		if (desc.hardProof !== undefined) info.hardProof = desc.hardProof;
+		if (desc.printProofSetup) {
+			if ('Bltn' in desc.printProofSetup) {
+				info.proofSetup = { builtin: desc.printProofSetup.Bltn.split('.')[1] };
+			} else {
+				info.proofSetup = {
+					profile: desc.printProofSetup.profile,
+					renderingIntent: Inte.decode(desc.printProofSetup.Inte ?? 'Inte.Img '),
+					blackPointCompensation: !!desc.printProofSetup.MpBl,
+					paperWhite: !!desc.printProofSetup.paperWhite,
+				};
+			}
+		}
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1082);
+		const info = target.printInformation!;
+		const desc: PrintInformationDescriptor = {};
+
+		if (info.printerManagesColors) {
+			desc.PstS = true;
+		} else {
+			if (info.hardProof !== undefined) desc.hardProof = !!info.hardProof;
+			desc.ClrS = 'Clrs.RGBC'; // TODO: ???
+			desc['Nm  '] = info.printerProfile ?? 'CIE RGB';
+		}
+
+		desc.Inte = Inte.encode(info.renderingIntent);
+
+		if (!info.printerManagesColors) desc.MpBl = !!info.blackPointCompensation;
+
+		desc.printSixteenBit = !!info.printSixteenBit;
+		desc.printerName = info.printerName ?? '';
+
+		if (info.proofSetup && 'profile' in info.proofSetup) {
+			desc.printProofSetup = {
+				profile: info.proofSetup.profile ?? '',
+				Inte: Inte.encode(info.proofSetup.renderingIntent),
+				MpBl: !!info.proofSetup.blackPointCompensation,
+				paperWhite: !!info.proofSetup.paperWhite,
+			};
+		} else {
+			desc.printProofSetup = {
+				Bltn: info.proofSetup?.builtin ? `builtinProof.${info.proofSetup.builtin}` : 'builtinProof.proofCMYK',
+			};
+		}
+
+		writeVersionAndDescriptor(writer, '', 'printOutput', desc);
 	},
 );
-// addHandler(
-// 	1082,
-// 	target => target.printInformation !== undefined,
-// 	(reader, target) => {
-// 		const value = readVersionAndDescriptor(reader);
-
-// 		target.printInformation = {
-// 			printerName: value.printerName,
-// 		};
-// 	},
-// 	(writer, target) => {
-// 		const value = target.printInformation!;
-
-// 		writeVersionAndDescriptor(writer, '', 'printOutput', {
-// 			PstS: true,
-// 			Inte: 'Inte.Clrm',
-// 			printSixteenBit: false,
-// 			printerName: value.printerName ?? '',
-// 			printProofSetup: {
-// 				Bltn: 'builtinProof.proofCMYK',
-// 			},
-// 		});
-// 	},
-// );
 
 MOCK_HANDLERS && addHandler(
-	1083,
+	1083, // Print style
 	target => (target as any)._ir1083 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1083', left());
 		(target as any)._ir1083 = readBytes(reader, left());
+
+		// TODO:
+		// const desc = readVersionAndDescriptor(reader);
+		// console.log('1083', require('util').inspect(desc, false, 99, true));
 	},
 	(writer, target) => {
 		writeBytes(writer, (target as any)._ir1083);
@@ -218,16 +279,16 @@ addHandler(
 
 addHandler(
 	1045,
-	target => target.unicodeAlphaNames !== undefined,
+	target => target.alphaChannelNames !== undefined,
 	(reader, target, left) => {
-		target.unicodeAlphaNames = [];
+		target.alphaChannelNames = [];
 
 		while (left()) {
-			target.unicodeAlphaNames.push(readUnicodeString(reader));
+			target.alphaChannelNames.push(readUnicodeString(reader));
 		}
 	},
 	(writer, target) => {
-		for (const name of target.unicodeAlphaNames!) {
+		for (const name of target.alphaChannelNames!) {
 			writeUnicodeStringWithPadding(writer, name);
 		}
 	},
@@ -314,7 +375,7 @@ addHandler(
 );
 
 MOCK_HANDLERS && addHandler(
-	10000,
+	10000, // Print flags
 	target => (target as any)._ir10000 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 10000', left());
@@ -326,7 +387,7 @@ MOCK_HANDLERS && addHandler(
 );
 
 MOCK_HANDLERS && addHandler(
-	1013,
+	1013, // Color halftoning
 	target => (target as any)._ir1013 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1013', left());
@@ -338,7 +399,7 @@ MOCK_HANDLERS && addHandler(
 );
 
 MOCK_HANDLERS && addHandler(
-	1016,
+	1016, // Color transfer functions
 	target => (target as any)._ir1016 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1016', left());
@@ -475,7 +536,7 @@ addHandler(
 );
 
 MOCK_HANDLERS && addHandler(
-	1050,
+	1050, // Slices
 	target => (target as any)._ir1050 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1050', left());
@@ -502,7 +563,7 @@ addHandler(
 );
 
 MOCK_HANDLERS && addHandler(
-	1039,
+	1039, // ICC Profile
 	target => (target as any)._ir1039 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1039', left());
@@ -608,7 +669,7 @@ addHandler(
 );
 
 MOCK_HANDLERS && addHandler(
-	1058,
+	1058, // EXIF data 1.
 	target => (target as any)._ir1058 !== undefined,
 	(reader, target, left) => {
 		console.log('image resource 1058', left());
@@ -630,3 +691,133 @@ MOCK_HANDLERS && addHandler(
 // 		writeBytes(writer, (target as any)._ir1025);
 // 	},
 // );
+
+const FrmD = createEnum<'auto' | 'none' | 'dispose'>('FrmD', '', {
+	auto: 'Auto',
+	none: 'None',
+	dispose: 'Disp',
+});
+
+interface AnimationDescriptor {
+	AFSt: number;
+	FrIn: {
+		FrID: number;
+		FrDl: number;
+		FrDs: string;
+		FrGA?: number;
+	}[];
+	FSts: {
+		FsID: number;
+		AFrm: number;
+		FsFr: number[];
+		LCnt: number;
+	}[];
+}
+
+interface Animations {
+	frames: {
+		id: number;
+		delay: number;
+		dispose?: 'auto' | 'none' | 'dispose';
+	}[];
+	animations: {
+		id: number;
+		frames: number[];
+		repeats?: number;
+	}[];
+}
+
+addHandler(
+	4000,
+	target => (target as any)._ir4000 !== undefined,
+	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
+		if (MOCK_HANDLERS) {
+			console.log('image resource 4000', left());
+			(target as any)._ir4000 = readBytes(reader, left());
+			return;
+		}
+
+		const key = readSignature(reader);
+
+		if (key === 'mani') {
+			checkSignature(reader, 'IRFR');
+			readSection(reader, 1, left => {
+				while (left()) {
+					checkSignature(reader, '8BIM');
+					const key = readSignature(reader);
+
+					readSection(reader, 1, left => {
+						if (key === 'AnDs') {
+							const desc = readVersionAndDescriptor(reader) as AnimationDescriptor;
+							// console.log('AnDs', desc);
+							logDevFeatures && console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
+
+							const result: Animations = {
+								// desc.AFSt ???
+								frames: desc.FrIn.map(x => ({
+									id: x.FrID,
+									delay: x.FrDl / 100,
+									dispose: x.FrDs ? FrmD.decode(x.FrDs) : 'auto', // missing == auto
+									// x.FrGA ???
+								})),
+								animations: desc.FSts.map(x => ({
+									id: x.FsID,
+									frames: x.FsFr,
+									repeats: x.LCnt,
+									// x.AFrm ???
+								})),
+							};
+
+							logDevFeatures && console.log('#4000 AnDs:result', require('util').inspect(result, false, 99, true));
+						} else if (key === 'Roll') {
+							const bytes = readBytes(reader, left());
+							logDevFeatures && console.log('#4000 Roll', bytes);
+						} else {
+							logMissingFeatures && console.log('Unhandled subsection in #4000', key);
+						}
+					});
+				}
+			});
+		} else if (key === 'mopt') {
+			const bytes = readBytes(reader, left());
+			logDevFeatures && console.log('#4000 mopt', bytes);
+		} else {
+			logMissingFeatures && console.log('Unhandled key in #4000:', key);
+			return;
+		}
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir4000);
+	},
+);
+
+addHandler(
+	4001,
+	target => (target as any)._ir4001 !== undefined,
+	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
+		if (MOCK_HANDLERS) {
+			console.log('image resource 4001', left());
+			(target as any)._ir4001 = readBytes(reader, left());
+			return;
+		}
+
+		const key = readSignature(reader);
+
+		if (key === 'mfri') {
+			const version = readUint32(reader);
+			if (version !== 2) throw new Error('Invalid mfri version');
+
+			const length = readUint32(reader);
+			const bytes = readBytes(reader, length);
+			logDevFeatures && console.log('mfri', bytes);
+		} else if (key === 'mset') {
+			const desc = readVersionAndDescriptor(reader);
+			logDevFeatures && console.log('mset', desc);
+		} else {
+			logMissingFeatures && console.log('Unhandled key in #4001', key);
+		}
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir4001);
+	},
+);

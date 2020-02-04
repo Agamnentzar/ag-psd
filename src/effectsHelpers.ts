@@ -1,7 +1,13 @@
 import { LayerEffectsInfo, BevelStyle, LayerEffectShadow } from './psd';
-import { readColor, writeColor, toBlendMode, fromBlendMode } from './helpers';
-import { PsdReader, checkSignature, readSignature, skipBytes, readUint16, readUint8, readUint32, readFixedPoint32 } from './psdReader';
-import { PsdWriter, writeSignature, writeUint16, writeZeros, writeFixedPoint32, writeUint8, writeUint32 } from './psdWriter';
+import { toBlendMode, fromBlendMode } from './helpers';
+import {
+	PsdReader, checkSignature, readSignature, skipBytes, readUint16, readUint8,
+	readUint32, readFixedPoint32, readColor
+} from './psdReader';
+import {
+	PsdWriter, writeSignature, writeUint16, writeZeros, writeFixedPoint32,
+	writeUint8, writeUint32, writeColor
+} from './psdWriter';
 
 const bevelStyles: BevelStyle[] = [
 	undefined as any, 'outer bevel', 'inner bevel', 'emboss', 'pillow emboss', 'stroke emboss'
