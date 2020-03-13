@@ -477,11 +477,17 @@ export interface HueSaturationAdjustment extends PresetInfo {
 	magentas?: HueSaturationAdjustmentChannel;
 }
 
+export interface ColorBalanceValues {
+	cyanRed: number;
+	magentaGreen: number;
+	yellowBlue: number;
+}
+
 export interface ColorBalanceAdjustment {
 	type: 'color balance';
-	shadows?: { cyanRed: number; magentaGreen: number; yellowBlue: number; };
-	midtones?: { cyanRed: number; magentaGreen: number; yellowBlue: number; };
-	highlights?: { cyanRed: number; magentaGreen: number; yellowBlue: number; };
+	shadows?: ColorBalanceValues;
+	midtones?: ColorBalanceValues;
+	highlights?: ColorBalanceValues;
 	preserveLuminosity?: boolean;
 }
 
@@ -551,13 +557,13 @@ export interface ColorStop {
 	color: Color;
 	location: number;
 	midpoint: number;
-};
+}
 
 export interface OpacityStop {
 	opacity: number;
 	location: number;
 	midpoint: number;
-};
+}
 
 export interface GradientMapAdjustment {
 	type: 'gradient map';
@@ -798,7 +804,7 @@ export interface ReadOptions {
 	 * (image data will appear in `imageData` fields instead of `canvas` fields)
 	 * This avoids issues with canvas premultiplied alpha corrupting image data. */
 	useImageData?: boolean;
-	/** Loads thumbnail raw data instead of decoding it's content into canvas. 
+	/** Loads thumbnail raw data instead of decoding it's content into canvas.
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;
 	/** Usend only for development */

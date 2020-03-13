@@ -210,7 +210,7 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 		}
 	});
 
-	// layer and mask info 
+	// layer and mask info
 	let globalAlpha = false;
 
 	readSection(reader, 1, left => {

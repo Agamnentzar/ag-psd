@@ -102,6 +102,13 @@ export interface ChannelData {
 	length: number;
 }
 
+export interface Bounds {
+	top: number;
+	left: number;
+	right: number;
+	bottom: number;
+}
+
 export interface LayerChannelData {
 	layer: Layer;
 	channels: ChannelData[];
@@ -109,12 +116,7 @@ export interface LayerChannelData {
 	left: number;
 	right: number;
 	bottom: number;
-	mask?: {
-		top: number;
-		left: number;
-		right: number;
-		bottom: number;
-	};
+	mask?: Bounds;
 }
 
 export type PixelArray = Uint8ClampedArray | Uint8Array;
@@ -165,7 +167,7 @@ export function decodeBitmap(input: PixelArray, output: PixelArray, width: numbe
 		for (let x = 0; x < width;) {
 			let b = input[o++];
 
-			for (let i = 0; i < 8 && x < width; i++ , x++) {
+			for (let i = 0; i < 8 && x < width; i++, x++) {
 				const v = b & 0x80 ? 0 : 255;
 				b = b << 1;
 				output[p++] = v;
@@ -327,6 +329,6 @@ export function initializeCanvas(
 	createImageDataMethod?: (width: number, height: number) => ImageData
 ) {
 	createCanvas = createCanvasMethod;
-	createCanvasFromData = createCanvasFromDataMethod ?? createCanvasFromData;
-	createImageData = createImageDataMethod ?? createImageData;
+	createCanvasFromData = createCanvasFromDataMethod || createCanvasFromData;
+	createImageData = createImageDataMethod || createImageData;
 }

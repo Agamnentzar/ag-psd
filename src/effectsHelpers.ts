@@ -191,10 +191,10 @@ export function readEffects(reader: PsdReader) {
 function writeShadowInfo(writer: PsdWriter, shadow: LayerEffectShadow) {
 	writeUint32(writer, 51);
 	writeUint32(writer, 2);
-	writeFixedPoint32(writer, shadow.size?.value || 0);
+	writeFixedPoint32(writer, shadow.size && shadow.size.value || 0);
 	writeFixedPoint32(writer, 0); // intensity
 	writeFixedPoint32(writer, shadow.angle || 0);
-	writeFixedPoint32(writer, shadow.distance?.value || 0);
+	writeFixedPoint32(writer, shadow.distance && shadow.distance.value || 0);
 	writeColor(writer, shadow.color);
 	writeBlendMode(writer, shadow.blendMode);
 	writeUint8(writer, shadow.enabled ? 1 : 0);

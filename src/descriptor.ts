@@ -8,8 +8,8 @@ import {
 } from './psdWriter';
 
 interface Dict { [key: string]: string; }
-interface NameClassID { name: string; classID: string; };
-interface ExtTypeDict { [key: string]: NameClassID; };
+interface NameClassID { name: string; classID: string; }
+interface ExtTypeDict { [key: string]: NameClassID; }
 
 function revMap(map: Dict) {
 	const result: Dict = {};
@@ -33,35 +33,39 @@ const unitsMap: Dict = {
 
 const unitsMapRev = revMap(unitsMap);
 
+function makeType(name: string, classID: string) {
+	return { name, classID };
+}
+
 const fieldToExtType: ExtTypeDict = {
-	strokeStyleContent: { name: '', classID: 'solidColorLayer' },
-	printProofSetup: { name: 'Proof Setup', classID: 'proofSetup' },
-	patternFill: { name: '', classID: 'patternFill' },
-	Grad: { name: 'Gradient', classID: 'Grdn' },
-	ebbl: { name: '', classID: 'ebbl' },
-	SoFi: { name: '', classID: 'SoFi' },
-	GrFl: { name: '', classID: 'GrFl' },
-	sdwC: { name: '', classID: 'RGBC' },
-	hglC: { name: '', classID: 'RGBC' },
-	'Clr ': { name: '', classID: 'RGBC' },
-	'tintColor': { name: '', classID: 'RGBC' },
-	Ofst: { name: '', classID: 'Pnt ' },
-	ChFX: { name: '', classID: 'ChFX' },
-	MpgS: { name: '', classID: 'ShpC' },
-	DrSh: { name: '', classID: 'DrSh' },
-	IrSh: { name: '', classID: 'IrSh' },
-	OrGl: { name: '', classID: 'OrGl' },
-	IrGl: { name: '', classID: 'IrGl' },
-	TrnS: { name: '', classID: 'ShpC' },
-	Ptrn: { name: '', classID: 'Ptrn' },
-	FrFX: { name: '', classID: 'FrFX' },
-	phase: { name: '', classID: 'Pnt ' },
+	strokeStyleContent: makeType('', 'solidColorLayer'),
+	printProofSetup: makeType('Proof Setup', 'proofSetup'),
+	patternFill: makeType('', 'patternFill'),
+	Grad: makeType('Gradient', 'Grdn'),
+	ebbl: makeType('', 'ebbl'),
+	SoFi: makeType('', 'SoFi'),
+	GrFl: makeType('', 'GrFl'),
+	sdwC: makeType('', 'RGBC'),
+	hglC: makeType('', 'RGBC'),
+	'Clr ': makeType('', 'RGBC'),
+	'tintColor': makeType('', 'RGBC'),
+	Ofst: makeType('', 'Pnt '),
+	ChFX: makeType('', 'ChFX'),
+	MpgS: makeType('', 'ShpC'),
+	DrSh: makeType('', 'DrSh'),
+	IrSh: makeType('', 'IrSh'),
+	OrGl: makeType('', 'OrGl'),
+	IrGl: makeType('', 'IrGl'),
+	TrnS: makeType('', 'ShpC'),
+	Ptrn: makeType('', 'Ptrn'),
+	FrFX: makeType('', 'FrFX'),
+	phase: makeType('', 'Pnt '),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
-	'Crv ': { name: '', classID: 'CrPt' },
-	'Clrs': { name: '', classID: 'Clrt' },
-	'Trns': { name: '', classID: 'TrnS' },
+	'Crv ': makeType('', 'CrPt'),
+	'Clrs': makeType('', 'Clrt'),
+	'Trns': makeType('', 'TrnS'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -200,11 +204,11 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			type = classId === 'printOutput' ? 'TEXT' : 'tdta';
 		} else if (key === 'strokeStyleContent') {
 			if (value[key]['Clr ']) {
-				extType = { name: '', classID: 'solidColorLayer' };
+				extType = makeType('', 'solidColorLayer');
 			} else if (value[key].Grad) {
-				extType = { name: '', classID: 'gradientLayer' };
+				extType = makeType('', 'gradientLayer');
 			} else if (value[key].Ptrn) {
-				extType = { name: '', classID: 'patternLayer' };
+				extType = makeType('', 'patternLayer');
 			} else {
 				console.log('Invalid strokeStyleContent value', value[key]);
 			}

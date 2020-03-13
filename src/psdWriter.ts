@@ -2,7 +2,7 @@ import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOp
 import {
 	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
-	LayerMaskFlags, MaskParams, ColorSpace
+	LayerMaskFlags, MaskParams, ColorSpace, Bounds
 } from './helpers';
 import { infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
@@ -172,7 +172,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	if (!(+psd.width > 0 && +psd.height > 0))
 		throw new Error('Invalid document size');
 
-	let imageResources = psd.imageResources ?? {};
+	let imageResources = psd.imageResources || {};
 
 	if (options.generateThumbnail) {
 		imageResources = { ...imageResources, thumbnail: createThumbnail(psd) };
@@ -227,7 +227,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// image data
 	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
-	const data: PixelData = imageData ?? {
+	const data: PixelData = imageData || {
 		data: new Uint8Array(4 * psd.width * psd.height),
 		width: psd.width,
 		height: psd.height,
@@ -279,7 +279,7 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			writeSection(writer, 1, () => {
 				writeLayerMaskData(writer, layer, layerData);
 				writeLayerBlendingRanges(writer, psd);
-				writePascalString(writer, layer.name ?? '', 4);
+				writePascalString(writer, layer.name || '', 4);
 				writeAdditionalLayerInfo(writer, layer, psd, options);
 			});
 		}
@@ -303,11 +303,12 @@ function writeLayerMaskData(writer: PsdWriter, { mask, vectorMask }: Layer, laye
 	writeSection(writer, 1, () => {
 		if (!mask) return;
 
-		writeInt32(writer, layerData.mask?.top ?? 0);
-		writeInt32(writer, layerData.mask?.left ?? 0);
-		writeInt32(writer, layerData.mask?.bottom ?? 0);
-		writeInt32(writer, layerData.mask?.right ?? 0);
-		writeUint8(writer, mask.defaultColor ?? 0);
+		const m = layerData.mask || {} as Partial<Bounds>;
+		writeInt32(writer, m.top!);
+		writeInt32(writer, m.left!);
+		writeInt32(writer, m.bottom!);
+		writeInt32(writer, m.right!);
+		writeUint8(writer, mask.defaultColor!);
 
 		let params = 0;
 		if (mask.userMaskDensity !== undefined) params |= MaskParams.UserMaskDensity;
@@ -501,7 +502,7 @@ function getChannels(
 }
 
 function getLayerDimentions({ canvas, imageData }: Layer): { width: number; height: number; } {
-	return imageData ?? canvas ?? { width: 0, height: 0 };
+	return imageData || canvas || { width: 0, height: 0 };
 }
 
 function cropImageData(data: ImageData, left: number, top: number, width: number, height: number) {
@@ -547,7 +548,7 @@ function getLayerChannels(
 	right = left + width;
 	bottom = top + height;
 
-	let data = layer.imageData ?? layer.canvas!.getContext('2d')!.getImageData(0, 0, width, height);
+	let data = layer.imageData || layer.canvas!.getContext('2d')!.getImageData(0, 0, width, height);
 
 	if (options.trimImageData) {
 		const trimmed = trimData(data);
@@ -614,7 +615,7 @@ function isColEmpty({ data, width }: PixelData, x: number, top: number, bottom: 
 	const stride = (width * 4) | 0;
 	const start = (top * stride + x * 4 + 3) | 0;
 
-	for (let y = top, i = start; y < bottom; y++ , i = (i + stride) | 0) {
+	for (let y = top, i = start; y < bottom; y++, i = (i + stride) | 0) {
 		if (data[i] !== 0) {
 			return false;
 		}

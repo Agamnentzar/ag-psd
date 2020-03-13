@@ -130,7 +130,7 @@ addHandler(
 		const desc: PrintInformationDescriptor = readVersionAndDescriptor(reader);
 
 		target.printInformation = {
-			printerName: desc.printerName ?? '',
+			printerName: desc.printerName || '',
 			renderingIntent: Inte.decode(desc.Inte ?? 'Inte.Img '),
 		};
 
@@ -171,11 +171,11 @@ addHandler(
 		if (!info.printerManagesColors) desc.MpBl = !!info.blackPointCompensation;
 
 		desc.printSixteenBit = !!info.printSixteenBit;
-		desc.printerName = info.printerName ?? '';
+		desc.printerName = info.printerName || '';
 
 		if (info.proofSetup && 'profile' in info.proofSetup) {
 			desc.printProofSetup = {
-				profile: info.proofSetup.profile ?? '',
+				profile: info.proofSetup.profile || '',
 				Inte: Inte.encode(info.proofSetup.renderingIntent),
 				MpBl: !!info.proofSetup.blackPointCompensation,
 				paperWhite: !!info.proofSetup.paperWhite,

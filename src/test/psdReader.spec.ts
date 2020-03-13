@@ -87,7 +87,7 @@ describe('PsdReader', () => {
 				}
 			}
 
-			pushLayerCanvases(psd.children ?? []);
+			pushLayerCanvases(psd.children || []);
 			mkdirp.sync(path.join(resultsFilesPath, f));
 
 			if (psd.imageResources?.thumbnail) {

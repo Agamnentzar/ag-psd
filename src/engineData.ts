@@ -5,7 +5,7 @@ function isWhitespace(char: number) {
 
 function isNumber(char: number) {
 	// 0123456789.-
-	return (char >= 48 && char <= 57) || char == 46 || char == 45;
+	return (char >= 48 && char <= 57) || char === 46 || char === 45;
 }
 
 export function parseEngineData(data: number[] | Uint8Array) {
@@ -20,13 +20,13 @@ export function parseEngineData(data: number[] | Uint8Array) {
 	function getText() {
 		let result = '';
 
-		if (data[index] == 41) { // )
+		if (data[index] === 41) { // )
 			index++;
 			return result;
 		}
 
 		// Strings start with utf-16 BOM
-		if (data[index] != 0xFE || data[index + 1] != 0xFF) {
+		if (data[index] !== 0xFE || data[index + 1] !== 0xFF) {
 			throw new Error('Invalid utf-16 BOM');
 		}
 
@@ -44,7 +44,7 @@ export function parseEngineData(data: number[] | Uint8Array) {
 			// Sometimes they also have space before escape character instead of 00 high byte:
 			//       FE FF 32 \ ) 00 ] 00 { ...
 
-			if (index === begin && high == 32 && char === 92) { // " \"
+			if (index === begin && high === 32 && char === 92) { // " \"
 				result += ' ';
 			} else {
 				char |= high << 8;
