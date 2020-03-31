@@ -69,7 +69,7 @@ console.log(psd1);
 // read document structure and image data
 const psd2 = readPsd(buffer);
 console.log(psd2);
-fs.writeFileSync('layer-1.png', psd2.children[0].canvas.getBuffer());
+fs.writeFileSync('layer-1.png', psd2.children[0].canvas.toBuffer());
 ```
 
 #### Writing
