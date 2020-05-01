@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import {
 	readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas,
@@ -88,7 +87,7 @@ describe('PsdReader', () => {
 			}
 
 			pushLayerCanvases(psd.children || []);
-			mkdirp.sync(path.join(resultsFilesPath, f));
+			fs.mkdirSync(path.join(resultsFilesPath, f), { recursive: true });
 
 			if (psd.imageResources?.thumbnail) {
 				compare.push({ name: 'thumb.png', canvas: psd.imageResources.thumbnail, skip: true });
@@ -228,6 +227,20 @@ describe('PsdReader', () => {
 			path.join(__dirname, '..', '..', 'resources', 'temp.js'),
 			'var x = ' + require('util').inspect(result, false, 99, false), 'utf8');
 	});
+
+	it.skip('test.psd', () => {
+		const buffer = fs.readFileSync('test.psd');
+		const psd = readPsdInternal(createReaderFromBuffer(buffer), {
+			skipCompositeImageData: true,
+			skipLayerImageData: true,
+			skipThumbnail: true,
+			throwForMissingFeatures: true,
+			logDevFeatures: true,
+		});
+		delete psd.engineData;
+		psd.imageResources = {};
+		console.log(require('util').inspect(psd, false, 99, true));
+	});
 });
 
 function clearEmptyCanvasFields(layer: Layer | undefined) {
@@ -249,6 +262,7 @@ function clearCanvasFields(layer: Layer | undefined) {
 }
 
 /// Engine data 2 experiments
+// /test/engineData2.json:1109 is character codes
 
 const keysColor = {
 	'0': {

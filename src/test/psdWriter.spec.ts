@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as mkdirp from 'mkdirp';
 import { expect } from 'chai';
 import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
 import { Psd, WriteOptions, ReadOptions } from '../psd';
@@ -339,7 +338,7 @@ describe('PsdWriter', () => {
 
 			expect(before).equal(after, 'psd object mutated');
 
-			mkdirp.sync(resultsFilesPath);
+			fs.mkdirSync(resultsFilesPath, { recursive: true });
 			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
 			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
 

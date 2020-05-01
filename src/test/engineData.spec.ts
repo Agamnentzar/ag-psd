@@ -28,7 +28,7 @@ describe('engineData', () => {
 
 	it('serializes engine data', () => {
 		const result = serializeEngineData(dataJSON);
-		
+
 		expectBuffersEqual(result, dataBin, 'serialized.bin');
 	});
 

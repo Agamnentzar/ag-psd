@@ -17,6 +17,18 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		}
 	}
 
+	function getTextByte() {
+		let byte = data[index];
+		index++;
+
+		if (byte === 92) { // \
+			byte = data[index];
+			index++;
+		}
+
+		return byte;
+	}
+
 	function getText() {
 		let result = '';
 
@@ -31,33 +43,14 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		}
 
 		index += 2;
-		const begin = index;
 
+		// ), ( and \ characters are escaped in ascii manner, remove the escapes before interpreting
+		// the bytes as utf-16
 		while (index < data.length && data[index] !== 41) { // )
-			const high = data[index];
-			let char = data[index + 1];
-
-			// utf-16be encoded strings have escaped closing parentheses:
-			//       FE FF 00 \ ) 00 ] 00 { ...
-			// which breaks encoding by shifting it by 1 byte.
-
-			// Sometimes they also have space before escape character instead of 00 high byte:
-			//       FE FF 32 \ ) 00 ] 00 { ...
-
-			if (index === begin && high === 32 && char === 92) { // " \"
-				result += ' ';
-			} else {
-				char |= high << 8;
-			}
-
-			index += 2;
-
-			if (char === 92) { // \
-				result += String.fromCharCode(data[index]); // escaped characters are single byte
-				index++;
-			} else {
-				result += String.fromCharCode(char);
-			}
+			const high = getTextByte();
+			const low = getTextByte();
+			const char = (high << 8) | low;
+			result += String.fromCharCode(char);
 		}
 
 		index++;
@@ -259,6 +252,14 @@ export function serializeEngineData(data: any, condensed = false) {
 		return keys;
 	}
 
+	function writeStringByte(value: number) {
+		if (value === 40 || value === 41 || value === 92) { // ( ) \
+			write(92); // \
+		}
+
+		write(value);
+	}
+
 	function writeValue(value: any, key?: string, inProperty = false) {
 		function writePrefix() {
 			if (inProperty) {
@@ -287,23 +288,10 @@ export function serializeEngineData(data: any, condensed = false) {
 				write(0xfe);
 				write(0xff);
 
-				let lastCode = 0;
-
 				for (let i = 0; i < value.length; i++) {
 					const code = value.charCodeAt(i);
-
-					if (code === 40 || code === 41) { // ( )
-						write(lastCode); // \0 or space
-						write(92); // \
-						write(code);
-						lastCode = 0;
-					} else if (code === 32 && (value.charCodeAt(i + 1) === 40 || value.charCodeAt(i + 1) === 41)) {
-						// space followed by ( ) is encoded as " \)"
-						lastCode = 32; // space
-					} else {
-						write((code >> 8) & 0xff);
-						write(code & 0xff);
-					}
+					writeStringByte((code >> 8) & 0xff);
+					writeStringByte(code & 0xff);
 				}
 
 				writeString(')');

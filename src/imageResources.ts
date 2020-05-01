@@ -728,7 +728,8 @@ interface Animations {
 	}[];
 }
 
-addHandler(
+// TODO: Unfinished
+MOCK_HANDLERS && addHandler(
 	4000,
 	target => (target as any)._ir4000 !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
@@ -792,7 +793,8 @@ addHandler(
 	},
 );
 
-addHandler(
+// TODO: Unfinished
+MOCK_HANDLERS && addHandler(
 	4001,
 	target => (target as any)._ir4001 !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
