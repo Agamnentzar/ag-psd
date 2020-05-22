@@ -14,6 +14,8 @@ interface ChannelInfo {
 export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
 
+const RAW_IMAGE_DATA = false;
+
 function setupGrayscale(data: PixelData) {
 	const size = data.width * data.height * 4;
 
@@ -417,6 +419,10 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		resetImageData(imageData);
 	}
 
+	if (RAW_IMAGE_DATA) {
+		(layer as any).imageDataRaw = [];
+	}
+
 	for (const channel of channels) {
 		const compression = readUint16(reader) as Compression;
 
@@ -454,7 +460,12 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 				}
 			}
 
+			const start = reader.offset;
 			readData(reader, targetData, compression, layerWidth, layerHeight, offset);
+
+			if (RAW_IMAGE_DATA) {
+				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+			}
 
 			if (targetData && psd.colorMode === ColorMode.Grayscale) {
 				setupGrayscale(targetData);
@@ -568,7 +579,12 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 				readDataRaw(reader, imageData, channels[i], psd.width, psd.height);
 			}
 		} else if (compression === Compression.RleCompressed) {
+			const start = reader.offset;
 			readDataRLE(reader, imageData, psd.width, psd.height, 4, channels);
+
+			if (RAW_IMAGE_DATA) {
+				(psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+			}
 		}
 
 		if (psd.colorMode === ColorMode.Grayscale) {
@@ -591,7 +607,7 @@ function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset
 	if (pixelData && offset < 4) {
 		const data = pixelData.data;
 
-		for (let i = 0, p = offset | 0; i < size; i++ , p = (p + 4) | 0) {
+		for (let i = 0, p = offset | 0; i < size; i++, p = (p + 4) | 0) {
 			data[p] = buffer[i];
 		}
 	}
@@ -604,7 +620,7 @@ export function readDataRLE(
 	const data = pixelData && pixelData.data;
 
 	for (let o = 0, li = 0; o < offsets.length; o++) {
-		for (let y = 0; y < height; y++ , li++) {
+		for (let y = 0; y < height; y++, li++) {
 			lengths[li] = readUint16(reader);
 		}
 	}
@@ -614,11 +630,11 @@ export function readDataRLE(
 		const extra = c > 3 || offset > 3;
 
 		if (!data || extra) {
-			for (let y = 0; y < height; y++ , li++) {
+			for (let y = 0; y < height; y++, li++) {
 				skipBytes(reader, lengths[li]);
 			}
 		} else {
-			for (let y = 0, p = offset | 0; y < height; y++ , li++) {
+			for (let y = 0, p = offset | 0; y < height; y++, li++) {
 				const length = lengths[li];
 				const buffer = readBytes(reader, length);
 

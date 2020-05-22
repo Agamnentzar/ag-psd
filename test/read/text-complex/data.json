@@ -132,6 +132,8 @@
         "top": -20.925140380859375,
         "right": 72.88780212402344,
         "bottom": 126.11767578125,
+        "shapeType": "point",
+        "pointBase": [0, 0],
         "text": "Test text aaaa\nxxxxx\n\nOMG !",
         "index": 0,
         "gridding": "none",
@@ -238,6 +240,7 @@
               },
               "autoKerning": false,
               "fillColor": {
+                "a": 1,
                 "r": 255,
                 "g": 0,
                 "b": 0
@@ -255,6 +258,7 @@
               },
               "autoKerning": true,
               "fillColor": {
+                "a": 1,
                 "r": 255,
                 "g": 0,
                 "b": 0
@@ -266,6 +270,7 @@
             "style": {
               "autoKerning": true,
               "fillColor": {
+                "a": 1,
                 "r": 255,
                 "g": 0,
                 "b": 0
@@ -277,6 +282,7 @@
             "style": {
               "autoKerning": true,
               "fillColor": {
+                "a": 1,
                 "r": 12.00795,
                 "g": 255,
                 "b": 0
@@ -294,6 +300,7 @@
               },
               "autoKerning": true,
               "fillColor": {
+                "a": 1,
                 "r": 255,
                 "g": 0,
                 "b": 0
@@ -305,6 +312,7 @@
             "style": {
               "autoKerning": true,
               "fillColor": {
+                "a": 1,
                 "r": 255,
                 "g": 0,
                 "b": 0
@@ -317,6 +325,7 @@
               "autoKerning": true,
               "underline": true,
               "fillColor": {
+                "a": 1,
                 "r": 255,
                 "g": 0,
                 "b": 0
@@ -331,6 +340,7 @@
               "underline": false,
               "language": 14,
               "fillColor": {
+                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
                 "b": 156.75869999999998
@@ -344,6 +354,7 @@
               "autoKerning": true,
               "underline": false,
               "fillColor": {
+                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
                 "b": 156.75869999999998
@@ -363,6 +374,7 @@
               "autoKerning": true,
               "underline": false,
               "fillColor": {
+                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
                 "b": 156.75869999999998
@@ -376,6 +388,7 @@
               "autoKerning": true,
               "underline": false,
               "fillColor": {
+                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
                 "b": 156.75869999999998

@@ -241,6 +241,87 @@ describe('PsdReader', () => {
 		psd.imageResources = {};
 		console.log(require('util').inspect(psd, false, 99, true));
 	});
+
+	it.skip('test', () => {
+		const psd = readPsdInternal(createReaderFromBuffer(fs.readFileSync(`test/read-write/text-box/src.psd`)), {
+			// skipCompositeImageData: true,
+			// skipLayerImageData: true,
+			// skipThumbnail: true,
+			throwForMissingFeatures: true,
+			logDevFeatures: true,
+			useRawThumbnail: true,
+		});
+		fs.writeFileSync('text_rect_out.psd', writePsdBuffer(psd));
+		fs.writeFileSync('text_rect_out.bin', writePsdBuffer(psd));
+		// const psd2 = readPsdInternal(createReaderFromBuffer(fs.readFileSync(`text_rect_out.psd`)), {
+		// 	// skipCompositeImageData: true,
+		// 	// skipLayerImageData: true,
+		// 	// skipThumbnail: true,
+		// 	throwForMissingFeatures: true,
+		// 	logDevFeatures: true,
+		// });
+		// psd2;
+		const original = fs.readFileSync(`test/read-write/text-box/src.psd`);
+		const output = fs.readFileSync(`text_rect_out.psd`);
+		compareBuffers(output, original, '-', 0x65d8); // , 0x8ce8, 0x8fca - 0x8ce8);
+	});
+
+	it.skip('compare test', () => {
+		for (const name of ['text_point', 'text_rect']) {
+			const psd = readPsdInternal(createReaderFromBuffer(fs.readFileSync(`${name}.psd`)), {
+				skipCompositeImageData: true,
+				skipLayerImageData: true,
+				skipThumbnail: true,
+				throwForMissingFeatures: true,
+				logDevFeatures: true,
+			});
+			// psd.imageResources = {};
+			fs.writeFileSync(`${name}.txt`, require('util').inspect(psd, false, 99, false), 'utf8');
+
+			// const engineData = parseEngineData(toByteArray(psd.engineData!));
+			// fs.writeFileSync(`${name}_enginedata.txt`, require('util').inspect(engineData, false, 99, false), 'utf8');
+		}
+	});
+
+	it.skip('text-replace.psd', () => {
+		{
+			const buffer = fs.readFileSync('text-replace2.psd');
+			const psd = readPsdInternal(createReaderFromBuffer(buffer), {});
+			psd.children![1]!.text!.text = 'Foo bar';
+			const output = writePsdBuffer(psd, { invalidateTextLayers: true });
+			fs.writeFileSync('out.psd', output);
+		}
+
+		{
+			const buffer = fs.readFileSync('text-replace.psd');
+			const psd = readPsdInternal(createReaderFromBuffer(buffer), {
+				skipCompositeImageData: true,
+				skipLayerImageData: true,
+				skipThumbnail: true,
+				throwForMissingFeatures: true,
+				logDevFeatures: true,
+			});
+			delete psd.engineData;
+			psd.imageResources = {};
+			psd.children?.splice(0, 1);
+			fs.writeFileSync('input.txt', require('util').inspect(psd, false, 99, false), 'utf8');
+		}
+
+		{
+			const buffer = fs.readFileSync('out.psd');
+			const psd = readPsdInternal(createReaderFromBuffer(buffer), {
+				skipCompositeImageData: true,
+				skipLayerImageData: true,
+				skipThumbnail: true,
+				throwForMissingFeatures: true,
+				logDevFeatures: true,
+			});
+			delete psd.engineData;
+			psd.imageResources = {};
+			psd.children?.splice(0, 1);
+			fs.writeFileSync('output.txt', require('util').inspect(psd, false, 99, false), 'utf8');
+		}
+	});
 });
 
 function clearEmptyCanvasFields(layer: Layer | undefined) {

@@ -233,6 +233,12 @@ addHandler(
 
 		if (text.EngineData) {
 			const engineData = decodeEngineData(parseEngineData(text.EngineData));
+
+			// const before = parseEngineData(text.EngineData);
+			// const after = encodeEngineData(engineData);
+			// require('fs').writeFileSync('before.txt', require('util').inspect(before, false, 99, false), 'utf8');
+			// require('fs').writeFileSync('after.txt', require('util').inspect(after, false, 99, false), 'utf8');
+
 			// console.log(require('util').inspect(parseEngineData(text.EngineData), false, 99, true));
 			target.text = { ...target.text, ...engineData };
 			// console.log(require('util').inspect(target.text, false, 99, true));
@@ -265,7 +271,7 @@ addHandler(
 		writeInt16(writer, 1); // version
 
 		for (let i = 0; i < 6; i++) {
-			writeFloat64(writer, transform[i]!);
+			writeFloat64(writer, transform[i]);
 		}
 
 		writeInt16(writer, 50); // text version
@@ -279,7 +285,7 @@ addHandler(
 		writeFloat32(writer, text.right!);
 		writeFloat32(writer, text.bottom!);
 
-		writeZeros(writer, 2);
+		// writeZeros(writer, 2);
 	},
 );
 
@@ -646,7 +652,7 @@ addHandler(
 		writeSignature(writer, 'cust');
 		writeUint8(writer, 0); // copy (always false)
 		writeZeros(writer, 3);
-		writeSection(writer, 1, () => writeVersionAndDescriptor(writer, '', 'metadata', desc));
+		writeSection(writer, 2, () => writeVersionAndDescriptor(writer, '', 'metadata', desc));
 	},
 );
 

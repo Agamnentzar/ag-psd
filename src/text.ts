@@ -108,6 +108,18 @@ interface StyleRun {
 	StyleSheet: { StyleSheetData: StyleSheetData; };
 }
 
+interface PhotoshopNode {
+	ShapeType?: number;
+	PointBase?: number[];
+	BoxBounds?: number[];
+	Base?: {
+		ShapeType: number;
+		TransformPoint0: number[];
+		TransformPoint1: number[];
+		TransformPoint2: number[];
+	};
+}
+
 interface EngineData {
 	EngineDict: {
 		Editor: { Text: string; };
@@ -134,7 +146,20 @@ interface EngineData {
 		};
 		AntiAlias: number;
 		UseFractionalGlyphWidths: boolean;
-		Rendered: {};
+		Rendered?: {
+			Version: number;
+			Shapes?: {
+				WritingDirection: number;
+				Children?: {
+					ShapeType?: number;
+					Procession: number;
+					Lines: { WritingDirection: number; Children: any[]; };
+					Cookie?: {
+						Photoshop?: PhotoshopNode;
+					};
+				}[];
+			};
+		};
 	};
 	ResourceDict: ResourceDict;
 	DocumentResources: ResourceDict;
@@ -247,15 +272,15 @@ function decodeColor(color: { Type: number; Values: number[]; }): Color {
 	if (color.Type === 0) { // grayscale
 		return { r: c[1] * 255, g: c[1] * 255, b: c[1] * 255 }; // , c[0] * 255];
 	} else { // rgb
-		return { r: c[1] * 255, g: c[2] * 255, b: c[3] * 255 }; // , c[0] * 255];
+		return { r: c[1] * 255, g: c[2] * 255, b: c[3] * 255, a: c[0] }; // , c[0] * 255];
 	}
 }
 
 function encodeColor(color: Color | undefined) {
 	if (color && 'r' in color) {
-		return [255 * 255, color.r / 255, color.g / 255, color.b / 255];
+		return ['a' in color ? color.a : 1, color.r / 255, color.g / 255, color.b / 255];
 	} else {
-		return [255 * 255, 0, 0, 0];
+		return [0, 0, 0, 0];
 	}
 }
 
@@ -410,6 +435,16 @@ export function decodeEngineData(engineData: EngineData) {
 		smallCapSize: resourceDict.SmallCapSize,
 	};
 
+	// shape
+
+	const photoshop = engineDict.Rendered?.Shapes?.Children?.[0]?.Cookie?.Photoshop;
+
+	if (photoshop) {
+		result.shapeType = photoshop.ShapeType === 1 ? 'box' : 'point';
+		if (photoshop.PointBase) result.pointBase = photoshop.PointBase;
+		if (photoshop.BoxBounds) result.boxBounds = photoshop.BoxBounds;
+	}
+
 	// paragraph style
 
 	// const theNormalParagraphSheet = resourceDict.TheNormalParagraphSheet;
@@ -469,7 +504,6 @@ export function encodeEngineData(data: LayerTextData) {
 		data.styleRuns?.find(s => s.style.font)?.style.font ||
 		defaultFont;
 
-	const paragraphProperties = encodeParagraphStyle({ ...defaultParagraphStyle, ...data.paragraphStyle }, fonts);
 	const paragraphRunArray: ParagraphRun[] = [];
 	const paragraphRunLengthArray: number[] = [];
 
@@ -479,9 +513,7 @@ export function encodeEngineData(data: LayerTextData) {
 			paragraphRunArray.push({
 				ParagraphSheet: {
 					DefaultStyleSheet: 0,
-					Properties: encodeParagraphStyle({
-						...defaultParagraphStyle, ...data.paragraphStyle, ...run.style
-					}, fonts),
+					Properties: encodeParagraphStyle({ ...defaultParagraphStyle, ...data.paragraphStyle, ...run.style }, fonts),
 				},
 				Adjustments: { Axis: [1, 0, 1], XY: [0, 0] },
 			});
@@ -493,7 +525,7 @@ export function encodeEngineData(data: LayerTextData) {
 				paragraphRunArray.push({
 					ParagraphSheet: {
 						DefaultStyleSheet: 0,
-						Properties: paragraphProperties,
+						Properties: encodeParagraphStyle({ ...defaultParagraphStyle, ...data.paragraphStyle }, fonts),
 					},
 					Adjustments: { Axis: [1, 0, 1], XY: [0, 0] },
 				});
@@ -523,8 +555,26 @@ export function encodeEngineData(data: LayerTextData) {
 	}
 
 	const gridInfo = { ...defaultGridInfo, ...data.gridInfo };
-	const writingDirection = data.orientation === 'vertical' ? 2 : 0;
-	const procession = data.orientation === 'vertical' ? 1 : 0;
+	const WritingDirection = data.orientation === 'vertical' ? 2 : 0;
+	const Procession = data.orientation === 'vertical' ? 1 : 0;
+	const ShapeType = data.shapeType === 'box' ? 1 : 0;
+	const Photoshop: PhotoshopNode = {
+		ShapeType,
+	};
+
+	if (ShapeType === 0) {
+		Photoshop.PointBase = data.pointBase || [0, 0];
+	} else {
+		Photoshop.BoxBounds = data.boxBounds || [0, 0, 0, 0];
+	}
+
+	// needed for correct order of properties
+	Photoshop.Base = {
+		ShapeType,
+		TransformPoint0: [1, 0],
+		TransformPoint1: [0, 1],
+		TransformPoint2: [0, 0],
+	};
 
 	const defaultResources = {
 		KinsokuSet: [
@@ -555,7 +605,7 @@ export function encodeEngineData(data: LayerTextData) {
 			{
 				Name: 'Normal RGB',
 				DefaultStyleSheet: 0,
-				Properties: paragraphProperties,
+				Properties: encodeParagraphStyle({ ...defaultParagraphStyle, ...data.paragraphStyle }, fonts),
 			},
 		],
 		StyleSheetSet: [
@@ -609,24 +659,13 @@ export function encodeEngineData(data: LayerTextData) {
 			Rendered: {
 				Version: 1,
 				Shapes: {
-					WritingDirection: writingDirection,
+					WritingDirection,
 					Children: [
 						{
-							ShapeType: 0,
-							Procession: procession,
-							Lines: { WritingDirection: writingDirection, Children: [] },
-							Cookie: {
-								Photoshop: {
-									ShapeType: 0,
-									PointBase: [0, 0],
-									Base: {
-										ShapeType: 0,
-										TransformPoint0: [1, 0],
-										TransformPoint1: [0, 1],
-										TransformPoint2: [0, 0],
-									},
-								},
-							},
+							ShapeType,
+							Procession,
+							Lines: { WritingDirection, Children: [] },
+							Cookie: { Photoshop },
 						},
 					],
 				},

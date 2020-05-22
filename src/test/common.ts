@@ -154,15 +154,17 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 	}
 }
 
-export function compareBuffers(actual: Buffer, expected: Buffer, test: string) {
+export function compareBuffers(actual: Buffer, expected: Buffer, test: string, start = 0, offset = 0) {
 	if (!actual)
 		throw new Error(`Actual buffer is null or undefined (${test})`);
 	if (!expected)
 		throw new Error(`Expected buffer is null or undefined (${test})`);
 
-	for (let i = 0; i < actual.length; i++) {
-		if (actual[i] !== expected[i]) {
-			throw new Error(`Buffers differ at byte: 0x${i.toString(16)} actual: ${actual[i]} expected: ${expected[i]} (${test})`);
+	for (let i = start; i < expected.length; i++) {
+		if (expected[i] !== actual[i + offset]) {
+			throw new Error(`Buffers differ ` +
+				`expected: 0x${expected[i].toString(16)} at [0x${i.toString(16)}] ` +
+				`actual: 0x${actual[i + offset].toString(16)} at [0x${(i + offset).toString(16)}] (${test})`);
 		}
 	}
 

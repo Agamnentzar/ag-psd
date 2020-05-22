@@ -7,6 +7,8 @@ import {
 import { infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
 
+const RAW_IMAGE_DATA = false;
+
 export interface PsdWriter {
 	offset: number;
 	buffer: ArrayBuffer;
@@ -234,11 +236,17 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	};
 
 	writeUint16(writer, Compression.RleCompressed);
-	writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
+
+	if (RAW_IMAGE_DATA && (psd as any).imageDataRaw) {
+		console.log('writing raw image data');
+		writeBytes(writer, (psd as any).imageDataRaw);
+	} else {
+		writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
+	}
 }
 
 function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: WriteOptions) {
-	writeSection(writer, 2, () => {
+	writeSection(writer, 4, () => {
 		const layers: Layer[] = [];
 
 		addChildren(layers, psd.children);
@@ -367,9 +375,9 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		if (handler.has(target)) {
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, handler.key);
-			writeSection(writer, 2, () => handler.write(writer, target, psd), handler.key !== 'Txt2');
 
-			if (handler.key === 'Txt2') writeZeros(writer, 2);
+			const align = handler.key === 'Txt2' ? 4 : 2;
+			writeSection(writer, align, () => handler.write(writer, target, psd), handler.key !== 'Txt2');
 		}
 	}
 }
@@ -585,7 +593,12 @@ function getLayerChannels(
 
 	channels = channelIds.map(channel => {
 		const offset = offsetForChannel(channel);
-		const buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
+		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
+
+		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
+			console.log('written raw layer image data');
+			buffer = (layer as any).imageDataRaw[channel];
+		}
 
 		return {
 			channelId: channel,

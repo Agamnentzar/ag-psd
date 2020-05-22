@@ -139,6 +139,8 @@
           "perspectiveOther": 0,
           "rotate": "horizontal"
         },
+        "shapeType": "point",
+        "pointBase": [0, 0],
         "useFractionalGlyphWidths": true,
         "superscriptSize": 0.583,
         "superscriptPosition": 0.333,
@@ -183,6 +185,7 @@
         "style": {
           "kerning": 0,
           "fillColor": {
+            "a": 1,
             "r": 255,
             "g": 0,
             "b": 0

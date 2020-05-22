@@ -22,12 +22,13 @@ export const enum SectionDividerType {
 	BoundingSectionDivider = 3,
 }
 
-export type Color = RGB | HSB | CMYK | LAB | Grayscale;
+export type RGBA = { r: number; g: number; b: number; a: number; };
 export type RGB = { r: number; g: number; b: number; };
 export type HSB = { h: number; s: number; b: number; };
 export type CMYK = { c: number; m: number; y: number; k: number; };
 export type LAB = { l: number; a: number; b: number; };
 export type Grayscale = { k: number };
+export type Color = RGBA | RGB | HSB | CMYK | LAB | Grayscale;
 
 export interface EffectContour {
 	name: string;
@@ -353,6 +354,10 @@ export interface LayerTextData {
 	subscriptSize?: number;
 	subscriptPosition?: number;
 	smallCapSize?: number;
+
+	shapeType?: 'point' | 'box';
+	pointBase?: number[];
+	boxBounds?: number[];
 }
 
 export interface PatternInfo {
