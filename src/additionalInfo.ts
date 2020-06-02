@@ -616,7 +616,8 @@ addHandler(
 					if (desc.layerTime !== undefined) target.timestamp = desc.layerTime;
 				} else if (key === 'mlst') {
 					const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
-					options.logDevFeatures && console.log('mlst', require('util').inspect(desc, false, 99, true));
+					options.logDevFeatures && console.log('mlst', desc);
+					// options.logDevFeatures && console.log('mlst', require('util').inspect(desc, false, 99, true));
 				} else if (key === 'mdyn') {
 					// frame flags
 					const unknown = readUint16(reader);

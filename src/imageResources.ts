@@ -752,7 +752,8 @@ MOCK_HANDLERS && addHandler(
 						if (key === 'AnDs') {
 							const desc = readVersionAndDescriptor(reader) as AnimationDescriptor;
 							// console.log('AnDs', desc);
-							logDevFeatures && console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
+							logDevFeatures && console.log('#4000 AnDs', desc);
+							// logDevFeatures && console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
 
 							const result: Animations = {
 								// desc.AFSt ???
@@ -770,7 +771,8 @@ MOCK_HANDLERS && addHandler(
 								})),
 							};
 
-							logDevFeatures && console.log('#4000 AnDs:result', require('util').inspect(result, false, 99, true));
+							logDevFeatures && console.log('#4000 AnDs:result', result);
+							// logDevFeatures && console.log('#4000 AnDs:result', require('util').inspect(result, false, 99, true));
 						} else if (key === 'Roll') {
 							const bytes = readBytes(reader, left());
 							logDevFeatures && console.log('#4000 Roll', bytes);
