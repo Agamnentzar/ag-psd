@@ -824,4 +824,6 @@ export interface WriteOptions {
 	/** Invalidates text layer data, forcing Photoshop to redraw them on load.
 	 *  Use this option if you're updating loaded text layer properties. */
 	invalidateTextLayers?: boolean;
+	/** Logs if features are missing. */
+	logMissingFeatures?: boolean;
 }

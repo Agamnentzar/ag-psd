@@ -377,7 +377,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 			writeSignature(writer, handler.key);
 
 			const align = handler.key === 'Txt2' ? 4 : 2;
-			writeSection(writer, align, () => handler.write(writer, target, psd), handler.key !== 'Txt2');
+			writeSection(writer, align, () => handler.write(writer, target, psd, options), handler.key !== 'Txt2');
 		}
 	}
 }

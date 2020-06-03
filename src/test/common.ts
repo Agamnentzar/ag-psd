@@ -10,7 +10,10 @@ import { createCanvas, Image } from 'canvas';
 import '../initializeCanvas';
 import { Psd, ReadOptions } from '../index';
 import { readPsd, createReader } from '../psdReader';
+import { setLogErrors } from '../descriptor';
 export { createCanvas };
+
+setLogErrors(true);
 
 const resultsPath = path.join(__dirname, '..', '..', 'results');
 

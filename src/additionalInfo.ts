@@ -12,7 +12,7 @@ import {
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -31,7 +31,7 @@ const MOCK_HANDLERS = false;
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
 type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, options: ReadOptions) => void;
-type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd) => void;
+type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: WriteOptions) => void;
 
 export interface InfoHandler {
 	key: string;
@@ -1819,7 +1819,8 @@ addHandler(
 addHandler(
 	'lfx2',
 	hasKey('effects'),
-	(reader, target, left) => {
+	(reader, target, left, _, options) => {
+		const log = !!options.logMissingFeatures;
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error(`Invalid lfx2 version`);
 
@@ -1830,15 +1831,15 @@ addHandler(
 
 		if (!info.masterFXSwitch) effects.disabled = true;
 		if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
-		if (info.DrSh) effects.dropShadow = parseEffectObject(info.DrSh);
-		if (info.IrSh) effects.innerShadow = parseEffectObject(info.IrSh);
-		if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl);
-		if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl);
-		if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl);
-		if (info.SoFi) effects.solidFill = parseEffectObject(info.SoFi);
-		if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill);
-		if (info.GrFl) effects.gradientOverlay = parseEffectObject(info.GrFl);
-		if (info.ChFX) effects.satin = parseEffectObject(info.ChFX);
+		if (info.DrSh) effects.dropShadow = parseEffectObject(info.DrSh, log);
+		if (info.IrSh) effects.innerShadow = parseEffectObject(info.IrSh, log);
+		if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl, log);
+		if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl, log);
+		if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl, log);
+		if (info.SoFi) effects.solidFill = parseEffectObject(info.SoFi, log);
+		if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill, log);
+		if (info.GrFl) effects.gradientOverlay = parseEffectObject(info.GrFl, log);
+		if (info.ChFX) effects.satin = parseEffectObject(info.ChFX, log);
 		if (info.FrFX) {
 			effects.stroke = {
 				enabled: !!info.FrFX.enab,
@@ -1856,22 +1857,23 @@ addHandler(
 
 		skipBytes(reader, left());
 	},
-	(writer, target) => {
+	(writer, target, _, options) => {
+		const log = !!options.logMissingFeatures;
 		const effects = target.effects!;
 		const info: any = {
 			masterFXSwitch: !effects.disabled,
 			'Scl ': unitsPercent(effects.scale ?? 1),
 		};
 
-		if (effects.dropShadow) info.DrSh = serializeEffectObject(effects.dropShadow, 'dropShadow');
-		if (effects.innerShadow) info.IrSh = serializeEffectObject(effects.innerShadow, 'innerShadow');
-		if (effects.outerGlow) info.OrGl = serializeEffectObject(effects.outerGlow, 'outerGlow');
-		if (effects.innerGlow) info.IrGl = serializeEffectObject(effects.innerGlow, 'innerGlow');
-		if (effects.bevel) info.ebbl = serializeEffectObject(effects.bevel, 'bevel');
-		if (effects.solidFill) info.SoFi = serializeEffectObject(effects.solidFill, 'solidFill');
-		if (effects.patternOverlay) info.patternFill = serializeEffectObject(effects.patternOverlay, 'patternOverlay');
-		if (effects.gradientOverlay) info.GrFl = serializeEffectObject(effects.gradientOverlay, 'gradientOverlay');
-		if (effects.satin) info.ChFX = serializeEffectObject(effects.satin, 'satin');
+		if (effects.dropShadow) info.DrSh = serializeEffectObject(effects.dropShadow, 'dropShadow', log);
+		if (effects.innerShadow) info.IrSh = serializeEffectObject(effects.innerShadow, 'innerShadow', log);
+		if (effects.outerGlow) info.OrGl = serializeEffectObject(effects.outerGlow, 'outerGlow', log);
+		if (effects.innerGlow) info.IrGl = serializeEffectObject(effects.innerGlow, 'innerGlow', log);
+		if (effects.bevel) info.ebbl = serializeEffectObject(effects.bevel, 'bevel', log);
+		if (effects.solidFill) info.SoFi = serializeEffectObject(effects.solidFill, 'solidFill', log);
+		if (effects.patternOverlay) info.patternFill = serializeEffectObject(effects.patternOverlay, 'patternOverlay', log);
+		if (effects.gradientOverlay) info.GrFl = serializeEffectObject(effects.gradientOverlay, 'gradientOverlay', log);
+		if (effects.satin) info.ChFX = serializeEffectObject(effects.satin, 'satin', log);
 
 		const stroke = effects.stroke;
 
@@ -2254,10 +2256,8 @@ function parseColor(color: DescriptorColor): Color {
 	} else if ('Gry ' in color) {
 		return { k: color['Gry '] };
 	} else if ('Lmnc' in color) {
-		console.log({ l: color.Lmnc, a: color['A   '], b: color['B   '] });
 		return { l: color.Lmnc, a: color['A   '], b: color['B   '] };
 	} else {
-		console.log(color);
 		throw new Error('Unsupported color descriptor');
 	}
 }
@@ -2284,7 +2284,7 @@ type AllEffects = LayerEffectShadow & LayerEffectsOuterGlow & LayerEffectStroke 
 	LayerEffectInnerGlow & LayerEffectBevel & LayerEffectSolidFill &
 	LayerEffectPatternOverlay & LayerEffectSatin & LayerEffectGradientOverlay;
 
-function parseEffectObject(obj: any) {
+function parseEffectObject(obj: any, reportErrors: boolean) {
 	const result: AllEffects = {} as any;
 
 	for (const key of Object.keys(obj)) {
@@ -2341,14 +2341,15 @@ function parseEffectObject(obj: any) {
 			case 'useShape':
 			case 'layerConceals':
 			case 'antialiasGloss': result[key] = val; break;
-			default: console.log(`Invalid effect key: '${key}':`, val);
+			default:
+				reportErrors && console.log(`Invalid effect key: '${key}':`, val);
 		}
 	}
 
 	return result;
 }
 
-function serializeEffectObject(obj: any, objName: string) {
+function serializeEffectObject(obj: any, objName: string, reportErrors: boolean) {
 	const result: any = {};
 
 	for (const objKey of Object.keys(obj)) {
@@ -2419,7 +2420,7 @@ function serializeEffectObject(obj: any, objName: string) {
 				result[key] = val;
 				break;
 			default:
-				console.log(`Invalid effect key: '${key}' value:`, val);
+				reportErrors && console.log(`Invalid effect key: '${key}' value:`, val);
 		}
 	}
 

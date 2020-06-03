@@ -111,7 +111,7 @@ describe('PsdReader', () => {
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, 'src.psd'), { ...opts, useImageData: true, useRawThumbnail: true });
-			const actual = writePsdBuffer(psd);
+			const actual = writePsdBuffer(psd, { logMissingFeatures: true });
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.psd`), actual);
 			compareBuffers(actual, expected, `read-write-${f}`);
@@ -161,7 +161,7 @@ describe('PsdReader', () => {
 			],
 		};
 
-		fs.writeFileSync(path.join(resultsFilesPath, '_TEXT2.psd'), writePsdBuffer(psd));
+		fs.writeFileSync(path.join(resultsFilesPath, '_TEXT2.psd'), writePsdBuffer(psd, { logMissingFeatures: true }));
 	});
 
 	it.skip('read text layer test', () => {
@@ -169,7 +169,7 @@ describe('PsdReader', () => {
 		// const layer = psd.children![1];
 
 		// layer.text!.text = 'Foo bar';
-		const buffer = writePsdBuffer(psd);
+		const buffer = writePsdBuffer(psd, { logMissingFeatures: true });
 		fs.writeFileSync(path.join(resultsFilesPath, '_TEXT.psd'), buffer);
 
 		// console.log(require('util').inspect(psd.children![0].text, false, 99, true));
@@ -191,7 +191,7 @@ describe('PsdReader', () => {
 		const originalPsd = readPsdInternal(createReaderFromBuffer(originalBuffer), opts);
 
 		console.log('WRITING');
-		const buffer = writePsdBuffer(originalPsd);
+		const buffer = writePsdBuffer(originalPsd, { logMissingFeatures: true });
 		fs.writeFileSync('temp.psd', buffer);
 		// fs.writeFileSync('temp.bin', buffer);
 		// fs.writeFileSync('temp.json', JSON.stringify(originalPsd, null, 2), 'utf8');
@@ -251,8 +251,8 @@ describe('PsdReader', () => {
 			logDevFeatures: true,
 			useRawThumbnail: true,
 		});
-		fs.writeFileSync('text_rect_out.psd', writePsdBuffer(psd));
-		fs.writeFileSync('text_rect_out.bin', writePsdBuffer(psd));
+		fs.writeFileSync('text_rect_out.psd', writePsdBuffer(psd, { logMissingFeatures: true }));
+		fs.writeFileSync('text_rect_out.bin', writePsdBuffer(psd, { logMissingFeatures: true }));
 		// const psd2 = readPsdInternal(createReaderFromBuffer(fs.readFileSync(`text_rect_out.psd`)), {
 		// 	// skipCompositeImageData: true,
 		// 	// skipLayerImageData: true,
@@ -288,7 +288,7 @@ describe('PsdReader', () => {
 			const buffer = fs.readFileSync('text-replace2.psd');
 			const psd = readPsdInternal(createReaderFromBuffer(buffer), {});
 			psd.children![1]!.text!.text = 'Foo bar';
-			const output = writePsdBuffer(psd, { invalidateTextLayers: true });
+			const output = writePsdBuffer(psd, { invalidateTextLayers: true, logMissingFeatures: true });
 			fs.writeFileSync('out.psd', output);
 		}
 

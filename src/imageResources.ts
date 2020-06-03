@@ -596,7 +596,7 @@ addHandler(
 		const planes = readUint16(reader); // 1
 
 		if (format !== 1 || bitsPerPixel !== 24 || planes !== 1) {
-			console.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
+			options.logMissingFeatures && console.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
 			skipBytes(reader, left());
 			return;
 		}

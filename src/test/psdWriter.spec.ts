@@ -333,7 +333,7 @@ describe('PsdWriter', () => {
 			const psd = loadPsdFromJSONAndPNGFiles(basePath);
 
 			const before = JSON.stringify(psd, replacer);
-			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true });
+			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true });
 			const after = JSON.stringify(psd, replacer);
 
 			expect(before).equal(after, 'psd object mutated');

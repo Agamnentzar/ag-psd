@@ -32,6 +32,11 @@ const unitsMap: Dict = {
 };
 
 const unitsMapRev = revMap(unitsMap);
+let logErrors = false;
+
+export function setLogErrors(value: boolean) {
+	logErrors = value;
+}
 
 function makeType(name: string, classID: string) {
 	return { name, classID };
@@ -185,7 +190,7 @@ export function readDescriptorStructure(reader: PsdReader) {
 }
 
 export function writeDescriptorStructure(writer: PsdWriter, name: string, classId: string, value: any) {
-	if (!classId) console.log('Missing classId for: ', name, classId, value);
+	if (logErrors && !classId) console.log('Missing classId for: ', name, classId, value);
 
 	// write class structure
 	writeUnicodeStringWithPadding(writer, name);
@@ -210,14 +215,14 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			} else if (value[key].Ptrn) {
 				extType = makeType('', 'patternLayer');
 			} else {
-				console.log('Invalid strokeStyleContent value', value[key]);
+				logErrors && console.log('Invalid strokeStyleContent value', value[key]);
 			}
 		}
 
 		writeAsciiStringOrClassId(writer, key);
 		writeSignature(writer, type || 'long');
 		writeOSType(writer, type || 'long', value[key], key, extType);
-		if (!type) console.log(`Missing descriptor field type for: '${key}' in`, value);
+		if (logErrors && !type) console.log(`Missing descriptor field type for: '${key}' in`, value);
 	}
 }
 
@@ -315,7 +320,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 				const type = fieldToArrayType[key];
 				writeSignature(writer, type || 'long');
 				writeOSType(writer, type || 'long', value[i], '', fieldToArrayExtType[key]);
-				if (!type) console.log(`Missing descriptor array type for: '${key}' in`, value);
+				if (logErrors && !type) console.log(`Missing descriptor array type for: '${key}' in`, value);
 			}
 			break;
 		case 'doub': // Double
