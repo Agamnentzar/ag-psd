@@ -4995,6 +4995,7 @@ function addChildren(layers, children) {
             var sectionDivider = {
                 type: c.opened === false ? 2 /* ClosedFolder */ : 1 /* OpenFolder */,
                 key: 'pass',
+                blendMode: c.blendMode,
                 subtype: 0,
             };
             layers.push({
