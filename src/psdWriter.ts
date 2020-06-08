@@ -396,8 +396,7 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 		if (c.children) {
 			const sectionDivider = {
 				type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
-				key: 'pass',
-                blendMode: c.blendMode,
+				key: c.blendMode || 'pass',
 				subtype: 0,
 			};
 			layers.push({
