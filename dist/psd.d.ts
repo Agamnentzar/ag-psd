@@ -785,4 +785,6 @@ export interface WriteOptions {
     invalidateTextLayers?: boolean;
     /** Logs if features are missing. */
     logMissingFeatures?: boolean;
+    /** Image data compression */
+    imageDataCompression?: 'rle' | 'zip';
 }

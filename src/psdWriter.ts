@@ -1,13 +1,11 @@
 import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color } from './psd';
 import {
-	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
+	hasAlpha, createCanvas, writeData, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
 	LayerMaskFlags, MaskParams, ColorSpace, Bounds
 } from './helpers';
 import { infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
-
-const RAW_IMAGE_DATA = false;
 
 export interface PsdWriter {
 	offset: number;
@@ -235,14 +233,8 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		height: psd.height,
 	};
 
-	writeUint16(writer, Compression.RleCompressed);
-
-	if (RAW_IMAGE_DATA && (psd as any).imageDataRaw) {
-		console.log('writing raw image data');
-		writeBytes(writer, (psd as any).imageDataRaw);
-	} else {
-		writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
-	}
+	writeUint16(writer, options.compression || Compression.RleCompressed);
+	writeBytes(writer, writeData(tempBuffer, data, psd.width, psd.height, channels, options.compression));
 }
 
 function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: WriteOptions) {
@@ -487,12 +479,13 @@ function getChannels(
 			right = left + width;
 			bottom = top + height;
 
-			const buffer = writeDataRLE(tempBuffer, imageData, width, height, [0])!;
+			const buffer = writeData(tempBuffer, imageData, width, height, [0], options.compression)!;
+
 			layerData.mask = { top, left, right, bottom };
 			layerData.channels.push({
 				channelId: ChannelID.UserMask,
-				compression: Compression.RleCompressed,
-				buffer: buffer,
+				compression: options.compression || Compression.RleCompressed,
+				buffer,
 				length: 2 + buffer.length,
 			});
 		} else {
@@ -593,16 +586,11 @@ function getLayerChannels(
 
 	channels = channelIds.map(channel => {
 		const offset = offsetForChannel(channel);
-		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
-
-		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
-			console.log('written raw layer image data');
-			buffer = (layer as any).imageDataRaw[channel];
-		}
+		let buffer = writeData(tempBuffer, data, width, height, [offset], options.compression)!;
 
 		return {
 			channelId: channel,
-			compression: Compression.RleCompressed,
+			compression: options.compression || Compression.RleCompressed,
 			buffer: buffer,
 			length: 2 + buffer.length,
 		};

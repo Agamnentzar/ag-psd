@@ -3051,7 +3051,7 @@ exports.serializeEngineData = serializeEngineData;
 },{}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataRLE = exports.writeDataRaw = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = void 0;
+exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataZip = exports.writeDataRLE = exports.writeDataRaw = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = void 0;
 var base64_js_1 = require("base64-js");
 exports.fromBlendMode = {};
 exports.toBlendMode = {
@@ -3288,6 +3288,14 @@ function writeDataRLE(buffer, _a, width, height, offsets) {
     return buffer.slice(0, o);
 }
 exports.writeDataRLE = writeDataRLE;
+function writeDataZip(buffer, _a, width, height, offsets) {
+    var data = _a.data;
+    if (!width || !height)
+        return undefined;
+    console.log(buffer, data, offsets);
+    throw new Error('Zip compression not yet implemented');
+}
+exports.writeDataZip = writeDataZip;
 /* istanbul ignore next */
 exports.createCanvas = function () {
     throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');
@@ -4834,13 +4842,21 @@ function writePsd(writer, psd, options) {
         width: psd.width,
         height: psd.height,
     };
-    writeUint16(writer, 1 /* RleCompressed */);
+    writeUint16(writer, options.imageDataCompression === 'zip' ? 2 /* ZipWithoutPrediction */ : 1 /* RleCompressed */);
     if (RAW_IMAGE_DATA && psd.imageDataRaw) {
         console.log('writing raw image data');
         writeBytes(writer, psd.imageDataRaw);
     }
     else {
-        writeBytes(writer, helpers_1.writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
+        switch (options.imageDataCompression) {
+            case 'zip':
+                writeBytes(writer, helpers_1.writeDataZip(tempBuffer, data, psd.width, psd.height, channels));
+                break;
+            case 'rle':
+            default:
+                writeBytes(writer, helpers_1.writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
+                break;
+        }
     }
 }
 exports.writePsd = writePsd;

@@ -179,6 +179,21 @@ export function decodeBitmap(input: PixelArray, output: PixelArray, width: numbe
 	}
 }
 
+export function writeData(buffer: Uint8Array, data: PixelData, width: number, height: number, offsets: number[], compression?: Compression) {
+	switch (compression) {
+		case Compression.RawData:
+			return new Uint8Array(data.data);
+		case Compression.ZipWithoutPrediction:
+			return writeDataZip(buffer, data, width, height, offsets);
+		case 3:
+			throw new Error('Zip with prediction is not yet supported');
+			return writeDataZip(buffer, data, width, height, offsets);
+		case 1:
+		default:
+			return writeDataRLE(buffer, data, width, height, offsets);
+	}
+}
+
 export function writeDataRaw(data: PixelData, offset: number, width: number, height: number) {
 	if (!width || !height)
 		return undefined;
@@ -284,6 +299,15 @@ export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: num
 	}
 
 	return buffer.slice(0, o);
+}
+
+export function writeDataZip(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]) {
+	if (!width || !height)
+		return undefined;
+
+	console.log(buffer, data, offsets);
+
+	throw new Error('Zip compression not yet implemented');
 }
 
 /* istanbul ignore next */
