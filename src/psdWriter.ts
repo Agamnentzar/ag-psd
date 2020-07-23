@@ -233,8 +233,11 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		height: psd.height,
 	};
 
-	writeUint16(writer, options.compression || Compression.RleCompressed);
-	writeBytes(writer, writeData(tempBuffer, data, psd.width, psd.height, channels, options.compression));
+	// TODO(jsr): reading fails for compressing multiple channels at once, so revert to RLE here
+	const compression = Compression.RleCompressed; // options.compression || Compression.RleCompressed;
+	// const compression = options.compression || Compression.RleCompressed;
+	writeUint16(writer, compression);
+	writeBytes(writer, writeData(tempBuffer, data, psd.width, psd.height, channels, compression));
 }
 
 function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: WriteOptions) {
@@ -475,16 +478,18 @@ function getChannels(
 			imageData = mask.canvas.getContext('2d')!.getImageData(0, 0, width, height);
 		}
 
+		const compression = options.compression || Compression.RleCompressed;
+
 		if (width && height && imageData) {
 			right = left + width;
 			bottom = top + height;
 
-			const buffer = writeData(tempBuffer, imageData, width, height, [0], options.compression)!;
+			const buffer = writeData(tempBuffer, imageData, width, height, [0], compression)!;
 
 			layerData.mask = { top, left, right, bottom };
 			layerData.channels.push({
 				channelId: ChannelID.UserMask,
-				compression: options.compression || Compression.RleCompressed,
+				compression,
 				buffer,
 				length: 2 + buffer.length,
 			});
@@ -584,14 +589,16 @@ function getLayerChannels(
 		channelIds.unshift(ChannelID.Transparency);
 	}
 
+	const compression = options.compression || Compression.RleCompressed;
+
 	channels = channelIds.map(channel => {
 		const offset = offsetForChannel(channel);
-		let buffer = writeData(tempBuffer, data, width, height, [offset], options.compression)!;
+		let buffer = writeData(tempBuffer, data, width, height, [offset], compression)!;
 
 		return {
 			channelId: channel,
-			compression: options.compression || Compression.RleCompressed,
-			buffer: buffer,
+			compression,
+			buffer,
 			length: 2 + buffer.length,
 		};
 	});

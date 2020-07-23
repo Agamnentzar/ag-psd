@@ -1,3 +1,4 @@
+import pako from 'pako';
 import { fromByteArray } from 'base64-js';
 import { Layer, BlendMode, LayerColor } from './psd';
 
@@ -186,8 +187,7 @@ export function writeData(buffer: Uint8Array, data: PixelData, width: number, he
 		case Compression.ZipWithoutPrediction:
 			return writeDataZip(buffer, data, width, height, offsets);
 		case 3:
-			throw new Error('Zip with prediction is not yet supported');
-			return writeDataZip(buffer, data, width, height, offsets);
+			return writeDataZipPrediction(buffer, data, width, height, offsets);
 		case 1:
 		default:
 			return writeDataRLE(buffer, data, width, height, offsets);
@@ -301,13 +301,58 @@ export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: num
 	return buffer.slice(0, o);
 }
 
+/**
+ * Creates a new Uint8Array based on two different ArrayBuffers
+ *
+ * @private
+ * @param {Uint8Array} buffer1 The first buffer.
+ * @param {Uint8Array} buffer2 The second buffer.
+ * @return {Uint8Array} The new ArrayBuffer created out of the two.
+ */
+var appendBuffer = function(buffer1: Uint8Array, buffer2: Uint8Array): Uint8Array {
+	var tmp = new Uint8Array(buffer1.byteLength + buffer2.byteLength);
+	tmp.set(new Uint8Array(buffer1), 0);
+	tmp.set(new Uint8Array(buffer2), buffer1.byteLength);
+	return tmp;
+};
+
+/**
+ * As per the Adobe file format, zlib compress each channel separately
+ */
 export function writeDataZip(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]) {
+	if (!width || !height)
+		return undefined;
+
+	const size = width * height;
+
+	let resultBuffer = new Uint8Array();
+
+	// TODO(jsr): this doesn't work if more than one offest is passed
+	if (offsets.length > 1) {
+		throw new Error("Zipping multiple channels is not supported");
+	}
+
+	// NOTE this fixes the packing order, so if you passed offsets = [1,0,2,3] it will flip channels
+	offsets.forEach((offset, o) => {
+		for (let i = 0; i < size; i++) {
+			buffer[i + o * size] = data[i * 4 + offset];
+		}
+
+		const zippedBuffer = pako.deflate(buffer.slice(0, size));
+
+		resultBuffer = o === 0 ? zippedBuffer : appendBuffer(resultBuffer, zippedBuffer);
+	});
+
+	return resultBuffer;
+}
+
+export function writeDataZipPrediction(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]) {
 	if (!width || !height)
 		return undefined;
 
 	console.log(buffer, data, offsets);
 
-	throw new Error('Zip compression not yet implemented');
+	throw new Error('Zip with prediction compression not yet implemented');
 }
 
 /* istanbul ignore next */

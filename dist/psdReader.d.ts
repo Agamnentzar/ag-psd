@@ -26,6 +26,7 @@ export declare function readAsciiString(reader: PsdReader, length: number): stri
 export declare function skipBytes(reader: PsdReader, count: number): void;
 export declare function checkSignature(reader: PsdReader, a: string, b?: string): void;
 export declare function readPsd(reader: PsdReader, options?: ReadOptions): Psd;
+export declare function readDataZip(_reader: PsdReader, _pixelData: PixelData | undefined, _width: number, _height: number, _step: number, _offsets: number[]): void;
 export declare function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, step: number, offsets: number[]): void;
 export declare function readSection<T>(reader: PsdReader, round: number, func: (left: () => number) => T, skipEmpty?: boolean): T | undefined;
 export declare function readColor(reader: PsdReader): Color;

@@ -1,16 +1,14 @@
 {
-	"compilerOptions": {
-		"target": "es5",
-		"module": "commonjs",
-		"lib": ["es2016", "dom"],
-		"noUnusedLocals": true,
-		"noUnusedParameters": true,
-		"preserveConstEnums": true,
-		"declaration": true,
-		"strict": true
-	},
-	"exclude": [
-		"node_modules",
-		"dist"
-	]
+  "compilerOptions": {
+    "target": "es5",
+    "module": "commonjs",
+    "lib": ["es2016", "dom"],
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "preserveConstEnums": true,
+    "declaration": true,
+    "strict": true,
+    "esModuleInterop": true
+  },
+  "exclude": ["node_modules", "dist"]
 }

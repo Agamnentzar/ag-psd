@@ -3051,7 +3051,7 @@ exports.serializeEngineData = serializeEngineData;
 },{}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataZip = exports.writeDataRLE = exports.writeDataRaw = exports.writeData = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = void 0;
+exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataZipPrediction = exports.writeDataZip = exports.writeDataRLE = exports.writeDataRaw = exports.writeData = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = void 0;
 var base64_js_1 = require("base64-js");
 exports.fromBlendMode = {};
 exports.toBlendMode = {
@@ -3196,8 +3196,7 @@ function writeData(buffer, data, width, height, offsets, compression) {
         case 2 /* ZipWithoutPrediction */:
             return writeDataZip(buffer, data, width, height, offsets);
         case 3:
-            throw new Error('Zip with prediction is not yet supported');
-            return writeDataZip(buffer, data, width, height, offsets);
+            return writeDataZipPrediction(buffer, data, width, height, offsets);
         case 1:
         default:
             return writeDataRLE(buffer, data, width, height, offsets);
@@ -3311,6 +3310,14 @@ function writeDataZip(buffer, _a, width, height, offsets) {
     throw new Error('Zip compression not yet implemented');
 }
 exports.writeDataZip = writeDataZip;
+function writeDataZipPrediction(buffer, _a, width, height, offsets) {
+    var data = _a.data;
+    if (!width || !height)
+        return undefined;
+    console.log(buffer, data, offsets);
+    throw new Error('Zip with prediction compression not yet implemented');
+}
+exports.writeDataZipPrediction = writeDataZipPrediction;
 /* istanbul ignore next */
 exports.createCanvas = function () {
     throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');

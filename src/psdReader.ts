@@ -1,3 +1,4 @@
+// import pako from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color } from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
@@ -14,7 +15,6 @@ interface ChannelInfo {
 export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
 
-const RAW_IMAGE_DATA = false;
 
 function setupGrayscale(data: PixelData) {
 	const size = data.width * data.height * 4;
@@ -419,9 +419,6 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		resetImageData(imageData);
 	}
 
-	if (RAW_IMAGE_DATA) {
-		(layer as any).imageDataRaw = [];
-	}
 
 	for (const channel of channels) {
 		const compression = readUint16(reader) as Compression;
@@ -460,12 +457,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 				}
 			}
 
-			const start = reader.offset;
 			readData(reader, targetData, compression, layerWidth, layerHeight, offset);
-
-			if (RAW_IMAGE_DATA) {
-				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
-			}
 
 			if (targetData && psd.colorMode === ColorMode.Grayscale) {
 				setupGrayscale(targetData);
@@ -543,9 +535,6 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 	if (supportedColorModes.indexOf(psd.colorMode!) === -1)
 		throw new Error(`Color mode not supported: ${psd.colorMode}`);
 
-	if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
-		throw new Error(`Compression type not supported: ${compression}`);
-
 	const imageData = createImageData(psd.width, psd.height);
 	resetImageData(imageData);
 
@@ -557,6 +546,9 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 		} else if (compression === Compression.RleCompressed) {
 			bytes = new Uint8Array(psd.width * psd.height);
 			readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 1, [0]);
+		} else if (compression === Compression.ZipWithoutPrediction) {
+			bytes = new Uint8Array(psd.width * psd.height);
+			readDataZip(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 1, [0]);
 		} else {
 			throw new Error(`Bitmap compression not supported: ${compression}`);
 		}
@@ -579,12 +571,11 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 				readDataRaw(reader, imageData, channels[i], psd.width, psd.height);
 			}
 		} else if (compression === Compression.RleCompressed) {
-			const start = reader.offset;
 			readDataRLE(reader, imageData, psd.width, psd.height, 4, channels);
-
-			if (RAW_IMAGE_DATA) {
-				(psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
-			}
+		} else if (compression === Compression.ZipWithoutPrediction) {
+			readDataZip(reader, imageData, psd.width, psd.height, 4, channels);
+		} else {
+			throw new Error(`Bitmap compression not supported: ${compression}`);
 		}
 
 		if (psd.colorMode === ColorMode.Grayscale) {
@@ -611,6 +602,26 @@ function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset
 			data[p] = buffer[i];
 		}
 	}
+}
+
+export function readDataZip(
+	_reader: PsdReader, _pixelData: PixelData | undefined, _width: number, _height: number, _step: number, _offsets: number[]
+) {
+	throw new Error('Zip reading not yet implemented');
+	/*
+	const size = width * height;
+    if (pixelData !== undefined) {
+        try {
+          const buffer = pako.inflate(new Uint8Array(pixelData!.data));
+            for (let i = 0, p = offset | 0; i < size; i++, p = (p + 4) | 0) {
+                data[p] = buffer[i];
+            }
+        } catch (err) {
+          console.log(err);
+        }
+    }
+    */
+
 }
 
 export function readDataRLE(

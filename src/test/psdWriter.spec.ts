@@ -35,6 +35,29 @@ function loadPsdFromJSONAndPNGFiles(basePath: string) {
 	return psd;
 }
 
+function testReadWritePsd(f: string, compression: Compression) {
+	const basePath = path.join(writeFilesPath, f);
+	const psd = loadPsdFromJSONAndPNGFiles(basePath);
+
+	const before = JSON.stringify(psd, replacer);
+	const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true, compression });
+	const after = JSON.stringify(psd, replacer);
+
+	expect(before).equal(after, 'psd object mutated');
+
+	fs.mkdirSync(resultsFilesPath, { recursive: true });
+	fs.writeFileSync(path.join(resultsFilesPath, `${f}-compression${compression}.psd`), buffer);
+	// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
+
+	const reader = createReader(buffer.buffer);
+	const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
+	fs.writeFileSync(path.join(resultsFilesPath, `${f}-compression${compression}-composite.png`), result.canvas!.toBuffer());
+	//compareCanvases(psd.canvas, result.canvas, 'composite image');
+
+	const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
+	compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
+}
+
 function testWritePsd(f: string, compression: Compression) {
 	const basePath = path.join(writeFilesPath, f);
 	const psd = loadPsdFromJSONAndPNGFiles(basePath);
@@ -46,16 +69,12 @@ function testWritePsd(f: string, compression: Compression) {
 	expect(before).equal(after, 'psd object mutated');
 
 	fs.mkdirSync(resultsFilesPath, { recursive: true });
-	fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
+	fs.writeFileSync(path.join(resultsFilesPath, `${f}-compression${compression}.psd`), buffer);
 	// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
 
-	const reader = createReader(buffer.buffer);
-	const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
-	fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBuffer());
-	//compareCanvases(psd.canvas, result.canvas, 'composite image');
-
-	const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
-	compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
+    // TODO: need to implement read in order to compare to RLE
+	// const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
+	// compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
 }
 
 describe('PsdWriter', () => {
@@ -352,7 +371,7 @@ describe('PsdWriter', () => {
 	});
 
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
-		it(`writes PSD file with rle compression (${f})`, () => testWritePsd(f, Compression.RleCompressed));
+		it(`reads/writes PSD file with rle compression (${f})`, () => testReadWritePsd(f, Compression.RleCompressed));
 	});
 
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {

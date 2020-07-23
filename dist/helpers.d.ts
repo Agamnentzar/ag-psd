@@ -83,7 +83,11 @@ export declare function decodeBitmap(input: PixelArray, output: PixelArray, widt
 export declare function writeData(buffer: Uint8Array, data: PixelData, width: number, height: number, offsets: number[], compression?: Compression): Uint8Array | undefined;
 export declare function writeDataRaw(data: PixelData, offset: number, width: number, height: number): Uint8Array | undefined;
 export declare function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]): Uint8Array | undefined;
-export declare function writeDataZip(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]): undefined;
+/**
+ * As per the Adobe file format, zlib compress each channel separately
+ */
+export declare function writeDataZip(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]): Uint8Array | undefined;
+export declare function writeDataZipPrediction(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]): undefined;
 export declare let createCanvas: (width: number, height: number) => HTMLCanvasElement;
 export declare let createCanvasFromData: (data: Uint8Array) => HTMLCanvasElement;
 export declare let createImageData: (width: number, height: number) => ImageData;
