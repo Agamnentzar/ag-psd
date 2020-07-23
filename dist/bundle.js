@@ -3051,7 +3051,7 @@ exports.serializeEngineData = serializeEngineData;
 },{}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataZip = exports.writeDataRLE = exports.writeDataRaw = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = void 0;
+exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataZip = exports.writeDataRLE = exports.writeDataRaw = exports.writeData = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = void 0;
 var base64_js_1 = require("base64-js");
 exports.fromBlendMode = {};
 exports.toBlendMode = {
@@ -3189,6 +3189,21 @@ function decodeBitmap(input, output, width, height) {
     }
 }
 exports.decodeBitmap = decodeBitmap;
+function writeData(buffer, data, width, height, offsets, compression) {
+    switch (compression) {
+        case 0 /* RawData */:
+            return new Uint8Array(data.data);
+        case 2 /* ZipWithoutPrediction */:
+            return writeDataZip(buffer, data, width, height, offsets);
+        case 3:
+            throw new Error('Zip with prediction is not yet supported');
+            return writeDataZip(buffer, data, width, height, offsets);
+        case 1:
+        default:
+            return writeDataRLE(buffer, data, width, height, offsets);
+    }
+}
+exports.writeData = writeData;
 function writeDataRaw(data, offset, width, height) {
     if (!width || !height)
         return undefined;
@@ -4638,7 +4653,6 @@ exports.writeColor = exports.writePsd = exports.writeSection = exports.writeUnic
 var helpers_1 = require("./helpers");
 var additionalInfo_1 = require("./additionalInfo");
 var imageResources_1 = require("./imageResources");
-var RAW_IMAGE_DATA = false;
 function createWriter(size) {
     if (size === void 0) { size = 4096; }
     var buffer = new ArrayBuffer(size);
@@ -4842,22 +4856,8 @@ function writePsd(writer, psd, options) {
         width: psd.width,
         height: psd.height,
     };
-    writeUint16(writer, options.imageDataCompression === 'zip' ? 2 /* ZipWithoutPrediction */ : 1 /* RleCompressed */);
-    if (RAW_IMAGE_DATA && psd.imageDataRaw) {
-        console.log('writing raw image data');
-        writeBytes(writer, psd.imageDataRaw);
-    }
-    else {
-        switch (options.imageDataCompression) {
-            case 'zip':
-                writeBytes(writer, helpers_1.writeDataZip(tempBuffer, data, psd.width, psd.height, channels));
-                break;
-            case 'rle':
-            default:
-                writeBytes(writer, helpers_1.writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
-                break;
-        }
-    }
+    writeUint16(writer, options.compression || 1 /* RleCompressed */);
+    writeBytes(writer, helpers_1.writeData(tempBuffer, data, psd.width, psd.height, channels, options.compression));
 }
 exports.writePsd = writePsd;
 function writeLayerInfo(tempBuffer, writer, psd, globalAlpha, options) {
@@ -5087,11 +5087,11 @@ function getChannels(tempBuffer, layer, background, options) {
         if (width && height && imageData) {
             right = left + width;
             bottom = top_2 + height;
-            var buffer = helpers_1.writeDataRLE(tempBuffer, imageData, width, height, [0]);
+            var buffer = helpers_1.writeData(tempBuffer, imageData, width, height, [0], options.compression);
             layerData.mask = { top: top_2, left: left, right: right, bottom: bottom };
             layerData.channels.push({
                 channelId: -2 /* UserMask */,
-                compression: 1 /* RleCompressed */,
+                compression: options.compression || 1 /* RleCompressed */,
                 buffer: buffer,
                 length: 2 + buffer.length,
             });
@@ -5177,14 +5177,10 @@ function getLayerChannels(tempBuffer, layer, background, options) {
     }
     channels = channelIds.map(function (channel) {
         var offset = helpers_1.offsetForChannel(channel);
-        var buffer = helpers_1.writeDataRLE(tempBuffer, data, width, height, [offset]);
-        if (RAW_IMAGE_DATA && layer.imageDataRaw) {
-            console.log('written raw layer image data');
-            buffer = layer.imageDataRaw[channel];
-        }
+        var buffer = helpers_1.writeData(tempBuffer, data, width, height, [offset], options.compression);
         return {
             channelId: channel,
-            compression: 1 /* RleCompressed */,
+            compression: options.compression || 1 /* RleCompressed */,
             buffer: buffer,
             length: 2 + buffer.length,
         };

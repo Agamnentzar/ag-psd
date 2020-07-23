@@ -80,6 +80,7 @@ export declare function clamp(value: number, min: number, max: number): number;
 export declare function hasAlpha(data: PixelData): boolean;
 export declare function resetImageData({ width, height, data }: PixelData): void;
 export declare function decodeBitmap(input: PixelArray, output: PixelArray, width: number, height: number): void;
+export declare function writeData(buffer: Uint8Array, data: PixelData, width: number, height: number, offsets: number[], compression?: Compression): Uint8Array | undefined;
 export declare function writeDataRaw(data: PixelData, offset: number, width: number, height: number): Uint8Array | undefined;
 export declare function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]): Uint8Array | undefined;
 export declare function writeDataZip(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]): undefined;

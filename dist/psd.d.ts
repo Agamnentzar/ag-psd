@@ -1,3 +1,4 @@
+import { Compression } from './helpers';
 export declare type BlendMode = 'pass through' | 'normal' | 'dissolve' | 'darken' | 'multiply' | 'color burn' | 'linear burn' | 'darker color' | 'lighten' | 'screen' | 'color dodge' | 'linear dodge' | 'lighter color' | 'overlay' | 'soft light' | 'hard light' | 'vivid light' | 'linear light' | 'pin light' | 'hard mix' | 'difference' | 'exclusion' | 'subtract' | 'divide' | 'hue' | 'saturation' | 'color' | 'luminosity';
 export declare const enum ColorMode {
     Bitmap = 0,
@@ -785,6 +786,11 @@ export interface WriteOptions {
     invalidateTextLayers?: boolean;
     /** Logs if features are missing. */
     logMissingFeatures?: boolean;
-    /** Image data compression */
-    imageDataCompression?: 'rle' | 'zip';
+    /** Image data compression (from PSD spec):
+     *  0: raw image data
+     *  1: [Default] Run length encoded (RLE) compressed (TIFF standard).
+     *  2: zip (zlib) without prediction
+     *  3: zip_prediction (zlib) with prediction
+     * */
+    compression?: Compression;
 }

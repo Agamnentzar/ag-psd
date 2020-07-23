@@ -6,6 +6,7 @@ import { Psd, WriteOptions, ReadOptions } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
 import { readPsd, createReader } from '../psdReader';
 import { writePsdBuffer } from '../index';
+import { Compression } from '../helpers';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
@@ -32,6 +33,29 @@ function loadPsdFromJSONAndPNGFiles(basePath: string) {
 		}
 	});
 	return psd;
+}
+
+function testWritePsd(f: string, compression: Compression) {
+	const basePath = path.join(writeFilesPath, f);
+	const psd = loadPsdFromJSONAndPNGFiles(basePath);
+
+	const before = JSON.stringify(psd, replacer);
+	const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true, compression });
+	const after = JSON.stringify(psd, replacer);
+
+	expect(before).equal(after, 'psd object mutated');
+
+	fs.mkdirSync(resultsFilesPath, { recursive: true });
+	fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
+	// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
+
+	const reader = createReader(buffer.buffer);
+	const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
+	fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBuffer());
+	//compareCanvases(psd.canvas, result.canvas, 'composite image');
+
+	const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
+	compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
 }
 
 describe('PsdWriter', () => {
@@ -328,28 +352,11 @@ describe('PsdWriter', () => {
 	});
 
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
-		it(`writes PSD file (${f})`, () => {
-			const basePath = path.join(writeFilesPath, f);
-			const psd = loadPsdFromJSONAndPNGFiles(basePath);
+		it(`writes PSD file with rle compression (${f})`, () => testWritePsd(f, Compression.RleCompressed));
+	});
 
-			const before = JSON.stringify(psd, replacer);
-			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true });
-			const after = JSON.stringify(psd, replacer);
-
-			expect(before).equal(after, 'psd object mutated');
-
-			fs.mkdirSync(resultsFilesPath, { recursive: true });
-			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
-			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
-
-			const reader = createReader(buffer.buffer);
-			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
-			fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBuffer());
-			//compareCanvases(psd.canvas, result.canvas, 'composite image');
-
-			const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
-			compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
-		});
+	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
+		it(`writes PSD file with zip compression (${f})`, () => testWritePsd(f, Compression.ZipWithoutPrediction));
 	});
 });
 
