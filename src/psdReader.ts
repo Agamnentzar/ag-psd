@@ -146,7 +146,6 @@ export function checkSignature(reader: PsdReader, a: string, b?: string) {
 	const offset = reader.offset;
 	const signature = readSignature(reader);
 
-	/* istanbul ignore if */
 	if (signature !== a && signature !== b) {
 		throw new Error(`Invalid signature: '${signature}' at 0x${offset.toString(16)}`);
 	}
@@ -451,7 +450,6 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 			const offset = offsetForChannel(channel.id);
 			let targetData = imageData;
 
-			/* istanbul ignore if */
 			if (offset < 0) {
 				targetData = undefined;
 
@@ -641,7 +639,7 @@ export function readDataRLE(
 				for (let i = 0; i < length; i++) {
 					let header = buffer[i];
 
-					if (header >= 128) {
+					if (header > 128) {
 						const value = buffer[++i];
 						header = (256 - header) | 0;
 
@@ -649,14 +647,15 @@ export function readDataRLE(
 							data[p] = value;
 							p = (p + step) | 0;
 						}
-					} else { // header < 128
+					} else if (header < 128) {
 						for (let j = 0; j <= header; j = (j + 1) | 0) {
 							data[p] = buffer[++i];
 							p = (p + step) | 0;
 						}
+					} else {
+						// ignore 128
 					}
 
-					/* istanbul ignore if */
 					if (i >= length) {
 						throw new Error(`Invalid RLE data: exceeded buffer size ${i}/${length}`);
 					}
@@ -674,11 +673,9 @@ export function readSection<T>(reader: PsdReader, round: number, func: (left: ()
 	let end = reader.offset + length;
 	const result = func(() => end - reader.offset);
 
-	/* istanbul ignore if */
 	if (reader.offset > end)
 		throw new Error('Exceeded section limits');
 
-	/* istanbul ignore if */
 	if (reader.offset !== end)
 		throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
 

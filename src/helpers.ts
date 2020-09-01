@@ -286,12 +286,10 @@ export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: num
 	return buffer.slice(0, o);
 }
 
-/* istanbul ignore next */
 export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');
 };
 
-/* istanbul ignore next */
 export let createCanvasFromData: (data: Uint8Array) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvasFromData method');
 };
@@ -303,7 +301,6 @@ export let createImageData: (width: number, height: number) => ImageData = (widt
 	return tempCanvas.getContext('2d')!.createImageData(width, height);
 };
 
-/* istanbul ignore if */
 if (typeof document !== 'undefined') {
 	createCanvas = (width, height) => {
 		const canvas = document.createElement('canvas');

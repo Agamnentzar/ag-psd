@@ -1,0 +1,130 @@
+{
+  "width": 1600,
+  "height": 900,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 100,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Inches",
+      "verticalResolution": 100,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Inches"
+    },
+    "versionInfo": {
+      "hasRealMergedData": false,
+      "writerName": "Autodesk SketchBook Pro 7.0",
+      "readerName": "Autodesk SketchBook Pro",
+      "fileVersion": 1
+    },
+    "layerState": 0
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Background",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "shot-generator",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "reference",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "fill",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "tone",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "pencil",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "ink",
+      "layerColor": "none"
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 900,
+      "right": 1600,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "notes",
+      "layerColor": "none"
+    }
+  ]
+}
