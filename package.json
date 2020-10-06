@@ -43,6 +43,7 @@
     "gulp-spawn-mocha": "^6.0.0",
     "gulp-typescript": "^5.0.1",
     "merge2": "^1.4.1",
+    "mkdir": "0.0.2",
     "mocha": "^8.1.3",
     "remap-istanbul": "^0.13.0",
     "source-map-support": "^0.5.19",
@@ -53,7 +54,6 @@
   "dependencies": {
     "@types/base64-js": "^1.3.0",
     "base64-js": "^1.3.1",
-    "mkdir": "0.0.2",
     "parse-engine-data": "^0.1.2"
   }
 }
