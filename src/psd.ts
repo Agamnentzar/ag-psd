@@ -52,6 +52,7 @@ export interface LayerEffectShadow {
 	useGlobalLight?: boolean;
 	antialiased?: boolean;
 	contour?: EffectContour;
+	choke?: UnitsValue; // spread
 	layerConceals?: boolean; // only drop shadow
 }
 
@@ -81,7 +82,7 @@ export interface LayerEffectInnerGlow {
 	antialiased?: boolean;
 	noise?: number;
 	range?: number;
-	choke?: UnitsValue;
+	choke?: UnitsValue; // spread
 	jitter?: number;
 	contour?: EffectContour;
 }
