@@ -2340,6 +2340,8 @@ function parseEffectObject(obj: any, reportErrors: boolean) {
 			case 'useTexture':
 			case 'useShape':
 			case 'layerConceals':
+			case 'present':
+			case 'showInDialog':
 			case 'antialiasGloss': result[key] = val; break;
 			default:
 				reportErrors && console.log(`Invalid effect key: '${key}':`, val);
@@ -2416,6 +2418,8 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 			case 'useTexture':
 			case 'useShape':
 			case 'layerConceals':
+			case 'present':
+			case 'showInDialog':
 			case 'antialiasGloss':
 				result[key] = val;
 				break;

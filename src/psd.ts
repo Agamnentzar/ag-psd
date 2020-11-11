@@ -42,6 +42,8 @@ export interface EffectPattern {
 }
 
 export interface LayerEffectShadow {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	size?: UnitsValue;
 	angle?: number;
@@ -57,6 +59,8 @@ export interface LayerEffectShadow {
 }
 
 export interface LayerEffectsOuterGlow {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	size?: UnitsValue;
 	color?: Color;
@@ -72,6 +76,8 @@ export interface LayerEffectsOuterGlow {
 }
 
 export interface LayerEffectInnerGlow {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	size?: UnitsValue;
 	color?: Color;
@@ -88,6 +94,8 @@ export interface LayerEffectInnerGlow {
 }
 
 export interface LayerEffectBevel {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	size?: UnitsValue;
 	angle?: number;
@@ -111,6 +119,8 @@ export interface LayerEffectBevel {
 }
 
 export interface LayerEffectSolidFill {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	blendMode?: BlendMode;
 	color?: Color;
@@ -118,6 +128,8 @@ export interface LayerEffectSolidFill {
 }
 
 export interface LayerEffectStroke {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	size?: UnitsValue;
 	position?: 'inside' | 'center' | 'outside';
@@ -130,6 +142,8 @@ export interface LayerEffectStroke {
 }
 
 export interface LayerEffectSatin {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	size?: UnitsValue;
 	blendMode?: BlendMode;
@@ -144,6 +158,8 @@ export interface LayerEffectSatin {
 
 // not supported yet because of `Patt` section not implemented
 export interface LayerEffectPatternOverlay {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	blendMode?: BlendMode;
 	opacity?: number;
@@ -174,6 +190,8 @@ export interface EffectNoiseGradient {
 }
 
 export interface LayerEffectGradientOverlay {
+	present?: boolean;
+	showInDialog?: boolean;
 	enabled?: boolean;
 	blendMode?: string;
 	opacity?: number;
