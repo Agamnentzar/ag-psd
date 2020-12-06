@@ -1,0 +1,346 @@
+{
+  "width": 300,
+  "height": 300,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "3382e982187ee414d1b76b9fb510d6d0",
+    "printInformation": {
+      "printerName": "HP Deskjet 5150 series",
+      "renderingIntent": "perceptual",
+      "printerProfile": "CIE RGB",
+      "blackPointCompensation": false,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "alphaChannelNames": [
+      "Transparency"
+    ],
+    "alphaIdentifiers": [
+      0
+    ],
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      6
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "idsSeedNumber": 6,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 37,
+      "left": 44,
+      "bottom": 275,
+      "right": 258,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "picture",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1606961409.4669318,
+      "placedLayer": {
+        "id": "ab4b9a2a-350c-11eb-b49a-c3eb555928d0",
+        "placed": "aa5448f7-350c-11eb-b49a-c3eb555928d0",
+        "type": "raster",
+        "transform": [
+          44,
+          37,
+          258,
+          37,
+          258,
+          275,
+          44,
+          275
+        ],
+        "width": 500,
+        "height": 511,
+        "resolution": {
+          "value": 72,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "custom",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 511,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 500,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4,
+          "customEnvelopeWarp": {
+            "meshPoints": [
+              {
+                "type": "horizontal",
+                "values": [
+                  0,
+                  166.66666666666666,
+                  333.3333333333333,
+                  500,
+                  0,
+                  166.66666666666666,
+                  333.3333333333333,
+                  500,
+                  0,
+                  166.66666666666666,
+                  333.3333333333333,
+                  500,
+                  0,
+                  166.66666666666666,
+                  333.3333333333333,
+                  500
+                ]
+              },
+              {
+                "type": "vertical",
+                "values": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  170.33333333333331,
+                  170.33333333333331,
+                  170.33333333333331,
+                  170.33333333333331,
+                  340.66666666666663,
+                  340.66666666666663,
+                  340.66666666666663,
+                  340.66666666666663,
+                  511,
+                  511,
+                  511,
+                  511
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "referencePoint": {
+        "x": 44,
+        "y": 37
+      }
+    },
+    {
+      "top": 171,
+      "left": 178,
+      "bottom": 282,
+      "right": 278,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "kitty",
+      "nameSource": "rend",
+      "id": 6,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1606961409.4669561,
+      "placedLayer": {
+        "id": "ab4b9a2b-350c-11eb-b49a-c3eb555928d0",
+        "placed": "aa5448f8-350c-11eb-b49a-c3eb555928d0",
+        "type": "raster",
+        "transform": [
+          178,
+          171,
+          278,
+          171,
+          278,
+          282,
+          178,
+          282
+        ],
+        "width": 100,
+        "height": 111,
+        "resolution": {
+          "value": 72,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "custom",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 111,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 100,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4,
+          "customEnvelopeWarp": {
+            "meshPoints": [
+              {
+                "type": "horizontal",
+                "values": [
+                  0,
+                  33.33333333333333,
+                  66.66666666666666,
+                  100,
+                  0,
+                  33.33333333333333,
+                  66.66666666666666,
+                  100,
+                  0,
+                  33.33333333333333,
+                  66.66666666666666,
+                  100,
+                  0,
+                  33.33333333333333,
+                  66.66666666666666,
+                  100
+                ]
+              },
+              {
+                "type": "vertical",
+                "values": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  37,
+                  37,
+                  37,
+                  37,
+                  74,
+                  74,
+                  74,
+                  74,
+                  111,
+                  111,
+                  111,
+                  111
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "referencePoint": {
+        "x": 178,
+        "y": 171
+      }
+    }
+  ],
+  "linkedFiles": [
+    {
+      "id": "ab4b9a2a-350c-11eb-b49a-c3eb555928d0",
+      "name": "91094a9a15b22680de531aa125eeeb3b.jpg"
+    },
+    {
+      "id": "ab4b9a2b-350c-11eb-b49a-c3eb555928d0",
+      "name": "kitty.jpg"
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  }
+}

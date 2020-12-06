@@ -65,6 +65,12 @@ const fieldToExtType: ExtTypeDict = {
 	Ptrn: makeType('', 'Ptrn'),
 	FrFX: makeType('', 'FrFX'),
 	phase: makeType('', 'Pnt '),
+	frameStep: makeType('', 'null'),
+	duration: makeType('', 'null'),
+	bounds: makeType('', 'Rctn'),
+	customEnvelopeWarp: makeType('', 'customEnvelopeWarp'),
+	warp: makeType('', 'warp'),
+	'Sz  ': makeType('', 'Pnt '),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -76,20 +82,21 @@ const fieldToArrayExtType: ExtTypeDict = {
 const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
-		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName',
+		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
 		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn',
 		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind',
-		'curvesPresetKind', 'mixerPresetKind',
+		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages',
+		'numerator', 'denominator', 'frameCount', 'Annt',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
-		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'Type', 'glwS', 'GrdF', 'GlwT',
+		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'glwS', 'GrdF', 'GlwT',
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
-		'tableOrder'
+		'tableOrder',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -99,18 +106,19 @@ const typeToField: { [key: string]: string[]; } = {
 		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint',
 	],
 	'doub': [
-		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr',
+		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
 		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
-		'strokeStyleOpacity', 'Sz  ', 'H   ',
+		'strokeStyleOpacity', 'H   ', 'Top ', 'Left', 'Btom', 'Rght', 'Rslt',
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
-		'LaSt',
+		'LaSt', 'Trnf', 'nonAffineTransform',
 	],
+	'ObAr': ['meshPoints'],
 };
 
 const channels = [
@@ -122,6 +130,8 @@ const fieldToArrayType: Dict = {
 	'Mxm ': 'long',
 	'FrLs': 'long',
 	'strokeStyleLineDashSet': 'UntF',
+	'Trnf': 'doub',
+	'nonAffineTransform': 'doub',
 };
 
 const fieldToType: Dict = {};
@@ -141,7 +151,11 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 }
 
 function getTypeByKey(key: string, value: any) {
-	if (key === 'AntA') {
+	if (key === 'Sz  ') {
+		return ('Wdth' in value) ? 'Objc' : (('units' in value) ? 'UntF' : 'doub');
+	} else if (key === 'Type') {
+		return typeof value === 'string' ? 'enum' : 'long';
+	} else if (key === 'AntA') {
 		return typeof value === 'string' ? 'enum' : 'bool';
 	} else if (key === 'Hrzn' || key === 'Vrtc') {
 		return typeof value === 'number' ? 'doub' : 'UntF';
@@ -152,8 +166,7 @@ function getTypeByKey(key: string, value: any) {
 
 export function readAsciiStringOrClassId(reader: PsdReader) {
 	const length = readInt32(reader);
-	const result = length === 0 ? readSignature(reader) : readAsciiString(reader, length);
-	return result;
+	return readAsciiString(reader, length || 4);
 }
 
 function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
@@ -172,17 +185,17 @@ function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 }
 
 export function readDescriptorStructure(reader: PsdReader) {
-	// const struct =
-	readClassStructure(reader);
-	// console.log(struct);
-	const itemsCount = readUint32(reader);
 	const object: any = {};
+	// object.__struct =
+	readClassStructure(reader);
+	const itemsCount = readUint32(reader);
 
 	for (let i = 0; i < itemsCount; i++) {
 		const key = readAsciiStringOrClassId(reader);
 		const type = readSignature(reader);
-		// console.log('>', key, type);
+		// console.log(`> '${key}' '${type}'`);
 		const data = readOSType(reader, type);
+		// if (!getTypeByKey(key, data)) console.log(`> '${key}' '${type}'`, data);
 		object[key] = data;
 	}
 	// console.log('//', struct);
@@ -289,8 +302,29 @@ function readOSType(reader: PsdReader, type: string) {
 			const length = readInt32(reader);
 			return readBytes(reader, length);
 		}
-		case 'ObAr': // Object array
-			throw new Error('not implemented: ObAr');
+		case 'ObAr': { // Object array
+			readInt32(reader); // version: 16
+			readUnicodeString(reader); // name: ''
+			readAsciiStringOrClassId(reader); // 'rationalPoint'
+			const length = readInt32(reader);
+			const items: any[] = [];
+
+			for (let i = 0; i < length; i++) {
+				const type1 = readAsciiStringOrClassId(reader); // type Hrzn | Vrtc
+				readSignature(reader); // UnFl
+
+				readSignature(reader); // units ? '#Pxl'
+				const valuesCount = readInt32(reader);
+				const values: number[] = [];
+				for (let j = 0; j < valuesCount; j++) {
+					values.push(readFloat64(reader));
+				}
+
+				items.push({ type: type1, values });
+			}
+
+			return items;
+		}
 		case 'Pth ': { // File path
 			/*const length =*/ readInt32(reader);
 			const sig = readSignature(reader);
@@ -340,8 +374,8 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeUnicodeStringWithPadding(writer, value);
 			break;
 		case 'enum': { // Enumerated
-			const [type, val] = value.split('.');
-			writeAsciiStringOrClassId(writer, type);
+			const [_type, val] = value.split('.');
+			writeAsciiStringOrClassId(writer, _type);
 			writeAsciiStringOrClassId(writer, val);
 			break;
 		}
@@ -362,8 +396,23 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeInt32(writer, value.byteLength);
 			writeBytes(writer, value);
 			break;
-		// case 'ObAr': // Object array
-		// 	throw new Error('not implemented: ObAr');
+		case 'ObAr': // Object array
+			writeInt32(writer, 16); // version
+			writeUnicodeStringWithPadding(writer, ''); // name
+			writeAsciiStringOrClassId(writer, 'rationalPoint');
+			writeInt32(writer, value.length);
+
+			for (let i = 0; i < value.length; i++) {
+				writeAsciiStringOrClassId(writer, value[i].type); // Hrzn | Vrtc
+				writeSignature(writer, 'UnFl');
+				writeSignature(writer, '#Pxl');
+				writeInt32(writer, value[i].values.length);
+
+				for (let j = 0; j < value[i].values.length; j++) {
+					writeFloat64(writer, value[i].values[j]);
+				}
+			}
+			break;
 		// case 'Pth ': // File path
 		// 	writeFilePath(reader);
 		default:

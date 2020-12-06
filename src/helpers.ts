@@ -51,8 +51,15 @@ export function revMap(map: Dict) {
 
 export function createEnum<T>(prefix: string, def: string, map: Dict) {
 	const rev = revMap(map);
-	const decode = (val: string): T => (rev[val.split('.')[1]] as any) || def;
-	const encode = (val: T | undefined): string => `${prefix}.${map[val as any] || map[def]}`;
+	const decode = (val: string): T => {
+		const value = val.split('.')[1];
+		if (value && !rev[value]) throw new Error(`Unrecognized value for enum: ${val}`);
+		return (rev[value] as any) || def;
+	};
+	const encode = (val: T | undefined): string => {
+		if (val && !map[val as any]) throw new Error(`Invalid value for enum: ${val}`);
+		return `${prefix}.${map[val as any] || map[def]}`;
+	};
 	return { decode, encode };
 }
 

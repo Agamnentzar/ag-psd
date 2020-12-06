@@ -1,10 +1,11 @@
-import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color } from './psd';
+import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo } from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
 	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace
 } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
+import { readVersionAndDescriptor } from './descriptor';
 
 interface ChannelInfo {
 	id: ChannelID;
@@ -98,7 +99,7 @@ export function readSignature(reader: PsdReader) {
 	return readShortString(reader, 4);
 }
 
-export function readPascalString(reader: PsdReader, padTo = 2) {
+export function readPascalString(reader: PsdReader, padTo: number) {
 	let length = readUint8(reader);
 	const text = readShortString(reader, length);
 
@@ -186,7 +187,7 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 			checkSignature(reader, '8BIM');
 
 			const id = readUint16(reader);
-			readPascalString(reader); // name
+			readPascalString(reader, 2); // name
 
 			readSection(reader, 2, left => {
 				const handler = resourceHandlersMap[id];
@@ -725,4 +726,153 @@ export function readColor(reader: PsdReader): Color {
 		default:
 			throw new Error('Invalid color space');
 	}
+}
+
+export function readAbr(buffer: ArrayBufferView) {
+	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	const version = readInt16(reader);
+	const brushes: any[] = [];
+
+	if (version === 1 || version === 2) {
+		throw new Error('not implemented (version 1/2)'); // TODO: ...
+	} else if (version === 6 || version === 7 || version === 10) {
+		const minorVersion = readInt16(reader);
+		if (minorVersion !== 1 && minorVersion !== 2) throw new Error('Unsupported ABR version');
+
+		while (reader.offset < reader.view.byteLength) {
+			// console.log('left', reader.view.byteLength - reader.offset, 'at', reader.offset.toString(16));
+			checkSignature(reader, '8BIM');
+			const type = readSignature(reader); // samp | desc | patt | phry
+			const size = readUint32(reader);
+			const end = reader.offset + size;
+
+			switch (type) {
+				case 'samp': {
+					while (reader.offset < end) {
+						let brushLength = readUint32(reader);
+						while (brushLength & 0b11) brushLength++; // pad to 4 byte alignment
+						const brushEnd = reader.offset + brushLength;
+
+						const id = readPascalString(reader, 1);
+
+						// v1 - Skip the Int16 bounds rectangle and the unknown Int16.
+						// v2 - Skip the unknown bytes.
+						skipBytes(reader, minorVersion === 1 ? 10 : 264);
+
+						const y = readInt32(reader);
+						const x = readInt32(reader);
+						const h = readInt32(reader) - y;
+						const w = readInt32(reader) - x;
+						if (w <= 0 || h <= 0) throw new Error('Invalid bounds');
+
+						const depth = readInt16(reader);
+						const compression = readUint8(reader); // 0 - raw, 1 - RLE
+						const alpha = new Uint8Array(w * h);
+
+						if (depth === 8) {
+							if (compression === 0) {
+								alpha.set(readBytes(reader, alpha.byteLength));
+							} else if (compression === 1) {
+								readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, 1, [0]);
+							} else {
+								throw new Error('Invalid compression');
+							}
+						} else if (depth === 16) {
+							if (compression === 0) {
+								for (let i = 0; i < alpha.byteLength; i++) {
+									alpha[i] = readUint16(reader) >> 8; // convert to 8bit values
+								}
+							} else if (compression === 1) {
+								throw new Error('not implemented (16bit RLE)'); // TODO: ...
+							} else {
+								throw new Error('Invalid compression');
+							}
+						} else {
+							throw new Error('Invalid depth');
+						}
+
+						brushes.push({ id, bounds: { x, y, w, h }, alpha });
+						reader.offset = brushEnd;
+					}
+					break;
+				}
+				case 'desc': {
+					brushes.push(readVersionAndDescriptor(reader));
+					break;
+				}
+				case 'patt': {
+					const pattern = readPattern(reader);
+					brushes.push({ pattern });
+					console.log('skipping `patt`');
+					reader.offset = end;
+					break;
+				}
+				case 'phry': {
+					brushes.push(readVersionAndDescriptor(reader));
+					break;
+				}
+				default:
+					throw new Error(`Invalid brush type: ${type}`);
+			}
+		}
+	} else {
+		throw new Error('Unsupported ABR version');
+	}
+
+	return brushes;
+}
+
+export function readPattern(reader: PsdReader): PatternInfo {
+	readUint32(reader); // length
+	const version = readUint32(reader);
+	if (version !== 1) throw new Error(`Invalid Patt version: ${version}`);
+
+	const colorMode = readUint32(reader) as ColorMode;
+	const x = readInt16(reader);
+	const y = readInt16(reader);
+
+	if (supportedColorModes.indexOf(colorMode) === -1)
+		throw new Error(`Invalid Patt color mode: ${colorMode}`);
+
+	const name = readUnicodeString(reader);
+	const id = readPascalString(reader, 1);
+
+	// TODO: index color table here (only for indexed color mode, not supported right now)
+
+	// virtual memory array list
+	const version2 = readUint32(reader);
+	if (version2 !== 3) throw new Error(`Invalid Patt:VMAL version: ${version2}`);
+
+	readUint32(reader); // length
+	const top = readUint32(reader);
+	const left = readUint32(reader);
+	const bottom = readUint32(reader);
+	const right = readUint32(reader);
+	const channelsCount = readUint32(reader);
+	const bounds = { x: left, y: top, w: right - left, h: bottom - top };
+	const channels: any[] = [];
+
+	for (let i = 0; i < (channelsCount + 2); i++) {
+		const has = readUint32(reader);
+
+		if (has) {
+			const length = readUint32(reader);
+			const pixelDepth = readUint32(reader);
+			const top = readUint32(reader);
+			const left = readUint32(reader);
+			const bottom = readUint32(reader);
+			const right = readUint32(reader);
+			const pixelDepth2 = readUint16(reader);
+			const compressionMode = readUint8(reader); // 0 - raw, 1 - zip
+			const dataLength = length - (4 + 16 + 2 + 1);
+			const data = readBytes(reader, dataLength);
+
+			if (pixelDepth !== 8 || pixelDepth2 !== 8) throw new Error('16bit pixel depth not supported in palettes');
+			if (compressionMode !== 0) throw new Error('zip compression not supported in palettes');
+
+			channels.push({ top, left, bottom, right, data });
+		}
+	}
+
+	return { name, id, colorMode, x, y, bounds, channels } as any;
 }

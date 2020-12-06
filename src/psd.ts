@@ -240,7 +240,7 @@ export type Orientation = 'horizontal' | 'vertical';
 export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
 export type WarpStyle =
 	'none' | 'arc' | 'arcLower' | 'arcUpper' | 'arch' | 'bulge' | 'shellLower' | 'shellUpper' | 'flag' |
-	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist';
+	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist' | 'custom';
 export type BevelStyle = 'outer bevel' | 'inner bevel' | 'emboss' | 'pillow emboss' | 'stroke emboss';
 export type BevelTechnique = 'smooth' | 'chisel hard' | 'chisel soft';
 export type BevelDirection = 'up' | 'down';
@@ -252,12 +252,20 @@ export type LineCapType = 'butt' | 'round' | 'square';
 export type LineJoinType = 'miter' | 'round' | 'bevel';
 export type LineAlignment = 'inside' | 'center' | 'outside';
 
-export interface LayerTextWarp {
+export interface Warp {
 	style?: WarpStyle;
 	value?: number;
 	perspective?: number;
 	perspectiveOther?: number;
 	rotate?: Orientation;
+
+	// for custom warps
+	bounds?: { top: UnitsValue; left: UnitsValue; bottom: UnitsValue; right: UnitsValue; };
+	uOrder?: number;
+	vOrder?: number;
+	customEnvelopeWarp?: {
+		meshPoints: { type: 'horizontal' | 'vertical'; values: number[]; }[];
+	};
 }
 
 export interface Font {
@@ -355,7 +363,7 @@ export interface LayerTextData {
 	gridding?: TextGridding;
 	orientation?: Orientation;
 	index?: number;
-	warp?: LayerTextWarp;
+	warp?: Warp;
 	top?: number;
 	left?: number;
 	bottom?: number;
@@ -385,6 +393,7 @@ export interface PatternInfo {
 	colorMode: ColorMode;
 	x: number;
 	y: number;
+	bounds: { x: number; y: number; w: number, h: number; };
 }
 
 export interface BezierKnot {
@@ -419,7 +428,7 @@ export type VectorContent = { type: 'color'; color: Color; } |
 
 export type RenderingIntent = 'perceptual' | 'saturation' | 'relative colorimetric' | 'absolute colorimetric';
 
-export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None';
+export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None' | 'Density';
 
 export interface UnitsValue {
 	units: Units;
@@ -623,6 +632,32 @@ export interface SelectiveColorAdjustment {
 	blacks?: CMYK;
 }
 
+export interface LinkedFile {
+	id: string;
+	name: string;
+	data?: Uint8Array;
+	time?: Date; // for external files
+}
+
+export type PlacedLayerType = 'unknown' | 'vector' | 'raster' | 'image stack';
+
+export interface PlacedLayer {
+	id: string; // id of linked image file (psd.linkedFiles)
+	placed?: string; // ???
+	type: PlacedLayerType;
+	// pageNumber: number; // ???
+	// totalPages: number; // ???
+	// frameStep?: { numerator: number; denominator: number; };
+	// duration?: { numerator: number; denominator: number; };
+	// frameCount?: number; // ???
+	transform: number[]; // x, y of 4 corners of the transform
+	width?: number;
+	height?: number;
+	resolution?: UnitsValue;
+	// antialias ?
+	warp?: Warp;
+}
+
 export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAdjustment |
 	ExposureAdjustment | VibranceAdjustment | HueSaturationAdjustment | ColorBalanceAdjustment |
 	BlackAndWhiteAdjustment | PhotoFilterAdjustment | ChannelMixerAdjustment | ColorLookupAdjustment |
@@ -699,6 +734,7 @@ export interface LayerAdditionalInfo {
 	pathList?: {
 	}[];
 	adjustment?: AdjustmentLayer;
+	placedLayer?: PlacedLayer;
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
@@ -811,6 +847,7 @@ export interface Psd extends LayerAdditionalInfo {
 	canvas?: HTMLCanvasElement;
 	imageData?: ImageData;
 	imageResources?: ImageResources;
+	linkedFiles?: LinkedFile[]; // used in smart objects
 }
 
 export interface ReadOptions {
@@ -820,6 +857,8 @@ export interface ReadOptions {
 	skipCompositeImageData?: boolean;
 	/** Does not load thumbnail. */
 	skipThumbnail?: boolean;
+	/** Does not load linked files (used in smart-objects). */
+	skipLinkedFilesData?: boolean;
 	/** Throws exception if features are missing. */
 	throwForMissingFeatures?: boolean;
 	/** Logs if features are missing. */

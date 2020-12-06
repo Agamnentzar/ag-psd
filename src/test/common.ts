@@ -118,6 +118,21 @@ export function loadCanvasFromFile(filePath: string) {
 	return canvas;
 }
 
+export function compareTwoFiles(expectedPath: string, actual: Uint8Array, name: string) {
+	const expectedBuffer = fs.readFileSync(expectedPath);
+	const expected = new Uint8Array(expectedBuffer.buffer, expectedBuffer.byteOffset, expectedBuffer.byteLength);
+
+	if (expected.byteLength !== actual.byteLength) {
+		throw new Error(`File size is different than expected (${name})`);
+	}
+
+	for (let i = 0; i < expected.byteLength; i++) {
+		if (expected[i] !== actual[i]) {
+			throw new Error(`Actual file different than expected at index ${i}: actual ${actual[i]}, expected ${expected[i]}`);
+		}
+	}
+}
+
 export function compareCanvases(expected: HTMLCanvasElement | undefined, actual: HTMLCanvasElement | undefined, name: string) {
 	const saveFailure = () => {
 		const failuresDir = path.join(resultsPath, 'failures');

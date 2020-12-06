@@ -1,5 +1,13 @@
 # Changelog
 
+## v11.2.0
+- Added handling for smart objects
+- Changed types for text warp
+
+## v11.1.0
+- Added handling for text shape (point, box)
+- Fixed incorrect parsing of utf-16 strings
+
 ## v11.0.0
 - **BREAKING CHANGE:** Changed all color fields from r, g, b, a array to color mode specific objects
   ```js

@@ -100,7 +100,7 @@ export function writeSignature(writer: PsdWriter, signature: string) {
 	}
 }
 
-export function writePascalString(writer: PsdWriter, text: string, padTo = 2) {
+export function writePascalString(writer: PsdWriter, text: string, padTo: number) {
 	let length = text.length;
 	writeUint8(writer, length);
 
@@ -214,7 +214,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 			if (handler.has(imageResources)) {
 				writeSignature(writer, '8BIM');
 				writeUint16(writer, handler.key);
-				writePascalString(writer, '');
+				writePascalString(writer, '', 2);
 				writeSection(writer, 2, () => handler.write(writer, imageResources));
 			}
 		}

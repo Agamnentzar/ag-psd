@@ -35,6 +35,7 @@ function addHandler(
 }
 
 const MOCK_HANDLERS = false;
+const LOG_MOCK_HANDLERS = false;
 const RESOLUTION_UNITS = [undefined, 'PPI', 'PPCM'];
 const MEASUREMENT_UNITS = [undefined, 'Inches', 'Centimeters', 'Points', 'Picas', 'Columns'];
 const hex = '0123456789abcdef';
@@ -61,7 +62,7 @@ MOCK_HANDLERS && addHandler(
 	1028, // IPTC-NAA record
 	target => (target as any)._ir1028 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1028', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1028', left());
 		(target as any)._ir1028 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -162,7 +163,7 @@ addHandler(
 			desc.PstS = true;
 		} else {
 			if (info.hardProof !== undefined) desc.hardProof = !!info.hardProof;
-			desc.ClrS = 'Clrs.RGBC'; // TODO: ???
+			desc.ClrS = 'ClrS.RGBC'; // TODO: ???
 			desc['Nm  '] = info.printerProfile ?? 'CIE RGB';
 		}
 
@@ -194,7 +195,7 @@ MOCK_HANDLERS && addHandler(
 	1083, // Print style
 	target => (target as any)._ir1083 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1083', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1083', left());
 		(target as any)._ir1083 = readBytes(reader, left());
 
 		// TODO:
@@ -299,7 +300,7 @@ MOCK_HANDLERS && addHandler(
 	1077,
 	target => (target as any)._ir1077 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1077', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1077', left());
 		(target as any)._ir1077 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -379,7 +380,7 @@ MOCK_HANDLERS && addHandler(
 	10000, // Print flags
 	target => (target as any)._ir10000 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 10000', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 10000', left());
 		(target as any)._ir10000 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -391,7 +392,7 @@ MOCK_HANDLERS && addHandler(
 	1013, // Color halftoning
 	target => (target as any)._ir1013 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1013', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1013', left());
 		(target as any)._ir1013 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -403,7 +404,7 @@ MOCK_HANDLERS && addHandler(
 	1016, // Color transfer functions
 	target => (target as any)._ir1016 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1016', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1016', left());
 		(target as any)._ir1016 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -540,7 +541,7 @@ MOCK_HANDLERS && addHandler(
 	1050, // Slices
 	target => (target as any)._ir1050 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1050', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1050', left());
 		(target as any)._ir1050 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -567,7 +568,7 @@ MOCK_HANDLERS && addHandler(
 	1039, // ICC Profile
 	target => (target as any)._ir1039 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1039', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1039', left());
 		(target as any)._ir1039 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -673,7 +674,7 @@ MOCK_HANDLERS && addHandler(
 	1058, // EXIF data 1.
 	target => (target as any)._ir1058 !== undefined,
 	(reader, target, left) => {
-		console.log('image resource 1058', left());
+		LOG_MOCK_HANDLERS && console.log('image resource 1058', left());
 		(target as any)._ir1058 = readBytes(reader, left());
 	},
 	(writer, target) => {
@@ -734,7 +735,7 @@ MOCK_HANDLERS && addHandler(
 	target => (target as any)._ir4000 !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
 		if (MOCK_HANDLERS) {
-			console.log('image resource 4000', left());
+			LOG_MOCK_HANDLERS && console.log('image resource 4000', left());
 			(target as any)._ir4000 = readBytes(reader, left());
 			return;
 		}
@@ -801,7 +802,7 @@ MOCK_HANDLERS && addHandler(
 	target => (target as any)._ir4001 !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
 		if (MOCK_HANDLERS) {
-			console.log('image resource 4001', left());
+			LOG_MOCK_HANDLERS && console.log('image resource 4001', left());
 			(target as any)._ir4001 = readBytes(reader, left());
 			return;
 		}

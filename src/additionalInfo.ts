@@ -1,3 +1,4 @@
+import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors } from './helpers';
 import {
@@ -12,20 +13,21 @@ import {
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32
+	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32,
+	readPascalString,
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8,
-	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor,
+	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding,
+	writeColor, writePascalString, writeInt32,
 } from './psdWriter';
-import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { readDescriptorStructure, readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
-import { fromByteArray, toByteArray } from 'base64-js';
 
 const MOCK_HANDLERS = false;
 
@@ -87,6 +89,7 @@ const warpStyle = createEnum<WarpStyle>('warpStyle', 'none', {
 	inflate: 'warpInflate',
 	squeeze: 'warpSqueeze',
 	twist: 'warpTwist',
+	custom: 'warpCustom',
 });
 
 const BlnM = createEnum<BlendMode>('BlnM', 'normal', {
@@ -260,14 +263,6 @@ addHandler(
 			EngineData: serializeEngineData(encodeEngineData(text)),
 		};
 
-		const warpDescriptor: WarpDescriptor = {
-			warpStyle: warpStyle.encode(warp.style),
-			warpValue: warp.value || 0,
-			warpPerspective: warp.perspective || 0,
-			warpPerspectiveOther: warp.perspectiveOther || 0,
-			warpRotate: Ornt.encode(warp.rotate),
-		};
-
 		writeInt16(writer, 1); // version
 
 		for (let i = 0; i < 6; i++) {
@@ -278,7 +273,7 @@ addHandler(
 		writeVersionAndDescriptor(writer, '', 'TxLr', textDescriptor);
 
 		writeInt16(writer, 1); // warp version
-		writeVersionAndDescriptor(writer, '', 'warp', warpDescriptor);
+		writeVersionAndDescriptor(writer, '', 'warp', encodeWarp(warp));
 
 		writeFloat32(writer, text.left!);
 		writeFloat32(writer, text.top!);
@@ -490,7 +485,7 @@ addHandler(
 	},
 	(writer, target) => {
 		writeUnicodeString(writer, target.name!);
-		// writeUint16(writer, 0); // padding (but not extending string length)
+		writeUint16(writer, 0); // padding (but not extending string length)
 	},
 );
 
@@ -653,7 +648,7 @@ addHandler(
 		writeSignature(writer, 'cust');
 		writeUint8(writer, 0); // copy (always false)
 		writeZeros(writer, 3);
-		writeSection(writer, 2, () => writeVersionAndDescriptor(writer, '', 'metadata', desc));
+		writeSection(writer, 2, () => writeVersionAndDescriptor(writer, '', 'metadata', desc), true);
 	},
 );
 
@@ -662,6 +657,190 @@ addHandler(
 	hasKey('usingAlignedRendering'),
 	(reader, target) => target.usingAlignedRendering = !!readUint32(reader),
 	(writer, target) => writeUint32(writer, target.usingAlignedRendering ? 1 : 0),
+);
+
+const placedLayerTypes: PlacedLayerType[] = ['unknown', 'vector', 'raster', 'image stack'];
+
+function parseWarp(warp: WarpDescriptor): Warp {
+	return {
+		style: warpStyle.decode(warp.warpStyle),
+		value: warp.warpValue || 0,
+		perspective: warp.warpPerspective || 0,
+		perspectiveOther: warp.warpPerspectiveOther || 0,
+		rotate: Ornt.decode(warp.warpRotate),
+		bounds: warp.bounds && {
+			top: parseUnits(warp.bounds['Top ']),
+			left: parseUnits(warp.bounds.Left),
+			bottom: parseUnits(warp.bounds.Btom),
+			right: parseUnits(warp.bounds.Rght),
+		},
+		uOrder: warp.uOrder,
+		vOrder: warp.vOrder,
+		customEnvelopeWarp: warp.customEnvelopeWarp && {
+			meshPoints: warp.customEnvelopeWarp.meshPoints.map(pt => ({
+				type: pt.type === 'Hrzn' ? 'horizontal' : 'vertical',
+				values: pt.values,
+			})),
+		},
+	};
+}
+
+function encodeWarp(warp: Warp): WarpDescriptor {
+	const desc: WarpDescriptor = {
+		warpStyle: warpStyle.encode(warp.style),
+		warpValue: warp.value || 0,
+		warpPerspective: warp.perspective || 0,
+		warpPerspectiveOther: warp.perspectiveOther || 0,
+		warpRotate: Ornt.encode(warp.rotate),
+		bounds: {
+			'Top ': unitsValue(warp.bounds?.top || { units: 'Pixels', value: 0 }, 'bounds.top'),
+			Left: unitsValue(warp.bounds?.left || { units: 'Pixels', value: 0 }, 'bounds.left'),
+			Btom: unitsValue(warp.bounds?.bottom || { units: 'Pixels', value: 0 }, 'bounds.bottom'),
+			Rght: unitsValue(warp.bounds?.right || { units: 'Pixels', value: 0 }, 'bounds.right'),
+		},
+		uOrder: warp.uOrder || 0,
+		vOrder: warp.vOrder || 0,
+	};
+
+	if (warp.customEnvelopeWarp) {
+		desc.customEnvelopeWarp = {
+			meshPoints: (warp.customEnvelopeWarp.meshPoints || []).map(pt => ({
+				type: pt.type === 'horizontal' ? 'Hrzn' : 'Vrtc',
+				values: pt.values,
+			})),
+		};
+	}
+
+	return desc;
+}
+
+addHandler(
+	'PlLd',
+	hasKey('placedLayer'),
+	(reader, target, left) => {
+		if (readSignature(reader) !== 'plcL') throw new Error(`Invalid PlLd signature`);
+		if (readInt32(reader) !== 3) throw new Error(`Invalid PlLd version`);
+		const id = readPascalString(reader, 1);
+		const pageNumber = readInt32(reader);
+		const totalPages = readInt32(reader); // TODO: check how this works ?
+		readInt32(reader); // anitAliasPolicy 16
+		const placedLayerType = readInt32(reader); // 0 = unknown, 1 = vector, 2 = raster, 3 = image stack
+		if (!placedLayerTypes[placedLayerType]) throw new Error('Invalid PlLd type');
+		const transform: number[] = [];
+		for (let i = 0; i < 8; i++) transform.push(readFloat64(reader)); // x, y of 4 corners of the transform
+		const warpVersion = readInt32(reader);
+		if (warpVersion !== 0) throw new Error(`Invalid Warp version ${warpVersion}`);
+		const warp: WarpDescriptor = readVersionAndDescriptor(reader);
+
+		target.placedLayer = target.placedLayer || { // skip if SoLd already set it
+			id,
+			type: placedLayerTypes[placedLayerType],
+			// pageNumber,
+			// totalPages,
+			transform,
+			warp: parseWarp(warp),
+		};
+
+		// console.log('PlLd warp', require('util').inspect(warp, false, 99, true));
+		// console.log('PlLd', require('util').inspect(target.placedLayer, false, 99, true));
+
+		pageNumber; totalPages;
+		skipBytes(reader, left()); // HACK
+	},
+	(writer, target) => {
+		const placed = target.placedLayer!;
+		writeSignature(writer, 'plcL');
+		writeInt32(writer, 3); // version
+		writePascalString(writer, placed.id, 1);
+		writeInt32(writer, 1); // pageNumber
+		writeInt32(writer, 1); // totalPages
+		writeInt32(writer, 16); // anitAliasPolicy
+		if (placedLayerTypes.indexOf(placed.type) === -1) throw new Error('Invalid placedLayer type');
+		writeInt32(writer, placedLayerTypes.indexOf(placed.type));
+		for (let i = 0; i < 8; i++) writeFloat64(writer, placed.transform[i]);
+		writeInt32(writer, 0); // warp version
+		writeVersionAndDescriptor(writer, '', 'warp', encodeWarp(placed.warp || {}));
+	},
+);
+
+interface SoLdDescriptor {
+	Idnt: string;
+	placed: string;
+	PgNm: number;
+	totalPages: number;
+	frameStep: { numerator: number; denominator: number; };
+	duration: { numerator: number; denominator: number; };
+	frameCount: number;
+	Annt: number;
+	Type: number;
+	Trnf: number[];
+	nonAffineTransform: number[];
+	warp: WarpDescriptor;
+	'Sz  ': { Wdth: number; Hght: number; };
+	Rslt: DescriptorUnitsValue;
+}
+
+addHandler(
+	'SoLd',
+	hasKey('placedLayer'),
+	(reader, target, left) => {
+		if (readSignature(reader) !== 'soLD') throw new Error(`Invalid SoLd type`);
+		if (readInt32(reader) !== 4) throw new Error(`Invalid SoLd version`);
+		const desc: SoLdDescriptor = readVersionAndDescriptor(reader);
+		// console.log('SoLd', require('util').inspect(desc, false, 99, true));
+		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
+
+		target.placedLayer = {
+			id: desc.Idnt,
+			placed: desc.placed,
+			type: placedLayerTypes[desc.Type],
+			// pageNumber: info.PgNm,
+			// totalPages: info.totalPages,
+			// frameStep: info.frameStep,
+			// duration: info.duration,
+			// frameCount: info.frameCount,
+			transform: desc.Trnf,
+			width: desc['Sz  '].Wdth,
+			height: desc['Sz  '].Hght,
+			resolution: parseUnits(desc.Rslt),
+			warp: parseWarp(desc.warp),
+		};
+
+		skipBytes(reader, left()); // HACK
+	},
+	(writer, target) => {
+		writeSignature(writer, 'soLD');
+		writeInt32(writer, 4); // version
+
+		const placed = target.placedLayer!;
+		const desc: SoLdDescriptor = {
+			Idnt: placed.id,
+			placed: placed.placed ?? placed.id, // ???
+			PgNm: 1,
+			totalPages: 1,
+			frameStep: {
+				numerator: 0,
+				denominator: 600
+			},
+			duration: {
+				numerator: 0,
+				denominator: 600
+			},
+			frameCount: 1,
+			Annt: 16,
+			Type: placedLayerTypes.indexOf(placed.type),
+			Trnf: placed.transform,
+			nonAffineTransform: placed.transform,
+			warp: encodeWarp(placed.warp || {}),
+			'Sz  ': {
+				Wdth: placed.width || 0, // TODO: find size ?
+				Hght: placed.height || 0, // TODO: find size ?
+			},
+			Rslt: placed.resolution ? unitsValue(placed.resolution, 'resolution') : { units: 'Density', value: 72 }
+		};
+
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
 );
 
 addHandler(
@@ -710,92 +889,120 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	'Patt',
-	target => 'children' in target, // (target as any)._Patt !== undefined,
-	(reader, target, left) => {
-		console.log('additional info: Patt');
-		(target as any)._Patt = readBytes(reader, left());
-	},
-	(writer, target) => false && writeBytes(writer, (target as any)._Patt),
-);
+if (MOCK_HANDLERS) {
+	addHandler(
+		'Patt',
+		target => (target as any)._Patt !== undefined,
+		(reader, target, left) => {
+			// console.log('additional info: Patt');
+			(target as any)._Patt = readBytes(reader, left());
+		},
+		(writer, target) => false && writeBytes(writer, (target as any)._Patt),
+	);
+} else {
+	addHandler(
+		'Patt', // TODO: handle also Pat2 & Pat3
+		target => !target,
+		(reader, _target, left) => {
+			if (!left()) return;
+
+			skipBytes(reader, left()); return; // not supported yet
+
+			// if (!target.patterns) target.patterns = [];
+			// target.patterns.push(readPattern(reader));
+			// skipBytes(reader, left());
+		},
+		(_writer, _target) => {
+		},
+	);
+}
 
 addHandler(
-	'Patt', // TODO: handle also Pat2 & Pat3
-	target => !target,
-	(reader, _target, left) => {
-		if (!left()) return;
+	'lnk2',
+	(target: any) => !!(target as Psd).linkedFiles && (target as Psd).linkedFiles!.length > 0,
+	(reader, target, left, _, options) => {
+		const psd = target as Psd;
+		psd.linkedFiles = [];
 
-		skipBytes(reader, left()); return; // not supported yet
-		/*
-		const length = readUint32(reader);
-		const version = readUint32(reader);
+		while (left() > 8) {
+			// console.log('read lnkD', left(), 'bytes left', 'at', reader.offset.toString(16));
+			const size = readLength64(reader); // size
+			const end = reader.offset + size;
+			const type = readSignature(reader) as 'liFD' | 'liFE' | 'liFA';
+			const version = readInt32(reader);
+			const id = readPascalString(reader, 1);
+			const name = readUnicodeString(reader);
+			readSignature(reader); // tile type '    '
+			readSignature(reader); // file creator '    '
+			const dataSize = readLength64(reader);
+			const hasFileOpenDescriptor = readUint8(reader);
+			const fileOpenDescriptor = hasFileOpenDescriptor ? readDescriptorStructure(reader) : undefined;
+			const linkedFileDescriptor = type === 'liFE' ? readDescriptorStructure(reader) : undefined;
+			const file: LinkedFile = { id, name, data: undefined };
 
-		if (version !== 1) throw new Error(`Invalid Patt version: ${version}`);
-
-		const colorMode = readUint32(reader) as ColorMode;
-		const x = readInt16(reader);
-		const y = readInt16(reader);
-
-		if (supportedColorModes.indexOf(colorMode) == -1) {
-			throw new Error(`Invalid Patt color mode: ${colorMode}`);
-		}
-
-		const name = readUnicodeString(reader);
-		const id = readPascalString(reader, 1);
-
-		// TODO: index color table here (only for indexed color mode, not supported right now)
-		console.log('patt', length, colorMode, x, y, name, id);
-
-		// virtual memory array list
-		{
-			const version = readUint32(reader);
-
-			if (version !== 3) throw new Error(`Invalid Patt:VMAL version: ${version}`);
-
-			const length = readUint32(reader);
-			const top = readUint32(reader);
-			const left = readUint32(reader);
-			const bottom = readUint32(reader);
-			const right = readUint32(reader);
-			const channels = readUint32(reader);
-
-			console.log('VMAL', length, top, left, bottom, right, channels);
-
-			for (let i = 0; i < (channels + 2); i++) {
-				const has = readUint32(reader);
-
-				if (has) {
-					const length = readUint32(reader);
-					const pixelDepth = readUint32(reader);
-					const top = readUint32(reader);
-					const left = readUint32(reader);
-					const bottom = readUint32(reader);
-					const right = readUint32(reader);
-					const pixelDepth2 = readUint16(reader);
-					const compressionMode = readUint8(reader); // 1 - zip
-
-					// TODO: decompress data ...
-
-					skipBytes(reader, length - (4 + 16 + 2 + 1));
-
-					console.log('channel', length, pixelDepth, top, left, bottom, right, pixelDepth2, compressionMode);
-				} else {
-					console.log('SKIP');
-				}
+			if (type === 'liFE' && version > 3) {
+				const year = readInt32(reader);
+				const month = readUint8(reader);
+				const day = readUint8(reader);
+				const hour = readUint8(reader);
+				const minute = readUint8(reader);
+				const seconds = readFloat64(reader);
+				const wholeSeconds = Math.floor(seconds);
+				const ms = (seconds - wholeSeconds) * 1000;
+				file.time = new Date(year, month, day, hour, minute, wholeSeconds, ms);
 			}
+
+			const fileSize = type === 'liFE' ? readLength64(reader) : 0;
+			if (type === 'liFA') skipBytes(reader, 8);
+			if (type === 'liFD') file.data = readBytes(reader, dataSize);
+			const childDocumentID = version >= 5 ? readUnicodeString(reader) : undefined;
+			const assetModTime = version >= 6 ? readFloat64(reader) : undefined;
+			const assetLockedState = version >= 7 ? readUint8(reader) : undefined;
+			if (type === 'liFE') file.data = readBytes(reader, fileSize);
+
+			if (options.skipLinkedFilesData) file.data = undefined;
+
+			psd.linkedFiles.push(file);
+
+			fileOpenDescriptor; linkedFileDescriptor; childDocumentID; assetModTime; assetLockedState;
+
+			reader.offset = end;
+			skipBytes(reader, 2); // HACK !
 		}
 
-		if (!target.patterns) target.patterns = [];
-
-		target.patterns.push({ name, id, colorMode, x, y });
-
-		skipBytes(reader, left());
-		*/
+		skipBytes(reader, left()); // ?
 	},
-	(_writer, _target) => {
+	(writer, target) => {
+		const psd = target as Psd;
+
+		for (const file of psd.linkedFiles!) {
+			writeUint32(writer, 0);
+			writeUint32(writer, 0); // size
+			const sizeOffset = writer.offset;
+			writeSignature(writer, file.data ? 'liFD' : 'liFA');
+			writeInt32(writer, 2);
+			writePascalString(writer, file.id || '', 1);
+			writeUnicodeStringWithPadding(writer, file.name || '');
+			writeSignature(writer, '    ');
+			writeSignature(writer, '    ');
+			writeLength64(writer, file.data ? file.data.byteLength : 0);
+			writeUint8(writer, 0);
+
+			if (file.data) {
+				writeBytes(writer, file.data);
+			} else {
+				writeLength64(writer, 0);
+			}
+
+			writer.view.setUint32(sizeOffset - 4, writer.offset - sizeOffset, false); // write size
+			writeUint16(writer, 0); // HACK!
+		}
+
+		writeUint8(writer, 0); // HACK !
 	},
 );
+addHandlerAlias('lnkD', 'lnk2');
+addHandlerAlias('lnk3', 'lnk2');
 
 addHandler(
 	'pths',
@@ -1900,6 +2107,16 @@ addHandler(
 	},
 );
 
+function readLength64(reader: PsdReader) {
+	if (readUint32(reader)) throw new Error(`Resource size above 4 GB limit at ${reader.offset.toString(16)}`);
+	return readUint32(reader);
+}
+
+function writeLength64(writer: PsdWriter, length: number) {
+	writeUint32(writer, 0);
+	writeUint32(writer, length);
+}
+
 // addHandler(
 // 	'lmfx',
 // 	target => !target,
@@ -2044,6 +2261,20 @@ interface WarpDescriptor {
 	warpPerspective: number;
 	warpPerspectiveOther: number;
 	warpRotate: string;
+	bounds?: {
+		'Top ': DescriptorUnitsValue;
+		Left: DescriptorUnitsValue;
+		Btom: DescriptorUnitsValue;
+		Rght: DescriptorUnitsValue;
+	};
+	uOrder: number;
+	vOrder: number;
+	customEnvelopeWarp?: {
+		meshPoints: {
+			type: 'Hrzn' | 'Vrtc';
+			values: number[];
+		}[];
+	};
 }
 
 function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoiseGradient {
@@ -2210,7 +2441,7 @@ function parsePercent(x: DescriptorUnitsValue | undefined) {
 function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
 	if (
 		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
-		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters'
+		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
 	) {
 		throw new Error(`Invalid units: ${JSON.stringify({ units, value })}`);
 	}
@@ -2238,7 +2469,7 @@ function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUnitsValu
 
 	if (
 		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
-		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters'
+		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
 	) {
 		throw new Error(`Invalid units in ${JSON.stringify(x)} (key: ${key})`);
 	}

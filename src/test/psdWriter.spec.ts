@@ -31,6 +31,11 @@ function loadPsdFromJSONAndPNGFiles(basePath: string) {
 			}
 		}
 	});
+	psd.linkedFiles?.forEach(f => {
+		try {
+			f.data = fs.readFileSync(path.join(basePath, f.name));
+		} catch { }
+	});
 	return psd;
 }
 
@@ -348,7 +353,7 @@ describe('PsdWriter', () => {
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
 
 			const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));
-			compareBuffers(buffer, expected, `ArrayBufferPsdWriter`);
+			compareBuffers(buffer, expected, `ArrayBufferPsdWriter`, 0);
 		});
 	});
 });

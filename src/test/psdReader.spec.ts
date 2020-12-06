@@ -3,12 +3,11 @@ import * as path from 'path';
 import { expect } from 'chai';
 import {
 	readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas,
-	createReaderFromBuffer,
-	compareBuffers
+	createReaderFromBuffer, compareBuffers, compareTwoFiles
 } from './common';
 import { Layer, ReadOptions, Psd } from '../psd';
 import { readPsd, writePsdBuffer } from '../index';
-import { readPsd as readPsdInternal } from '../psdReader';
+import { readAbr, readPsd as readPsdInternal } from '../psdReader';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'read');
@@ -36,11 +35,6 @@ describe('PsdReader', () => {
 		expect(psd.children![0].canvas).not.ok;
 	});
 
-	it.skip('can read a PSD with layer masks (only if throw on missing features is not set)', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, '..', 'layer-mask', 'src.psd'));
-		expect(psd.children![0].canvas).ok;
-	});
-
 	it('reads PSD from Buffer with offset', () => {
 		const file = fs.readFileSync(path.join(readFilesPath, 'layers', 'src.psd'));
 		const outer = Buffer.alloc(file.byteLength + 100);
@@ -59,6 +53,7 @@ describe('PsdReader', () => {
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; skip?: boolean; }[] = [];
+			const compareFiles: { name: string; data: Uint8Array; }[] = [];
 
 			compare.push({ name: `canvas.png`, canvas: psd.canvas });
 			psd.canvas = undefined;
@@ -86,6 +81,15 @@ describe('PsdReader', () => {
 				}
 			}
 
+			if (psd.linkedFiles) {
+				for (const file of psd.linkedFiles) {
+					if (file.data) {
+						compareFiles.push({ name: file.name, data: file.data });
+						delete file.data;
+					}
+				}
+			}
+
 			pushLayerCanvases(psd.children || []);
 			fs.mkdirSync(path.join(resultsFilesPath, f), { recursive: true });
 
@@ -97,6 +101,7 @@ describe('PsdReader', () => {
 			if (psd.imageResources) delete psd.imageResources.thumbnailRaw;
 
 			compare.forEach(i => saveCanvas(path.join(resultsFilesPath, f, i.name), i.canvas));
+			compareFiles.forEach(i => fs.writeFileSync(path.join(resultsFilesPath, f, i.name), i.data));
 
 			fs.writeFileSync(path.join(resultsFilesPath, f, 'data.json'), JSON.stringify(psd, null, 2), 'utf8');
 
@@ -105,6 +110,7 @@ describe('PsdReader', () => {
 
 			expect(psd).eql(expected, f);
 			compare.forEach(i => i.skip || compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
+			compareFiles.forEach(i => compareTwoFiles(path.join(basePath, i.name), i.data, `${f}/${i.name}`));
 		});
 	});
 
@@ -114,8 +120,28 @@ describe('PsdReader', () => {
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true });
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.psd`), actual);
-			compareBuffers(actual, expected, `read-write-${f}`);
+
+			// fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.bin`), actual);
+			// console.log('------------');
+			// readPsdFromFile(path.join(resultsFilesPath, `read-write-${f}.psd`), { ...opts, useImageData: true, useRawThumbnail: true });
+
+			compareBuffers(actual, expected, `read-write-${f}`, 0);
 		});
+	});
+
+	it.skip('ABR', () => {
+		const buffer = fs.readFileSync('resources/test2.abr');
+		const abr = readAbr(buffer);
+
+		// const canvas = createCanvas(w, h);
+		// const context = canvas.getContext('2d')!;
+		// const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+		// for (let i = 0, j = 0; i < alpha.byteLength; i++, j += 4) {
+		// 	imageData.data[j + 3] = alpha[i];
+		// }
+		// context.putImageData(imageData, 0, 0);
+		// saveCanvas('brush_test.png', canvas);
+		if (0) console.log(require('util').inspect(abr, false, 99, true));
 	});
 
 	it.skip('write text layer test', () => {
