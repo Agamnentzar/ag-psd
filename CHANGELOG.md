@@ -1,5 +1,10 @@
 # Changelog
 
+## v11.3.0
+- Added handling for *Vector Origination Data* and *Compositor Used*
+- Added handling for *ICC Untagged Profile*
+- Added handling for *Lock Artbords* layer option
+
 ## v11.2.0
 - Added handling for smart objects
 - Changed types for text warp

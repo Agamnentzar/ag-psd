@@ -390,10 +390,10 @@ export interface LayerTextData {
 export interface PatternInfo {
 	name: string;
 	id: string;
-	colorMode: ColorMode;
 	x: number;
 	y: number;
 	bounds: { x: number; y: number; w: number, h: number; };
+	data: Uint8Array;
 }
 
 export interface BezierKnot {
@@ -679,6 +679,7 @@ export interface LayerAdditionalInfo {
 		transparency?: boolean;
 		composite?: boolean;
 		position?: boolean;
+		artboards?: boolean;
 	};
 	layerColor?: LayerColor;
 	referencePoint?: {
@@ -735,6 +736,27 @@ export interface LayerAdditionalInfo {
 	}[];
 	adjustment?: AdjustmentLayer;
 	placedLayer?: PlacedLayer;
+	vectorOrigination?: {
+		keyDescriptorList: {
+			keyOriginType: number;
+			keyOriginResolution: number;
+			keyOriginShapeBoundingBox: {
+				top: UnitsValue;
+				left: UnitsValue;
+				bottom: UnitsValue;
+				right: UnitsValue;
+			};
+		}[];
+	};
+	compositorUsed?: {
+		description: string;
+		reason: string;
+		engine: string;
+		enableCompCore: string;
+		enableCompCoreGPU: string;
+		compCoreSupport: string;
+		compCoreGPUSupport: string;
+	};
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
@@ -818,6 +840,7 @@ export interface ImageResources {
 		caption?: boolean;
 		printFlags?: boolean;
 	};
+	iccUntaggedProfile?: boolean;
 }
 
 export interface Layer extends LayerAdditionalInfo {

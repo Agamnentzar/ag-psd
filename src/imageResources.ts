@@ -553,14 +553,23 @@ addHandler(
 	1064,
 	target => target.pixelAspectRatio !== undefined,
 	(reader, target) => {
-		const version = readUint32(reader);
-		if (version > 2) throw new Error('Invalid pixelAspectRatio version');
-
+		if (readUint32(reader) > 2) throw new Error('Invalid pixelAspectRatio version');
 		target.pixelAspectRatio = { aspect: readFloat64(reader) };
 	},
 	(writer, target) => {
 		writeUint32(writer, 2); // version
 		writeFloat64(writer, target.pixelAspectRatio!.aspect);
+	},
+);
+
+addHandler(
+	1041,
+	target => target.iccUntaggedProfile !== undefined,
+	(reader, target) => {
+		target.iccUntaggedProfile = !!readUint8(reader);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.iccUntaggedProfile ? 1 : 0);
 	},
 );
 

@@ -2,18 +2,15 @@ import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors } from './helpers';
 import {
-	LayerAdditionalInfo, TextGridding, Orientation, WarpStyle, AntiAlias, BevelStyle, BevelTechnique,
-	LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
-	LayerEffectSolidFill, BevelDirection, GlowTechnique, GlowSource, LayerEffectPatternOverlay,
-	LayerEffectGradientOverlay, LayerEffectSatin, GradientStyle, EffectContour, EffectSolidGradient,
-	EffectNoiseGradient, BezierPath, Psd, BlendMode, LineCapType, LineJoinType, LineAlignment,
-	VectorContent, UnitsValue, LayerEffectStroke, ExtraGradientInfo, EffectPattern,
+	LayerAdditionalInfo, LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
+	LayerEffectSolidFill, LayerEffectPatternOverlay, LayerEffectGradientOverlay, LayerEffectSatin, EffectContour,
+	EffectNoiseGradient, BezierPath, Psd, VectorContent, LayerEffectStroke, ExtraGradientInfo, EffectPattern,
 	ExtraPatternInfo, ReadOptions, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment,
 	ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel,
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -25,7 +22,13 @@ import {
 	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding,
 	writeColor, writePascalString, writeInt32,
 } from './psdWriter';
-import { readDescriptorStructure, readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
+import {
+	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
+	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, GrdT, IGSr, Ornt,
+	parseAngle, parsePercent, parseUnits, readDescriptorStructure, readVersionAndDescriptor, StrokeDescriptor,
+	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
+	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor
+} from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
 
@@ -54,146 +57,6 @@ function addHandler(key: string, has: HasMethod, read: ReadMethod, write: WriteM
 function addHandlerAlias(key: string, target: string) {
 	infoHandlersMap[key] = infoHandlersMap[target];
 }
-
-const textGridding = createEnum<TextGridding>('textGridding', 'none', {
-	none: 'None',
-});
-
-const Ornt = createEnum<Orientation>('Ornt', 'horizontal', {
-	horizontal: 'Hrzn',
-	vertical: 'Vrtc',
-});
-
-const Annt = createEnum<AntiAlias>('Annt', 'sharp', {
-	none: 'Anno',
-	sharp: 'antiAliasSharp',
-	crisp: 'AnCr',
-	strong: 'AnSt',
-	smooth: 'AnSm',
-});
-
-const warpStyle = createEnum<WarpStyle>('warpStyle', 'none', {
-	none: 'warpNone',
-	arc: 'warpArc',
-	arcLower: 'warpArcLower',
-	arcUpper: 'warpArcUpper',
-	arch: 'warpArch',
-	bulge: 'warpBulge',
-	shellLower: 'warpShellLower',
-	shellUpper: 'warpShellUpper',
-	flag: 'warpFlag',
-	wave: 'warpWave',
-	fish: 'warpFish',
-	rise: 'warpRise',
-	fisheye: 'warpFisheye',
-	inflate: 'warpInflate',
-	squeeze: 'warpSqueeze',
-	twist: 'warpTwist',
-	custom: 'warpCustom',
-});
-
-const BlnM = createEnum<BlendMode>('BlnM', 'normal', {
-	'normal': 'Nrml',
-	'dissolve': 'Dslv',
-	'darken': 'Drkn',
-	'multiply': 'Mltp',
-	'color burn': 'CBrn',
-	'linear burn': 'linearBurn',
-	'darker color': 'darkerColor',
-	'lighten': 'Lghn',
-	'screen': 'Scrn',
-	'color dodge': 'CDdg',
-	'linear dodge': 'linearDodge',
-	'lighter color': 'lighterColor',
-	'overlay': 'Ovrl',
-	'soft light': 'SftL',
-	'hard light': 'HrdL',
-	'vivid light': 'vividLight',
-	'linear light': 'linearLight',
-	'pin light': 'pinLight',
-	'hard mix': 'hardMix',
-	'difference': 'Dfrn',
-	'exclusion': 'Xclu',
-	'subtract': 'blendSubtraction',
-	'divide': 'blendDivide',
-	'hue': 'H   ',
-	'saturation': 'Strt',
-	'color': 'Clr ',
-	'luminosity': 'Lmns',
-});
-
-const BESl = createEnum<BevelStyle>('BESl', 'inner bevel', {
-	'inner bevel': 'InrB',
-	'outer bevel': 'OtrB',
-	'emboss': 'Embs',
-	'pillow emboss': 'PlEb',
-	'stroke emboss': 'strokeEmboss',
-});
-
-const bvlT = createEnum<BevelTechnique>('bvlT', 'smooth', {
-	'smooth': 'SfBL',
-	'chisel hard': 'PrBL',
-	'chisel soft': 'Slmt',
-});
-
-const BESs = createEnum<BevelDirection>('BESs', 'up', {
-	up: 'In  ',
-	down: 'Out ',
-});
-
-const BETE = createEnum<GlowTechnique>('BETE', 'softer', {
-	softer: 'SfBL',
-	precise: 'PrBL',
-});
-
-const IGSr = createEnum<GlowSource>('IGSr', 'edge', {
-	edge: 'SrcE',
-	center: 'SrcC',
-});
-
-const GrdT = createEnum<GradientStyle>('GrdT', 'linear', {
-	linear: 'Lnr ',
-	radial: 'Rdl ',
-	angle: 'Angl',
-	reflected: 'Rflc',
-	diamond: 'Dmnd',
-});
-
-export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {
-	rgb: 'RGBC',
-	hsb: 'HSBl',
-	lab: 'LbCl',
-});
-
-const FStl = createEnum<'inside' | 'center' | 'outside'>('FStl', 'outside', {
-	outside: 'OutF',
-	center: 'CtrF',
-	inside: 'InsF'
-});
-
-const FrFl = createEnum<'color' | 'gradient' | 'pattern'>('FrFl', 'color', {
-	color: 'SClr',
-	gradient: 'GrFl',
-	pattern: 'Ptrn',
-});
-
-const strokeStyleLineCapType = createEnum<LineCapType>('strokeStyleLineCapType', 'butt', {
-	butt: 'strokeStyleButtCap',
-	round: 'strokeStyleRoundCap',
-	square: 'strokeStyleSquareCap',
-});
-
-const strokeStyleLineJoinType = createEnum<LineJoinType>('strokeStyleLineJoinType', 'miter', {
-	miter: 'strokeStyleMiterJoin',
-	round: 'strokeStyleRoundJoin',
-	bevel: 'strokeStyleBevelJoin',
-});
-
-const strokeStyleLineAlignment = createEnum<LineAlignment>('strokeStyleLineAlignment', 'inside', {
-	inside: 'strokeStyleAlignInside',
-	center: 'strokeStyleAlignCenter',
-	outside: 'strokeStyleAlignOutside',
-});
 
 function hasKey(key: keyof LayerAdditionalInfo) {
 	return (target: LayerAdditionalInfo) => target[key] !== undefined;
@@ -476,6 +339,65 @@ addHandler(
 // TODO: need to write vmsk if has outline ?
 addHandlerAlias('vsms', 'vmsk');
 
+interface VogkDescriptor {
+	keyDescriptorList: {
+		keyOriginType: number;
+		keyOriginResolution: number;
+		keyOriginShapeBBox: {
+			unitValueQuadVersion: number;
+			'Top ': DescriptorUnitsValue;
+			Left: DescriptorUnitsValue;
+			Btom: DescriptorUnitsValue;
+			Rght: DescriptorUnitsValue;
+		};
+		keyOriginIndex: number;
+	}[];
+}
+
+addHandler(
+	'vogk',
+	hasKey('vectorOrigination'),
+	(reader, target, left) => {
+		if (readInt32(reader) !== 1) throw new Error(`Invalid vogk version`);
+		const desc = readVersionAndDescriptor(reader) as VogkDescriptor;
+		// console.log(require('util').inspect(desc, false, 99, true));
+		target.vectorOrigination = {
+			keyDescriptorList: desc.keyDescriptorList.map(i => ({
+				keyOriginType: i.keyOriginType,
+				keyOriginResolution: i.keyOriginResolution,
+				keyOriginShapeBoundingBox: {
+					top: parseUnits(i.keyOriginShapeBBox['Top ']),
+					left: parseUnits(i.keyOriginShapeBBox.Left),
+					bottom: parseUnits(i.keyOriginShapeBBox.Btom),
+					right: parseUnits(i.keyOriginShapeBBox.Rght),
+				},
+			})),
+		};
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		target;
+		const orig = target.vectorOrigination!;
+		const desc: VogkDescriptor = {
+			keyDescriptorList: orig.keyDescriptorList.map((i, index) => ({
+				keyOriginType: i.keyOriginType,
+				keyOriginResolution: i.keyOriginResolution,
+				keyOriginShapeBBox: {
+					unitValueQuadVersion: 1,
+					'Top ': unitsValue(i.keyOriginShapeBoundingBox.top, 'top'),
+					Left: unitsValue(i.keyOriginShapeBoundingBox.left, 'left'),
+					Btom: unitsValue(i.keyOriginShapeBoundingBox.bottom, 'bottom'),
+					Rght: unitsValue(i.keyOriginShapeBoundingBox.right, 'right'),
+				},
+				keyOriginIndex: index,
+			})),
+		};
+
+		writeInt32(writer, 1); // version
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	}
+);
+
 addHandler(
 	'luni',
 	hasKey('name'),
@@ -485,7 +407,7 @@ addHandler(
 	},
 	(writer, target) => {
 		writeUnicodeString(writer, target.name!);
-		writeUint16(writer, 0); // padding (but not extending string length)
+		// writeUint16(writer, 0); // padding (but not extending string length)
 	},
 );
 
@@ -552,12 +474,15 @@ addHandler(
 			composite: (flags & 0x02) !== 0,
 			position: (flags & 0x04) !== 0,
 		};
+
+		if (flags & 0x08) target.protected.artboards = true;
 	},
 	(writer, target) => {
 		const flags =
 			(target.protected!.transparency ? 0x01 : 0) |
 			(target.protected!.composite ? 0x02 : 0) |
-			(target.protected!.position ? 0x04 : 0);
+			(target.protected!.position ? 0x04 : 0) |
+			(target.protected!.artboards ? 0x08 : 0);
 
 		writeUint32(writer, flags);
 	},
@@ -2131,151 +2056,50 @@ function writeLength64(writer: PsdWriter, length: number) {
 // 	},
 // );
 
-// addHandler(
-// 	'cinf',
-// 	target => !target,
-// 	(reader, _target) => {
-// 		const descriptor = readVersionAndDescriptor(reader);
-// 		console.log(require('util').inspect(descriptor, false, 99, true));
-// 	},
-// 	(_writer, _target) => {
-// 	},
-// );
+interface CinfDescriptor {
+	Vrsn: { major: 1; minor: 0; fix: 1; };
+	description: string;
+	reason: string;
+	Engn: string; // 'Engn.compCore';
+	enableCompCore: string; // 'enable.feature';
+	enableCompCoreGPU: string; // 'enable.feature';
+	compCoreSupport: string; // 'reason.supported';
+	compCoreGPUSupport: string; // 'reason.featureDisabled';
+}
+
+addHandler(
+	'cinf',
+	hasKey('compositorUsed'),
+	(reader, target) => {
+		const desc = readVersionAndDescriptor(reader) as CinfDescriptor;
+		// console.log(require('util').inspect(desc, false, 99, true));
+		target.compositorUsed = {
+			description: desc.description,
+			reason: desc.reason,
+			engine: desc.Engn.split('.')[1],
+			enableCompCore: desc.enableCompCore.split('.')[1],
+			enableCompCoreGPU: desc.enableCompCoreGPU.split('.')[1],
+			compCoreSupport: desc.compCoreSupport.split('.')[1],
+			compCoreGPUSupport: desc.compCoreGPUSupport.split('.')[1],
+		};
+	},
+	(writer, target) => {
+		const cinf = target.compositorUsed!;
+		const desc: CinfDescriptor = {
+			Vrsn: { major: 1, minor: 0, fix: 1 },
+			description: cinf.description,
+			reason: cinf.reason,
+			Engn: `Engn.${cinf.engine}`,
+			enableCompCore: `enable.${cinf.enableCompCore}`,
+			enableCompCoreGPU: `enable.${cinf.enableCompCoreGPU}`,
+			compCoreSupport: `reason.${cinf.compCoreSupport}`,
+			compCoreGPUSupport: `reason.${cinf.compCoreGPUSupport}`,
+		};
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
 
 // descriptor helpers
-
-type DescriptorUnits = 'Angle' | 'Density' | 'Distance' | 'None' | 'Percent' | 'Pixels' |
-	'Millimeters' | 'Points' | 'Picas' | 'Inches' | 'Centimeters';
-
-interface DescriptorUnitsValue {
-	units: DescriptorUnits;
-	value: number;
-}
-
-type DescriptorColor = {
-	'Rd  ': number;
-	'Grn ': number;
-	'Bl  ': number;
-} | {
-	'H   ': DescriptorUnitsValue;
-	Strt: number;
-	Brgh: number;
-} | {
-	'Cyn ': number;
-	Mgnt: number;
-	'Ylw ': number;
-	Blck: number;
-} | {
-	'Gry ': number;
-} | {
-	Lmnc: number;
-	'A   ': number;
-	'B   ': number;
-};
-
-interface DesciptorPattern {
-	'Nm  ': string;
-	Idnt: string;
-}
-
-type DesciptorGradient = {
-	GrdF: 'GrdF.CstS';
-	Intr: number;
-	'Nm  ': string;
-	Clrs: {
-		'Clr ': DescriptorColor;
-		Lctn: number;
-		Mdpn: number;
-	}[];
-	Trns: {
-		Opct: DescriptorUnitsValue;
-		Lctn: number;
-		Mdpn: number;
-	}[];
-} | {
-	GrdF: 'GrdF.ClNs';
-	Smth: number;
-	'Nm  ': string;
-	ClrS: string;
-	RndS: number;
-	VctC?: boolean;
-	ShTr?: boolean;
-	'Mnm ': number[];
-	'Mxm ': number[];
-};
-
-interface DescriptorColorContent {
-	'Clr ': DescriptorColor;
-}
-
-interface DescriptorGradientContent {
-	Grad: DesciptorGradient;
-	Type: string;
-	Dthr?: boolean;
-	Rvrs?: boolean;
-	Angl?: DescriptorUnitsValue;
-	'Scl '?: DescriptorUnitsValue;
-	Algn?: boolean;
-	Ofst?: { Hrzn: DescriptorUnitsValue; Vrtc: DescriptorUnitsValue; };
-}
-
-interface DescriptorPatternContent {
-	Ptrn: DesciptorPattern;
-	Lnkd?: boolean;
-	phase?: { Hrzn: number; Vrtc: number; };
-}
-
-type DescriptorVectorContent = DescriptorColorContent | DescriptorGradientContent | DescriptorPatternContent;
-
-interface StrokeDescriptor {
-	strokeStyleVersion: number;
-	strokeEnabled: boolean;
-	fillEnabled: boolean;
-	strokeStyleLineWidth: DescriptorUnitsValue;
-	strokeStyleLineDashOffset: DescriptorUnitsValue;
-	strokeStyleMiterLimit: number;
-	strokeStyleLineCapType: string;
-	strokeStyleLineJoinType: string;
-	strokeStyleLineAlignment: string;
-	strokeStyleScaleLock: boolean;
-	strokeStyleStrokeAdjust: boolean;
-	strokeStyleLineDashSet: DescriptorUnitsValue[];
-	strokeStyleBlendMode: string;
-	strokeStyleOpacity: DescriptorUnitsValue;
-	strokeStyleContent: DescriptorVectorContent;
-	strokeStyleResolution: number;
-}
-
-interface TextDescriptor {
-	'Txt ': string;
-	textGridding: string;
-	Ornt: string;
-	AntA: string;
-	TextIndex: number;
-	EngineData?: Uint8Array;
-}
-
-interface WarpDescriptor {
-	warpStyle: string;
-	warpValue: number;
-	warpPerspective: number;
-	warpPerspectiveOther: number;
-	warpRotate: string;
-	bounds?: {
-		'Top ': DescriptorUnitsValue;
-		Left: DescriptorUnitsValue;
-		Btom: DescriptorUnitsValue;
-		Rght: DescriptorUnitsValue;
-	};
-	uOrder: number;
-	vOrder: number;
-	customEnvelopeWarp?: {
-		meshPoints: {
-			type: 'Hrzn' | 'Vrtc';
-			values: number[];
-		}[];
-	};
-}
 
 function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoiseGradient {
 	if (grad.GrdF === 'GrdF.CstS') {
@@ -2424,57 +2248,6 @@ function serializeVectorContent(content: VectorContent): { descriptor: Descripto
 	} else {
 		return { key: 'GdFl', descriptor: serializeGradientContent(content) };
 	}
-}
-
-function parseAngle(x: DescriptorUnitsValue) {
-	if (x === undefined) return 0;
-	if (x.units !== 'Angle') throw new Error(`Invalid units: ${x.units}`);
-	return x.value;
-}
-
-function parsePercent(x: DescriptorUnitsValue | undefined) {
-	if (x === undefined) return 1;
-	if (x.units !== 'Percent') throw new Error(`Invalid units: ${x.units}`);
-	return x.value / 100;
-}
-
-function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
-	if (
-		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
-		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
-	) {
-		throw new Error(`Invalid units: ${JSON.stringify({ units, value })}`);
-	}
-	return { value, units };
-}
-
-function unitsAngle(value: number | undefined): DescriptorUnitsValue {
-	return { units: 'Angle', value: value || 0 };
-}
-
-function unitsPercent(value: number | undefined): DescriptorUnitsValue {
-	return { units: 'Percent', value: Math.round(clamp(value || 0, 0, 1) * 100) };
-}
-
-function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUnitsValue {
-	if (x == null) return { units: 'Pixels', value: 0 };
-
-	if (typeof x !== 'object')
-		throw new Error(`Invalid value: ${JSON.stringify(x)} (key: ${key}) (should have value and units)`);
-
-	const { units, value } = x;
-
-	if (typeof value !== 'number')
-		throw new Error(`Invalid value in ${JSON.stringify(x)} (key: ${key})`);
-
-	if (
-		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
-		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
-	) {
-		throw new Error(`Invalid units in ${JSON.stringify(x)} (key: ${key})`);
-	}
-
-	return { units, value };
 }
 
 function parseColor(color: DescriptorColor): Color {

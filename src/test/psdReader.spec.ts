@@ -7,7 +7,7 @@ import {
 } from './common';
 import { Layer, ReadOptions, Psd } from '../psd';
 import { readPsd, writePsdBuffer } from '../index';
-import { readAbr, readPsd as readPsdInternal } from '../psdReader';
+import { readPsd as readPsdInternal } from '../psdReader';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'read');
@@ -127,21 +127,6 @@ describe('PsdReader', () => {
 
 			compareBuffers(actual, expected, `read-write-${f}`, 0);
 		});
-	});
-
-	it.skip('ABR', () => {
-		const buffer = fs.readFileSync('resources/test2.abr');
-		const abr = readAbr(buffer);
-
-		// const canvas = createCanvas(w, h);
-		// const context = canvas.getContext('2d')!;
-		// const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-		// for (let i = 0, j = 0; i < alpha.byteLength; i++, j += 4) {
-		// 	imageData.data[j + 3] = alpha[i];
-		// }
-		// context.putImageData(imageData, 0, 0);
-		// saveCanvas('brush_test.png', canvas);
-		if (0) console.log(require('util').inspect(abr, false, 99, true));
 	});
 
 	it.skip('write text layer test', () => {

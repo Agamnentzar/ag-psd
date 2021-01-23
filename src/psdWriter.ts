@@ -370,14 +370,16 @@ function writeGlobalLayerMaskInfo(writer: PsdWriter) {
 
 function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: WriteOptions) {
 	for (const handler of infoHandlers) {
-		if (handler.key === 'Txt2' && options.invalidateTextLayers) continue;
+		const key = handler.key;
+
+		if (key === 'Txt2' && options.invalidateTextLayers) continue;
 
 		if (handler.has(target)) {
 			writeSignature(writer, '8BIM');
-			writeSignature(writer, handler.key);
+			writeSignature(writer, key);
 
-			const align = handler.key === 'Txt2' ? 4 : 2;
-			writeSection(writer, align, () => handler.write(writer, target, psd, options), handler.key !== 'Txt2');
+			const align = (key === 'Txt2' || key === 'luni' || key === 'vmsk') ? 4 : 2;
+			writeSection(writer, align, () => handler.write(writer, target, psd, options), key !== 'Txt2');
 		}
 	}
 }

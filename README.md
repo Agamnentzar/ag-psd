@@ -17,7 +17,6 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 * Does not support animations
 * Does not support patterns (or "Pattern Overlay" layer effect)
 * Does not support some metadata fields
-* Does not support smart objects
 * Does not support 3d effects
 * Does not support some new features from latest versions of Photoshop
 * Text layers implementation is incomplete

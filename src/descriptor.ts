@@ -1,3 +1,5 @@
+import { clamp, createEnum } from './helpers';
+import { AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, GlowSource, GlowTechnique, GradientStyle, LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, UnitsValue, WarpStyle } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
 	readBytes, readAsciiString, readInt32, readFloat32, readInt32LE, readUnicodeStringWithLength
@@ -71,32 +73,36 @@ const fieldToExtType: ExtTypeDict = {
 	customEnvelopeWarp: makeType('', 'customEnvelopeWarp'),
 	warp: makeType('', 'warp'),
 	'Sz  ': makeType('', 'Pnt '),
+	keyOriginShapeBBox: makeType('', 'unitRect'),
+	Vrsn: makeType('', 'null'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
 	'Crv ': makeType('', 'CrPt'),
 	'Clrs': makeType('', 'Clrt'),
 	'Trns': makeType('', 'TrnS'),
+	'keyDescriptorList': makeType('', 'null'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
-		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed',
+		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
 		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn',
 		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind',
 		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages',
-		'numerator', 'denominator', 'frameCount', 'Annt',
+		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
+		'keyOriginIndex', 'major', 'minor', 'fix',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
 		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'glwS', 'GrdF', 'GlwT',
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
-		'tableOrder',
+		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -107,7 +113,7 @@ const typeToField: { [key: string]: string[]; } = {
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
-		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime',
+		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -116,7 +122,7 @@ const typeToField: { [key: string]: string[]; } = {
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
-		'LaSt', 'Trnf', 'nonAffineTransform',
+		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList',
 	],
 	'ObAr': ['meshPoints'],
 };
@@ -132,6 +138,7 @@ const fieldToArrayType: Dict = {
 	'strokeStyleLineDashSet': 'UntF',
 	'Trnf': 'doub',
 	'nonAffineTransform': 'doub',
+	'keyDescriptorList': 'Objc',
 };
 
 const fieldToType: Dict = {};
@@ -159,6 +166,8 @@ function getTypeByKey(key: string, value: any) {
 		return typeof value === 'string' ? 'enum' : 'bool';
 	} else if (key === 'Hrzn' || key === 'Vrtc') {
 		return typeof value === 'number' ? 'doub' : 'UntF';
+	} else if (key === 'Vrsn') {
+		return typeof value === 'number' ? 'long' : 'Objc';
 	} else {
 		return fieldToType[key];
 	}
@@ -254,9 +263,6 @@ function readOSType(reader: PsdReader, type: string) {
 				const type = readSignature(reader);
 				// console.log('  >', type);
 				items.push(readOSType(reader, type));
-
-				// if (typeof items[items.length - 1] === 'object' && 'units' in items[items.length - 1])
-				// 	console.log('[]', items[items.length - 1]);
 			}
 
 			return items;
@@ -344,7 +350,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 		// 	writeReferenceStructure(reader);
 		case 'Objc': // Descriptor
 		case 'GlbO': // GlobalObject same as Descriptor
-			if (!extType) throw new Error(`Missing ext type for: ${key} (${JSON.stringify(value)})`);
+			if (!extType) throw new Error(`Missing ext type for: '${key}' (${JSON.stringify(value)})`);
 			writeDescriptorStructure(writer, extType.name, extType.classID, value);
 			break;
 		case 'VlLs': // List
@@ -470,12 +476,12 @@ function readReferenceStructure(reader: PsdReader) {
 function readClassStructure(reader: PsdReader) {
 	const name = readUnicodeString(reader);
 	const classID = readAsciiStringOrClassId(reader);
+	// console.log({ name, classID });
 	return { name, classID };
 }
 
 export function readVersionAndDescriptor(reader: PsdReader) {
-	const version = readUint32(reader);
-	if (version !== 16) throw new Error('Invalid descriptor version');
+	if (readUint32(reader) !== 16) throw new Error('Invalid descriptor version');
 	return readDescriptorStructure(reader);
 }
 
@@ -483,3 +489,332 @@ export function writeVersionAndDescriptor(writer: PsdWriter, name: string, class
 	writeUint32(writer, 16); // version
 	writeDescriptorStructure(writer, name, classID, descriptor);
 }
+
+export type DescriptorUnits = 'Angle' | 'Density' | 'Distance' | 'None' | 'Percent' | 'Pixels' |
+	'Millimeters' | 'Points' | 'Picas' | 'Inches' | 'Centimeters';
+
+export interface DescriptorUnitsValue {
+	units: DescriptorUnits;
+	value: number;
+}
+
+export type DescriptorColor = {
+	'Rd  ': number;
+	'Grn ': number;
+	'Bl  ': number;
+} | {
+	'H   ': DescriptorUnitsValue;
+	Strt: number;
+	Brgh: number;
+} | {
+	'Cyn ': number;
+	Mgnt: number;
+	'Ylw ': number;
+	Blck: number;
+} | {
+	'Gry ': number;
+} | {
+	Lmnc: number;
+	'A   ': number;
+	'B   ': number;
+};
+
+export interface DesciptorPattern {
+	'Nm  ': string;
+	Idnt: string;
+}
+
+export type DesciptorGradient = {
+	GrdF: 'GrdF.CstS';
+	Intr: number;
+	'Nm  ': string;
+	Clrs: {
+		'Clr ': DescriptorColor;
+		Lctn: number;
+		Mdpn: number;
+	}[];
+	Trns: {
+		Opct: DescriptorUnitsValue;
+		Lctn: number;
+		Mdpn: number;
+	}[];
+} | {
+	GrdF: 'GrdF.ClNs';
+	Smth: number;
+	'Nm  ': string;
+	ClrS: string;
+	RndS: number;
+	VctC?: boolean;
+	ShTr?: boolean;
+	'Mnm ': number[];
+	'Mxm ': number[];
+};
+
+export interface DescriptorColorContent {
+	'Clr ': DescriptorColor;
+}
+
+export interface DescriptorGradientContent {
+	Grad: DesciptorGradient;
+	Type: string;
+	Dthr?: boolean;
+	Rvrs?: boolean;
+	Angl?: DescriptorUnitsValue;
+	'Scl '?: DescriptorUnitsValue;
+	Algn?: boolean;
+	Ofst?: { Hrzn: DescriptorUnitsValue; Vrtc: DescriptorUnitsValue; };
+}
+
+export interface DescriptorPatternContent {
+	Ptrn: DesciptorPattern;
+	Lnkd?: boolean;
+	phase?: { Hrzn: number; Vrtc: number; };
+}
+
+export type DescriptorVectorContent = DescriptorColorContent | DescriptorGradientContent | DescriptorPatternContent;
+
+export interface StrokeDescriptor {
+	strokeStyleVersion: number;
+	strokeEnabled: boolean;
+	fillEnabled: boolean;
+	strokeStyleLineWidth: DescriptorUnitsValue;
+	strokeStyleLineDashOffset: DescriptorUnitsValue;
+	strokeStyleMiterLimit: number;
+	strokeStyleLineCapType: string;
+	strokeStyleLineJoinType: string;
+	strokeStyleLineAlignment: string;
+	strokeStyleScaleLock: boolean;
+	strokeStyleStrokeAdjust: boolean;
+	strokeStyleLineDashSet: DescriptorUnitsValue[];
+	strokeStyleBlendMode: string;
+	strokeStyleOpacity: DescriptorUnitsValue;
+	strokeStyleContent: DescriptorVectorContent;
+	strokeStyleResolution: number;
+}
+
+export interface TextDescriptor {
+	'Txt ': string;
+	textGridding: string;
+	Ornt: string;
+	AntA: string;
+	TextIndex: number;
+	EngineData?: Uint8Array;
+}
+
+export interface WarpDescriptor {
+	warpStyle: string;
+	warpValue: number;
+	warpPerspective: number;
+	warpPerspectiveOther: number;
+	warpRotate: string;
+	bounds?: {
+		'Top ': DescriptorUnitsValue;
+		Left: DescriptorUnitsValue;
+		Btom: DescriptorUnitsValue;
+		Rght: DescriptorUnitsValue;
+	};
+	uOrder: number;
+	vOrder: number;
+	customEnvelopeWarp?: {
+		meshPoints: {
+			type: 'Hrzn' | 'Vrtc';
+			values: number[];
+		}[];
+	};
+}
+
+export function parseAngle(x: DescriptorUnitsValue) {
+	if (x === undefined) return 0;
+	if (x.units !== 'Angle') throw new Error(`Invalid units: ${x.units}`);
+	return x.value;
+}
+
+export function parsePercent(x: DescriptorUnitsValue | undefined) {
+	if (x === undefined) return 1;
+	if (x.units !== 'Percent') throw new Error(`Invalid units: ${x.units}`);
+	return x.value / 100;
+}
+
+export function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
+	if (
+		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
+		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
+	) {
+		throw new Error(`Invalid units: ${JSON.stringify({ units, value })}`);
+	}
+	return { value, units };
+}
+
+export function parseUnitsToNumber({ units, value }: DescriptorUnitsValue, expectedUnits: string): number {
+	if (units !== expectedUnits) throw new Error(`Invalid units: ${JSON.stringify({ units, value })}`);
+	return value;
+}
+
+export function unitsAngle(value: number | undefined): DescriptorUnitsValue {
+	return { units: 'Angle', value: value || 0 };
+}
+
+export function unitsPercent(value: number | undefined): DescriptorUnitsValue {
+	return { units: 'Percent', value: Math.round(clamp(value || 0, 0, 1) * 100) };
+}
+
+export function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUnitsValue {
+	if (x == null) return { units: 'Pixels', value: 0 };
+
+	if (typeof x !== 'object')
+		throw new Error(`Invalid value: ${JSON.stringify(x)} (key: ${key}) (should have value and units)`);
+
+	const { units, value } = x;
+
+	if (typeof value !== 'number')
+		throw new Error(`Invalid value in ${JSON.stringify(x)} (key: ${key})`);
+
+	if (
+		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
+		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
+	) {
+		throw new Error(`Invalid units in ${JSON.stringify(x)} (key: ${key})`);
+	}
+
+	return { units, value };
+}
+
+export const textGridding = createEnum<TextGridding>('textGridding', 'none', {
+	none: 'None',
+});
+
+export const Ornt = createEnum<Orientation>('Ornt', 'horizontal', {
+	horizontal: 'Hrzn',
+	vertical: 'Vrtc',
+});
+
+export const Annt = createEnum<AntiAlias>('Annt', 'sharp', {
+	none: 'Anno',
+	sharp: 'antiAliasSharp',
+	crisp: 'AnCr',
+	strong: 'AnSt',
+	smooth: 'AnSm',
+});
+
+export const warpStyle = createEnum<WarpStyle>('warpStyle', 'none', {
+	none: 'warpNone',
+	arc: 'warpArc',
+	arcLower: 'warpArcLower',
+	arcUpper: 'warpArcUpper',
+	arch: 'warpArch',
+	bulge: 'warpBulge',
+	shellLower: 'warpShellLower',
+	shellUpper: 'warpShellUpper',
+	flag: 'warpFlag',
+	wave: 'warpWave',
+	fish: 'warpFish',
+	rise: 'warpRise',
+	fisheye: 'warpFisheye',
+	inflate: 'warpInflate',
+	squeeze: 'warpSqueeze',
+	twist: 'warpTwist',
+	custom: 'warpCustom',
+});
+
+export const BlnM = createEnum<BlendMode>('BlnM', 'normal', {
+	'normal': 'Nrml',
+	'dissolve': 'Dslv',
+	'darken': 'Drkn',
+	'multiply': 'Mltp',
+	'color burn': 'CBrn',
+	'linear burn': 'linearBurn',
+	'darker color': 'darkerColor',
+	'lighten': 'Lghn',
+	'screen': 'Scrn',
+	'color dodge': 'CDdg',
+	'linear dodge': 'linearDodge',
+	'lighter color': 'lighterColor',
+	'overlay': 'Ovrl',
+	'soft light': 'SftL',
+	'hard light': 'HrdL',
+	'vivid light': 'vividLight',
+	'linear light': 'linearLight',
+	'pin light': 'pinLight',
+	'hard mix': 'hardMix',
+	'difference': 'Dfrn',
+	'exclusion': 'Xclu',
+	'subtract': 'blendSubtraction',
+	'divide': 'blendDivide',
+	'hue': 'H   ',
+	'saturation': 'Strt',
+	'color': 'Clr ',
+	'luminosity': 'Lmns',
+});
+
+export const BESl = createEnum<BevelStyle>('BESl', 'inner bevel', {
+	'inner bevel': 'InrB',
+	'outer bevel': 'OtrB',
+	'emboss': 'Embs',
+	'pillow emboss': 'PlEb',
+	'stroke emboss': 'strokeEmboss',
+});
+
+export const bvlT = createEnum<BevelTechnique>('bvlT', 'smooth', {
+	'smooth': 'SfBL',
+	'chisel hard': 'PrBL',
+	'chisel soft': 'Slmt',
+});
+
+export const BESs = createEnum<BevelDirection>('BESs', 'up', {
+	up: 'In  ',
+	down: 'Out ',
+});
+
+export const BETE = createEnum<GlowTechnique>('BETE', 'softer', {
+	softer: 'SfBL',
+	precise: 'PrBL',
+});
+
+export const IGSr = createEnum<GlowSource>('IGSr', 'edge', {
+	edge: 'SrcE',
+	center: 'SrcC',
+});
+
+export const GrdT = createEnum<GradientStyle>('GrdT', 'linear', {
+	linear: 'Lnr ',
+	radial: 'Rdl ',
+	angle: 'Angl',
+	reflected: 'Rflc',
+	diamond: 'Dmnd',
+});
+
+export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {
+	rgb: 'RGBC',
+	hsb: 'HSBl',
+	lab: 'LbCl',
+});
+
+export const FStl = createEnum<'inside' | 'center' | 'outside'>('FStl', 'outside', {
+	outside: 'OutF',
+	center: 'CtrF',
+	inside: 'InsF'
+});
+
+export const FrFl = createEnum<'color' | 'gradient' | 'pattern'>('FrFl', 'color', {
+	color: 'SClr',
+	gradient: 'GrFl',
+	pattern: 'Ptrn',
+});
+
+export const strokeStyleLineCapType = createEnum<LineCapType>('strokeStyleLineCapType', 'butt', {
+	butt: 'strokeStyleButtCap',
+	round: 'strokeStyleRoundCap',
+	square: 'strokeStyleSquareCap',
+});
+
+export const strokeStyleLineJoinType = createEnum<LineJoinType>('strokeStyleLineJoinType', 'miter', {
+	miter: 'strokeStyleMiterJoin',
+	round: 'strokeStyleRoundJoin',
+	bevel: 'strokeStyleBevelJoin',
+});
+
+export const strokeStyleLineAlignment = createEnum<LineAlignment>('strokeStyleLineAlignment', 'inside', {
+	inside: 'strokeStyleAlignInside',
+	center: 'strokeStyleAlignCenter',
+	outside: 'strokeStyleAlignOutside',
+});

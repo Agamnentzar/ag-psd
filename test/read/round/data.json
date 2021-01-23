@@ -1,0 +1,250 @@
+{
+  "width": 200,
+  "height": 200,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "perceptual",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "alphaChannelNames": [
+      "透明度"
+    ],
+    "alphaIdentifiers": [
+      0
+    ],
+    "globalAngle": 90,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      2
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 2,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CC 2019",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 200,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": true,
+      "hidden": true,
+      "name": "背景",
+      "nameSource": "bgnd",
+      "id": 1,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": true,
+        "composite": false,
+        "position": true,
+        "artboards": true
+      },
+      "layerColor": "none",
+      "timestamp": 1611416547.563128,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 22,
+      "left": 16,
+      "bottom": 190,
+      "right": 184,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "椭圆 1",
+      "vectorFill": {
+        "type": "color",
+        "color": {
+          "r": 72.00000330805779,
+          "g": 72.00000330805779,
+          "b": 72.00000330805779
+        }
+      },
+      "vectorMask": {
+        "paths": [
+          {
+            "open": false,
+            "knots": [
+              {
+                "linked": true,
+                "points": [
+                  54.160380363464355,
+                  23.000001907348633,
+                  100,
+                  23.000001907348633,
+                  145.83961963653564,
+                  23.000001907348633
+                ]
+              },
+              {
+                "linked": true,
+                "points": [
+                  183.00000429153442,
+                  60.16037464141846,
+                  183.00000429153442,
+                  105.9999942779541,
+                  183.00000429153442,
+                  151.8396258354187
+                ]
+              },
+              {
+                "linked": true,
+                "points": [
+                  145.83961963653564,
+                  188.99999856948853,
+                  100,
+                  188.99999856948853,
+                  54.160380363464355,
+                  188.99999856948853
+                ]
+              },
+              {
+                "linked": true,
+                "points": [
+                  16.999995708465576,
+                  151.8396258354187,
+                  16.999995708465576,
+                  105.9999942779541,
+                  16.999995708465576,
+                  60.16037464141846
+                ]
+              }
+            ]
+          }
+        ],
+        "invert": false,
+        "notLink": false,
+        "disable": false,
+        "fillStartsWithAllPixels": false
+      },
+      "vectorOrigination": {
+        "keyDescriptorList": [
+          {
+            "keyOriginType": 5,
+            "keyOriginResolution": 72,
+            "keyOriginShapeBoundingBox": {
+              "top": {
+                "value": 23,
+                "units": "Pixels"
+              },
+              "left": {
+                "value": 17,
+                "units": "Pixels"
+              },
+              "bottom": {
+                "value": 189,
+                "units": "Pixels"
+              },
+              "right": {
+                "value": 183,
+                "units": "Pixels"
+              }
+            }
+          }
+        ]
+      },
+      "nameSource": "shap",
+      "id": 2,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1611416547.563137,
+      "referencePoint": {
+        "x": -11,
+        "y": 0
+      }
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  },
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "compCore",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "supported",
+    "compCoreGPUSupport": "featureDisabled"
+  }
+}

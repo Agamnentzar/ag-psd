@@ -71,6 +71,7 @@
       "g": 255,
       "b": 255
     },
+    "iccUntaggedProfile": true,
     "idsSeedNumber": 22,
     "printFlags": {
       "caption": false,
