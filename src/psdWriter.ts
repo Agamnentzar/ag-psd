@@ -91,9 +91,7 @@ export function writeZeros(writer: PsdWriter, count: number) {
 }
 
 export function writeSignature(writer: PsdWriter, signature: string) {
-	if (signature.length !== 4) {
-		throw new Error(`Invalid signature: '${signature}'`);
-	}
+	if (signature.length !== 4) throw new Error(`Invalid signature: '${signature}'`);
 
 	for (let i = 0; i < 4; i++) {
 		writeUint8(writer, signature.charCodeAt(i));
@@ -280,7 +278,9 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			let flags = 0x08; // 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
 			if (layer.transparencyProtected) flags |= 0x01;
 			if (layer.hidden) flags |= 0x02;
-			if (layer.vectorMask) flags |= 0x10; // pixel data irrelevant to appearance of document
+			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other)) {
+				flags |= 0x10; // pixel data irrelevant to appearance of document
+			}
 
 			writeUint8(writer, flags);
 			writeUint8(writer, 0); // filler
@@ -378,37 +378,43 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, key);
 
-			const align = (key === 'Txt2' || key === 'luni' || key === 'vmsk') ? 4 : 2;
+			const align = (key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
+				key === 'vogk' || key === 'SoLd' || key === 'lnk2') ? 4 : 2;
 			writeSection(writer, align, () => handler.write(writer, target, psd, options), key !== 'Txt2');
 		}
 	}
 }
 
 function addChildren(layers: Layer[], children: Layer[] | undefined) {
-	if (!children)
-		return;
+	if (!children) return;
 
 	for (const c of children) {
-		if (c.children && c.canvas)
-			throw new Error(`Invalid layer, cannot have both 'canvas' and 'children' properties`);
-
-		if (c.children && c.imageData)
-			throw new Error(`Invalid layer, cannot have both 'imageData' and 'children' properties`);
+		if (c.children && c.canvas) throw new Error(`Invalid layer, cannot have both 'canvas' and 'children' properties`);
+		if (c.children && c.imageData) throw new Error(`Invalid layer, cannot have both 'imageData' and 'children' properties`);
 
 		if (c.children) {
-			const sectionDivider = {
-				type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
-				key: 'pass',
-				subtype: 0,
-			};
 			layers.push({
 				name: '</Layer group>',
 				sectionDivider: {
 					type: SectionDividerType.BoundingSectionDivider,
 				},
+				// TESTING
+				// nameSource: 'lset',
+				// id: [4, 0, 0, 8, 11, 0, 0, 0, 0, 14][layers.length] || 0,
+				// layerColor: 'none',
+				// timestamp: [1611346817.349021, 0, 0, 1611346817.349175, 1611346817.3491833, 0, 0, 0, 0, 1611346817.349832][layers.length] || 0,
+				// protected: {},
+				// referencePoint: { x: 0, y: 0 },
 			});
 			addChildren(layers, c.children);
-			layers.push({ ...c, sectionDivider });
+			layers.push({
+				sectionDivider: {
+					type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
+					key: 'pass',
+					subType: 0,
+				},
+				...c,
+			});
 		} else {
 			layers.push({ ...c });
 		}
@@ -539,12 +545,10 @@ function getLayerChannels(
 ): LayerChannelData {
 	let { top = 0, left = 0, right = 0, bottom = 0 } = layer;
 	let channels: ChannelData[] = [
-		{
-			channelId: ChannelID.Transparency,
-			compression: Compression.RawData,
-			buffer: undefined,
-			length: 2,
-		}
+		{ channelId: ChannelID.Transparency, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ channelId: ChannelID.Red, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ channelId: ChannelID.Green, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ channelId: ChannelID.Blue, compression: Compression.RawData, buffer: undefined, length: 2 },
 	];
 
 	let { width, height } = getLayerDimentions(layer);
@@ -589,7 +593,7 @@ function getLayerChannels(
 		ChannelID.Blue,
 	];
 
-	if (!background || hasAlpha(data) || layer.mask) {
+	if (!background || hasAlpha(data) || layer.mask || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
 		channelIds.unshift(ChannelID.Transparency);
 	}
 
@@ -598,7 +602,7 @@ function getLayerChannels(
 		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
 
 		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
-			console.log('written raw layer image data');
+			// console.log('written raw layer image data');
 			buffer = (layer as any).imageDataRaw[channel];
 		}
 

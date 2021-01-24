@@ -635,8 +635,16 @@ export interface SelectiveColorAdjustment {
 export interface LinkedFile {
 	id: string;
 	name: string;
+	type?: string;
+	creator?: string;
 	data?: Uint8Array;
 	time?: Date; // for external files
+	descriptor?: {
+		compInfo: { compID: number; originalCompID: number; };
+	};
+	childDocumentID?: string;
+	assetModTime?: number;
+	assetLockedState?: number;
 }
 
 export type PlacedLayerType = 'unknown' | 'vector' | 'raster' | 'image stack';
@@ -656,6 +664,9 @@ export interface PlacedLayer {
 	resolution?: UnitsValue;
 	// antialias ?
 	warp?: Warp;
+	crop?: number;
+	comp?: number;
+	compInfo?: { compID: number; originalCompID: number; };
 }
 
 export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAdjustment |
@@ -665,6 +676,24 @@ export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAd
 	SelectiveColorAdjustment;
 
 export type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray';
+
+export interface KeyDescriptorItem {
+	keyShapeInvalidated?: boolean;
+	keyOriginType?: number;
+	keyOriginResolution?: number;
+	keyOriginRRectRadii?: {
+		topRight: UnitsValue;
+		topLeft: UnitsValue;
+		bottomLeft: UnitsValue;
+		bottomRight: UnitsValue;
+	};
+	keyOriginShapeBoundingBox?: {
+		top: UnitsValue;
+		left: UnitsValue;
+		bottom: UnitsValue;
+		right: UnitsValue;
+	};
+}
 
 export interface LayerAdditionalInfo {
 	name?: string; // layer name
@@ -737,16 +766,7 @@ export interface LayerAdditionalInfo {
 	adjustment?: AdjustmentLayer;
 	placedLayer?: PlacedLayer;
 	vectorOrigination?: {
-		keyDescriptorList: {
-			keyOriginType: number;
-			keyOriginResolution: number;
-			keyOriginShapeBoundingBox: {
-				top: UnitsValue;
-				left: UnitsValue;
-				bottom: UnitsValue;
-				right: UnitsValue;
-			};
-		}[];
+		keyDescriptorList: KeyDescriptorItem[];
 	};
 	compositorUsed?: {
 		description: string;
@@ -756,6 +776,13 @@ export interface LayerAdditionalInfo {
 		enableCompCoreGPU: string;
 		compCoreSupport: string;
 		compCoreGPUSupport: string;
+	};
+	artboard?: {
+		rect: { top: number; left: number; bottom: number; right: number; };
+		guideIndices?: any[];
+		presetName?: string;
+		color?: Color;
+		backgroundType?: number;
 	};
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
@@ -871,6 +898,17 @@ export interface Psd extends LayerAdditionalInfo {
 	imageData?: ImageData;
 	imageResources?: ImageResources;
 	linkedFiles?: LinkedFile[]; // used in smart objects
+	artboards?: {
+		count: number;
+		autoExpandOffset?: { horizontal: number; vertical: number; };
+		origin?: { horizontal: number; vertical: number; };
+		autoExpandEnabled?: boolean;
+		autoNestEnabled?: boolean;
+		autoPositionEnabled?: boolean;
+		shrinkwrapOnSaveEnabled?: boolean;
+		docDefaultNewArtboardBackgroundColor?: Color;
+		docDefaultNewArtboardBackgroundType?: number;
+	};
 }
 
 export interface ReadOptions {

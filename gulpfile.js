@@ -6,7 +6,6 @@ const mocha = require('gulp-spawn-mocha');
 const sourcemaps = require('gulp-sourcemaps');
 const remapIstanbul = require('remap-istanbul/lib/gulpRemapIstanbul');
 const merge = require('merge2');
-const argv = require('yargs').argv;
 
 const scripts = ['src/**/*.ts'];
 
@@ -52,8 +51,10 @@ const coverage = () => gulp.src(['dist/test/**/*.js'], { read: false })
 		istanbul: { print: 'none' },
 	}));
 
+const useCoverage = process.argv.indexOf('--coverage') !== -1;
+
 const watch = cb => {
-	gulp.watch([...scripts, 'test/**/*.psd', 'test/**/*.png', 'test/**/*.json'], argv.coverage ? cov : test);
+	gulp.watch([...scripts, 'test/**/*.psd', 'test/**/*.png', 'test/**/*.json'], useCoverage ? cov : test);
 	cb();
 };
 

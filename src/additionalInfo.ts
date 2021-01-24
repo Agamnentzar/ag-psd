@@ -10,7 +10,7 @@ import {
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient, KeyDescriptorItem,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -25,7 +25,7 @@ import {
 import {
 	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
 	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, GrdT, IGSr, Ornt,
-	parseAngle, parsePercent, parseUnits, readDescriptorStructure, readVersionAndDescriptor, StrokeDescriptor,
+	parseAngle, parsePercent, parseUnits, readVersionAndDescriptor, StrokeDescriptor,
 	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
 	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor
 } from './descriptor';
@@ -316,9 +316,9 @@ addHandler(
 		for (const path of vectorMask.paths) {
 			writeUint16(writer, path.open ? 3 : 0);
 			writeUint16(writer, path.knots.length);
+			writeUint16(writer, 1); // TODO: this is sometimes 2
 			writeUint16(writer, 1);
-			writeUint16(writer, 1);
-			writeZeros(writer, 18);
+			writeZeros(writer, 18); // TODO: these are sometimes non-zero
 
 			const linkedKnot = path.open ? 4 : 1;
 			const unlinkedKnot = path.open ? 5 : 2;
@@ -341,9 +341,17 @@ addHandlerAlias('vsms', 'vmsk');
 
 interface VogkDescriptor {
 	keyDescriptorList: {
-		keyOriginType: number;
-		keyOriginResolution: number;
-		keyOriginShapeBBox: {
+		keyShapeInvalidated?: boolean;
+		keyOriginType?: number;
+		keyOriginResolution?: number;
+		keyOriginRRectRadii?: {
+			unitValueQuadVersion: number;
+			topRight: DescriptorUnitsValue;
+			topLeft: DescriptorUnitsValue;
+			bottomLeft: DescriptorUnitsValue;
+			bottomRight: DescriptorUnitsValue;
+		};
+		keyOriginShapeBBox?: {
 			unitValueQuadVersion: number;
 			'Top ': DescriptorUnitsValue;
 			Left: DescriptorUnitsValue;
@@ -361,37 +369,77 @@ addHandler(
 		if (readInt32(reader) !== 1) throw new Error(`Invalid vogk version`);
 		const desc = readVersionAndDescriptor(reader) as VogkDescriptor;
 		// console.log(require('util').inspect(desc, false, 99, true));
-		target.vectorOrigination = {
-			keyDescriptorList: desc.keyDescriptorList.map(i => ({
-				keyOriginType: i.keyOriginType,
-				keyOriginResolution: i.keyOriginResolution,
-				keyOriginShapeBoundingBox: {
+		target.vectorOrigination = { keyDescriptorList: [] };
+
+		for (const i of desc.keyDescriptorList) {
+			const item: KeyDescriptorItem = {};
+
+			if (i.keyShapeInvalidated != null) item.keyShapeInvalidated = i.keyShapeInvalidated;
+			if (i.keyOriginType != null) item.keyOriginType = i.keyOriginType;
+			if (i.keyOriginResolution != null) item.keyOriginResolution = i.keyOriginResolution;
+			if (i.keyOriginShapeBBox != null) {
+				item.keyOriginShapeBoundingBox = {
 					top: parseUnits(i.keyOriginShapeBBox['Top ']),
 					left: parseUnits(i.keyOriginShapeBBox.Left),
 					bottom: parseUnits(i.keyOriginShapeBBox.Btom),
 					right: parseUnits(i.keyOriginShapeBBox.Rght),
-				},
-			})),
-		};
+				};
+			}
+			if (i.keyOriginRRectRadii != null) {
+				item.keyOriginRRectRadii = {
+					topRight: parseUnits(i.keyOriginRRectRadii.topRight),
+					topLeft: parseUnits(i.keyOriginRRectRadii.topLeft),
+					bottomLeft: parseUnits(i.keyOriginRRectRadii.bottomLeft),
+					bottomRight: parseUnits(i.keyOriginRRectRadii.bottomRight),
+				};
+			}
+
+			target.vectorOrigination.keyDescriptorList.push(item);
+		}
+
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		target;
 		const orig = target.vectorOrigination!;
-		const desc: VogkDescriptor = {
-			keyDescriptorList: orig.keyDescriptorList.map((i, index) => ({
-				keyOriginType: i.keyOriginType,
-				keyOriginResolution: i.keyOriginResolution,
-				keyOriginShapeBBox: {
-					unitValueQuadVersion: 1,
-					'Top ': unitsValue(i.keyOriginShapeBoundingBox.top, 'top'),
-					Left: unitsValue(i.keyOriginShapeBoundingBox.left, 'left'),
-					Btom: unitsValue(i.keyOriginShapeBoundingBox.bottom, 'bottom'),
-					Rght: unitsValue(i.keyOriginShapeBoundingBox.right, 'right'),
-				},
-				keyOriginIndex: index,
-			})),
-		};
+		const desc: VogkDescriptor = { keyDescriptorList: [] };
+
+		for (let i = 0; i < orig.keyDescriptorList.length; i++) {
+			const item = orig.keyDescriptorList[i];
+
+			if (item.keyShapeInvalidated) {
+				desc.keyDescriptorList.push({ keyShapeInvalidated: true, keyOriginIndex: i });
+			} else {
+				desc.keyDescriptorList.push({
+					keyOriginType: item.keyOriginType ?? 4,
+					keyOriginResolution: item.keyOriginResolution ?? 72,
+				} as any);
+
+				const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
+
+				if (item.keyOriginRRectRadii) {
+					out.keyOriginRRectRadii = {
+						unitValueQuadVersion: 1,
+						topRight: unitsValue(item.keyOriginRRectRadii.topRight, 'topRight'),
+						topLeft: unitsValue(item.keyOriginRRectRadii.topLeft, 'topLeft'),
+						bottomLeft: unitsValue(item.keyOriginRRectRadii.bottomLeft, 'bottomLeft'),
+						bottomRight: unitsValue(item.keyOriginRRectRadii.bottomRight, 'bottomRight'),
+					};
+				}
+
+				if (item.keyOriginShapeBoundingBox) {
+					out.keyOriginShapeBBox = {
+						unitValueQuadVersion: 1,
+						'Top ': unitsValue(item.keyOriginShapeBoundingBox.top, 'top'),
+						Left: unitsValue(item.keyOriginShapeBoundingBox.left, 'left'),
+						Btom: unitsValue(item.keyOriginShapeBoundingBox.bottom, 'bottom'),
+						Rght: unitsValue(item.keyOriginShapeBoundingBox.right, 'right'),
+					};
+				}
+
+				out.keyOriginIndex = i;
+			}
+		}
 
 		writeInt32(writer, 1); // version
 		writeVersionAndDescriptor(writer, '', 'null', desc);
@@ -423,6 +471,37 @@ addHandler(
 	hasKey('id'),
 	(reader, target) => target.id = readUint32(reader),
 	(writer, target) => writeUint32(writer, target.id!),
+);
+
+addHandler(
+	'lsct',
+	hasKey('sectionDivider'),
+	(reader, target, left) => {
+		target.sectionDivider = { type: readUint32(reader) };
+
+		if (left()) {
+			checkSignature(reader, '8BIM');
+			target.sectionDivider.key = readSignature(reader);
+		}
+
+		if (left()) {
+			// 0 = normal
+			// 1 = scene group, affects the animation timeline.
+			target.sectionDivider.subType = readUint32(reader);
+		}
+	},
+	(writer, target) => {
+		writeUint32(writer, target.sectionDivider!.type);
+
+		if (target.sectionDivider!.key) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, target.sectionDivider!.key);
+
+			if (target.sectionDivider!.subType !== undefined) {
+				writeUint32(writer, target.sectionDivider!.subType);
+			}
+		}
+	},
 );
 
 addHandler(
@@ -577,6 +656,43 @@ addHandler(
 	},
 );
 
+interface ArtbDescriptor {
+	artboardRect: { 'Top ': number; Left: number; Btom: number; Rght: number; };
+	guideIndeces: any[];
+	artboardPresetName: string;
+	'Clr ': DescriptorColor;
+	artboardBackgroundType: number;
+}
+
+addHandler(
+	'artb', // per-layer arboard info
+	hasKey('artboard'),
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as ArtbDescriptor;
+		target.artboard = {
+			rect: { top: desc.artboardRect['Top '], left: desc.artboardRect.Left, bottom: desc.artboardRect.Btom, right: desc.artboardRect.Rght },
+			guideIndices: desc.guideIndeces,
+			presetName: desc.artboardPresetName,
+			color: parseColor(desc['Clr ']),
+			backgroundType: desc.artboardBackgroundType,
+		};
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const artb = target.artboard!;
+		const desc: ArtbDescriptor = {
+			artboardRect: { 'Top ': artb.rect.top, Left: artb.rect.left, Btom: artb.rect.bottom, Rght: artb.rect.right },
+			guideIndeces: artb.guideIndices || [],
+			artboardPresetName: artb.presetName || '',
+			'Clr ': serializeColor(artb.color),
+			artboardBackgroundType: artb.backgroundType ?? 1,
+		};
+
+		writeVersionAndDescriptor(writer, '', 'artboard', desc);
+	},
+);
+
 addHandler(
 	'sn2P',
 	hasKey('usingAlignedRendering'),
@@ -646,8 +762,8 @@ addHandler(
 		if (readSignature(reader) !== 'plcL') throw new Error(`Invalid PlLd signature`);
 		if (readInt32(reader) !== 3) throw new Error(`Invalid PlLd version`);
 		const id = readPascalString(reader, 1);
-		const pageNumber = readInt32(reader);
-		const totalPages = readInt32(reader); // TODO: check how this works ?
+		readInt32(reader); // pageNumber
+		readInt32(reader); // totalPages, TODO: check how this works ?
 		readInt32(reader); // anitAliasPolicy 16
 		const placedLayerType = readInt32(reader); // 0 = unknown, 1 = vector, 2 = raster, 3 = image stack
 		if (!placedLayerTypes[placedLayerType]) throw new Error('Invalid PlLd type');
@@ -669,7 +785,6 @@ addHandler(
 		// console.log('PlLd warp', require('util').inspect(warp, false, 99, true));
 		// console.log('PlLd', require('util').inspect(target.placedLayer, false, 99, true));
 
-		pageNumber; totalPages;
 		skipBytes(reader, left()); // HACK
 	},
 	(writer, target) => {
@@ -693,6 +808,7 @@ interface SoLdDescriptor {
 	placed: string;
 	PgNm: number;
 	totalPages: number;
+	Crop?: number;
 	frameStep: { numerator: number; denominator: number; };
 	duration: { numerator: number; denominator: number; };
 	frameCount: number;
@@ -703,6 +819,8 @@ interface SoLdDescriptor {
 	warp: WarpDescriptor;
 	'Sz  ': { Wdth: number; Hght: number; };
 	Rslt: DescriptorUnitsValue;
+	comp?: number;
+	compInfo?: { compID: number; originalCompID: number; };
 }
 
 addHandler(
@@ -731,6 +849,10 @@ addHandler(
 			warp: parseWarp(desc.warp),
 		};
 
+		if (desc.Crop) target.placedLayer.crop = desc.Crop;
+		if (desc.comp) target.placedLayer.comp = desc.comp;
+		if (desc.compInfo) target.placedLayer.compInfo = desc.compInfo;
+
 		skipBytes(reader, left()); // HACK
 	},
 	(writer, target) => {
@@ -743,6 +865,7 @@ addHandler(
 			placed: placed.placed ?? placed.id, // ???
 			PgNm: 1,
 			totalPages: 1,
+			...(placed.crop ? { Crop: placed.crop } : {}),
 			frameStep: {
 				numerator: 0,
 				denominator: 600
@@ -764,6 +887,9 @@ addHandler(
 			Rslt: placed.resolution ? unitsValue(placed.resolution, 'resolution') : { units: 'Density', value: 72 }
 		};
 
+		if (placed.comp) desc.comp = placed.comp;
+		if (placed.compInfo) desc.compInfo = placed.compInfo;
+
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );
@@ -780,37 +906,6 @@ addHandler(
 	(writer, target) => {
 		writeFloat64(writer, target.referencePoint!.x);
 		writeFloat64(writer, target.referencePoint!.y);
-	},
-);
-
-addHandler(
-	'lsct',
-	hasKey('sectionDivider'),
-	(reader, target, left) => {
-		target.sectionDivider = { type: readUint32(reader) };
-
-		if (left()) {
-			checkSignature(reader, '8BIM');
-			target.sectionDivider.key = readSignature(reader);
-		}
-
-		if (left()) {
-			// 0 = normal
-			// 1 = scene group, affects the animation timeline.
-			target.sectionDivider.subType = readUint32(reader);
-		}
-	},
-	(writer, target) => {
-		writeUint32(writer, target.sectionDivider!.type);
-
-		if (target.sectionDivider!.key) {
-			writeSignature(writer, '8BIM');
-			writeSignature(writer, target.sectionDivider!.key);
-
-			if (target.sectionDivider!.subType !== undefined) {
-				writeUint32(writer, target.sectionDivider!.subType);
-			}
-		}
 	},
 );
 
@@ -842,6 +937,10 @@ if (MOCK_HANDLERS) {
 	);
 }
 
+interface FileOpenDescriptor {
+	compInfo: { compID: number; originalCompID: number; };
+}
+
 addHandler(
 	'lnk2',
 	(target: any) => !!(target as Psd).linkedFiles && (target as Psd).linkedFiles!.length > 0,
@@ -850,20 +949,23 @@ addHandler(
 		psd.linkedFiles = [];
 
 		while (left() > 8) {
-			// console.log('read lnkD', left(), 'bytes left', 'at', reader.offset.toString(16));
-			const size = readLength64(reader); // size
-			const end = reader.offset + size;
+			let size = readLength64(reader); // size
+			const startOffset = reader.offset;
 			const type = readSignature(reader) as 'liFD' | 'liFE' | 'liFA';
 			const version = readInt32(reader);
 			const id = readPascalString(reader, 1);
 			const name = readUnicodeString(reader);
-			readSignature(reader); // tile type '    '
-			readSignature(reader); // file creator '    '
+			const fileType = readSignature(reader).trim(); // '    ' if empty
+			const fileCreator = readSignature(reader).trim(); // '    ' or '\0\0\0\0' if empty
 			const dataSize = readLength64(reader);
 			const hasFileOpenDescriptor = readUint8(reader);
-			const fileOpenDescriptor = hasFileOpenDescriptor ? readDescriptorStructure(reader) : undefined;
-			const linkedFileDescriptor = type === 'liFE' ? readDescriptorStructure(reader) : undefined;
+			const fileOpenDescriptor = hasFileOpenDescriptor ? readVersionAndDescriptor(reader) as FileOpenDescriptor : undefined;
+			const linkedFileDescriptor = type === 'liFE' ? readVersionAndDescriptor(reader) : undefined;
 			const file: LinkedFile = { id, name, data: undefined };
+
+			if (fileType) file.type = fileType;
+			if (fileCreator) file.creator = fileCreator;
+			if (fileOpenDescriptor) file.descriptor = fileOpenDescriptor;
 
 			if (type === 'liFE' && version > 3) {
 				const year = readInt32(reader);
@@ -880,19 +982,18 @@ addHandler(
 			const fileSize = type === 'liFE' ? readLength64(reader) : 0;
 			if (type === 'liFA') skipBytes(reader, 8);
 			if (type === 'liFD') file.data = readBytes(reader, dataSize);
-			const childDocumentID = version >= 5 ? readUnicodeString(reader) : undefined;
-			const assetModTime = version >= 6 ? readFloat64(reader) : undefined;
-			const assetLockedState = version >= 7 ? readUint8(reader) : undefined;
+			if (version >= 5) file.childDocumentID = readUnicodeString(reader);
+			if (version >= 6) file.assetModTime = readFloat64(reader);
+			if (version >= 7) file.assetLockedState = readUint8(reader);
 			if (type === 'liFE') file.data = readBytes(reader, fileSize);
 
 			if (options.skipLinkedFilesData) file.data = undefined;
 
 			psd.linkedFiles.push(file);
+			linkedFileDescriptor;
 
-			fileOpenDescriptor; linkedFileDescriptor; childDocumentID; assetModTime; assetLockedState;
-
-			reader.offset = end;
-			skipBytes(reader, 2); // HACK !
+			while (size % 4) size++;
+			reader.offset = startOffset + size;
 		}
 
 		skipBytes(reader, left()); // ?
@@ -901,33 +1002,65 @@ addHandler(
 		const psd = target as Psd;
 
 		for (const file of psd.linkedFiles!) {
+			let version = 2;
+
+			if (file.assetLockedState != null) version = 7;
+			else if (file.assetModTime != null) version = 6;
+			else if (file.childDocumentID != null) version = 5;
+			// TODO: else if (file.time != null) version = 3; (only for liFE)
+
 			writeUint32(writer, 0);
 			writeUint32(writer, 0); // size
 			const sizeOffset = writer.offset;
 			writeSignature(writer, file.data ? 'liFD' : 'liFA');
-			writeInt32(writer, 2);
+			writeInt32(writer, version);
 			writePascalString(writer, file.id || '', 1);
 			writeUnicodeStringWithPadding(writer, file.name || '');
-			writeSignature(writer, '    ');
-			writeSignature(writer, '    ');
+			writeSignature(writer, file.type ? `${file.type}    `.substr(0, 4) : '    ');
+			writeSignature(writer, file.creator ? `${file.creator}    `.substr(0, 4) : '\0\0\0\0');
 			writeLength64(writer, file.data ? file.data.byteLength : 0);
-			writeUint8(writer, 0);
 
-			if (file.data) {
-				writeBytes(writer, file.data);
+			if (file.descriptor && file.descriptor.compInfo) {
+				const desc: FileOpenDescriptor = {
+					compInfo: file.descriptor.compInfo,
+				};
+
+				writeUint8(writer, 1);
+				writeVersionAndDescriptor(writer, '', 'null', desc);
 			} else {
-				writeLength64(writer, 0);
+				writeUint8(writer, 0);
 			}
 
-			writer.view.setUint32(sizeOffset - 4, writer.offset - sizeOffset, false); // write size
-			writeUint16(writer, 0); // HACK!
-		}
+			if (file.data) writeBytes(writer, file.data);
+			else writeLength64(writer, 0);
+			if (version >= 5) writeUnicodeStringWithPadding(writer, file.childDocumentID || '');
+			if (version >= 6) writeFloat64(writer, file.assetModTime || 0);
+			if (version >= 7) writeUint8(writer, file.assetLockedState || 0);
 
-		writeUint8(writer, 0); // HACK !
+			let size = writer.offset - sizeOffset;
+			writer.view.setUint32(sizeOffset - 4, size, false); // write size
+
+			while (size % 4) {
+				size++;
+				writeUint8(writer, 0);
+			}
+		}
 	},
 );
 addHandlerAlias('lnkD', 'lnk2');
 addHandlerAlias('lnk3', 'lnk2');
+
+if (MOCK_HANDLERS) {
+	addHandler(
+		'lnkE',
+		target => (target as any)._lnkE !== undefined,
+		(reader, target, left) => {
+			// TODO: this seems to just be zero size block
+			(target as any)._lnkE = readBytes(reader, left());
+		},
+		(writer, target) => false && writeBytes(writer, (target as any)._lnkE),
+	);
+}
 
 addHandler(
 	'pths',
@@ -1896,28 +2029,76 @@ addHandler(
 	},
 );
 
+interface ArtdDescriptor {
+	'Cnt ': number;
+	autoExpandOffset: { Hrzn: number; Vrtc: number; };
+	origin: { Hrzn: number; Vrtc: number; };
+	autoExpandEnabled: boolean;
+	autoNestEnabled: boolean;
+	autoPositionEnabled: boolean;
+	shrinkwrapOnSaveEnabled: boolean;
+	docDefaultNewArtboardBackgroundColor: DescriptorColor;
+	docDefaultNewArtboardBackgroundType: number;
+}
+
+addHandler(
+	'artd', // document-wide artboard info
+	target => (target as Psd).artboards !== undefined,
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as ArtdDescriptor;
+		(target as Psd).artboards = {
+			count: desc['Cnt '],
+			autoExpandOffset: { horizontal: desc.autoExpandOffset.Hrzn, vertical: desc.autoExpandOffset.Vrtc },
+			origin: { horizontal: desc.origin.Hrzn, vertical: desc.origin.Vrtc },
+			autoExpandEnabled: desc.autoExpandEnabled,
+			autoNestEnabled: desc.autoNestEnabled,
+			autoPositionEnabled: desc.autoPositionEnabled,
+			shrinkwrapOnSaveEnabled: desc.shrinkwrapOnSaveEnabled,
+			docDefaultNewArtboardBackgroundColor: parseColor(desc.docDefaultNewArtboardBackgroundColor),
+			docDefaultNewArtboardBackgroundType: desc.docDefaultNewArtboardBackgroundType,
+		};
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const artb = (target as Psd).artboards!;
+		const desc: ArtdDescriptor = {
+			'Cnt ': artb.count,
+			autoExpandOffset: artb.autoExpandOffset ? { Hrzn: artb.autoExpandOffset.horizontal, Vrtc: artb.autoExpandOffset.vertical } : { Hrzn: 0, Vrtc: 0 },
+			origin: artb.origin ? { Hrzn: artb.origin.horizontal, Vrtc: artb.origin.vertical } : { Hrzn: 0, Vrtc: 0 },
+			autoExpandEnabled: artb.autoExpandEnabled ?? true,
+			autoNestEnabled: artb.autoNestEnabled ?? true,
+			autoPositionEnabled: artb.autoPositionEnabled ?? true,
+			shrinkwrapOnSaveEnabled: artb.shrinkwrapOnSaveEnabled ?? true,
+			docDefaultNewArtboardBackgroundColor: serializeColor(artb.docDefaultNewArtboardBackgroundColor),
+			docDefaultNewArtboardBackgroundType: artb.docDefaultNewArtboardBackgroundType ?? 1,
+		};
+		writeVersionAndDescriptor(writer, '', 'null', desc, 'artd');
+	},
+);
+
 addHandler(
 	'vstk',
 	hasKey('vectorStroke'),
 	(reader, target, left) => {
-		const descriptor = readVersionAndDescriptor(reader) as StrokeDescriptor;
-
+		const desc = readVersionAndDescriptor(reader) as StrokeDescriptor;
+		// console.log('vstk', require('util').inspect(desc, false, 99, true));
 		target.vectorStroke = {
-			strokeEnabled: descriptor.strokeEnabled,
-			fillEnabled: descriptor.fillEnabled,
-			lineWidth: parseUnits(descriptor.strokeStyleLineWidth),
-			lineDashOffset: parseUnits(descriptor.strokeStyleLineDashOffset),
-			miterLimit: descriptor.strokeStyleMiterLimit,
-			lineCapType: strokeStyleLineCapType.decode(descriptor.strokeStyleLineCapType),
-			lineJoinType: strokeStyleLineJoinType.decode(descriptor.strokeStyleLineJoinType),
-			lineAlignment: strokeStyleLineAlignment.decode(descriptor.strokeStyleLineAlignment),
-			scaleLock: descriptor.strokeStyleScaleLock,
-			strokeAdjust: descriptor.strokeStyleStrokeAdjust,
-			lineDashSet: descriptor.strokeStyleLineDashSet.map(parseUnits),
-			blendMode: BlnM.decode(descriptor.strokeStyleBlendMode),
-			opacity: parsePercent(descriptor.strokeStyleOpacity),
-			content: parseVectorContent(descriptor.strokeStyleContent),
-			resolution: descriptor.strokeStyleResolution,
+			strokeEnabled: desc.strokeEnabled,
+			fillEnabled: desc.fillEnabled,
+			lineWidth: parseUnits(desc.strokeStyleLineWidth),
+			lineDashOffset: parseUnits(desc.strokeStyleLineDashOffset),
+			miterLimit: desc.strokeStyleMiterLimit,
+			lineCapType: strokeStyleLineCapType.decode(desc.strokeStyleLineCapType),
+			lineJoinType: strokeStyleLineJoinType.decode(desc.strokeStyleLineJoinType),
+			lineAlignment: strokeStyleLineAlignment.decode(desc.strokeStyleLineAlignment),
+			scaleLock: desc.strokeStyleScaleLock,
+			strokeAdjust: desc.strokeStyleStrokeAdjust,
+			lineDashSet: desc.strokeStyleLineDashSet.map(parseUnits),
+			blendMode: BlnM.decode(desc.strokeStyleBlendMode),
+			opacity: parsePercent(desc.strokeStyleOpacity),
+			content: parseVectorContent(desc.strokeStyleContent),
+			resolution: desc.strokeStyleResolution,
 		};
 
 		skipBytes(reader, left());
@@ -2057,7 +2238,8 @@ function writeLength64(writer: PsdWriter, length: number) {
 // );
 
 interface CinfDescriptor {
-	Vrsn: { major: 1; minor: 0; fix: 1; };
+	Vrsn: { major: number; minor: number; fix: number; };
+	psVersion?: { major: number; minor: number; fix: number; };
 	description: string;
 	reason: string;
 	Engn: string; // 'Engn.compCore';
@@ -2086,7 +2268,8 @@ addHandler(
 	(writer, target) => {
 		const cinf = target.compositorUsed!;
 		const desc: CinfDescriptor = {
-			Vrsn: { major: 1, minor: 0, fix: 1 },
+			Vrsn: { major: 1, minor: 0, fix: 0 },
+			// psVersion: { major: 22, minor: 1, fix: 0 }, // TESTING
 			description: cinf.description,
 			reason: cinf.reason,
 			Engn: `Engn.${cinf.engine}`,

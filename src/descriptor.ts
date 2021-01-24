@@ -46,6 +46,7 @@ function makeType(name: string, classID: string) {
 
 const fieldToExtType: ExtTypeDict = {
 	strokeStyleContent: makeType('', 'solidColorLayer'),
+	// printProofSetup: makeType('校样设置', 'proofSetup'), // TESTING
 	printProofSetup: makeType('Proof Setup', 'proofSetup'),
 	patternFill: makeType('', 'patternFill'),
 	Grad: makeType('Gradient', 'Grdn'),
@@ -73,8 +74,15 @@ const fieldToExtType: ExtTypeDict = {
 	customEnvelopeWarp: makeType('', 'customEnvelopeWarp'),
 	warp: makeType('', 'warp'),
 	'Sz  ': makeType('', 'Pnt '),
+	origin: makeType('', 'Pnt '),
+	autoExpandOffset: makeType('', 'Pnt '),
 	keyOriginShapeBBox: makeType('', 'unitRect'),
 	Vrsn: makeType('', 'null'),
+	psVersion: makeType('', 'null'),
+	docDefaultNewArtboardBackgroundColor: makeType('', 'RGBC'),
+	artboardRect: makeType('', 'classFloatRect'),
+	keyOriginRRectRadii: makeType('', 'radii'),
+	compInfo: makeType('', 'null'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -88,14 +96,15 @@ const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
+		'artboardPresetName',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
-		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn',
-		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind',
-		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages',
+		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn', 'Cnt ',
+		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind', 'comp', 'compID', 'originalCompID',
+		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages', 'Crop',
 		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
-		'keyOriginIndex', 'major', 'minor', 'fix',
+		'keyOriginIndex', 'major', 'minor', 'fix', 'docDefaultNewArtboardBackgroundType', 'artboardBackgroundType',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
@@ -109,7 +118,8 @@ const typeToField: { [key: string]: string[]; } = {
 		'useShape', 'useTexture', 'masterFXSwitch', 'uglg', 'antialiasGloss', 'useShape',
 		'useTexture', 'Algn', 'Rvrs', 'Dthr', 'Invr', 'VctC', 'ShTr', 'layerConceals',
 		'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock', 'strokeStyleStrokeAdjust',
-		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint',
+		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint', 'keyShapeInvalidated',
+		'autoExpandEnabled', 'autoNestEnabled', 'autoPositionEnabled', 'shrinkwrapOnSaveEnabled',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
@@ -119,10 +129,11 @@ const typeToField: { [key: string]: string[]; } = {
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
 		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
 		'strokeStyleOpacity', 'H   ', 'Top ', 'Left', 'Btom', 'Rght', 'Rslt',
+		'topRight', 'topLeft', 'bottomLeft', 'bottomRight',
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
-		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList',
+		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces',
 	],
 	'ObAr': ['meshPoints'],
 };
@@ -157,17 +168,19 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 	fieldToArrayType[field] = 'Objc';
 }
 
-function getTypeByKey(key: string, value: any) {
+function getTypeByKey(key: string, value: any, root: string) {
 	if (key === 'Sz  ') {
 		return ('Wdth' in value) ? 'Objc' : (('units' in value) ? 'UntF' : 'doub');
 	} else if (key === 'Type') {
 		return typeof value === 'string' ? 'enum' : 'long';
 	} else if (key === 'AntA') {
 		return typeof value === 'string' ? 'enum' : 'bool';
-	} else if (key === 'Hrzn' || key === 'Vrtc') {
+	} else if (key === 'Hrzn' || key === 'Vrtc' || key === 'Top ' || key === 'Left' || key === 'Btom' || key === 'Rght') {
 		return typeof value === 'number' ? 'doub' : 'UntF';
 	} else if (key === 'Vrsn') {
 		return typeof value === 'number' ? 'long' : 'Objc';
+	} else if (key === 'Rd  ' || key === 'Grn ' || key === 'Bl  ') {
+		return root === 'artd' ? 'long' : 'doub';
 	} else {
 		return fieldToType[key];
 	}
@@ -211,7 +224,7 @@ export function readDescriptorStructure(reader: PsdReader) {
 	return object;
 }
 
-export function writeDescriptorStructure(writer: PsdWriter, name: string, classId: string, value: any) {
+export function writeDescriptorStructure(writer: PsdWriter, name: string, classId: string, value: any, root: string) {
 	if (logErrors && !classId) console.log('Missing classId for: ', name, classId, value);
 
 	// write class structure
@@ -222,11 +235,11 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	writeUint32(writer, keys.length);
 
 	for (const key of keys) {
-		let type = getTypeByKey(key, value[key]);
+		let type = getTypeByKey(key, value[key], root);
 		let extType = fieldToExtType[key];
 
 		if (channels.indexOf(key) !== -1) {
-			type = classId === 'RGBC' ? 'doub' : 'long';
+			type = (classId === 'RGBC' && root !== 'artd') ? 'doub' : 'long';
 		} else if (key === 'profile') {
 			type = classId === 'printOutput' ? 'TEXT' : 'tdta';
 		} else if (key === 'strokeStyleContent') {
@@ -243,7 +256,7 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 
 		writeAsciiStringOrClassId(writer, key);
 		writeSignature(writer, type || 'long');
-		writeOSType(writer, type || 'long', value[key], key, extType);
+		writeOSType(writer, type || 'long', value[key], key, extType, root);
 		if (logErrors && !type) console.log(`Missing descriptor field type for: '${key}' in`, value);
 	}
 }
@@ -344,14 +357,14 @@ function readOSType(reader: PsdReader, type: string) {
 	}
 }
 
-function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType?: NameClassID) {
+function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType: NameClassID | undefined, root: string) {
 	switch (type) {
 		// case 'obj ': // Reference
 		// 	writeReferenceStructure(reader);
 		case 'Objc': // Descriptor
 		case 'GlbO': // GlobalObject same as Descriptor
 			if (!extType) throw new Error(`Missing ext type for: '${key}' (${JSON.stringify(value)})`);
-			writeDescriptorStructure(writer, extType.name, extType.classID, value);
+			writeDescriptorStructure(writer, extType.name, extType.classID, value, root);
 			break;
 		case 'VlLs': // List
 			writeInt32(writer, value.length);
@@ -359,7 +372,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			for (let i = 0; i < value.length; i++) {
 				const type = fieldToArrayType[key];
 				writeSignature(writer, type || 'long');
-				writeOSType(writer, type || 'long', value[i], '', fieldToArrayExtType[key]);
+				writeOSType(writer, type || 'long', value[i], '', fieldToArrayExtType[key], root);
 				if (logErrors && !type) console.log(`Missing descriptor array type for: '${key}' in`, value);
 			}
 			break;
@@ -367,12 +380,12 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeFloat64(writer, value);
 			break;
 		case 'UntF': // Unit double
-			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units}`);
+			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units} in ${key}`);
 			writeSignature(writer, unitsMapRev[value.units]);
 			writeFloat64(writer, value.value);
 			break;
 		case 'UnFl': // Unit float
-			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units}`);
+			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units} in ${key}`);
 			writeSignature(writer, unitsMapRev[value.units]);
 			writeFloat32(writer, value.value);
 			break;
@@ -485,9 +498,9 @@ export function readVersionAndDescriptor(reader: PsdReader) {
 	return readDescriptorStructure(reader);
 }
 
-export function writeVersionAndDescriptor(writer: PsdWriter, name: string, classID: string, descriptor: any) {
+export function writeVersionAndDescriptor(writer: PsdWriter, name: string, classID: string, descriptor: any, root = '') {
 	writeUint32(writer, 16); // version
-	writeDescriptorStructure(writer, name, classID, descriptor);
+	writeDescriptorStructure(writer, name, classID, descriptor, root);
 }
 
 export type DescriptorUnits = 'Angle' | 'Density' | 'Distance' | 'None' | 'Percent' | 'Pixels' |

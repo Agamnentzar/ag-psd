@@ -1,0 +1,405 @@
+{
+  "width": 2264,
+  "height": 1257,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Inches",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Inches"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "alphaChannelNames": [
+      "Transparency"
+    ],
+    "alphaIdentifiers": [
+      0
+    ],
+    "globalAngle": 90,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 10,
+    "layersGroup": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      13
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 14,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop 2021",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "white board",
+      "id": 3,
+      "sectionDivider": {
+        "type": 1,
+        "key": "norm",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1611346817.3491664,
+      "artboard": {
+        "rect": {
+          "top": 0,
+          "left": 0,
+          "bottom": 722,
+          "right": 1082
+        },
+        "guideIndices": [],
+        "presetName": "",
+        "color": {
+          "r": 255,
+          "g": 255,
+          "b": 255
+        },
+        "backgroundType": 1
+      },
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "version": 160,
+      "opened": true,
+      "children": [
+        {
+          "top": 241,
+          "left": 95,
+          "bottom": 474,
+          "right": 564,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": false,
+          "name": "Layer 1",
+          "nameSource": "layr",
+          "id": 2,
+          "blendClippendElements": true,
+          "blendInteriorElements": false,
+          "knockout": false,
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1611346817.3490338,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      ]
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "transparent board",
+      "id": 7,
+      "sectionDivider": {
+        "type": 1,
+        "key": "norm",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1611346817.3498204,
+      "artboard": {
+        "rect": {
+          "top": 0,
+          "left": 1182,
+          "bottom": 722,
+          "right": 2264
+        },
+        "guideIndices": [],
+        "presetName": "",
+        "color": {
+          "r": 83,
+          "g": 83,
+          "b": 83
+        },
+        "backgroundType": 3
+      },
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "version": 160,
+      "opened": true,
+      "children": [
+        {
+          "top": 0,
+          "left": 0,
+          "bottom": 0,
+          "right": 0,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": false,
+          "name": "Group 1",
+          "nameSource": "lset",
+          "id": 10,
+          "sectionDivider": {
+            "type": 1,
+            "key": "pass",
+            "subType": 0
+          },
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1611346817.3498087,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          },
+          "version": 80,
+          "opened": true,
+          "children": [
+            {
+              "top": 160,
+              "left": 121,
+              "bottom": 419,
+              "right": 1881,
+              "blendMode": "normal",
+              "opacity": 1,
+              "clipping": false,
+              "transparencyProtected": false,
+              "hidden": false,
+              "name": "Layer 2",
+              "nameSource": "layr",
+              "id": 9,
+              "blendClippendElements": true,
+              "blendInteriorElements": false,
+              "knockout": false,
+              "protected": {
+                "transparency": false,
+                "composite": false,
+                "position": false
+              },
+              "layerColor": "none",
+              "timestamp": 1611346817.3491905,
+              "referencePoint": {
+                "x": 0,
+                "y": 0
+              }
+            },
+            {
+              "top": 365,
+              "left": 1886,
+              "bottom": 466,
+              "right": 2051,
+              "blendMode": "normal",
+              "opacity": 1,
+              "clipping": false,
+              "transparencyProtected": false,
+              "hidden": false,
+              "name": "Layer 3",
+              "nameSource": "layr",
+              "id": 12,
+              "blendClippendElements": true,
+              "blendInteriorElements": false,
+              "knockout": false,
+              "protected": {
+                "transparency": false,
+                "composite": false,
+                "position": false
+              },
+              "layerColor": "none",
+              "timestamp": 1611346817.3495102,
+              "referencePoint": {
+                "x": 0,
+                "y": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "custom board",
+      "id": 13,
+      "sectionDivider": {
+        "type": 1,
+        "key": "norm",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1611346817.3498404,
+      "artboard": {
+        "rect": {
+          "top": 799,
+          "left": 279,
+          "bottom": 1257,
+          "right": 877
+        },
+        "guideIndices": [],
+        "presetName": "",
+        "color": {
+          "r": 217,
+          "g": 117,
+          "b": 117
+        },
+        "backgroundType": 4
+      },
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "version": 160,
+      "opened": true,
+      "children": []
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  },
+  "artboards": {
+    "count": 3,
+    "autoExpandOffset": {
+      "horizontal": 0,
+      "vertical": 0
+    },
+    "origin": {
+      "horizontal": 0,
+      "vertical": 0
+    },
+    "autoExpandEnabled": true,
+    "autoNestEnabled": true,
+    "autoPositionEnabled": true,
+    "shrinkwrapOnSaveEnabled": true,
+    "docDefaultNewArtboardBackgroundColor": {
+      "r": 217,
+      "g": 117,
+      "b": 117
+    },
+    "docDefaultNewArtboardBackgroundType": 4
+  },
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "compCore",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "supported",
+    "compCoreGPUSupport": "featureDisabled"
+  }
+}

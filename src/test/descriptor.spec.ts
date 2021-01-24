@@ -21,7 +21,7 @@ describe('descriptor', () => {
 			const reader = createReader(expected.buffer, expected.byteOffset, expected.byteLength);
 			const struct = readDescriptorStructure(reader);
 			const writer = createWriter();
-			writeDescriptorStructure(writer, '', 'null', struct);
+			writeDescriptorStructure(writer, '', 'null', struct, 'null');
 			const actual = getWriterBufferNoCopy(writer);
 
 			// require('fs').writeFileSync('expected.bin', Buffer.from(expected));

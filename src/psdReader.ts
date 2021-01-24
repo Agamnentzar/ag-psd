@@ -333,12 +333,14 @@ function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptions) {
 	const flags = readUint8(reader);
 	layer.transparencyProtected = (flags & 0x01) !== 0;
 	layer.hidden = (flags & 0x02) !== 0;
+	// 0x04 - obsolete
+	// 0x08 - 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
+	// 0x10 - pixel data irrelevant to appearance of document
 
 	skipBytes(reader, 1);
 
 	readSection(reader, 1, left => {
 		const mask = readLayerMaskData(reader, options);
-
 		if (mask) layer.mask = mask;
 
 		/*const blendingRanges =*/ readLayerBlendingRanges(reader);

@@ -1,5 +1,10 @@
 # Changelog
 
+## v11.4.0
+- Added handling for artboards
+- Fixed issues with handling smart objects
+- Fixed issues with handling vector layers
+
 ## v11.3.0
 - Added handling for *Vector Origination Data* and *Compositor Used*
 - Added handling for *ICC Untagged Profile*
