@@ -34,7 +34,7 @@ function loadPsdFromJSONAndPNGFiles(basePath: string) {
 	psd.linkedFiles?.forEach(f => {
 		try {
 			f.data = fs.readFileSync(path.join(basePath, f.name));
-		} catch { }
+		} catch (e) { }
 	});
 	return psd;
 }
