@@ -217,6 +217,15 @@ function readBezierKnot(reader: PsdReader, width: number, height: number) {
 	return [x0, y0, x1, y1, x2, y2];
 }
 
+function writeBezierKnot(writer: PsdWriter, points: number[], width: number, height: number) {
+	writeFixedPointPath32(writer, points[1] / height); // y0
+	writeFixedPointPath32(writer, points[0] / width); // x0
+	writeFixedPointPath32(writer, points[3] / height); // y1
+	writeFixedPointPath32(writer, points[2] / width); // x1
+	writeFixedPointPath32(writer, points[5] / height); // y2
+	writeFixedPointPath32(writer, points[4] / width); // x2
+}
+
 addHandler(
 	'vmsk',
 	hasKey('vectorMask'),
@@ -325,12 +334,7 @@ addHandler(
 
 			for (const { linked, points } of path.knots) {
 				writeUint16(writer, linked ? linkedKnot : unlinkedKnot);
-				writeFixedPointPath32(writer, points[1] / width); // y0
-				writeFixedPointPath32(writer, points[0] / height); // x0
-				writeFixedPointPath32(writer, points[3] / width); // y1
-				writeFixedPointPath32(writer, points[2] / height); // x1
-				writeFixedPointPath32(writer, points[5] / width); // y2
-				writeFixedPointPath32(writer, points[4] / height); // x2
+				writeBezierKnot(writer, points, width, height);
 			}
 		}
 	},
