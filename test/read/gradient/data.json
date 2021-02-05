@@ -1,0 +1,331 @@
+{
+  "width": 200,
+  "height": 200,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "HP Deskjet 5150 series",
+      "renderingIntent": "perceptual",
+      "printerProfile": "CIE RGB",
+      "blackPointCompensation": false,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      3
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "idsSeedNumber": 3,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 200,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": true,
+      "hidden": false,
+      "name": "Background",
+      "nameSource": "bgnd",
+      "id": 1,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": true,
+        "composite": false,
+        "position": true
+      },
+      "layerColor": "none",
+      "timestamp": 1612549228.8547387,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 54,
+      "left": 15,
+      "bottom": 151,
+      "right": 179,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "mask": {
+        "top": 54,
+        "left": 15,
+        "bottom": 151,
+        "right": 179,
+        "defaultColor": 0,
+        "positionRelativeToLayer": false,
+        "disabled": false
+      },
+      "name": "Rectangle 1",
+      "vectorFill": {
+        "type": "solid",
+        "name": "$$$/DefaultGradient/RedGreen=Red, Green",
+        "smoothness": 1,
+        "colorStops": [
+          {
+            "color": {
+              "r": 225.00000178813934,
+              "g": 0,
+              "b": 25.00389140099287
+            },
+            "location": 0,
+            "midpoint": 0.5
+          },
+          {
+            "color": {
+              "r": 0,
+              "g": 96.00000187754631,
+              "b": 27.00389128178358
+            },
+            "location": 1,
+            "midpoint": 0.5
+          }
+        ],
+        "opacityStops": [
+          {
+            "opacity": 1,
+            "location": 0,
+            "midpoint": 0.5
+          },
+          {
+            "opacity": 1,
+            "location": 1,
+            "midpoint": 0.5
+          }
+        ],
+        "style": "radial",
+        "dither": true,
+        "angle": 126.03,
+        "scale": 1.69
+      },
+      "vectorMask": {
+        "paths": [
+          {
+            "open": false,
+            "knots": [
+              {
+                "linked": false,
+                "points": [
+                  15.999996662139893,
+                  54.99999523162842,
+                  15.999996662139893,
+                  54.99999523162842,
+                  15.999996662139893,
+                  54.99999523162842
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  177.99999713897705,
+                  54.99999523162842,
+                  177.99999713897705,
+                  54.99999523162842,
+                  177.99999713897705,
+                  54.99999523162842
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  177.99999713897705,
+                  150,
+                  177.99999713897705,
+                  150,
+                  177.99999713897705,
+                  150
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  15.999996662139893,
+                  150,
+                  15.999996662139893,
+                  150,
+                  15.999996662139893,
+                  150
+                ]
+              }
+            ]
+          }
+        ],
+        "invert": false,
+        "notLink": false,
+        "disable": false,
+        "fillStartsWithAllPixels": false
+      },
+      "nameSource": "shap",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1612549228.8547494,
+      "vectorStroke": {
+        "strokeEnabled": true,
+        "fillEnabled": true,
+        "lineWidth": {
+          "value": 3,
+          "units": "Points"
+        },
+        "lineDashOffset": {
+          "value": 0,
+          "units": "Points"
+        },
+        "miterLimit": 100,
+        "lineCapType": "butt",
+        "lineJoinType": "miter",
+        "lineAlignment": "inside",
+        "scaleLock": false,
+        "strokeAdjust": false,
+        "lineDashSet": [],
+        "blendMode": "normal",
+        "opacity": 1,
+        "content": {
+          "type": "solid",
+          "name": "$$$/DefaultGradient/OrangeYellowOrange=Orange, Yellow, Orange",
+          "smoothness": 1,
+          "colorStops": [
+            {
+              "color": {
+                "h": 0.071319580078125,
+                "s": 99.2156862745098,
+                "b": 100
+              },
+              "location": 0,
+              "midpoint": 0.5
+            },
+            {
+              "color": {
+                "h": 0.166656494140625,
+                "s": 100,
+                "b": 100
+              },
+              "location": 0.5,
+              "midpoint": 0.5
+            },
+            {
+              "color": {
+                "h": 0.071319580078125,
+                "s": 100,
+                "b": 100
+              },
+              "location": 1,
+              "midpoint": 0.47
+            }
+          ],
+          "opacityStops": [
+            {
+              "opacity": 1,
+              "location": 0,
+              "midpoint": 0.5
+            },
+            {
+              "opacity": 1,
+              "location": 1,
+              "midpoint": 0.5
+            }
+          ],
+          "style": "linear",
+          "dither": true,
+          "reverse": false,
+          "angle": 90,
+          "scale": 1,
+          "align": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "resolution": 72
+      },
+      "usingAlignedRendering": true,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "version": 130
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  },
+  "pathList": []
+}

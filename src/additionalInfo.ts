@@ -25,7 +25,7 @@ import {
 import {
 	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
 	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, GrdT, IGSr, Ornt,
-	parseAngle, parsePercent, parseUnits, readVersionAndDescriptor, StrokeDescriptor,
+	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, readVersionAndDescriptor, StrokeDescriptor,
 	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
 	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor
 } from './descriptor';
@@ -196,8 +196,8 @@ addHandler(
 	target => target.vectorFill !== undefined && target.vectorStroke !== undefined,
 	(reader, target, left) => {
 		readSignature(reader); // key
-		const descriptor = readVersionAndDescriptor(reader);
-		target.vectorFill = parseVectorContent(descriptor);
+		const desc = readVersionAndDescriptor(reader);
+		target.vectorFill = parseVectorContent(desc);
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
@@ -342,6 +342,7 @@ addHandler(
 
 // TODO: need to write vmsk if has outline ?
 addHandlerAlias('vsms', 'vmsk');
+// addHandlerAlias('vmsk', 'vsms');
 
 interface VogkDescriptor {
 	keyDescriptorList: {
@@ -657,6 +658,57 @@ addHandler(
 		writeUint8(writer, 0); // copy (always false)
 		writeZeros(writer, 3);
 		writeSection(writer, 2, () => writeVersionAndDescriptor(writer, '', 'metadata', desc), true);
+	},
+);
+
+addHandler(
+	'vstk',
+	hasKey('vectorStroke'),
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as StrokeDescriptor;
+		target.vectorStroke = {
+			strokeEnabled: desc.strokeEnabled,
+			fillEnabled: desc.fillEnabled,
+			lineWidth: parseUnits(desc.strokeStyleLineWidth),
+			lineDashOffset: parseUnits(desc.strokeStyleLineDashOffset),
+			miterLimit: desc.strokeStyleMiterLimit,
+			lineCapType: strokeStyleLineCapType.decode(desc.strokeStyleLineCapType),
+			lineJoinType: strokeStyleLineJoinType.decode(desc.strokeStyleLineJoinType),
+			lineAlignment: strokeStyleLineAlignment.decode(desc.strokeStyleLineAlignment),
+			scaleLock: desc.strokeStyleScaleLock,
+			strokeAdjust: desc.strokeStyleStrokeAdjust,
+			lineDashSet: desc.strokeStyleLineDashSet.map(parseUnits),
+			blendMode: BlnM.decode(desc.strokeStyleBlendMode),
+			opacity: parsePercent(desc.strokeStyleOpacity),
+			content: parseVectorContent(desc.strokeStyleContent),
+			resolution: desc.strokeStyleResolution,
+		};
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const stroke = target.vectorStroke!;
+		const descriptor: StrokeDescriptor = {
+			strokeStyleVersion: 2,
+			strokeEnabled: !!stroke.strokeEnabled,
+			fillEnabled: !!stroke.fillEnabled,
+			strokeStyleLineWidth: stroke.lineWidth || { value: 3, units: 'Points' },
+			strokeStyleLineDashOffset: stroke.lineDashOffset || { value: 0, units: 'Points' },
+			strokeStyleMiterLimit: stroke.miterLimit ?? 100,
+			strokeStyleLineCapType: strokeStyleLineCapType.encode(stroke.lineCapType),
+			strokeStyleLineJoinType: strokeStyleLineJoinType.encode(stroke.lineJoinType),
+			strokeStyleLineAlignment: strokeStyleLineAlignment.encode(stroke.lineAlignment),
+			strokeStyleScaleLock: !!stroke.scaleLock,
+			strokeStyleStrokeAdjust: !!stroke.strokeAdjust,
+			strokeStyleLineDashSet: stroke.lineDashSet || [],
+			strokeStyleBlendMode: BlnM.encode(stroke.blendMode),
+			strokeStyleOpacity: unitsPercent(stroke.opacity ?? 1),
+			strokeStyleContent: serializeVectorContent(
+				stroke.content || { type: 'color', color: { r: 0, g: 0, b: 0 } }).descriptor,
+			strokeStyleResolution: stroke.resolution ?? 72,
+		};
+
+		writeVersionAndDescriptor(writer, '', 'strokeStyle', descriptor);
 	},
 );
 
@@ -2082,58 +2134,6 @@ addHandler(
 );
 
 addHandler(
-	'vstk',
-	hasKey('vectorStroke'),
-	(reader, target, left) => {
-		const desc = readVersionAndDescriptor(reader) as StrokeDescriptor;
-		// console.log('vstk', require('util').inspect(desc, false, 99, true));
-		target.vectorStroke = {
-			strokeEnabled: desc.strokeEnabled,
-			fillEnabled: desc.fillEnabled,
-			lineWidth: parseUnits(desc.strokeStyleLineWidth),
-			lineDashOffset: parseUnits(desc.strokeStyleLineDashOffset),
-			miterLimit: desc.strokeStyleMiterLimit,
-			lineCapType: strokeStyleLineCapType.decode(desc.strokeStyleLineCapType),
-			lineJoinType: strokeStyleLineJoinType.decode(desc.strokeStyleLineJoinType),
-			lineAlignment: strokeStyleLineAlignment.decode(desc.strokeStyleLineAlignment),
-			scaleLock: desc.strokeStyleScaleLock,
-			strokeAdjust: desc.strokeStyleStrokeAdjust,
-			lineDashSet: desc.strokeStyleLineDashSet.map(parseUnits),
-			blendMode: BlnM.decode(desc.strokeStyleBlendMode),
-			opacity: parsePercent(desc.strokeStyleOpacity),
-			content: parseVectorContent(desc.strokeStyleContent),
-			resolution: desc.strokeStyleResolution,
-		};
-
-		skipBytes(reader, left());
-	},
-	(writer, target) => {
-		const stroke = target.vectorStroke!;
-		const descriptor: StrokeDescriptor = {
-			strokeStyleVersion: 2,
-			strokeEnabled: !!stroke.strokeEnabled,
-			fillEnabled: !!stroke.fillEnabled,
-			strokeStyleLineWidth: stroke.lineWidth || { value: 3, units: 'Points' },
-			strokeStyleLineDashOffset: stroke.lineDashOffset || { value: 0, units: 'Points' },
-			strokeStyleMiterLimit: stroke.miterLimit ?? 100,
-			strokeStyleLineCapType: strokeStyleLineCapType.encode(stroke.lineCapType),
-			strokeStyleLineJoinType: strokeStyleLineJoinType.encode(stroke.lineJoinType),
-			strokeStyleLineAlignment: strokeStyleLineAlignment.encode(stroke.lineAlignment),
-			strokeStyleScaleLock: !!stroke.scaleLock,
-			strokeStyleStrokeAdjust: !!stroke.strokeAdjust,
-			strokeStyleLineDashSet: stroke.lineDashSet || [],
-			strokeStyleBlendMode: BlnM.encode(stroke.blendMode),
-			strokeStyleOpacity: unitsPercent(stroke.opacity ?? 1),
-			strokeStyleContent: serializeVectorContent(
-				stroke.content || { type: 'color', color: { r: 0, g: 0, b: 0 } }).descriptor,
-			strokeStyleResolution: stroke.resolution ?? 72,
-		};
-
-		writeVersionAndDescriptor(writer, '', 'strokeStyle', descriptor);
-	},
-);
-
-addHandler(
 	'lfx2',
 	hasKey('effects'),
 	(reader, target, left, _, options) => {
@@ -2327,8 +2327,8 @@ function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): Des
 		const samples = Math.round((grad.smoothness ?? 1) * 4096);
 
 		return {
-			GrdF: 'GrdF.CstS',
 			'Nm  ': grad.name,
+			GrdF: 'GrdF.CstS',
 			Intr: samples,
 			Clrs: grad.colorStops.map(s => ({
 				'Clr ': serializeColor(s.color),
@@ -2397,21 +2397,20 @@ function parseVectorContent(descriptor: DescriptorVectorContent): VectorContent 
 }
 
 function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo) {
-	const result: DescriptorGradientContent = {
-		Grad: serializeGradient(content),
-		Type: GrdT.encode(content.style),
-	};
+	const result: DescriptorGradientContent = {} as any;
 	if (content.dither !== undefined) result.Dthr = content.dither;
 	if (content.reverse !== undefined) result.Rvrs = content.reverse;
 	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
-	if (content.scale !== undefined) result['Scl '] = unitsPercent(content.scale);
+	result.Type = GrdT.encode(content.style);
 	if (content.align !== undefined) result.Algn = content.align;
+	if (content.scale !== undefined) result['Scl '] = unitsPercent(content.scale);
 	if (content.offset) {
 		result.Ofst = {
 			Hrzn: unitsPercent(content.offset.x),
 			Vrtc: unitsPercent(content.offset.y),
 		};
 	}
+	result.Grad = serializeGradient(content);
 	return result;
 }
 
@@ -2439,7 +2438,7 @@ function serializeVectorContent(content: VectorContent): { descriptor: Descripto
 
 function parseColor(color: DescriptorColor): Color {
 	if ('H   ' in color) {
-		return { h: parsePercent(color['H   ']), s: color.Strt, b: color.Brgh };
+		return { h: parsePercentOrAngle(color['H   ']), s: color.Strt, b: color.Brgh };
 	} else if ('Rd  ' in color) {
 		return { r: color['Rd  '], g: color['Grn '], b: color['Bl  '] };
 	} else if ('Cyn ' in color) {
@@ -2459,7 +2458,7 @@ function serializeColor(color: Color | undefined): DescriptorColor {
 	} else if ('r' in color) {
 		return { 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
 	} else if ('h' in color) {
-		return { 'H   ': unitsPercent(color.h), Strt: color.s || 0, Brgh: color.b || 0 };
+		return { 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
 	} else if ('c' in color) {
 		return { 'Cyn ': color.c || 0, Mgnt: color.m || 0, 'Ylw ': color.y || 0, Blck: color.k || 0 };
 	} else if ('l' in color) {

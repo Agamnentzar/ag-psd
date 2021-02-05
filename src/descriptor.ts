@@ -1,4 +1,4 @@
-import { clamp, createEnum } from './helpers';
+import { createEnum } from './helpers';
 import { AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, GlowSource, GlowTechnique, GradientStyle, LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, UnitsValue, WarpStyle } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
@@ -238,7 +238,9 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		let type = getTypeByKey(key, value[key], root);
 		let extType = fieldToExtType[key];
 
-		if (channels.indexOf(key) !== -1) {
+		if ((key === 'Strt' || key === 'Brgh') && 'H   ' in value) {
+			type = 'doub';
+		} else if (channels.indexOf(key) !== -1) {
 			type = (classId === 'RGBC' && root !== 'artd') ? 'doub' : 'long';
 		} else if (key === 'profile') {
 			type = classId === 'printOutput' ? 'TEXT' : 'tdta';
@@ -252,6 +254,11 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			} else {
 				logErrors && console.log('Invalid strokeStyleContent value', value[key]);
 			}
+		}
+
+		if (extType && extType.classID === 'RGBC') {
+			if ('H   ' in value[key]) extType = { classID: 'HSBC', name: '' };
+			// TODO: other color spaces
 		}
 
 		writeAsciiStringOrClassId(writer, key);
@@ -538,11 +545,12 @@ export interface DesciptorPattern {
 }
 
 export type DesciptorGradient = {
+	'Nm  ': string;
 	GrdF: 'GrdF.CstS';
 	Intr: number;
-	'Nm  ': string;
 	Clrs: {
 		'Clr ': DescriptorColor;
+		Type: 'Clry.UsrS';
 		Lctn: number;
 		Mdpn: number;
 	}[];
@@ -648,6 +656,13 @@ export function parsePercent(x: DescriptorUnitsValue | undefined) {
 	return x.value / 100;
 }
 
+export function parsePercentOrAngle(x: DescriptorUnitsValue | undefined) {
+	if (x === undefined) return 1;
+	if (x.units === 'Percent') return x.value / 100;
+	if (x.units === 'Angle') return x.value / 360;
+	throw new Error(`Invalid units: ${x.units}`);
+}
+
 export function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
 	if (
 		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
@@ -668,7 +683,7 @@ export function unitsAngle(value: number | undefined): DescriptorUnitsValue {
 }
 
 export function unitsPercent(value: number | undefined): DescriptorUnitsValue {
-	return { units: 'Percent', value: Math.round(clamp(value || 0, 0, 1) * 100) };
+	return { units: 'Percent', value: Math.round((value || 0) * 100) };
 }
 
 export function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUnitsValue {
