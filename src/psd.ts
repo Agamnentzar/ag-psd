@@ -945,4 +945,7 @@ export interface WriteOptions {
 	invalidateTextLayers?: boolean;
 	/** Logs if features are missing. */
 	logMissingFeatures?: boolean;
+	/** Forces bottom layer to be treated as layer and not background even when it's missing any transparency
+	 * 	(by default Photoshop treats bottom layer as background it it doesn't have any transparent pixels) */
+	noBackground?: boolean;
 }

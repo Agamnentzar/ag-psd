@@ -593,7 +593,7 @@ function getLayerChannels(
 		ChannelID.Blue,
 	];
 
-	if (!background || hasAlpha(data) || layer.mask || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
+	if (!background || options.noBackground || layer.mask || hasAlpha(data) || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
 		channelIds.unshift(ChannelID.Transparency);
 	}
 
