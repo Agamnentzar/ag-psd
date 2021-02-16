@@ -294,19 +294,42 @@ You can see working example in `test/index.html`, `test/worker-read.js` and `tes
 
 ```typescript
 interface ReadOptions {
-  /** does not load layer image data */
-  skipLayerImageData?: boolean;
-  /** does not load composite image data */
-  skipCompositeImageData?: boolean;
-  /** does not load thumbnail */
-  skipThumbnail?: boolean;
+	/** Does not load layer image data. */
+	skipLayerImageData?: boolean;
+	/** Does not load composite image data. */
+	skipCompositeImageData?: boolean;
+	/** Does not load thumbnail. */
+	skipThumbnail?: boolean;
+	/** Does not load linked files (used in smart-objects). */
+	skipLinkedFilesData?: boolean;
+	/** Throws exception if features are missing. */
+	throwForMissingFeatures?: boolean;
+	/** Logs if features are missing. */
+	logMissingFeatures?: boolean;
+	/** Keep image data as byte array instead of canvas.
+	 * (image data will appear in `imageData` fields instead of `canvas` fields)
+	 * This avoids issues with canvas premultiplied alpha corrupting image data. */
+	useImageData?: boolean;
+	/** Loads thumbnail raw data instead of decoding it's content into canvas.
+	 * `thumnailRaw` field is used instead. */
+	useRawThumbnail?: boolean;
+	/** Usend only for development */
+	logDevFeatures?: boolean;
 }
 
 interface WriteOptions {
-  /** automatically generates thumbnail from composite image */
-  generateThumbnail?: boolean;
-  /** trims transparent pixels from layer image data */
-  trimImageData?: boolean;
+	/** Automatically generates thumbnail from composite image. */
+	generateThumbnail?: boolean;
+	/** Trims transparent pixels from layer image data. */
+	trimImageData?: boolean;
+	/** Invalidates text layer data, forcing Photoshop to redraw them on load.
+	 *  Use this option if you're updating loaded text layer properties. */
+	invalidateTextLayers?: boolean;
+	/** Logs if features are missing. */
+	logMissingFeatures?: boolean;
+	/** Forces bottom layer to be treated as layer and not background even when it's missing any transparency
+	 * 	(by default Photoshop treats bottom layer as background it it doesn't have any transparent pixels) */
+	noBackground?: boolean;
 }
 ```
 
