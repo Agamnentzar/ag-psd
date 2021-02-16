@@ -116,13 +116,14 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /gradient/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /boolean/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, 'src.psd'), { ...opts, useImageData: true, useRawThumbnail: true });
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true });
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.psd`), actual);
-
+			// console.log(require('util').inspect(psd, false, 99, true));
+			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, true), 'utf8');
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.bin`), actual);
 			// console.log('------------');
 			// readPsdFromFile(path.join(resultsFilesPath, `read-write-${f}.psd`), { ...opts, useImageData: true, useRawThumbnail: true });

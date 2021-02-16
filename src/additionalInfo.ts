@@ -10,7 +10,7 @@ import {
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient, KeyDescriptorItem,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient, KeyDescriptorItem, BooleanOperation,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -167,9 +167,10 @@ addHandler(
 	'GdFl',
 	target => target.vectorFill !== undefined && target.vectorStroke === undefined &&
 		(target.vectorFill.type === 'solid' || target.vectorFill.type === 'noise'),
-	(reader, target) => {
+	(reader, target, left) => {
 		const descriptor = readVersionAndDescriptor(reader);
 		target.vectorFill = parseVectorContent(descriptor);
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const { descriptor } = serializeVectorContent(target.vectorFill!);
@@ -226,6 +227,8 @@ function writeBezierKnot(writer: PsdWriter, points: number[], width: number, hei
 	writeFixedPointPath32(writer, points[4] / width); // x2
 }
 
+const booleanOperations: BooleanOperation[] = ['exclude', 'combine', 'subtract', 'intersect'];
+
 addHandler(
 	'vmsk',
 	hasKey('vectorMask'),
@@ -248,24 +251,20 @@ addHandler(
 
 			switch (selector) {
 				case 0: // Closed subpath length record
+				case 3: { // Open subpath length record
 					readUint16(reader); // count
-					skipBytes(reader, 22);
-					path = { open: false, knots: [] };
+					const boolOp = readUint16(reader);
+					readUint16(reader); // always 1 ?
+					skipBytes(reader, 18);
+					path = { open: selector === 3, operation: booleanOperations[boolOp], knots: [] };
 					paths.push(path);
 					break;
+				}
 				case 1: // Closed subpath Bezier knot, linked
-				case 4: // Open subpath Bezier knot, linked
-					path!.knots.push({ linked: true, points: readBezierKnot(reader, width, height) });
-					break;
 				case 2: // Closed subpath Bezier knot, unlinked
+				case 4: // Open subpath Bezier knot, linked
 				case 5: // Open subpath Bezier knot, unlinked
-					path!.knots.push({ linked: false, points: readBezierKnot(reader, width, height) });
-					break;
-				case 3: // Open subpath length record
-					readUint16(reader); // count
-					skipBytes(reader, 22);
-					path = { open: true, knots: [] };
-					paths.push(path);
+					path!.knots.push({ linked: (selector === 1 || selector === 4), points: readBezierKnot(reader, width, height) });
 					break;
 				case 6: // Path fill rule record
 					skipBytes(reader, 24);
@@ -325,7 +324,7 @@ addHandler(
 		for (const path of vectorMask.paths) {
 			writeUint16(writer, path.open ? 3 : 0);
 			writeUint16(writer, path.knots.length);
-			writeUint16(writer, 1); // TODO: this is sometimes 2
+			writeUint16(writer, Math.abs(booleanOperations.indexOf(path.operation))); // default to 1 if not found
 			writeUint16(writer, 1);
 			writeZeros(writer, 18); // TODO: these are sometimes non-zero
 

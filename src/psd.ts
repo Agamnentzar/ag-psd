@@ -401,8 +401,11 @@ export interface BezierKnot {
 	points: number[]; // x0, y0, x1, y1, x2, y2
 }
 
+export type BooleanOperation = 'exclude' | 'combine' | 'subtract' | 'intersect';
+
 export interface BezierPath {
 	open: boolean;
+	operation: BooleanOperation;
 	knots: BezierKnot[];
 }
 

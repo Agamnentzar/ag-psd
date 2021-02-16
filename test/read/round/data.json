@@ -133,6 +133,7 @@
         "paths": [
           {
             "open": false,
+            "operation": "combine",
             "knots": [
               {
                 "linked": true,

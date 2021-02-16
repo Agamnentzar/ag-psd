@@ -379,7 +379,8 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 			writeSignature(writer, key);
 
 			const align = (key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
-				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms') ? 4 : 2;
+				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' ||
+				key === 'GdFl') ? 4 : 2;
 			writeSection(writer, align, () => handler.write(writer, target, psd, options), key !== 'Txt2');
 		}
 	}

@@ -1,5 +1,8 @@
 # Changelog
 
+## v11.5.1
+- Added missing field `operation` to paths in vector layers
+
 ## v11.5.0
 - Added `noBackground` write option to force treating bottom layer as layer instead of background when it doesn't have any transparent pixels
 
