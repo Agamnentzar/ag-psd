@@ -68,8 +68,8 @@ console.log(psd1);
 // read document structure and image data
 const psd2 = readPsd(buffer);
 console.log(psd2);
-// by defaults `canvas` field type is HTMLCanvasElement, so it needs to be cast to `any` or node-canvas `Canvas` type
-// in order to call `toBuffer` method
+// by defaults `canvas` field type is HTMLCanvasElement, so it needs to be cast to `any`
+// or node-canvas `Canvas` type, in order to call `toBuffer` method
 fs.writeFileSync('layer-1.png', (psd2.children[0].canvas as any).toBuffer());
 ```
 
