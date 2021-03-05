@@ -120,6 +120,7 @@
         "right": 179,
         "defaultColor": 0,
         "positionRelativeToLayer": false,
+        "fromVectorData": true,
         "disabled": false
       },
       "name": "Rectangle 1",

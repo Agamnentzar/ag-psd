@@ -227,6 +227,7 @@ export interface LayerMaskData {
 	defaultColor?: number;
 	disabled?: boolean;
 	positionRelativeToLayer?: boolean;
+	fromVectorData?: boolean; // set to true if the mask is generated from vector data, false if it's a bitmap provided by user
 	userMaskDensity?: number;
 	userMaskFeather?: number; // px
 	vectorMaskDensity?: number;
@@ -873,6 +874,16 @@ export interface ImageResources {
 	iccUntaggedProfile?: boolean;
 }
 
+export interface GlobalLayerMaskInfo {
+	overlayColorSpace: number;
+	colorSpace1: number;
+	colorSpace2: number;
+	colorSpace3: number;
+	colorSpace4: number;
+	opacity: number;
+	kind: number;
+}
+
 export interface Layer extends LayerAdditionalInfo {
 	top?: number;
 	left?: number;
@@ -912,6 +923,7 @@ export interface Psd extends LayerAdditionalInfo {
 		docDefaultNewArtboardBackgroundColor?: Color;
 		docDefaultNewArtboardBackgroundType?: number;
 	};
+	globalLayerMaskInfo?: GlobalLayerMaskInfo;
 }
 
 export interface ReadOptions {

@@ -691,17 +691,17 @@ MOCK_HANDLERS && addHandler(
 	},
 );
 
-// addHandler(
-// 	1025,
-// 	target => (target as any)._ir1025 !== undefined,
-// 	(reader, target, left) => {
-// 		console.log('image resource 1025', left());
-// 		(target as any)._ir1025 = readBytes(reader, left());
-// 	},
-// 	(writer, target) => {
-// 		writeBytes(writer, (target as any)._ir1025);
-// 	},
-// );
+MOCK_HANDLERS && addHandler(
+	1025,
+	target => (target as any)._ir1025 !== undefined,
+	(reader, target, left) => {
+		LOG_MOCK_HANDLERS && console.log('image resource 1025', left());
+		(target as any)._ir1025 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1025);
+	},
+);
 
 const FrmD = createEnum<'auto' | 'none' | 'dispose'>('FrmD', '', {
 	auto: 'Auto',

@@ -96,6 +96,7 @@
         "right": 189,
         "defaultColor": 0,
         "disabled": false,
+        "fromVectorData": false,
         "positionRelativeToLayer": false
       },
       "name": "Layer 1",
@@ -123,5 +124,14 @@
       "b": 0
     },
     "opacity": 0.19607843137254902
+  },
+  "globalLayerMaskInfo": {
+    "colorSpace1": 65535,
+    "colorSpace2": 0,
+    "colorSpace3": 0,
+    "colorSpace4": 0,
+    "kind": 128,
+    "opacity": 0.19607843137254902,
+    "overlayColorSpace": 0
   }
 }

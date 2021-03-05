@@ -1,5 +1,10 @@
 # Changelog
 
+## v11.6.0
+- Added `fromVectorData` field to `mask` object that indicates if mask image data comes from vector data attached to the layer
+- Added handling `globalLayerMaskInfo` field
+- Fixed vector and bitmap masks not writing correctly when used at the same time on one layer
+
 ## v11.5.1
 - Added missing field `operation` to paths in vector layers
 

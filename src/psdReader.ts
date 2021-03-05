@@ -1,4 +1,7 @@
-import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo } from './psd';
+import {
+	Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color,
+	PatternInfo, GlobalLayerMaskInfo
+} from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
 	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace
@@ -219,7 +222,8 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 
 		// SAI does not include this section
 		if (left() > 0) {
-			readGlobalLayerMaskInfo(reader);
+			const globalLayerMaskInfo = readGlobalLayerMaskInfo(reader);
+			if (globalLayerMaskInfo) psd.globalLayerMaskInfo = globalLayerMaskInfo;
 		} else {
 			// revert back to end of section if exceeded section limits
 			// options.logMissingFeatures && console.log('reverting to end of section');
@@ -280,9 +284,7 @@ function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptions) {
 
 		skipBytes(reader, left());
 
-		if (!psd.children) {
-			psd.children = [];
-		}
+		if (!psd.children) psd.children = [];
 
 		const stack: (Layer | Psd)[] = [psd];
 
@@ -368,6 +370,7 @@ function readLayerMaskData(reader: PsdReader, options: ReadOptions) {
 		const flags = readUint8(reader);
 		mask.positionRelativeToLayer = (flags & LayerMaskFlags.PositionRelativeToLayer) !== 0;
 		mask.disabled = (flags & LayerMaskFlags.LayerMaskDisabled) !== 0;
+		mask.fromVectorData = (flags & LayerMaskFlags.LayerMaskFromRenderingOtherData) !== 0;
 
 		if (flags & LayerMaskFlags.MaskHasParametersAppliedToIt) {
 			const params = readUint8(reader);
@@ -438,7 +441,14 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 			if (maskWidth && maskHeight) {
 				const maskData = createImageData(maskWidth, maskHeight);
 				resetImageData(maskData);
+
+				const start = reader.offset;
 				readData(reader, maskData, compression, maskWidth, maskHeight, 0);
+
+				if (RAW_IMAGE_DATA) {
+					(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+				}
+
 				setupGrayscale(maskData);
 
 				if (options.useImageData) {
@@ -497,18 +507,18 @@ function readData(
 }
 
 function readGlobalLayerMaskInfo(reader: PsdReader) {
-	return readSection(reader, 1, left => {
-		if (left()) {
-			const overlayColorSpace = readUint16(reader);
-			const colorSpace1 = readUint16(reader);
-			const colorSpace2 = readUint16(reader);
-			const colorSpace3 = readUint16(reader);
-			const colorSpace4 = readUint16(reader);
-			const opacity = readUint16(reader) / 0xff;
-			const kind = readUint8(reader);
-			skipBytes(reader, left());
-			return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
-		}
+	return readSection<GlobalLayerMaskInfo | undefined>(reader, 1, left => {
+		if (!left()) return undefined;
+
+		const overlayColorSpace = readUint16(reader);
+		const colorSpace1 = readUint16(reader);
+		const colorSpace2 = readUint16(reader);
+		const colorSpace3 = readUint16(reader);
+		const colorSpace4 = readUint16(reader);
+		const opacity = readUint16(reader) / 0xff;
+		const kind = readUint8(reader);
+		skipBytes(reader, left()); // 3 bytes of padding ?
+		return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
 	});
 }
 

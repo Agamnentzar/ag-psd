@@ -1,4 +1,4 @@
-import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color } from './psd';
+import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo } from './psd';
 import {
 	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
@@ -221,7 +221,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	// layer and mask info
 	writeSection(writer, 2, () => {
 		writeLayerInfo(tempBuffer, writer, psd, globalAlpha, options);
-		writeGlobalLayerMaskInfo(writer);
+		writeGlobalLayerMaskInfo(writer, psd.globalLayerMaskInfo);
 		writeAdditionalLayerInfo(writer, psd, psd, options);
 	});
 
@@ -307,7 +307,7 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 	}, true);
 }
 
-function writeLayerMaskData(writer: PsdWriter, { mask, vectorMask }: Layer, layerData: LayerChannelData) {
+function writeLayerMaskData(writer: PsdWriter, { mask }: Layer, layerData: LayerChannelData) {
 	writeSection(writer, 1, () => {
 		if (!mask) return;
 
@@ -327,7 +327,7 @@ function writeLayerMaskData(writer: PsdWriter, { mask, vectorMask }: Layer, laye
 		let flags = 0;
 		if (mask.disabled) flags |= LayerMaskFlags.LayerMaskDisabled;
 		if (mask.positionRelativeToLayer) flags |= LayerMaskFlags.PositionRelativeToLayer;
-		if (vectorMask) flags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
+		if (mask.fromVectorData) flags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
 		if (params) flags |= LayerMaskFlags.MaskHasParametersAppliedToIt;
 
 		writeUint8(writer, flags);
@@ -362,9 +362,18 @@ function writeLayerBlendingRanges(writer: PsdWriter, psd: Psd) {
 	});
 }
 
-function writeGlobalLayerMaskInfo(writer: PsdWriter) {
+function writeGlobalLayerMaskInfo(writer: PsdWriter, info: GlobalLayerMaskInfo | undefined) {
 	writeSection(writer, 1, () => {
-		// TODO: implement
+		if (info) {
+			writeUint16(writer, info.overlayColorSpace);
+			writeUint16(writer, info.colorSpace1);
+			writeUint16(writer, info.colorSpace2);
+			writeUint16(writer, info.colorSpace3);
+			writeUint16(writer, info.colorSpace4);
+			writeUint16(writer, info.opacity * 0xff);
+			writeUint8(writer, info.kind);
+			writeZeros(writer, 3);
+		}
 	});
 }
 
@@ -496,7 +505,13 @@ function getChannels(
 			right = left + width;
 			bottom = top + height;
 
-			const buffer = writeDataRLE(tempBuffer, imageData, width, height, [0])!;
+			let buffer = writeDataRLE(tempBuffer, imageData, width, height, [0])!;
+
+			if (RAW_IMAGE_DATA && (layer as any).maskDataRaw) {
+				// console.log('written raw layer image data');
+				buffer = (layer as any).maskDataRaw;
+			}
+
 			layerData.mask = { top, left, right, bottom };
 			layerData.channels.push({
 				channelId: ChannelID.UserMask,

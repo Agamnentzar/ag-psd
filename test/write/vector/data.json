@@ -77,7 +77,8 @@
         "right": 173,
         "defaultColor": 0,
         "disabled": false,
-        "positionRelativeToLayer": false
+        "positionRelativeToLayer": false,
+        "fromVectorData": true
       },
       "name": "Shape 1",
       "vectorFill": {

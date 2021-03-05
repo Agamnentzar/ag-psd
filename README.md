@@ -23,6 +23,7 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
   * Writing text layer with "vertical" orientation may result in broken PSD file
   * Does not support writing or reading predefined "Paragraph Styles" or "Character Styles"
   * The library does not redraw bitmap data for the text layer, so files with updated/written text layers will result in a warning prompt when opening the file in Photoshop. [see more below](#updating-text-layers)
+* This library does not handle redrawing layer and composite image data by itself when blending options, vector data or text options are changed. Any updates to image data have to be done by the user or updated by opening and re-saving the file in Photoshop.
 
 ## Installation
 
