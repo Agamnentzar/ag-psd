@@ -19,12 +19,20 @@ function writeAndRead(psd: Psd, writeOptions: WriteOptions = {}, readOptions: Re
 	return readPsd(reader, { ...readOptions, throwForMissingFeatures: true, logMissingFeatures: true });
 }
 
+function tryLoadCanvasFromFile(filePath: string) {
+	try {
+		return loadCanvasFromFile(filePath);
+	} catch {
+		return undefined;
+	}
+}
+
 function loadPsdFromJSONAndPNGFiles(basePath: string) {
 	const psd: Psd = JSON.parse(fs.readFileSync(path.join(basePath, 'data.json'), 'utf8'));
 	psd.canvas = loadCanvasFromFile(path.join(basePath, 'canvas.png'));
 	psd.children!.forEach((l, i) => {
 		if (!l.children) {
-			l.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}.png`));
+			l.canvas = tryLoadCanvasFromFile(path.join(basePath, `layer-${i}.png`));
 
 			if (l.mask) {
 				l.mask.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}-mask.png`));
@@ -332,6 +340,7 @@ describe('PsdWriter', () => {
 		});
 	});
 
+	// fs.readdirSync(writeFilesPath).filter(f => /group-blend/.test(f)).forEach(f => {
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);

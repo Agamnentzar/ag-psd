@@ -1,5 +1,8 @@
 # Changelog
 
+## v11.6.1
+- Fixed group blending modes not writing correctly
+
 ## v11.6.0
 - Added `fromVectorData` field to `mask` object that indicates if mask image data comes from vector data attached to the layer
 - Added handling `globalLayerMaskInfo` field

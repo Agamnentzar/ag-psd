@@ -420,7 +420,7 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 			layers.push({
 				sectionDivider: {
 					type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
-					key: 'pass',
+					key: fromBlendMode[c.blendMode!] || 'pass',
 					subType: 0,
 				},
 				...c,
