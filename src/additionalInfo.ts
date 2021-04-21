@@ -34,9 +34,13 @@ import { encodeEngineData, decodeEngineData } from './text';
 
 const MOCK_HANDLERS = false;
 
+export interface ExtendedWriteOptions extends WriteOptions {
+	layerIds: number[];
+}
+
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
 type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, options: ReadOptions) => void;
-type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: WriteOptions) => void;
+type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: ExtendedWriteOptions) => void;
 
 export interface InfoHandler {
 	key: string;
@@ -474,7 +478,12 @@ addHandler(
 	'lyid',
 	hasKey('id'),
 	(reader, target) => target.id = readUint32(reader),
-	(writer, target) => writeUint32(writer, target.id!),
+	(writer, target, _psd, options) => {
+		let id = target.id!;
+		while (options.layerIds.indexOf(id) !== -1) id += 100; // make sure we don't have duplicate layer ids
+		writeUint32(writer, id);
+		options.layerIds.push(id);
+	},
 );
 
 addHandler(

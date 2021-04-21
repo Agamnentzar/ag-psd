@@ -4,7 +4,7 @@ import {
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
 	LayerMaskFlags, MaskParams, ColorSpace, Bounds
 } from './helpers';
-import { infoHandlers } from './additionalInfo';
+import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
 
 const RAW_IMAGE_DATA = false;
@@ -174,7 +174,9 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	let imageResources = psd.imageResources || {};
 
-	if (options.generateThumbnail) {
+	const writeOptions: ExtendedWriteOptions = { ...options, layerIds: [] };
+
+	if (writeOptions.generateThumbnail) {
 		imageResources = { ...imageResources, thumbnail: createThumbnail(psd) };
 	}
 
@@ -220,9 +222,9 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// layer and mask info
 	writeSection(writer, 2, () => {
-		writeLayerInfo(tempBuffer, writer, psd, globalAlpha, options);
+		writeLayerInfo(tempBuffer, writer, psd, globalAlpha, writeOptions);
 		writeGlobalLayerMaskInfo(writer, psd.globalLayerMaskInfo);
-		writeAdditionalLayerInfo(writer, psd, psd, options);
+		writeAdditionalLayerInfo(writer, psd, psd, writeOptions);
 	});
 
 	// image data
@@ -243,7 +245,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	}
 }
 
-function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: WriteOptions) {
+function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
 	writeSection(writer, 4, () => {
 		const layers: Layer[] = [];
 
@@ -375,7 +377,7 @@ function writeGlobalLayerMaskInfo(writer: PsdWriter, info: GlobalLayerMaskInfo |
 	});
 }
 
-function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: WriteOptions) {
+function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: ExtendedWriteOptions) {
 	for (const handler of infoHandlers) {
 		const key = handler.key;
 
