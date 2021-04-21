@@ -302,8 +302,6 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 				}
 			}
 		}
-
-		// writeUint16(writer, 0);
 	}, true);
 }
 

@@ -35,7 +35,7 @@ function loadPsdFromJSONAndPNGFiles(basePath: string) {
 			l.canvas = tryLoadCanvasFromFile(path.join(basePath, `layer-${i}.png`));
 
 			if (l.mask) {
-				l.mask.canvas = loadCanvasFromFile(path.join(basePath, `layer-${i}-mask.png`));
+				l.mask.canvas = tryLoadCanvasFromFile(path.join(basePath, `layer-${i}-mask.png`));
 			}
 		}
 	});
@@ -340,7 +340,7 @@ describe('PsdWriter', () => {
 		});
 	});
 
-	// fs.readdirSync(writeFilesPath).filter(f => /group-blend/.test(f)).forEach(f => {
+	// fs.readdirSync(writeFilesPath).filter(f => /smart-simple/.test(f)).forEach(f => {
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);

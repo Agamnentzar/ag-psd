@@ -46,6 +46,23 @@ describe('PsdReader', () => {
 		expect(psd.width).equal(300);
 	});
 
+	it.skip('duplicate smart', () => {
+		const psd = readPsdFromFile(path.join(readFilesPath, 'smart-test', 'src.psd'), { ...opts });
+
+		// const child = psd.children![1].children![0];
+		// psd.children![1].children!.push(child);
+
+		const child = psd.children![0];
+		delete child.id;
+		psd.children!.push(child);
+
+		fs.writeFileSync('output.psd', writePsdBuffer(psd, {
+			trimImageData: false,
+			generateThumbnail: true,
+			noBackground: true
+		}));
+	});
+
 	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		// fs.readdirSync(readFilesPath).filter(f => /gradient/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {

@@ -25,7 +25,7 @@ import {
 import {
 	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
 	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, GrdT, IGSr, Ornt,
-	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, readVersionAndDescriptor, StrokeDescriptor,
+	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, parseUnitsOrNumber, readVersionAndDescriptor, StrokeDescriptor,
 	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
 	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor
 } from './descriptor';
@@ -765,10 +765,10 @@ function parseWarp(warp: WarpDescriptor): Warp {
 		perspectiveOther: warp.warpPerspectiveOther || 0,
 		rotate: Ornt.decode(warp.warpRotate),
 		bounds: warp.bounds && {
-			top: parseUnits(warp.bounds['Top ']),
-			left: parseUnits(warp.bounds.Left),
-			bottom: parseUnits(warp.bounds.Btom),
-			right: parseUnits(warp.bounds.Rght),
+			top: parseUnitsOrNumber(warp.bounds['Top ']),
+			left: parseUnitsOrNumber(warp.bounds.Left),
+			bottom: parseUnitsOrNumber(warp.bounds.Btom),
+			right: parseUnitsOrNumber(warp.bounds.Rght),
 		},
 		uOrder: warp.uOrder,
 		vOrder: warp.vOrder,
@@ -1105,17 +1105,45 @@ addHandler(
 addHandlerAlias('lnkD', 'lnk2');
 addHandlerAlias('lnk3', 'lnk2');
 
-if (MOCK_HANDLERS) {
-	addHandler(
-		'lnkE',
-		target => (target as any)._lnkE !== undefined,
-		(reader, target, left) => {
-			// TODO: this seems to just be zero size block
+// this seems to just be zero size block, ignore it
+addHandler(
+	'lnkE',
+	target => (target as any)._lnkE !== undefined,
+	(reader, target, left, _psds, options) => {
+		if (options.logMissingFeatures && left()) {
+			console.log(`Non-empty lnkE layer info (${left()} bytes)`);
+		}
+
+		if (MOCK_HANDLERS) {
 			(target as any)._lnkE = readBytes(reader, left());
-		},
-		(writer, target) => false && writeBytes(writer, (target as any)._lnkE),
-	);
+		}
+	},
+	(writer, target) => MOCK_HANDLERS && writeBytes(writer, (target as any)._lnkE),
+);
+
+interface ExtensionDesc {
+	generatorSettings: {
+		generator_45_assets: { json: string; };
+		layerTime: number;
+	};
 }
+
+// extension settings ?, ignore it
+addHandler(
+	'extn',
+	target => (target as any)._extn !== undefined,
+	(reader, target) => {
+		const desc: ExtensionDesc = readVersionAndDescriptor(reader);
+
+		if (MOCK_HANDLERS) {
+			(target as any)._ext = desc;
+		}
+	},
+	(_writer, _target) => {
+		// TODO: need to add correct types for desc fields (resources/src.psd)
+		// if (MOCK_HANDLERS) writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
 
 addHandler(
 	'pths',

@@ -1,5 +1,8 @@
 # Changelog
 
+## v11.6.2
+- Fixed smart layer block info not parsing correctly in some cases
+
 ## v11.6.1
 - Fixed group blending modes not writing correctly
 

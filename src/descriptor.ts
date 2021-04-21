@@ -1,5 +1,8 @@
 import { createEnum } from './helpers';
-import { AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, GlowSource, GlowTechnique, GradientStyle, LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, UnitsValue, WarpStyle } from './psd';
+import {
+	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, GlowSource, GlowTechnique, GradientStyle,
+	LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, Units, UnitsValue, WarpStyle
+} from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
 	readBytes, readAsciiString, readInt32, readFloat32, readInt32LE, readUnicodeStringWithLength
@@ -83,6 +86,7 @@ const fieldToExtType: ExtTypeDict = {
 	artboardRect: makeType('', 'classFloatRect'),
 	keyOriginRRectRadii: makeType('', 'radii'),
 	compInfo: makeType('', 'null'),
+	generatorSettings: makeType('', 'null'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -671,6 +675,11 @@ export function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
 		throw new Error(`Invalid units: ${JSON.stringify({ units, value })}`);
 	}
 	return { value, units };
+}
+
+export function parseUnitsOrNumber(value: DescriptorUnitsValue | number, units: Units = 'Pixels'): UnitsValue {
+	if (typeof value === 'number') return { value, units };
+	return parseUnits(value);
 }
 
 export function parseUnitsToNumber({ units, value }: DescriptorUnitsValue, expectedUnits: string): number {
