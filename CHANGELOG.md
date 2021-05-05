@@ -1,5 +1,15 @@
 # Changelog
 
+## v12.0.0
+- **BREAKING CHANGE:** Added support for multiples of the same layer blending effect, these `layer.effects` keys are now arrays:
+	- `dropShadow`
+	- `innerShadow`
+	- `solidFill`
+	- `stroke`
+	- `gradientOverlay`
+
+  WARNING: adding more than one of effect in these arrays will result in file being saved with new version of effects section that is not readable on older versions of Photoshop.
+
 ## v11.6.2
 - Fixed smart layer block info not parsing correctly in some cases
 - Added automatic deduplication of layer IDs

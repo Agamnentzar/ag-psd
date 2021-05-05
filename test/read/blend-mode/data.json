@@ -97,46 +97,48 @@
       "name": "ść猫",
       "effects": {
         "scale": 1,
-        "dropShadow": {
-          "size": {
-            "value": 5,
-            "units": "Pixels"
-          },
-          "angle": 120,
-          "distance": {
-            "value": 5,
-            "units": "Pixels"
-          },
-          "color": {
-            "r": 0,
-            "g": 0,
-            "b": 0
-          },
-          "blendMode": "multiply",
-          "enabled": true,
-          "useGlobalLight": true,
-          "opacity": 0.75,
-          "choke": {
-            "value": 0,
-            "units": "Pixels"
-          },
-          "noise": 0,
-          "antialiased": false,
-          "contour": {
-            "name": "Linear",
-            "curve": [
-              {
-                "x": 0,
-                "y": 0
-              },
-              {
-                "x": 255,
-                "y": 255
-              }
-            ]
-          },
-          "layerConceals": true
-        },
+        "dropShadow": [
+          {
+            "size": {
+              "value": 5,
+              "units": "Pixels"
+            },
+            "angle": 120,
+            "distance": {
+              "value": 5,
+              "units": "Pixels"
+            },
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            },
+            "blendMode": "multiply",
+            "enabled": true,
+            "useGlobalLight": true,
+            "opacity": 0.75,
+            "choke": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "noise": 0,
+            "antialiased": false,
+            "contour": {
+              "name": "Linear",
+              "curve": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 255,
+                  "y": 255
+                }
+              ]
+            },
+            "layerConceals": true
+          }
+        ],
         "outerGlow": {
           "size": {
             "value": 5,
@@ -173,16 +175,18 @@
           },
           "range": 0.5
         },
-        "solidFill": {
-          "blendMode": "normal",
-          "color": {
-            "r": 255,
-            "g": 0,
-            "b": 0
-          },
-          "opacity": 1,
-          "enabled": true
-        }
+        "solidFill": [
+          {
+            "blendMode": "normal",
+            "color": {
+              "r": 255,
+              "g": 0,
+              "b": 0
+            },
+            "opacity": 1,
+            "enabled": true
+          }
+        ]
       },
       "id": 3,
       "blendClippendElements": true,

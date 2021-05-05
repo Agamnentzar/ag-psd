@@ -131,6 +131,7 @@ export interface LayerEffectStroke {
 	present?: boolean;
 	showInDialog?: boolean;
 	enabled?: boolean;
+	overprint?: boolean;
 	size?: UnitsValue;
 	position?: 'inside' | 'center' | 'outside';
 	fillType?: 'color' | 'gradient' | 'pattern';
@@ -207,15 +208,15 @@ export interface LayerEffectGradientOverlay {
 export interface LayerEffectsInfo {
 	disabled?: boolean;
 	scale?: number;
-	dropShadow?: LayerEffectShadow;
-	innerShadow?: LayerEffectShadow;
+	dropShadow?: LayerEffectShadow[];
+	innerShadow?: LayerEffectShadow[];
 	outerGlow?: LayerEffectsOuterGlow;
 	innerGlow?: LayerEffectInnerGlow;
 	bevel?: LayerEffectBevel;
-	solidFill?: LayerEffectSolidFill;
+	solidFill?: LayerEffectSolidFill[];
 	satin?: LayerEffectSatin;
-	stroke?: LayerEffectStroke;
-	gradientOverlay?: LayerEffectGradientOverlay;
+	stroke?: LayerEffectStroke[];
+	gradientOverlay?: LayerEffectGradientOverlay[];
 	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
 }
 

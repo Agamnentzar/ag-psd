@@ -10,7 +10,8 @@ import {
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient, KeyDescriptorItem, BooleanOperation,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient,
+	KeyDescriptorItem, BooleanOperation, LayerEffectsInfo,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -64,6 +65,16 @@ function addHandlerAlias(key: string, target: string) {
 
 function hasKey(key: keyof LayerAdditionalInfo) {
 	return (target: LayerAdditionalInfo) => target[key] !== undefined;
+}
+
+function readLength64(reader: PsdReader) {
+	if (readUint32(reader)) throw new Error(`Resource size above 4 GB limit at ${reader.offset.toString(16)}`);
+	return readUint32(reader);
+}
+
+function writeLength64(writer: PsdWriter, length: number) {
+	writeUint32(writer, 0);
+	writeUint32(writer, length);
 }
 
 addHandler(
@@ -452,6 +463,42 @@ addHandler(
 		writeInt32(writer, 1); // version
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	}
+);
+
+addHandler(
+	'lmfx',
+	target => target.effects !== undefined && hasMultiEffects(target.effects),
+	(reader, target, left, _, options) => {
+		const version = readUint32(reader);
+		if (version !== 0) throw new Error('Invalid lmfx version');
+
+		const desc: LmfxDescriptor = readVersionAndDescriptor(reader);
+		// console.log(require('util').inspect(info, false, 99, true));
+
+		// discard if read in 'lrFX' or 'lfx2' section
+		target.effects = parseEffects(desc, !!options.logMissingFeatures);
+
+		skipBytes(reader, left());
+	},
+	(writer, target, _, options) => {
+		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+
+		writeUint32(writer, 0); // version
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
+addHandler(
+	'lrFX',
+	hasKey('effects'),
+	(reader, target, left) => {
+		if (!target.effects) target.effects = readEffects(reader);
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		writeEffects(writer, target.effects!);
+	},
 );
 
 addHandler(
@@ -1179,21 +1226,6 @@ addHandler(
 	hasKey('version'),
 	(reader, target) => target.version = readUint32(reader),
 	(writer, target) => writeUint32(writer, target.version!),
-);
-
-addHandler(
-	'lrFX',
-	hasKey('effects'),
-	(reader, target, left) => {
-		if (!target.effects) {
-			target.effects = readEffects(reader);
-		}
-
-		skipBytes(reader, left());
-	},
-	(writer, target) => {
-		writeEffects(writer, target.effects!);
-	},
 );
 
 function adjustmentType(type: string) {
@@ -2169,113 +2201,183 @@ addHandler(
 	},
 );
 
+interface EffectDescriptor extends Partial<DescriptorGradientContent>, Partial<DescriptorPatternContent> {
+	enab?: boolean;
+	Styl: string;
+	PntT?: string;
+	'Md  '?: string;
+	Opct?: DescriptorUnitsValue;
+	'Sz  '?: DescriptorUnitsValue;
+	'Clr '?: DescriptorColor;
+	present?: boolean;
+	showInDialog?: boolean;
+	overprint?: boolean;
+}
+
+interface Lfx2Descriptor {
+	'Scl '?: DescriptorUnitsValue;
+	masterFXSwitch?: boolean;
+	DrSh?: EffectDescriptor;
+	IrSh?: EffectDescriptor;
+	OrGl?: EffectDescriptor;
+	IrGl?: EffectDescriptor;
+	ebbl?: EffectDescriptor;
+	SoFi?: EffectDescriptor;
+	patternFill?: EffectDescriptor;
+	GrFl?: EffectDescriptor;
+	ChFX?: EffectDescriptor;
+	FrFX?: EffectDescriptor;
+}
+
+interface LmfxDescriptor {
+	'Scl '?: DescriptorUnitsValue;
+	masterFXSwitch?: boolean;
+	numModifyingFX?: number;
+	OrGl?: EffectDescriptor;
+	IrGl?: EffectDescriptor;
+	ebbl?: EffectDescriptor;
+	ChFX?: EffectDescriptor;
+	dropShadowMulti?: EffectDescriptor[];
+	innerShadowMulti?: EffectDescriptor[];
+	solidFillMulti?: EffectDescriptor[];
+	gradientFillMulti?: EffectDescriptor[];
+	frameFXMulti?: EffectDescriptor[];
+	patternFill?: EffectDescriptor; // ???
+}
+
+function parseFxObject(fx: EffectDescriptor) {
+	const stroke: LayerEffectStroke = {
+		enabled: !!fx.enab,
+		position: FStl.decode(fx.Styl),
+		fillType: FrFl.decode(fx.PntT!),
+		blendMode: BlnM.decode(fx['Md  ']!),
+		opacity: parsePercent(fx.Opct),
+		size: parseUnits(fx['Sz  ']!),
+	};
+
+	if (fx.present !== undefined) stroke.present = fx.present;
+	if (fx.showInDialog !== undefined) stroke.showInDialog = fx.showInDialog;
+	if (fx.overprint !== undefined) stroke.overprint = fx.overprint;
+	if (fx['Clr ']) stroke.color = parseColor(fx['Clr ']);
+	if (fx.Grad) stroke.gradient = parseGradientContent(fx as any);
+	if (fx.Ptrn) stroke.pattern = parsePatternContent(fx as any);
+
+	return stroke;
+}
+
+function serializeFxObject(stroke: LayerEffectStroke) {
+	let FrFX: EffectDescriptor = {} as any;
+	FrFX.enab = !!stroke.enabled;
+	if (stroke.present !== undefined) FrFX.present = !!stroke.present;
+	if (stroke.showInDialog !== undefined) FrFX.showInDialog = !!stroke.showInDialog;
+	FrFX.Styl = FStl.encode(stroke.position);
+	FrFX.PntT = FrFl.encode(stroke.fillType);
+	FrFX['Md  '] = BlnM.encode(stroke.blendMode);
+	FrFX.Opct = unitsPercent(stroke.opacity);
+	FrFX['Sz  '] = unitsValue(stroke.size, 'size');
+	if (stroke.color) FrFX['Clr '] = serializeColor(stroke.color);
+	if (stroke.gradient) FrFX = { ...FrFX, ...serializeGradientContent(stroke.gradient) };
+	if (stroke.pattern) FrFX = { ...FrFX, ...serializePatternContent(stroke.pattern) };
+	if (stroke.overprint !== undefined) FrFX.overprint = !!stroke.overprint;
+	return FrFX;
+}
+
+function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean) {
+	const effects: LayerEffectsInfo = {};
+	if (!info.masterFXSwitch) effects.disabled = true;
+	if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
+	if (info.DrSh) effects.dropShadow = [parseEffectObject(info.DrSh, log)];
+	if (info.dropShadowMulti) effects.dropShadow = info.dropShadowMulti.map(i => parseEffectObject(i, log));
+	if (info.IrSh) effects.innerShadow = [parseEffectObject(info.IrSh, log)];
+	if (info.innerShadowMulti) effects.innerShadow = info.innerShadowMulti.map(i => parseEffectObject(i, log));
+	if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl, log);
+	if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl, log);
+	if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl, log);
+	if (info.SoFi) effects.solidFill = [parseEffectObject(info.SoFi, log)];
+	if (info.solidFillMulti) effects.solidFill = info.solidFillMulti.map(i => parseEffectObject(i, log));
+	if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill, log);
+	if (info.GrFl) effects.gradientOverlay = [parseEffectObject(info.GrFl, log)];
+	if (info.gradientFillMulti) effects.gradientOverlay = info.gradientFillMulti.map(i => parseEffectObject(i, log));
+	if (info.ChFX) effects.satin = parseEffectObject(info.ChFX, log);
+	if (info.FrFX) effects.stroke = [parseFxObject(info.FrFX)];
+	if (info.frameFXMulti) effects.stroke = info.frameFXMulti.map(i => parseFxObject(i));
+	return effects;
+}
+
+function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boolean) {
+	const info: Lfx2Descriptor & LmfxDescriptor = multi ? {
+		'Scl ': unitsPercent(e.scale ?? 1),
+		masterFXSwitch: !e.disabled,
+	} : {
+		masterFXSwitch: !e.disabled,
+		'Scl ': unitsPercent(e.scale ?? 1),
+	};
+
+	const arrayKeys: (keyof LayerEffectsInfo)[] = ['dropShadow', 'innerShadow', 'solidFill', 'gradientOverlay', 'stroke'];
+	for (const key of arrayKeys) {
+		if (e[key] && !Array.isArray(e[key])) throw new Error(`${key} should be an array`);
+	}
+
+	if (e.dropShadow?.[0] && !multi) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', log);
+	if (e.dropShadow?.[0] && multi) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', log));
+	if (e.innerShadow?.[0] && !multi) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', log);
+	if (e.innerShadow?.[0] && multi) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', log));
+	if (e.outerGlow) info.OrGl = serializeEffectObject(e.outerGlow, 'outerGlow', log);
+	if (e.solidFill?.[0] && multi) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', log));
+	if (e.gradientOverlay?.[0] && multi) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', log));
+	if (e.stroke?.[0] && multi) info.frameFXMulti = e.stroke.map(i => serializeFxObject(i));
+	if (e.innerGlow) info.IrGl = serializeEffectObject(e.innerGlow, 'innerGlow', log);
+	if (e.bevel) info.ebbl = serializeEffectObject(e.bevel, 'bevel', log);
+	if (e.solidFill?.[0] && !multi) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', log);
+	if (e.patternOverlay) info.patternFill = serializeEffectObject(e.patternOverlay, 'patternOverlay', log);
+	if (e.gradientOverlay?.[0] && !multi) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', log);
+	if (e.satin) info.ChFX = serializeEffectObject(e.satin, 'satin', log);
+	if (e.stroke?.[0] && !multi) info.FrFX = serializeFxObject(e.stroke?.[0]);
+
+	if (multi) {
+		info.numModifyingFX = 0;
+
+		for (const key of Object.keys(e)) {
+			const value = (e as any)[key];
+			if (Array.isArray(value)) {
+				for (const effect of value) {
+					if (effect.enabled) info.numModifyingFX++;
+				}
+			}
+		}
+	}
+
+	return info;
+}
+
+export function hasMultiEffects(effects: LayerEffectsInfo) {
+	return Object.keys(effects).map(key => (effects as any)[key]).some(v => Array.isArray(v) && v.length > 1);
+}
+
 addHandler(
 	'lfx2',
-	hasKey('effects'),
+	target => target.effects !== undefined && !hasMultiEffects(target.effects),
 	(reader, target, left, _, options) => {
-		const log = !!options.logMissingFeatures;
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error(`Invalid lfx2 version`);
 
-		const info = readVersionAndDescriptor(reader);
+		const desc: Lfx2Descriptor = readVersionAndDescriptor(reader);
+		// console.log(require('util').inspect(desc, false, 99, true));
 
-		target.effects = {}; // discard if read in 'lrFX' section
-		const effects = target.effects;
-
-		if (!info.masterFXSwitch) effects.disabled = true;
-		if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
-		if (info.DrSh) effects.dropShadow = parseEffectObject(info.DrSh, log);
-		if (info.IrSh) effects.innerShadow = parseEffectObject(info.IrSh, log);
-		if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl, log);
-		if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl, log);
-		if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl, log);
-		if (info.SoFi) effects.solidFill = parseEffectObject(info.SoFi, log);
-		if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill, log);
-		if (info.GrFl) effects.gradientOverlay = parseEffectObject(info.GrFl, log);
-		if (info.ChFX) effects.satin = parseEffectObject(info.ChFX, log);
-		if (info.FrFX) {
-			effects.stroke = {
-				enabled: !!info.FrFX.enab,
-				position: FStl.decode(info.FrFX.Styl),
-				fillType: FrFl.decode(info.FrFX.PntT),
-				blendMode: BlnM.decode(info.FrFX['Md  ']),
-				opacity: parsePercent(info.FrFX.Opct),
-				size: parseUnits(info.FrFX['Sz  ']),
-			};
-
-			if (info.FrFX['Clr ']) effects.stroke.color = parseColor(info.FrFX['Clr ']);
-			if (info.FrFX.Grad) effects.stroke.gradient = parseGradientContent(info.FrFX);
-			if (info.FrFX.Ptrn) effects.stroke.pattern = parsePatternContent(info.FrFX);
-		}
+		// TODO: don't discard if we got it from lmfx
+		// discard if read in 'lrFX' section
+		target.effects = parseEffects(desc, !!options.logMissingFeatures);
 
 		skipBytes(reader, left());
 	},
 	(writer, target, _, options) => {
-		const log = !!options.logMissingFeatures;
-		const effects = target.effects!;
-		const info: any = {
-			masterFXSwitch: !effects.disabled,
-			'Scl ': unitsPercent(effects.scale ?? 1),
-		};
-
-		if (effects.dropShadow) info.DrSh = serializeEffectObject(effects.dropShadow, 'dropShadow', log);
-		if (effects.innerShadow) info.IrSh = serializeEffectObject(effects.innerShadow, 'innerShadow', log);
-		if (effects.outerGlow) info.OrGl = serializeEffectObject(effects.outerGlow, 'outerGlow', log);
-		if (effects.innerGlow) info.IrGl = serializeEffectObject(effects.innerGlow, 'innerGlow', log);
-		if (effects.bevel) info.ebbl = serializeEffectObject(effects.bevel, 'bevel', log);
-		if (effects.solidFill) info.SoFi = serializeEffectObject(effects.solidFill, 'solidFill', log);
-		if (effects.patternOverlay) info.patternFill = serializeEffectObject(effects.patternOverlay, 'patternOverlay', log);
-		if (effects.gradientOverlay) info.GrFl = serializeEffectObject(effects.gradientOverlay, 'gradientOverlay', log);
-		if (effects.satin) info.ChFX = serializeEffectObject(effects.satin, 'satin', log);
-
-		const stroke = effects.stroke;
-
-		if (stroke) {
-			info.FrFX = {
-				enab: !!stroke.enabled,
-				Styl: FStl.encode(stroke.position),
-				PntT: FrFl.encode(stroke.fillType),
-				'Md  ': BlnM.encode(stroke.blendMode),
-				Opct: unitsPercent(stroke.opacity),
-				'Sz  ': unitsValue(stroke.size, 'size'),
-			};
-
-			if (stroke.color)
-				info.FrFX['Clr '] = serializeColor(stroke.color);
-			if (stroke.gradient)
-				info.FrFX = { ...info.FrFX, ...serializeGradientContent(stroke.gradient) };
-			if (stroke.pattern)
-				info.FrFX = { ...info.FrFX, ...serializePatternContent(stroke.pattern) };
-		}
+		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, false);
+		// console.log(require('util').inspect(desc, false, 99, true));
 
 		writeUint32(writer, 0); // version
-		writeVersionAndDescriptor(writer, '', 'null', info);
+		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );
-
-function readLength64(reader: PsdReader) {
-	if (readUint32(reader)) throw new Error(`Resource size above 4 GB limit at ${reader.offset.toString(16)}`);
-	return readUint32(reader);
-}
-
-function writeLength64(writer: PsdWriter, length: number) {
-	writeUint32(writer, 0);
-	writeUint32(writer, length);
-}
-
-// addHandler(
-// 	'lmfx',
-// 	target => !target,
-// 	(reader, _target) => {
-// 		const version = readUint32(reader);
-// 		if (version !== 0) throw new Error('Invalid lmfx version');
-
-// 		const descriptor = readVersionAndDescriptor(reader);
-// 		console.log(require('util').inspect(descriptor, false, 99, true));
-// 	},
-// 	(_writer, _target) => {
-// 	},
-// );
 
 interface CinfDescriptor {
 	Vrsn: { major: number; minor: number; fix: number; };
@@ -2285,6 +2387,7 @@ interface CinfDescriptor {
 	Engn: string; // 'Engn.compCore';
 	enableCompCore: string; // 'enable.feature';
 	enableCompCoreGPU: string; // 'enable.feature';
+	enableCompCoreThreads?: string; // 'enable.feature';
 	compCoreSupport: string; // 'reason.supported';
 	compCoreGPUSupport: string; // 'reason.featureDisabled';
 }
@@ -2292,9 +2395,10 @@ interface CinfDescriptor {
 addHandler(
 	'cinf',
 	hasKey('compositorUsed'),
-	(reader, target) => {
+	(reader, target, left) => {
 		const desc = readVersionAndDescriptor(reader) as CinfDescriptor;
 		// console.log(require('util').inspect(desc, false, 99, true));
+
 		target.compositorUsed = {
 			description: desc.description,
 			reason: desc.reason,
@@ -2304,17 +2408,20 @@ addHandler(
 			compCoreSupport: desc.compCoreSupport.split('.')[1],
 			compCoreGPUSupport: desc.compCoreGPUSupport.split('.')[1],
 		};
+
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const cinf = target.compositorUsed!;
 		const desc: CinfDescriptor = {
-			Vrsn: { major: 1, minor: 0, fix: 0 },
-			// psVersion: { major: 22, minor: 1, fix: 0 }, // TESTING
+			Vrsn: { major: 1, minor: 0, fix: 0 }, // TEMP
+			// psVersion: { major: 22, minor: 3, fix: 1 }, // TESTING
 			description: cinf.description,
 			reason: cinf.reason,
 			Engn: `Engn.${cinf.engine}`,
 			enableCompCore: `enable.${cinf.enableCompCore}`,
 			enableCompCoreGPU: `enable.${cinf.enableCompCoreGPU}`,
+			// enableCompCoreThreads: `enable.feature`, // TESTING
 			compCoreSupport: `reason.${cinf.compCoreSupport}`,
 			compCoreGPUSupport: `reason.${cinf.compCoreGPUSupport}`,
 		};
@@ -2361,9 +2468,8 @@ function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoi
 function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): DesciptorGradient {
 	if (grad.type === 'solid') {
 		const samples = Math.round((grad.smoothness ?? 1) * 4096);
-
 		return {
-			'Nm  ': grad.name,
+			'Nm  ': grad.name || '',
 			GrdF: 'GrdF.CstS',
 			Intr: samples,
 			Clrs: grad.colorStops.map(s => ({
@@ -2381,7 +2487,7 @@ function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): Des
 	} else {
 		return {
 			GrdF: 'GrdF.ClNs',
-			'Nm  ': grad.name,
+			'Nm  ': grad.name || '',
 			ShTr: !!grad.addTransparency,
 			VctC: !!grad.restrictColors,
 			ClrS: ClrS.encode(grad.colorModel),

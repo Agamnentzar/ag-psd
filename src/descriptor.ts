@@ -91,9 +91,14 @@ const fieldToExtType: ExtTypeDict = {
 
 const fieldToArrayExtType: ExtTypeDict = {
 	'Crv ': makeType('', 'CrPt'),
-	'Clrs': makeType('', 'Clrt'),
-	'Trns': makeType('', 'TrnS'),
-	'keyDescriptorList': makeType('', 'null'),
+	Clrs: makeType('', 'Clrt'),
+	Trns: makeType('', 'TrnS'),
+	keyDescriptorList: makeType('', 'null'),
+	solidFillMulti: makeType('', 'SoFi'),
+	gradientFillMulti: makeType('', 'GrFl'),
+	dropShadowMulti: makeType('', 'DrSh'),
+	innerShadowMulti: makeType('', 'IrSh'),
+	frameFXMulti: makeType('', 'FrFX'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -109,6 +114,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages', 'Crop',
 		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
 		'keyOriginIndex', 'major', 'minor', 'fix', 'docDefaultNewArtboardBackgroundType', 'artboardBackgroundType',
+		'numModifyingFX',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
@@ -116,6 +122,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
+		'enableCompCoreThreads',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -124,6 +131,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock', 'strokeStyleStrokeAdjust',
 		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint', 'keyShapeInvalidated',
 		'autoExpandEnabled', 'autoNestEnabled', 'autoPositionEnabled', 'shrinkwrapOnSaveEnabled',
+		'present', 'showInDialog', 'overprint',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
@@ -137,7 +145,8 @@ const typeToField: { [key: string]: string[]; } = {
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
-		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces',
+		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
+		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti',
 	],
 	'ObAr': ['meshPoints'],
 };
@@ -154,6 +163,11 @@ const fieldToArrayType: Dict = {
 	'Trnf': 'doub',
 	'nonAffineTransform': 'doub',
 	'keyDescriptorList': 'Objc',
+	'gradientFillMulti': 'Objc',
+	'solidFillMulti': 'Objc',
+	'frameFXMulti': 'Objc',
+	'innerShadowMulti': 'Objc',
+	'dropShadowMulti': 'Objc',
 };
 
 const fieldToType: Dict = {};

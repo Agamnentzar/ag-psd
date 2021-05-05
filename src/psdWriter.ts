@@ -4,7 +4,7 @@ import {
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
 	LayerMaskFlags, MaskParams, ColorSpace, Bounds
 } from './helpers';
-import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
+import { ExtendedWriteOptions, hasMultiEffects, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
 
 const RAW_IMAGE_DATA = false;
@@ -283,6 +283,9 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other)) {
 				flags |= 0x10; // pixel data irrelevant to appearance of document
 			}
+			if (layer.effects && hasMultiEffects(layer.effects)) {
+				flags |= 0x20; // just guessing this one, might be completely incorrect
+			}
 
 			writeUint8(writer, flags);
 			writeUint8(writer, 0); // filler
@@ -387,10 +390,10 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 			writeSignature(writer, '8BIM');
 			writeSignature(writer, key);
 
-			const align = (key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
-				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' ||
-				key === 'GdFl') ? 4 : 2;
-			writeSection(writer, align, () => handler.write(writer, target, psd, options), key !== 'Txt2');
+			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
+				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
+				key === 'lmfx' || key === 'lrFX' || key === 'cinf';
+			writeSection(writer, fourBytes ? 4 : 2, () => handler.write(writer, target, psd, options), key !== 'Txt2');
 		}
 	}
 }

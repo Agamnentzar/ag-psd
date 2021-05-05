@@ -85,67 +85,69 @@
       "name": "other2",
       "effects": {
         "scale": 1,
-        "gradientOverlay": {
-          "enabled": true,
-          "blendMode": "normal",
-          "opacity": 0.9,
-          "gradient": {
-            "name": "$$$/DefaultGradient/BlueRedYellow=Blue, Red, Yellow",
-            "type": "solid",
-            "smoothness": 1,
-            "colorStops": [
-              {
-                "color": {
-                  "r": 9.57198467105627,
-                  "g": 0,
-                  "b": 178.00000458955765
+        "gradientOverlay": [
+          {
+            "enabled": true,
+            "blendMode": "normal",
+            "opacity": 0.9,
+            "gradient": {
+              "name": "$$$/DefaultGradient/BlueRedYellow=Blue, Red, Yellow",
+              "type": "solid",
+              "smoothness": 1,
+              "colorStops": [
+                {
+                  "color": {
+                    "r": 9.57198467105627,
+                    "g": 0,
+                    "b": 178.00000458955765
+                  },
+                  "location": 0,
+                  "midpoint": 0.5
                 },
-                "location": 0,
-                "midpoint": 0.5
-              },
-              {
-                "color": {
-                  "r": 255,
-                  "g": 0,
-                  "b": 0.02334630349650979
+                {
+                  "color": {
+                    "r": 255,
+                    "g": 0,
+                    "b": 0.02334630349650979
+                  },
+                  "location": 0.5,
+                  "midpoint": 0.5
                 },
-                "location": 0.5,
-                "midpoint": 0.5
-              },
-              {
-                "color": {
-                  "r": 255,
-                  "g": 252.00000017881393,
-                  "b": 0
+                {
+                  "color": {
+                    "r": 255,
+                    "g": 252.00000017881393,
+                    "b": 0
+                  },
+                  "location": 1,
+                  "midpoint": 0.5
+                }
+              ],
+              "opacityStops": [
+                {
+                  "opacity": 1,
+                  "location": 0,
+                  "midpoint": 0.5
                 },
-                "location": 1,
-                "midpoint": 0.5
-              }
-            ],
-            "opacityStops": [
-              {
-                "opacity": 1,
-                "location": 0,
-                "midpoint": 0.5
-              },
-              {
-                "opacity": 1,
-                "location": 1,
-                "midpoint": 0.5
-              }
-            ]
-          },
-          "angle": 90,
-          "type": "radial",
-          "reverse": false,
-          "dither": true,
-          "align": true,
-          "scale": 1.12,
-          "offset": {
-            "x": 0,
-            "y": 0
+                {
+                  "opacity": 1,
+                  "location": 1,
+                  "midpoint": 0.5
+                }
+              ]
+            },
+            "angle": 90,
+            "type": "radial",
+            "reverse": false,
+            "dither": true,
+            "align": true,
+            "scale": 1.12,
+            "offset": {
+              "x": 0,
+              "y": 0
+            }
           }
-        }
+        ]
       },
       "id": 12,
       "blendClippendElements": true,
@@ -174,42 +176,44 @@
       "name": "other",
       "effects": {
         "scale": 1,
-        "gradientOverlay": {
-          "enabled": true,
-          "blendMode": "normal",
-          "opacity": 1,
-          "gradient": {
-            "name": "Custom",
-            "type": "noise",
-            "roughness": 0.5,
-            "colorModel": "lab",
-            "randomSeed": 43487260,
-            "restrictColors": true,
-            "addTransparency": false,
-            "min": [
-              0,
-              0,
-              0,
-              0
-            ],
-            "max": [
-              1,
-              1,
-              1,
-              1
-            ]
-          },
-          "angle": 90,
-          "type": "linear",
-          "reverse": false,
-          "dither": false,
-          "align": true,
-          "scale": 1,
-          "offset": {
-            "x": 0,
-            "y": 0
+        "gradientOverlay": [
+          {
+            "enabled": true,
+            "blendMode": "normal",
+            "opacity": 1,
+            "gradient": {
+              "name": "Custom",
+              "type": "noise",
+              "roughness": 0.5,
+              "colorModel": "lab",
+              "randomSeed": 43487260,
+              "restrictColors": true,
+              "addTransparency": false,
+              "min": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "max": [
+                1,
+                1,
+                1,
+                1
+              ]
+            },
+            "angle": 90,
+            "type": "linear",
+            "reverse": false,
+            "dither": false,
+            "align": true,
+            "scale": 1,
+            "offset": {
+              "x": 0,
+              "y": 0
+            }
           }
-        },
+        ],
         "satin": {
           "enabled": true,
           "blendMode": "multiply",
@@ -300,46 +304,48 @@
       "name": "drop shadow",
       "effects": {
         "scale": 1,
-        "dropShadow": {
-          "enabled": true,
-          "blendMode": "multiply",
-          "color": {
-            "r": 144.00000661611557,
-            "g": 58.16342577338219,
-            "b": 58.16342577338219
-          },
-          "opacity": 0.75,
-          "useGlobalLight": true,
-          "angle": 120,
-          "distance": {
-            "value": 5,
-            "units": "Pixels"
-          },
-          "choke": {
-            "value": 2,
-            "units": "Pixels"
-          },
-          "size": {
-            "value": 5,
-            "units": "Pixels"
-          },
-          "noise": 0,
-          "antialiased": false,
-          "contour": {
-            "name": "Linear",
-            "curve": [
-              {
-                "x": 0,
-                "y": 0
-              },
-              {
-                "x": 255,
-                "y": 255
-              }
-            ]
-          },
-          "layerConceals": true
-        }
+        "dropShadow": [
+          {
+            "enabled": true,
+            "blendMode": "multiply",
+            "color": {
+              "r": 144.00000661611557,
+              "g": 58.16342577338219,
+              "b": 58.16342577338219
+            },
+            "opacity": 0.75,
+            "useGlobalLight": true,
+            "angle": 120,
+            "distance": {
+              "value": 5,
+              "units": "Pixels"
+            },
+            "choke": {
+              "value": 2,
+              "units": "Pixels"
+            },
+            "size": {
+              "value": 5,
+              "units": "Pixels"
+            },
+            "noise": 0,
+            "antialiased": false,
+            "contour": {
+              "name": "Linear",
+              "curve": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 255,
+                  "y": 255
+                }
+              ]
+            },
+            "layerConceals": true
+          }
+        ]
       },
       "id": 3,
       "blendClippendElements": true,
@@ -368,45 +374,47 @@
       "name": "inner shadow",
       "effects": {
         "scale": 1,
-        "innerShadow": {
-          "enabled": true,
-          "blendMode": "multiply",
-          "color": {
-            "r": 50.194554179906845,
-            "g": 200.00000327825546,
-            "b": 67.81711935997009
-          },
-          "opacity": 0.63,
-          "useGlobalLight": false,
-          "angle": 61,
-          "distance": {
-            "value": 14,
-            "units": "Pixels"
-          },
-          "choke": {
-            "value": 11,
-            "units": "Pixels"
-          },
-          "size": {
-            "value": 4,
-            "units": "Pixels"
-          },
-          "noise": 0,
-          "antialiased": false,
-          "contour": {
-            "name": "Linear",
-            "curve": [
-              {
-                "x": 0,
-                "y": 0
-              },
-              {
-                "x": 255,
-                "y": 255
-              }
-            ]
+        "innerShadow": [
+          {
+            "enabled": true,
+            "blendMode": "multiply",
+            "color": {
+              "r": 50.194554179906845,
+              "g": 200.00000327825546,
+              "b": 67.81711935997009
+            },
+            "opacity": 0.63,
+            "useGlobalLight": false,
+            "angle": 61,
+            "distance": {
+              "value": 14,
+              "units": "Pixels"
+            },
+            "choke": {
+              "value": 11,
+              "units": "Pixels"
+            },
+            "size": {
+              "value": 4,
+              "units": "Pixels"
+            },
+            "noise": 0,
+            "antialiased": false,
+            "contour": {
+              "name": "Linear",
+              "curve": [
+                {
+                  "x": 0,
+                  "y": 0
+                },
+                {
+                  "x": 255,
+                  "y": 255
+                }
+              ]
+            }
           }
-        }
+        ]
       },
       "id": 5,
       "blendClippendElements": true,
@@ -617,16 +625,18 @@
       "effects": {
         "disabled": true,
         "scale": 1,
-        "solidFill": {
-          "enabled": true,
-          "blendMode": "normal",
-          "opacity": 1,
-          "color": {
-            "r": 42.062257155776024,
-            "g": 91.36575534939766,
-            "b": 173.00000488758087
+        "solidFill": [
+          {
+            "enabled": true,
+            "blendMode": "normal",
+            "opacity": 1,
+            "color": {
+              "r": 42.062257155776024,
+              "g": 91.36575534939766,
+              "b": 173.00000488758087
+            }
           }
-        }
+        ]
       },
       "id": 8,
       "blendClippendElements": true,

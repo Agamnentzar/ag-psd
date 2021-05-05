@@ -47,20 +47,24 @@ describe('PsdReader', () => {
 	});
 
 	it.skip('duplicate smart', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, 'smart-test', 'src.psd'), { ...opts });
+		const psd = readPsdFromFile(path.join('resources', 'src.psd'), { ...opts });
 
-		// const child = psd.children![1].children![0];
-		// psd.children![1].children!.push(child);
+		const child = psd.children![1].children![0];
+		psd.children![1].children!.push(child);
 
-		const child = psd.children![0];
-		delete child.id;
-		psd.children!.push(child);
+		// const child = psd.children![0];
+		// delete child.id;
+		// psd.children!.push(child);
 
 		fs.writeFileSync('output.psd', writePsdBuffer(psd, {
 			trimImageData: false,
 			generateThumbnail: true,
 			noBackground: true
 		}));
+
+		const psd2 = readPsdFromFile(path.join('output.psd'), { ...opts });
+
+		console.log(psd2.width);
 	});
 
 	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
@@ -133,14 +137,14 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /boolean/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /strokes/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, 'src.psd'), { ...opts, useImageData: true, useRawThumbnail: true });
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true });
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.psd`), actual);
 			// console.log(require('util').inspect(psd, false, 99, true));
-			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, true), 'utf8');
+			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, false), 'utf8');
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.bin`), actual);
 			// console.log('------------');
 			// readPsdFromFile(path.join(resultsFilesPath, `read-write-${f}.psd`), { ...opts, useImageData: true, useRawThumbnail: true });

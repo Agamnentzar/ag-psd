@@ -33,9 +33,7 @@ function writeFixedPoint8(writer: PsdWriter, value: number) {
 
 export function readEffects(reader: PsdReader) {
 	const version = readUint16(reader);
-
-	if (version !== 0)
-		throw new Error(`Invalid effects layer version: ${version}`);
+	if (version !== 0) throw new Error(`Invalid effects layer version: ${version}`);
 
 	const effectsCount = readUint16(reader);
 	const effects: LayerEffectsInfo = <any>{};
@@ -79,9 +77,9 @@ export function readEffects(reader: PsdReader) {
 				};
 
 				if (type === 'dsdw') {
-					effects.dropShadow = shadowInfo;
+					effects.dropShadow = [shadowInfo];
 				} else {
-					effects.innerShadow = shadowInfo;
+					effects.innerShadow = [shadowInfo];
 				}
 				break;
 			}
@@ -177,7 +175,7 @@ export function readEffects(reader: PsdReader) {
 				const enabled = !!readUint8(reader);
 				readColor(reader); // native color
 
-				effects.solidFill = { blendMode, color, opacity, enabled };
+				effects.solidFill = [{ blendMode, color, opacity, enabled }];
 				break;
 			}
 			default:
@@ -204,16 +202,22 @@ function writeShadowInfo(writer: PsdWriter, shadow: LayerEffectShadow) {
 }
 
 export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
-	writeUint16(writer, 0);
+	const dropShadow = effects.dropShadow?.[0];
+	const innerShadow = effects.innerShadow?.[0];
+	const outerGlow = effects.outerGlow;
+	const innerGlow = effects.innerGlow;
+	const bevel = effects.bevel;
+	const solidFill = effects.solidFill?.[0];
 
 	let count = 1;
-	if (effects.dropShadow) count++;
-	if (effects.innerShadow) count++;
-	if (effects.outerGlow) count++;
-	if (effects.innerGlow) count++;
-	if (effects.bevel) count++;
-	if (effects.solidFill) count++;
+	if (dropShadow) count++;
+	if (innerShadow) count++;
+	if (outerGlow) count++;
+	if (innerGlow) count++;
+	if (bevel) count++;
+	if (solidFill) count++;
 
+	writeUint16(writer, 0);
 	writeUint16(writer, count);
 
 	writeSignature(writer, '8BIM');
@@ -223,79 +227,79 @@ export function writeEffects(writer: PsdWriter, effects: LayerEffectsInfo) {
 	writeUint8(writer, 1); // visible
 	writeZeros(writer, 2);
 
-	if (effects.dropShadow) {
+	if (dropShadow) {
 		writeSignature(writer, '8BIM');
 		writeSignature(writer, 'dsdw');
-		writeShadowInfo(writer, effects.dropShadow);
+		writeShadowInfo(writer, dropShadow);
 	}
 
-	if (effects.innerShadow) {
+	if (innerShadow) {
 		writeSignature(writer, '8BIM');
 		writeSignature(writer, 'isdw');
-		writeShadowInfo(writer, effects.innerShadow);
+		writeShadowInfo(writer, innerShadow);
 	}
 
-	if (effects.outerGlow) {
+	if (outerGlow) {
 		writeSignature(writer, '8BIM');
 		writeSignature(writer, 'oglw');
 		writeUint32(writer, 42);
 		writeUint32(writer, 2);
-		writeFixedPoint32(writer, effects.outerGlow.size?.value || 0);
+		writeFixedPoint32(writer, outerGlow.size?.value || 0);
 		writeFixedPoint32(writer, 0); // intensity
-		writeColor(writer, effects.outerGlow.color);
-		writeBlendMode(writer, effects.outerGlow.blendMode);
-		writeUint8(writer, effects.outerGlow.enabled ? 1 : 0);
-		writeFixedPoint8(writer, effects.outerGlow.opacity || 0);
-		writeColor(writer, effects.outerGlow.color);
+		writeColor(writer, outerGlow.color);
+		writeBlendMode(writer, outerGlow.blendMode);
+		writeUint8(writer, outerGlow.enabled ? 1 : 0);
+		writeFixedPoint8(writer, outerGlow.opacity || 0);
+		writeColor(writer, outerGlow.color);
 	}
 
-	if (effects.innerGlow) {
+	if (innerGlow) {
 		writeSignature(writer, '8BIM');
 		writeSignature(writer, 'iglw');
 		writeUint32(writer, 43);
 		writeUint32(writer, 2);
-		writeFixedPoint32(writer, effects.innerGlow.size?.value || 0);
+		writeFixedPoint32(writer, innerGlow.size?.value || 0);
 		writeFixedPoint32(writer, 0); // intensity
-		writeColor(writer, effects.innerGlow.color);
-		writeBlendMode(writer, effects.innerGlow.blendMode);
-		writeUint8(writer, effects.innerGlow.enabled ? 1 : 0);
-		writeFixedPoint8(writer, effects.innerGlow.opacity || 0);
+		writeColor(writer, innerGlow.color);
+		writeBlendMode(writer, innerGlow.blendMode);
+		writeUint8(writer, innerGlow.enabled ? 1 : 0);
+		writeFixedPoint8(writer, innerGlow.opacity || 0);
 		writeUint8(writer, 0); // inverted
-		writeColor(writer, effects.innerGlow.color);
+		writeColor(writer, innerGlow.color);
 	}
 
-	if (effects.bevel) {
+	if (bevel) {
 		writeSignature(writer, '8BIM');
 		writeSignature(writer, 'bevl');
 		writeUint32(writer, 78);
 		writeUint32(writer, 2);
-		writeFixedPoint32(writer, effects.bevel.angle || 0);
-		writeFixedPoint32(writer, effects.bevel.strength || 0);
-		writeFixedPoint32(writer, effects.bevel.size?.value || 0);
-		writeBlendMode(writer, effects.bevel.highlightBlendMode);
-		writeBlendMode(writer, effects.bevel.shadowBlendMode);
-		writeColor(writer, effects.bevel.highlightColor);
-		writeColor(writer, effects.bevel.shadowColor);
-		const style = bevelStyles.indexOf(effects.bevel.style!);
+		writeFixedPoint32(writer, bevel.angle || 0);
+		writeFixedPoint32(writer, bevel.strength || 0);
+		writeFixedPoint32(writer, bevel.size?.value || 0);
+		writeBlendMode(writer, bevel.highlightBlendMode);
+		writeBlendMode(writer, bevel.shadowBlendMode);
+		writeColor(writer, bevel.highlightColor);
+		writeColor(writer, bevel.shadowColor);
+		const style = bevelStyles.indexOf(bevel.style!);
 		writeUint8(writer, style <= 0 ? 1 : style);
-		writeFixedPoint8(writer, effects.bevel.highlightOpacity || 0);
-		writeFixedPoint8(writer, effects.bevel.shadowOpacity || 0);
-		writeUint8(writer, effects.bevel.enabled ? 1 : 0);
-		writeUint8(writer, effects.bevel.useGlobalLight ? 1 : 0);
-		writeUint8(writer, effects.bevel.direction === 'down' ? 1 : 0);
-		writeColor(writer, effects.bevel.highlightColor);
-		writeColor(writer, effects.bevel.shadowColor);
+		writeFixedPoint8(writer, bevel.highlightOpacity || 0);
+		writeFixedPoint8(writer, bevel.shadowOpacity || 0);
+		writeUint8(writer, bevel.enabled ? 1 : 0);
+		writeUint8(writer, bevel.useGlobalLight ? 1 : 0);
+		writeUint8(writer, bevel.direction === 'down' ? 1 : 0);
+		writeColor(writer, bevel.highlightColor);
+		writeColor(writer, bevel.shadowColor);
 	}
 
-	if (effects.solidFill) {
+	if (solidFill) {
 		writeSignature(writer, '8BIM');
 		writeSignature(writer, 'sofi');
 		writeUint32(writer, 34);
 		writeUint32(writer, 2);
-		writeBlendMode(writer, effects.solidFill.blendMode);
-		writeColor(writer, effects.solidFill.color);
-		writeFixedPoint8(writer, effects.solidFill.opacity || 0);
-		writeUint8(writer, effects.solidFill.enabled ? 1 : 0);
-		writeColor(writer, effects.solidFill.color);
+		writeBlendMode(writer, solidFill.blendMode);
+		writeColor(writer, solidFill.color);
+		writeFixedPoint8(writer, solidFill.opacity || 0);
+		writeUint8(writer, solidFill.enabled ? 1 : 0);
+		writeColor(writer, solidFill.color);
 	}
 }
