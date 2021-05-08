@@ -85,8 +85,14 @@ const fieldToExtType: ExtTypeDict = {
 	docDefaultNewArtboardBackgroundColor: makeType('', 'RGBC'),
 	artboardRect: makeType('', 'classFloatRect'),
 	keyOriginRRectRadii: makeType('', 'radii'),
+	keyOriginBoxCorners: makeType('', 'null'),
+	rectangleCornerA: makeType('', 'Pnt '),
+	rectangleCornerB: makeType('', 'Pnt '),
+	rectangleCornerC: makeType('', 'Pnt '),
+	rectangleCornerD: makeType('', 'Pnt '),
 	compInfo: makeType('', 'null'),
 	generatorSettings: makeType('', 'null'),
+	Trnf: makeType('Transform', 'Trnf'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -136,6 +142,7 @@ const typeToField: { [key: string]: string[]; } = {
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
+		'xx', 'xy', 'yx', 'yy', 'tx', 'ty',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -179,7 +186,7 @@ for (const type of Object.keys(typeToField)) {
 }
 
 for (const field of Object.keys(fieldToExtType)) {
-	fieldToType[field] = 'Objc';
+	if (!fieldToType[field]) fieldToType[field] = 'Objc';
 }
 
 for (const field of Object.keys(fieldToArrayExtType)) {
@@ -199,6 +206,8 @@ function getTypeByKey(key: string, value: any, root: string) {
 		return typeof value === 'number' ? 'long' : 'Objc';
 	} else if (key === 'Rd  ' || key === 'Grn ' || key === 'Bl  ') {
 		return root === 'artd' ? 'long' : 'doub';
+	} else if (key === 'Trnf') {
+		return Array.isArray(value) ? 'VlLs' : 'Objc';
 	} else {
 		return fieldToType[key];
 	}
@@ -519,7 +528,8 @@ function readClassStructure(reader: PsdReader) {
 }
 
 export function readVersionAndDescriptor(reader: PsdReader) {
-	if (readUint32(reader) !== 16) throw new Error('Invalid descriptor version');
+	const version = readUint32(reader);
+	if (version !== 16) throw new Error(`Invalid descriptor version: ${version}`);
 	return readDescriptorStructure(reader);
 }
 

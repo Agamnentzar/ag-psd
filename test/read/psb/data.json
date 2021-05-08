@@ -1,0 +1,305 @@
+{
+  "width": 413,
+  "height": 413,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "e8f15cf32fc118a1a27b67adc564d5ba",
+    "printInformation": {
+      "printerName": "HP DeskJet 5820 series",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 300,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 300,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "globalAngle": 90,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      4
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "idsSeedNumber": 4,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop 2021",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": -1,
+      "left": -1,
+      "bottom": 414,
+      "right": 414,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Rectangle 1",
+      "vectorFill": {
+        "type": "color",
+        "color": {
+          "r": 27.99957275390625,
+          "g": 109.99832153320312,
+          "b": 231.9964599609375
+        }
+      },
+      "vectorMask": {
+        "paths": [
+          {
+            "open": false,
+            "operation": "combine",
+            "knots": [
+              {
+                "linked": true,
+                "points": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              {
+                "linked": true,
+                "points": [
+                  413,
+                  0,
+                  413,
+                  0,
+                  413,
+                  0
+                ]
+              },
+              {
+                "linked": true,
+                "points": [
+                  413,
+                  413,
+                  413,
+                  413,
+                  413,
+                  413
+                ]
+              },
+              {
+                "linked": true,
+                "points": [
+                  0,
+                  413,
+                  0,
+                  413,
+                  0,
+                  413
+                ]
+              }
+            ]
+          }
+        ],
+        "invert": false,
+        "notLink": false,
+        "disable": false,
+        "fillStartsWithAllPixels": false
+      },
+      "vectorOrigination": {
+        "keyDescriptorList": [
+          {
+            "keyOriginType": 1,
+            "keyOriginResolution": 300,
+            "keyOriginShapeBoundingBox": {
+              "top": {
+                "value": 0,
+                "units": "Pixels"
+              },
+              "left": {
+                "value": 0,
+                "units": "Pixels"
+              },
+              "bottom": {
+                "value": 413,
+                "units": "Pixels"
+              },
+              "right": {
+                "value": 413,
+                "units": "Pixels"
+              }
+            },
+            "keyOriginBoxCorners": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 413,
+                "y": 0
+              },
+              {
+                "x": 413,
+                "y": 413
+              },
+              {
+                "x": 0,
+                "y": 413
+              }
+            ],
+            "transform": [
+              1,
+              0,
+              0,
+              1,
+              -137,
+              -179
+            ]
+          }
+        ]
+      },
+      "nameSource": "shap",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1620246588.288874,
+      "vectorStroke": {
+        "strokeEnabled": true,
+        "fillEnabled": true,
+        "lineWidth": {
+          "value": 1,
+          "units": "Pixels"
+        },
+        "lineDashOffset": {
+          "value": 0,
+          "units": "Points"
+        },
+        "miterLimit": 100,
+        "lineCapType": "butt",
+        "lineJoinType": "miter",
+        "lineAlignment": "inside",
+        "scaleLock": false,
+        "strokeAdjust": false,
+        "lineDashSet": [],
+        "blendMode": "normal",
+        "opacity": 1,
+        "content": {
+          "type": "color",
+          "color": {
+            "r": 27.99957275390625,
+            "g": 109.99832153320312,
+            "b": 231.9964599609375
+          }
+        },
+        "resolution": 300
+      },
+      "referencePoint": {
+        "x": -137,
+        "y": -179
+      },
+      "version": 130
+    },
+    {
+      "top": 0,
+      "left": -1,
+      "bottom": 413,
+      "right": 413,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 1",
+      "nameSource": "rend",
+      "id": 4,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1620246588.288885,
+      "referencePoint": {
+        "x": -1,
+        "y": 0
+      }
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  },
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "compCore",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "supported",
+    "compCoreGPUSupport": "featureDisabled"
+  }
+}

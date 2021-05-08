@@ -68,10 +68,11 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /gradient/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /psb/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
-			const psd = readPsdFromFile(path.join(basePath, 'src.psd'), { ...opts });
+			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
+			const psd = readPsdFromFile(path.join(basePath, fileName), { ...opts });
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; skip?: boolean; }[] = [];
@@ -137,12 +138,13 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /strokes/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /shapes/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
-			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, 'src.psd'), { ...opts, useImageData: true, useRawThumbnail: true });
-			const actual = writePsdBuffer(psd, { logMissingFeatures: true });
-			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, 'expected.psd'));
-			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.psd`), actual);
+			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
+			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), { ...opts, useImageData: true, useRawThumbnail: true });
+			const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb' });
+			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
+			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.${ext}`), actual);
 			// console.log(require('util').inspect(psd, false, 99, true));
 			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, false), 'utf8');
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.bin`), actual);

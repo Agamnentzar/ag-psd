@@ -39,6 +39,13 @@ export const layerColors: LayerColor[] = [
 	'none', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray'
 ];
 
+export const largeAdditionalInfoKeys = [
+	// from documentation
+	'LMsk', 'Lr16', 'Lr32', 'Layr', 'Mt16', 'Mt32', 'Mtrn', 'Alph', 'FMsk', 'lnk2', 'FEid', 'FXid', 'PxSD',
+	// from guessing
+	'cinf',
+];
+
 export interface Dict {
 	[key: string]: string;
 }
@@ -199,14 +206,16 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	return array;
 }
 
-export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[]) {
-	if (!width || !height)
-		return undefined;
+export function writeDataRLE(
+	buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[],
+	large: boolean
+) {
+	if (!width || !height) return undefined;
 
 	const stride = (4 * width) | 0;
 
 	let ol = 0;
-	let o = (offsets.length * 2 * height) | 0;
+	let o = (offsets.length * (large ? 4 : 2) * height) | 0;
 
 	for (const offset of offsets) {
 		for (let y = 0, p = offset | 0; y < height; y++) {
@@ -285,6 +294,12 @@ export function writeDataRLE(buffer: Uint8Array, { data }: PixelData, width: num
 			}
 
 			const length = o - startOffset;
+
+			if (large) {
+				buffer[ol++] = (length >> 24) & 0xff;
+				buffer[ol++] = (length >> 16) & 0xff;
+			}
+
 			buffer[ol++] = (length >> 8) & 0xff;
 			buffer[ol++] = length & 0xff;
 		}

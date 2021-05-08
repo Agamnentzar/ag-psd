@@ -2,7 +2,7 @@ import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOp
 import {
 	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
-	LayerMaskFlags, MaskParams, ColorSpace, Bounds
+	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys
 } from './helpers';
 import { ExtendedWriteOptions, hasMultiEffects, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
@@ -147,9 +147,11 @@ function getLargestLayerSize(layers: Layer[] = []): number {
 	return max;
 }
 
-export function writeSection(writer: PsdWriter, round: number, func: () => void, writeTotalLength = false) {
+export function writeSection(writer: PsdWriter, round: number, func: () => void, writeTotalLength = false, large = false) {
+	if (large) writeUint32(writer, 0);
+
 	const offset = writer.offset;
-	writeInt32(writer, 0);
+	writeUint32(writer, 0);
 
 	func();
 
@@ -165,18 +167,21 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 		length = len;
 	}
 
-	writer.view.setInt32(offset, length, false);
+	writer.view.setUint32(offset, length, false);
 }
 
 export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}) {
 	if (!(+psd.width > 0 && +psd.height > 0))
 		throw new Error('Invalid document size');
 
+	if ((psd.width > 30000 || psd.height > 30000) && !options.psb)
+		throw new Error('Document size is too large (max is 30000x30000, use PSB format instead)');
+
 	let imageResources = psd.imageResources || {};
 
-	const writeOptions: ExtendedWriteOptions = { ...options, layerIds: [] };
+	const opt: ExtendedWriteOptions = { ...options, layerIds: [] };
 
-	if (writeOptions.generateThumbnail) {
+	if (opt.generateThumbnail) {
 		imageResources = { ...imageResources, thumbnail: createThumbnail(psd) };
 	}
 
@@ -195,7 +200,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// header
 	writeSignature(writer, '8BPS');
-	writeUint16(writer, 1); // version
+	writeUint16(writer, options.psb ? 2 : 1); // version
 	writeZeros(writer, 6);
 	writeUint16(writer, globalAlpha ? 4 : 3); // channels
 	writeUint32(writer, psd.height);
@@ -222,10 +227,10 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// layer and mask info
 	writeSection(writer, 2, () => {
-		writeLayerInfo(tempBuffer, writer, psd, globalAlpha, writeOptions);
+		writeLayerInfo(tempBuffer, writer, psd, globalAlpha, opt);
 		writeGlobalLayerMaskInfo(writer, psd.globalLayerMaskInfo);
-		writeAdditionalLayerInfo(writer, psd, psd, writeOptions);
-	});
+		writeAdditionalLayerInfo(writer, psd, psd, opt);
+	}, undefined, !!opt.psb);
 
 	// image data
 	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
@@ -241,7 +246,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		console.log('writing raw image data');
 		writeBytes(writer, (psd as any).imageDataRaw);
 	} else {
-		writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels));
+		writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels, !!options.psb));
 	}
 }
 
@@ -269,7 +274,8 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 
 			for (const c of channels) {
 				writeInt16(writer, c.channelId);
-				writeInt32(writer, c.length);
+				if (options.psb) writeUint32(writer, 0);
+				writeUint32(writer, c.length);
 			}
 
 			writeSignature(writer, '8BIM');
@@ -307,7 +313,7 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 				}
 			}
 		}
-	}, true);
+	}, true, options.psb);
 }
 
 function writeLayerMaskData(writer: PsdWriter, { mask }: Layer, layerData: LayerChannelData) {
@@ -355,8 +361,8 @@ function writeLayerBlendingRanges(writer: PsdWriter, psd: Psd) {
 		writeUint32(writer, 65535);
 		writeUint32(writer, 65535);
 
-		// TODO: use always 4 instead ?
-		const channels = psd.channels || 0;
+		let channels = psd.channels || 0; // TODO: use always 4 instead ?
+		// channels = 4; // TESTING
 
 		for (let i = 0; i < channels; i++) {
 			writeUint32(writer, 65535);
@@ -382,18 +388,24 @@ function writeGlobalLayerMaskInfo(writer: PsdWriter, info: GlobalLayerMaskInfo |
 
 function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: ExtendedWriteOptions) {
 	for (const handler of infoHandlers) {
-		const key = handler.key;
+		let key = handler.key;
 
 		if (key === 'Txt2' && options.invalidateTextLayers) continue;
+		if (key === 'vmsk' && options.psb) key = 'vsms';
 
 		if (handler.has(target)) {
-			writeSignature(writer, '8BIM');
+			const large = options.psb && largeAdditionalInfoKeys.indexOf(key) !== -1;
+
+			writeSignature(writer, large ? '8B64' : '8BIM');
 			writeSignature(writer, key);
 
 			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
 				key === 'lmfx' || key === 'lrFX' || key === 'cinf';
-			writeSection(writer, fourBytes ? 4 : 2, () => handler.write(writer, target, psd, options), key !== 'Txt2');
+
+			writeSection(writer, fourBytes ? 4 : 2, () => {
+				handler.write(writer, target, psd, options);
+			}, key !== 'Txt2', large);
 		}
 	}
 }
@@ -508,7 +520,7 @@ function getChannels(
 			right = left + width;
 			bottom = top + height;
 
-			let buffer = writeDataRLE(tempBuffer, imageData, width, height, [0])!;
+			let buffer = writeDataRLE(tempBuffer, imageData, width, height, [0], !!options.psb)!;
 
 			if (RAW_IMAGE_DATA && (layer as any).maskDataRaw) {
 				// console.log('written raw layer image data');
@@ -618,7 +630,7 @@ function getLayerChannels(
 
 	channels = channelIds.map(channel => {
 		const offset = offsetForChannel(channel);
-		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset])!;
+		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset], !!options.psb)!;
 
 		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
 			// console.log('written raw layer image data');

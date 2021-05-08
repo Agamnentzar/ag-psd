@@ -38,9 +38,9 @@ describe('helpers', () => {
 
 	describe('writeDataRLE()', () => {
 		it('returns undefined for 0 size', () => {
-			expect(writeDataRLE(new Uint8Array(1), {} as any, 0, 0, [0])).undefined;
-			expect(writeDataRLE(new Uint8Array(1), {} as any, 0, 100, [0])).undefined;
-			expect(writeDataRLE(new Uint8Array(1), {} as any, 100, 0, [0])).undefined;
+			expect(writeDataRLE(new Uint8Array(1), {} as any, 0, 0, [0], false)).undefined;
+			expect(writeDataRLE(new Uint8Array(1), {} as any, 0, 100, [0], false)).undefined;
+			expect(writeDataRLE(new Uint8Array(1), {} as any, 100, 0, [0], false)).undefined;
 		});
 
 		const rleTests: { name: string; width: number; height: number; data: number[]; }[] = [
@@ -105,10 +105,10 @@ describe('helpers', () => {
 					const output: PixelData = { width: width, height: height, data: new Uint8Array(width * height * 4) };
 
 					const buffer = new Uint8Array(16 * 1024 * 1024);
-					array = writeDataRLE(buffer, input, width, height, [0])!;
+					array = writeDataRLE(buffer, input, width, height, [0], false)!;
 
 					const reader = createReader(array!.buffer);
-					readDataRLE(reader, output, width, height, 4, [0]);
+					readDataRLE(reader, output, width, height, 4, [0], false);
 					result = fromData(output.data);
 				} catch (e) {
 					throw new Error(`Error for image: [${array}] ${e.stack}`);

@@ -377,6 +377,13 @@ interface VogkDescriptor {
 			Btom: DescriptorUnitsValue;
 			Rght: DescriptorUnitsValue;
 		};
+		keyOriginBoxCorners?: {
+			rectangleCornerA: { Hrzn: number; Vrtc: number; };
+			rectangleCornerB: { Hrzn: number; Vrtc: number; };
+			rectangleCornerC: { Hrzn: number; Vrtc: number; };
+			rectangleCornerD: { Hrzn: number; Vrtc: number; };
+		};
+		Trnf?: { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; },
 		keyOriginIndex: number;
 	}[];
 }
@@ -388,6 +395,7 @@ addHandler(
 		if (readInt32(reader) !== 1) throw new Error(`Invalid vogk version`);
 		const desc = readVersionAndDescriptor(reader) as VogkDescriptor;
 		// console.log(require('util').inspect(desc, false, 99, true));
+
 		target.vectorOrigination = { keyDescriptorList: [] };
 
 		for (const i of desc.keyDescriptorList) {
@@ -396,7 +404,7 @@ addHandler(
 			if (i.keyShapeInvalidated != null) item.keyShapeInvalidated = i.keyShapeInvalidated;
 			if (i.keyOriginType != null) item.keyOriginType = i.keyOriginType;
 			if (i.keyOriginResolution != null) item.keyOriginResolution = i.keyOriginResolution;
-			if (i.keyOriginShapeBBox != null) {
+			if (i.keyOriginShapeBBox) {
 				item.keyOriginShapeBoundingBox = {
 					top: parseUnits(i.keyOriginShapeBBox['Top ']),
 					left: parseUnits(i.keyOriginShapeBBox.Left),
@@ -404,13 +412,24 @@ addHandler(
 					right: parseUnits(i.keyOriginShapeBBox.Rght),
 				};
 			}
-			if (i.keyOriginRRectRadii != null) {
+			if (i.keyOriginRRectRadii) {
 				item.keyOriginRRectRadii = {
 					topRight: parseUnits(i.keyOriginRRectRadii.topRight),
 					topLeft: parseUnits(i.keyOriginRRectRadii.topLeft),
 					bottomLeft: parseUnits(i.keyOriginRRectRadii.bottomLeft),
 					bottomRight: parseUnits(i.keyOriginRRectRadii.bottomRight),
 				};
+			}
+			if (i.keyOriginBoxCorners) {
+				item.keyOriginBoxCorners = [
+					{ x: i.keyOriginBoxCorners.rectangleCornerA.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerA.Vrtc },
+					{ x: i.keyOriginBoxCorners.rectangleCornerB.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerB.Vrtc },
+					{ x: i.keyOriginBoxCorners.rectangleCornerC.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerC.Vrtc },
+					{ x: i.keyOriginBoxCorners.rectangleCornerD.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerD.Vrtc },
+				];
+			}
+			if (i.Trnf) {
+				item.transform = [i.Trnf.xx, i.Trnf.xy, i.Trnf.xy, i.Trnf.yy, i.Trnf.tx, i.Trnf.ty];
 			}
 
 			target.vectorOrigination.keyDescriptorList.push(item);
@@ -453,6 +472,26 @@ addHandler(
 						Left: unitsValue(item.keyOriginShapeBoundingBox.left, 'left'),
 						Btom: unitsValue(item.keyOriginShapeBoundingBox.bottom, 'bottom'),
 						Rght: unitsValue(item.keyOriginShapeBoundingBox.right, 'right'),
+					};
+				}
+
+				if (item.keyOriginBoxCorners && item.keyOriginBoxCorners.length === 4) {
+					out.keyOriginBoxCorners = {
+						rectangleCornerA: { Hrzn: item.keyOriginBoxCorners[0].x, Vrtc: item.keyOriginBoxCorners[0].y },
+						rectangleCornerB: { Hrzn: item.keyOriginBoxCorners[1].x, Vrtc: item.keyOriginBoxCorners[1].y },
+						rectangleCornerC: { Hrzn: item.keyOriginBoxCorners[2].x, Vrtc: item.keyOriginBoxCorners[2].y },
+						rectangleCornerD: { Hrzn: item.keyOriginBoxCorners[3].x, Vrtc: item.keyOriginBoxCorners[3].y },
+					};
+				}
+
+				if (item.transform && item.transform.length === 6) {
+					out.Trnf = {
+						xx: item.transform[0],
+						xy: item.transform[1],
+						yx: item.transform[2],
+						yy: item.transform[3],
+						tx: item.transform[4],
+						ty: item.transform[5],
 					};
 				}
 

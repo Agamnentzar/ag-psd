@@ -314,7 +314,7 @@ interface ReadOptions {
    * This avoids issues with canvas premultiplied alpha corrupting image data. */
   useImageData?: boolean;
   /** Loads thumbnail raw data instead of decoding it's content into canvas.
-   * `thumnailRaw` field is used instead. */
+   * `thumnailRaw` field is used instead of `thumbnail` field. */
   useRawThumbnail?: boolean;
   /** Usend only for development */
   logDevFeatures?: boolean;
@@ -331,7 +331,7 @@ interface WriteOptions {
   /** Logs if features are missing. */
   logMissingFeatures?: boolean;
   /** Forces bottom layer to be treated as layer and not background even when it's missing any transparency
-   *  (by default Photoshop treats bottom layer as background it it doesn't have any transparent pixels) */
+   *  (by default Photoshop treats bottom layer as background if it doesn't have any transparent pixels) */
   noBackground?: boolean;
 }
 ```

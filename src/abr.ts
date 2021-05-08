@@ -317,7 +317,7 @@ export function readAbr(buffer: ArrayBufferView) {
 							if (compression === 0) {
 								alpha.set(readBytes(reader, alpha.byteLength));
 							} else if (compression === 1) {
-								readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, 1, [0]);
+								readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, 1, [0], false);
 							} else {
 								throw new Error('Invalid compression');
 							}

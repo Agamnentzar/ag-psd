@@ -1,5 +1,13 @@
 # Changelog
 
+## v12.1.0
+- Added support for reading and writing PSB files (Large Document Format)
+
+  Use `psb: true` in write options to write file in PSB format)
+  
+  The sizes are still limited by 32bit integer number range and will throw an error if you attempt to read any file larger than 2GB.
+- Fixed some fields not handled in `vectorOrigination`
+
 ## v12.0.0
 - **BREAKING CHANGE:** Added support for multiples of the same layer blending effect, these `layer.effects` keys are now arrays:
 	- `dropShadow`
