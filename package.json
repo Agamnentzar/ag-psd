@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "12.1.0",
+  "version": "12.2.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -17,7 +17,7 @@
     "lint": "tslint -c tslint.json src/ts/**/*.ts",
     "build": "gulp build && browserify dist/index.js --standalone agPsd -o dist/bundle.js",
     "rollup": "rollup --format=cjs --external base64-js --file=dist-es/bundle.js --sourcemap --sourcemapFile dist-es/bundle.js.map dist-es/index.js",
-    "prepublish": "npm run build"
+    "prepublishOnly": "npm run build"
   },
   "jspm": {
     "main": "dist/index.js",

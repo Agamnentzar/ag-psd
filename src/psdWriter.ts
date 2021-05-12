@@ -2,12 +2,10 @@ import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOp
 import {
 	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
-	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys
+	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA
 } from './helpers';
 import { ExtendedWriteOptions, hasMultiEffects, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
-
-const RAW_IMAGE_DATA = false;
 
 export interface PsdWriter {
 	offset: number;
@@ -405,7 +403,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 
 			writeSection(writer, fourBytes ? 4 : 2, () => {
 				handler.write(writer, target, psd, options);
-			}, key !== 'Txt2', large);
+			}, key !== 'Txt2' && key !== 'cinf', large);
 		}
 	}
 }

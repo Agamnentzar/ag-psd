@@ -68,7 +68,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /psb/.test(f)).forEach(f => {
+	// fs.readdirSync(readFilesPath).filter(f => /text-simple2/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
@@ -138,10 +138,12 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /shapes/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /vectors/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
-			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), { ...opts, useImageData: true, useRawThumbnail: true });
+			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {
+				...opts, useImageData: true, useRawThumbnail: true, throwForMissingFeatures: true
+			});
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb' });
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.${ext}`), actual);

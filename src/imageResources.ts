@@ -9,7 +9,7 @@ import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
 	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor,
 } from './psdWriter';
-import { createCanvasFromData, createEnum } from './helpers';
+import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
 import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
 
@@ -34,7 +34,6 @@ function addHandler(
 	resourceHandlersMap[handler.key] = handler;
 }
 
-const MOCK_HANDLERS = false;
 const LOG_MOCK_HANDLERS = false;
 const RESOLUTION_UNITS = [undefined, 'PPI', 'PPCM'];
 const MEASUREMENT_UNITS = [undefined, 'Inches', 'Centimeters', 'Points', 'Picas', 'Columns'];
@@ -688,6 +687,24 @@ MOCK_HANDLERS && addHandler(
 	},
 	(writer, target) => {
 		writeBytes(writer, (target as any)._ir1058);
+	},
+);
+
+interface Descriptor1088 {
+	'null': string[];
+}
+
+addHandler(
+	1088,
+	target => target.pathSelectionState !== undefined,
+	(reader, target, _left) => {
+		const desc: Descriptor1088 = readVersionAndDescriptor(reader);
+		// console.log(require('util').inspect(desc, false, 99, true));
+		target.pathSelectionState = desc['null'];
+	},
+	(writer, target) => {
+		const desc: Descriptor1088 = { 'null': target.pathSelectionState! };
+		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );
 

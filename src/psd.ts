@@ -875,6 +875,7 @@ export interface ImageResources {
 		printFlags?: boolean;
 	};
 	iccUntaggedProfile?: boolean;
+	pathSelectionState?: string[];
 }
 
 export interface GlobalLayerMaskInfo {

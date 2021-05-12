@@ -4,7 +4,7 @@ import {
 } from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
-	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace
+	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA
 } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
@@ -20,8 +20,6 @@ interface ReadOptionsExt extends ReadOptions {
 
 export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
-
-const RAW_IMAGE_DATA = false;
 
 function setupGrayscale(data: PixelData) {
 	const size = data.width * data.height * 4;

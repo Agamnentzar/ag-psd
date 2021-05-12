@@ -1,5 +1,9 @@
 # Changelog
 
+## v12.2.0
+- Fixed incorrect length of style and paragraph style runs when reading or writing
+- Added handling for `pathSelectionState`
+
 ## v12.1.0
 - Added support for reading and writing PSB files (Large Document Format)
 

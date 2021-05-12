@@ -1,6 +1,9 @@
 import { fromByteArray } from 'base64-js';
 import { Layer, BlendMode, LayerColor } from './psd';
 
+export const MOCK_HANDLERS = false;
+export const RAW_IMAGE_DATA = false;
+
 export const fromBlendMode: { [key: string]: string } = {};
 export const toBlendMode: { [key: string]: BlendMode } = {
 	'pass': 'pass through',

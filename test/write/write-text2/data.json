@@ -1,0 +1,89 @@
+{
+  "width": 100,
+  "height": 50,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 50,
+      "right": 100,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": true,
+      "hidden": false,
+      "name": "Background"
+    },
+    {
+      "top": 19,
+      "left": 16,
+      "bottom": 28,
+      "right": 59,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Test text",
+      "text": {
+        "transform": [
+          1,
+          0,
+          0,
+          1,
+          17,
+          28
+        ],
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "text": "Test text",
+        "index": 0,
+        "gridding": "none",
+        "antialias": "sharp",
+        "orientation": "horizontal",
+        "warp": {
+          "style": "none",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal"
+        },
+        "style": {
+          "fillColor": {
+            "r": 255,
+            "g": 0,
+            "b": 0
+          }
+        },
+        "styleRuns": [
+          {
+            "length": 5,
+            "style": {
+              "fillColor": {
+                "r": 255,
+                "g": 0,
+                "b": 0,
+                "a": 1
+              }
+            }
+          },
+          {
+            "length": 3,
+            "style": {
+              "fillColor": {
+                "r": 0,
+                "g": 255,
+                "b": 0,
+                "a": 1
+              }
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

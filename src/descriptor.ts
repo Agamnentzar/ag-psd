@@ -9,7 +9,7 @@ import {
 } from './psdReader';
 import {
 	PsdWriter, writeSignature, writeBytes, writeUint32, writeFloat64, writeUint8,
-	writeUnicodeStringWithPadding, writeInt32, writeFloat32
+	writeUnicodeStringWithPadding, writeInt32, writeFloat32, writeUnicodeString
 } from './psdWriter';
 
 interface Dict { [key: string]: string; }
@@ -156,6 +156,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti',
 	],
 	'ObAr': ['meshPoints'],
+	'obj ': ['null'],
 };
 
 const channels = [
@@ -393,8 +394,9 @@ function readOSType(reader: PsdReader, type: string) {
 
 function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType: NameClassID | undefined, root: string) {
 	switch (type) {
-		// case 'obj ': // Reference
-		// 	writeReferenceStructure(reader);
+		case 'obj ': // Reference
+			writeReferenceStructure(writer, key, value);
+			break;
 		case 'Objc': // Descriptor
 		case 'GlbO': // GlobalObject same as Descriptor
 			if (!extType) throw new Error(`Missing ext type for: '${key}' (${JSON.stringify(value)})`);
@@ -469,7 +471,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 		// case 'Pth ': // File path
 		// 	writeFilePath(reader);
 		default:
-			throw new Error(`Not implemented TySh descriptor OSType: ${type}`);
+			throw new Error(`Not implemented descriptor OSType: ${type}`);
 	}
 }
 
@@ -482,25 +484,25 @@ function readReferenceStructure(reader: PsdReader) {
 
 		switch (type) {
 			case 'prop': { // Property
-				const { name, classID } = readClassStructure(reader);
+				readClassStructure(reader);
 				const keyID = readAsciiStringOrClassId(reader);
-				items.push({ name, classID, keyID });
+				items.push(keyID);
 				break;
 			}
 			case 'Clss': // Class
 				items.push(readClassStructure(reader));
 				break;
 			case 'Enmr': { // Enumerated Reference
-				const { name, classID } = readClassStructure(reader);
-				const TypeID = readAsciiStringOrClassId(reader);
+				readClassStructure(reader);
+				const typeID = readAsciiStringOrClassId(reader);
 				const value = readAsciiStringOrClassId(reader);
-				items.push({ name, classID, TypeID, value });
+				items.push(`${typeID}.${value}`);
 				break;
 			}
 			case 'rele': { // Offset
-				const { name, classID } = readClassStructure(reader);
-				const value = readUint32(reader);
-				items.push({ name, classID, value });
+				// const { name, classID } =
+				readClassStructure(reader);
+				items.push(readUint32(reader));
 				break;
 			}
 			case 'Idnt': // Identifier
@@ -509,11 +511,56 @@ function readReferenceStructure(reader: PsdReader) {
 			case 'indx': // Index
 				items.push(readInt32(reader));
 				break;
-			case 'name': // Name
+			case 'name': { // Name
+				readClassStructure(reader);
 				items.push(readUnicodeString(reader));
 				break;
+			}
 			default:
-				throw new Error(`Invalid TySh descriptor Reference type: ${type}`);
+				throw new Error(`Invalid descriptor reference type: ${type}`);
+		}
+	}
+
+	return items;
+}
+
+function writeReferenceStructure(writer: PsdWriter, _key: string, items: any[]) {
+	writeInt32(writer, items.length);
+
+	for (let i = 0; i < items.length; i++) {
+		const value = items[i];
+		let type = 'unknown';
+
+		if (typeof value === 'string') {
+			if (/^[a-z]+\.[a-z]+$/i.test(value)) {
+				type = 'Enmr';
+			} else {
+				type = 'name';
+			}
+		}
+
+		writeSignature(writer, type);
+
+		switch (type) {
+			// case 'prop': // Property
+			// case 'Clss': // Class
+			case 'Enmr': { // Enumerated Reference
+				const [typeID, enumValue] = value.split('.');
+				writeClassStructure(writer, '\0', typeID);
+				writeAsciiStringOrClassId(writer, typeID);
+				writeAsciiStringOrClassId(writer, enumValue);
+				break;
+			}
+			// case 'rele': // Offset
+			// case 'Idnt': // Identifier
+			// case 'indx': // Index
+			case 'name': { // Name
+				writeClassStructure(writer, '\0', 'Lyr ');
+				writeUnicodeString(writer, value + '\0');
+				break;
+			}
+			default:
+				throw new Error(`Invalid descriptor reference type: ${type}`);
 		}
 	}
 
@@ -527,10 +574,17 @@ function readClassStructure(reader: PsdReader) {
 	return { name, classID };
 }
 
+function writeClassStructure(writer: PsdWriter, name: string, classID: string) {
+	writeUnicodeString(writer, name);
+	writeAsciiStringOrClassId(writer, classID);
+}
+
 export function readVersionAndDescriptor(reader: PsdReader) {
 	const version = readUint32(reader);
 	if (version !== 16) throw new Error(`Invalid descriptor version: ${version}`);
-	return readDescriptorStructure(reader);
+	const desc = readDescriptorStructure(reader);
+	// console.log(require('util').inspect(desc, false, 99, true));
+	return desc;
 }
 
 export function writeVersionAndDescriptor(writer: PsdWriter, name: string, classID: string, descriptor: any, root = '') {

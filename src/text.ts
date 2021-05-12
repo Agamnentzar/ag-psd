@@ -414,6 +414,7 @@ function deduplicateValues<T>(base: T, runs: { style: T; }[], keys: (keyof T)[])
 }
 
 export function decodeEngineData(engineData: EngineData) {
+	// console.log('engineData', require('util').inspect(engineData, false, 99, true));
 	const engineDict = engineData.EngineDict;
 	const resourceDict = engineData.ResourceDict;
 
@@ -424,8 +425,16 @@ export function decodeEngineData(engineData: EngineData) {
 		synthetic: f.Synthetic,
 	}));
 
+	let text = engineDict.Editor.Text.replace(/\r/g, '\n');
+	let removedCharacters = 0;
+
+	while (/\n$/.test(text)) {
+		text = text.substr(0, text.length - 1);
+		removedCharacters++;
+	}
+
 	const result: LayerTextData = {
-		text: engineDict.Editor.Text.replace(/\r/g, '\n').replace(/\n$/, ''),
+		text,
 		antiAlias: antialias[engineDict.AntiAlias] ?? 'smooth',
 		useFractionalGlyphWidths: !!engineDict.UseFractionalGlyphWidths,
 		superscriptSize: resourceDict.SuperscriptSize,
@@ -466,6 +475,12 @@ export function decodeEngineData(engineData: EngineData) {
 		result.paragraphStyleRuns.push({ length, style/*, adjustments*/ });
 	}
 
+	for (let counter = removedCharacters; result.paragraphStyleRuns.length && counter > 0; counter--) {
+		if (--result.paragraphStyleRuns[result.paragraphStyleRuns.length - 1].length === 0) {
+			result.paragraphStyleRuns.pop();
+		}
+	}
+
 	deduplicateValues(result.paragraphStyle, result.paragraphStyleRuns, paragraphStyleKeys);
 
 	if (!result.paragraphStyleRuns.length) delete result.paragraphStyleRuns;
@@ -486,6 +501,12 @@ export function decodeEngineData(engineData: EngineData) {
 		result.styleRuns.push({ length, style });
 	}
 
+	for (let counter = removedCharacters; result.styleRuns.length && counter > 0; counter--) {
+		if (--result.styleRuns[result.styleRuns.length - 1].length === 0) {
+			result.styleRuns.pop();
+		}
+	}
+
 	deduplicateValues(result.style, result.styleRuns, styleKeys);
 
 	if (!result.styleRuns.length) delete result.styleRuns;
@@ -500,20 +521,42 @@ export function encodeEngineData(data: LayerTextData) {
 		{ name: 'AdobeInvisFont', script: 0, type: 0, synthetic: 0 },
 	];
 
-	const defFont = data.style?.font ||
-		data.styleRuns?.find(s => s.style.font)?.style.font ||
-		defaultFont;
-
+	const defFont = data.style?.font || data.styleRuns?.find(s => s.style.font)?.style.font || defaultFont;
 	const paragraphRunArray: ParagraphRun[] = [];
 	const paragraphRunLengthArray: number[] = [];
+	const paragraphRuns = data.paragraphStyleRuns;
 
-	if (data.paragraphStyleRuns && data.paragraphStyleRuns.length) {
-		for (const run of data.paragraphStyleRuns) {
-			paragraphRunLengthArray.push(run.length);
+	if (paragraphRuns && paragraphRuns.length) {
+		let leftLength = text.length;
+
+		for (const run of paragraphRuns) {
+			let runLength = Math.min(run.length, leftLength);
+			leftLength -= runLength;
+
+			if (!runLength) continue; // ignore 0 size runs
+
+			// extend last run if it's only for trailing \r
+			if (leftLength === 1 && run === paragraphRuns[paragraphRuns.length - 1]) {
+				runLength++;
+				leftLength--;
+			}
+
+			paragraphRunLengthArray.push(runLength);
 			paragraphRunArray.push({
 				ParagraphSheet: {
 					DefaultStyleSheet: 0,
 					Properties: encodeParagraphStyle({ ...defaultParagraphStyle, ...data.paragraphStyle, ...run.style }, fonts),
+				},
+				Adjustments: { Axis: [1, 0, 1], XY: [0, 0] },
+			});
+		}
+
+		if (leftLength) {
+			paragraphRunLengthArray.push(leftLength);
+			paragraphRunArray.push({
+				ParagraphSheet: {
+					DefaultStyleSheet: 0,
+					Properties: encodeParagraphStyle({ ...defaultParagraphStyle, ...data.paragraphStyle }, fonts),
 				},
 				Adjustments: { Axis: [1, 0, 1], XY: [0, 0] },
 			});
@@ -539,8 +582,21 @@ export function encodeEngineData(data: LayerTextData) {
 	const styleRunArray: StyleRun[] = [];
 	const styleRunLengthArray: number[] = [];
 
+	let leftLength = text.length;
+
 	for (const run of styleRuns) {
-		styleRunLengthArray.push(run.length);
+		let runLength = Math.min(run.length, leftLength);
+		leftLength -= runLength;
+
+		if (!runLength) continue; // ignore 0 size runs
+
+		// extend last run if it's only for trailing \r
+		if (leftLength === 1 && run === styleRuns[styleRuns.length - 1]) {
+			runLength++;
+			leftLength--;
+		}
+
+		styleRunLengthArray.push(runLength);
 		styleRunArray.push({
 			StyleSheet: {
 				StyleSheetData: encodeStyle({
@@ -549,6 +605,21 @@ export function encodeEngineData(data: LayerTextData) {
 					fillColor: { r: 0, g: 0, b: 0 },
 					...data.style,
 					...run.style,
+				}, fonts),
+			},
+		});
+	}
+
+	// add extra run to the end if existing ones didn't fill it up
+	if (leftLength && styleRuns.length) {
+		styleRunLengthArray.push(leftLength);
+		styleRunArray.push({
+			StyleSheet: {
+				StyleSheetData: encodeStyle({
+					kerning: 0,
+					autoKerning: true,
+					fillColor: { r: 0, g: 0, b: 0 },
+					...data.style,
 				}, fonts),
 			},
 		});

@@ -1,6 +1,6 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
-import { clamp, createEnum, layerColors } from './helpers';
+import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
 import {
 	LayerAdditionalInfo, LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
 	LayerEffectSolidFill, LayerEffectPatternOverlay, LayerEffectGradientOverlay, LayerEffectSatin, EffectContour,
@@ -32,8 +32,6 @@ import {
 } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
-
-const MOCK_HANDLERS = false;
 
 export interface ExtendedWriteOptions extends WriteOptions {
 	layerIds: number[];
@@ -760,6 +758,8 @@ addHandler(
 	hasKey('vectorStroke'),
 	(reader, target, left) => {
 		const desc = readVersionAndDescriptor(reader) as StrokeDescriptor;
+		// console.log(require('util').inspect(desc, false, 99, true));
+
 		target.vectorStroke = {
 			strokeEnabled: desc.strokeEnabled,
 			fillEnabled: desc.fillEnabled,

@@ -214,7 +214,7 @@
             }
           },
           {
-            "length": 6,
+            "length": 5,
             "style": {
               "firstLineIndent": 0,
               "startIndent": 0,
@@ -383,7 +383,7 @@
             }
           },
           {
-            "length": 3,
+            "length": 2,
             "style": {
               "autoKerning": true,
               "underline": false,
