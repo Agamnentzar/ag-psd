@@ -340,7 +340,7 @@ describe('PsdWriter', () => {
 		});
 	});
 
-	// fs.readdirSync(writeFilesPath).filter(f => /write-text2/.test(f)).forEach(f => {
+	// fs.readdirSync(writeFilesPath).filter(f => /smart-object/.test(f)).forEach(f => {
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);
@@ -354,7 +354,7 @@ describe('PsdWriter', () => {
 
 			fs.mkdirSync(resultsFilesPath, { recursive: true });
 			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
-			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer);
+			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer); // TEMP
 
 			const reader = createReader(buffer.buffer);
 			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });

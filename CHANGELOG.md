@@ -1,5 +1,20 @@
 # Changelog
 
+## v13.0.0
+- **BREAKING CHANGE:** Changed how `meshPoints` are represented in warps
+```ts
+// old representation
+interface Warp {
+  meshPoints: { type: 'horizontal' | 'vertical'; values: number[]; }[];
+}
+
+// new representation
+interface Warp {
+  meshPoints: { x: number; y: number; }[];
+}
+ ```
+- Fixed handling for complex warps
+
 ## v12.2.0
 - Fixed incorrect length of style and paragraph style runs when reading or writing
 - Added handling for `pathSelectionState`

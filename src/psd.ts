@@ -260,13 +260,16 @@ export interface Warp {
 	perspective?: number;
 	perspectiveOther?: number;
 	rotate?: Orientation;
-
 	// for custom warps
 	bounds?: { top: UnitsValue; left: UnitsValue; bottom: UnitsValue; right: UnitsValue; };
 	uOrder?: number;
 	vOrder?: number;
+	deformNumRows?: number;
+	deformNumCols?: number;
 	customEnvelopeWarp?: {
-		meshPoints: { type: 'horizontal' | 'vertical'; values: number[]; }[];
+		quiltSliceX?: number[];
+		quiltSliceY?: number[];
+		meshPoints: { x: number; y: number; }[];
 	};
 }
 

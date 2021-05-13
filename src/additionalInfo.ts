@@ -26,7 +26,7 @@ import {
 import {
 	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
 	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, GrdT, IGSr, Ornt,
-	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, parseUnitsOrNumber, readVersionAndDescriptor, StrokeDescriptor,
+	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, readVersionAndDescriptor, StrokeDescriptor,
 	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
 	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor
 } from './descriptor';
@@ -852,8 +852,8 @@ addHandler(
 
 const placedLayerTypes: PlacedLayerType[] = ['unknown', 'vector', 'raster', 'image stack'];
 
-function parseWarp(warp: WarpDescriptor): Warp {
-	return {
+function parseWarp(warp: WarpDescriptor & QuiltWarpDescriptor): Warp {
+	const result: Warp = {
 		style: warpStyle.decode(warp.warpStyle),
 		value: warp.warpValue || 0,
 		perspective: warp.warpPerspective || 0,
@@ -867,13 +867,37 @@ function parseWarp(warp: WarpDescriptor): Warp {
 		},
 		uOrder: warp.uOrder,
 		vOrder: warp.vOrder,
-		customEnvelopeWarp: warp.customEnvelopeWarp && {
-			meshPoints: warp.customEnvelopeWarp.meshPoints.map(pt => ({
-				type: pt.type === 'Hrzn' ? 'horizontal' : 'vertical',
-				values: pt.values,
-			})),
-		},
 	};
+
+	if (warp.deformNumRows != null || warp.deformNumCols != null) {
+		result.deformNumRows = warp.deformNumRows;
+		result.deformNumCols = warp.deformNumCols;
+	}
+
+	if (warp.customEnvelopeWarp) {
+		result.customEnvelopeWarp = {
+			meshPoints: [],
+		};
+
+		const xs = warp.customEnvelopeWarp!.meshPoints.find(i => i.type === 'Hrzn')?.values || [];
+		const ys = warp.customEnvelopeWarp!.meshPoints.find(i => i.type === 'Vrtc')?.values || [];
+
+		for (let i = 0; i < xs.length; i++) {
+			result.customEnvelopeWarp!.meshPoints.push({ x: xs[i], y: ys[i] });
+		}
+
+		if (warp.customEnvelopeWarp.quiltSliceX || warp.customEnvelopeWarp.quiltSliceY) {
+			result.customEnvelopeWarp.quiltSliceX = warp.customEnvelopeWarp.quiltSliceX?.[0]?.values || [];
+			result.customEnvelopeWarp.quiltSliceY = warp.customEnvelopeWarp.quiltSliceY?.[0]?.values || [];
+		}
+	}
+
+	return result;
+}
+
+function isQuiltWarp(warp: Warp) {
+	return warp.deformNumCols != null || warp.deformNumRows != null ||
+		warp.customEnvelopeWarp?.quiltSliceX || warp.customEnvelopeWarp?.quiltSliceY;
 }
 
 function encodeWarp(warp: Warp): WarpDescriptor {
@@ -893,13 +917,41 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 		vOrder: warp.vOrder || 0,
 	};
 
+	const isQuilt = isQuiltWarp(warp);
+
+	if (isQuilt) {
+		const desc2 = desc as QuiltWarpDescriptor;
+		desc2.deformNumRows = warp.deformNumRows || 0;
+		desc2.deformNumCols = warp.deformNumCols || 0;
+	}
+
 	if (warp.customEnvelopeWarp) {
-		desc.customEnvelopeWarp = {
-			meshPoints: (warp.customEnvelopeWarp.meshPoints || []).map(pt => ({
-				type: pt.type === 'horizontal' ? 'Hrzn' : 'Vrtc',
-				values: pt.values,
-			})),
-		};
+		const meshPoints = warp.customEnvelopeWarp.meshPoints || [];
+
+		if (isQuilt) {
+			const desc2 = desc as QuiltWarpDescriptor;
+			desc2.customEnvelopeWarp = {
+				quiltSliceX: [{
+					type: 'quiltSliceX',
+					values: warp.customEnvelopeWarp.quiltSliceX || [],
+				}],
+				quiltSliceY: [{
+					type: 'quiltSliceY',
+					values: warp.customEnvelopeWarp.quiltSliceY || [],
+				}],
+				meshPoints: [
+					{ type: 'Hrzn', values: meshPoints.map(p => p.x) },
+					{ type: 'Vrtc', values: meshPoints.map(p => p.y) },
+				],
+			};
+		} else {
+			desc.customEnvelopeWarp = {
+				meshPoints: [
+					{ type: 'Hrzn', values: meshPoints.map(p => p.x) },
+					{ type: 'Vrtc', values: meshPoints.map(p => p.y) },
+				],
+			};
+		}
 	}
 
 	return desc;
@@ -921,7 +973,7 @@ addHandler(
 		for (let i = 0; i < 8; i++) transform.push(readFloat64(reader)); // x, y of 4 corners of the transform
 		const warpVersion = readInt32(reader);
 		if (warpVersion !== 0) throw new Error(`Invalid Warp version ${warpVersion}`);
-		const warp: WarpDescriptor = readVersionAndDescriptor(reader);
+		const warp: WarpDescriptor & QuiltWarpDescriptor = readVersionAndDescriptor(reader);
 
 		target.placedLayer = target.placedLayer || { // skip if SoLd already set it
 			id,
@@ -935,7 +987,7 @@ addHandler(
 		// console.log('PlLd warp', require('util').inspect(warp, false, 99, true));
 		// console.log('PlLd', require('util').inspect(target.placedLayer, false, 99, true));
 
-		skipBytes(reader, left()); // HACK
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const placed = target.placedLayer!;
@@ -949,7 +1001,9 @@ addHandler(
 		writeInt32(writer, placedLayerTypes.indexOf(placed.type));
 		for (let i = 0; i < 8; i++) writeFloat64(writer, placed.transform[i]);
 		writeInt32(writer, 0); // warp version
-		writeVersionAndDescriptor(writer, '', 'warp', encodeWarp(placed.warp || {}));
+		const isQuilt = placed.warp && isQuiltWarp(placed.warp);
+		const type = isQuilt ? 'quiltWarp' : 'warp';
+		writeVersionAndDescriptor(writer, '', type, encodeWarp(placed.warp || {}), type);
 	},
 );
 
@@ -966,6 +1020,7 @@ interface SoLdDescriptor {
 	Type: number;
 	Trnf: number[];
 	nonAffineTransform: number[];
+	quiltWarp?: QuiltWarpDescriptor;
 	warp: WarpDescriptor;
 	'Sz  ': { Wdth: number; Hght: number; };
 	Rslt: DescriptorUnitsValue;
@@ -982,6 +1037,7 @@ addHandler(
 		const desc: SoLdDescriptor = readVersionAndDescriptor(reader);
 		// console.log('SoLd', require('util').inspect(desc, false, 99, true));
 		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
+		// console.log('SoLd.quiltWarp', require('util').inspect(desc.quiltWarp, false, 99, true));
 
 		target.placedLayer = {
 			id: desc.Idnt,
@@ -996,7 +1052,7 @@ addHandler(
 			width: desc['Sz  '].Wdth,
 			height: desc['Sz  '].Hght,
 			resolution: parseUnits(desc.Rslt),
-			warp: parseWarp(desc.warp),
+			warp: parseWarp((desc.quiltWarp || desc.warp) as any),
 		};
 
 		if (desc.Crop) target.placedLayer.crop = desc.Crop;
@@ -1029,18 +1085,36 @@ addHandler(
 			Type: placedLayerTypes.indexOf(placed.type),
 			Trnf: placed.transform,
 			nonAffineTransform: placed.transform,
+			quiltWarp: {} as any,
 			warp: encodeWarp(placed.warp || {}),
 			'Sz  ': {
 				Wdth: placed.width || 0, // TODO: find size ?
 				Hght: placed.height || 0, // TODO: find size ?
 			},
-			Rslt: placed.resolution ? unitsValue(placed.resolution, 'resolution') : { units: 'Density', value: 72 }
+			Rslt: placed.resolution ? unitsValue(placed.resolution, 'resolution') : { units: 'Density', value: 72 },
 		};
+
+		if (placed.warp && isQuiltWarp(placed.warp)) {
+			const quiltWarp = encodeWarp(placed.warp) as QuiltWarpDescriptor;
+			desc.quiltWarp = quiltWarp;
+			desc.warp = {
+				warpStyle: 'warpStyle.warpNone',
+				warpValue: quiltWarp.warpValue,
+				warpPerspective: quiltWarp.warpPerspective,
+				warpPerspectiveOther: quiltWarp.warpPerspectiveOther,
+				warpRotate: quiltWarp.warpRotate,
+				bounds: quiltWarp.bounds,
+				uOrder: quiltWarp.uOrder,
+				vOrder: quiltWarp.vOrder,
+			};
+		} else {
+			delete desc.quiltWarp;
+		}
 
 		if (placed.comp) desc.comp = placed.comp;
 		if (placed.compInfo) desc.compInfo = placed.compInfo;
 
-		writeVersionAndDescriptor(writer, '', 'null', desc);
+		writeVersionAndDescriptor(writer, '', 'null', desc, desc.quiltWarp ? 'quiltWarp' : 'warp');
 	},
 );
 
@@ -1222,23 +1296,6 @@ interface ExtensionDesc {
 		layerTime: number;
 	};
 }
-
-// extension settings ?, ignore it
-addHandler(
-	'extn',
-	target => (target as any)._extn !== undefined,
-	(reader, target) => {
-		const desc: ExtensionDesc = readVersionAndDescriptor(reader);
-
-		if (MOCK_HANDLERS) {
-			(target as any)._ext = desc;
-		}
-	},
-	(_writer, _target) => {
-		// TODO: need to add correct types for desc fields (resources/src.psd)
-		// if (MOCK_HANDLERS) writeVersionAndDescriptor(writer, '', 'null', desc);
-	},
-);
 
 addHandler(
 	'pths',
@@ -2465,6 +2522,22 @@ addHandler(
 			compCoreGPUSupport: `reason.${cinf.compCoreGPUSupport}`,
 		};
 		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
+// extension settings ?, ignore it
+addHandler(
+	'extn',
+	target => (target as any)._extn !== undefined,
+	(reader, target) => {
+		const desc: ExtensionDesc = readVersionAndDescriptor(reader);
+		// console.log(require('util').inspect(desc, false, 99, true));
+
+		if (MOCK_HANDLERS) (target as any)._extn = desc;
+	},
+	(writer, target) => {
+		// TODO: need to add correct types for desc fields (resources/src.psd)
+		if (MOCK_HANDLERS) writeVersionAndDescriptor(writer, '', 'null', (target as any)._extn);
 	},
 );
 

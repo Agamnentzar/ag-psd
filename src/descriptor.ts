@@ -91,8 +91,10 @@ const fieldToExtType: ExtTypeDict = {
 	rectangleCornerC: makeType('', 'Pnt '),
 	rectangleCornerD: makeType('', 'Pnt '),
 	compInfo: makeType('', 'null'),
-	generatorSettings: makeType('', 'null'),
 	Trnf: makeType('Transform', 'Trnf'),
+	quiltWarp: makeType('', 'quiltWarp'),
+	generatorSettings: makeType('', 'null'),
+	crema: makeType('', 'null'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -111,7 +113,7 @@ const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
-		'artboardPresetName',
+		'artboardPresetName', 'json',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
@@ -120,7 +122,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages', 'Crop',
 		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
 		'keyOriginIndex', 'major', 'minor', 'fix', 'docDefaultNewArtboardBackgroundType', 'artboardBackgroundType',
-		'numModifyingFX',
+		'numModifyingFX', 'deformNumRows', 'deformNumCols',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
@@ -155,7 +157,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti',
 	],
-	'ObAr': ['meshPoints'],
+	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null'],
 };
 
@@ -282,6 +284,8 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			} else {
 				logErrors && console.log('Invalid strokeStyleContent value', value[key]);
 			}
+		} else if (key === 'bounds' && root === 'quiltWarp') {
+			extType = makeType('', 'classFloatRect');
 		}
 
 		if (extType && extType.classID === 'RGBC') {
@@ -392,6 +396,12 @@ function readOSType(reader: PsdReader, type: string) {
 	}
 }
 
+const ObArTypes: { [key: string]: string | undefined; } = {
+	meshPoints: 'rationalPoint',
+	quiltSliceX: 'UntF',
+	quiltSliceY: 'UntF',
+};
+
 function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType: NameClassID | undefined, root: string) {
 	switch (type) {
 		case 'obj ': // Reference
@@ -451,10 +461,12 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeInt32(writer, value.byteLength);
 			writeBytes(writer, value);
 			break;
-		case 'ObAr': // Object array
+		case 'ObAr': { // Object array
 			writeInt32(writer, 16); // version
 			writeUnicodeStringWithPadding(writer, ''); // name
-			writeAsciiStringOrClassId(writer, 'rationalPoint');
+			const type = ObArTypes[key];
+			if (!type) throw new Error(`Not implemented ObArType for: ${key}`);
+			writeAsciiStringOrClassId(writer, type);
 			writeInt32(writer, value.length);
 
 			for (let i = 0; i < value.length; i++) {
@@ -468,6 +480,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 				}
 			}
 			break;
+		}
 		// case 'Pth ': // File path
 		// 	writeFilePath(reader);
 		default:
@@ -719,6 +732,25 @@ export interface WarpDescriptor {
 	uOrder: number;
 	vOrder: number;
 	customEnvelopeWarp?: {
+		meshPoints: {
+			type: 'Hrzn' | 'Vrtc';
+			values: number[];
+		}[];
+	};
+}
+
+export interface QuiltWarpDescriptor extends WarpDescriptor {
+	deformNumRows: number;
+	deformNumCols: number;
+	customEnvelopeWarp: {
+		quiltSliceX: {
+			type: 'quiltSliceX';
+			values: number[];
+		}[];
+		quiltSliceY: {
+			type: 'quiltSliceY';
+			values: number[];
+		}[];
 		meshPoints: {
 			type: 'Hrzn' | 'Vrtc';
 			values: number[];

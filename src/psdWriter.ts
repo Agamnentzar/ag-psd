@@ -399,11 +399,11 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 
 			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
-				key === 'lmfx' || key === 'lrFX' || key === 'cinf';
+				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd';
 
 			writeSection(writer, fourBytes ? 4 : 2, () => {
 				handler.write(writer, target, psd, options);
-			}, key !== 'Txt2' && key !== 'cinf', large);
+			}, key !== 'Txt2' && key !== 'cinf' && key !== 'extn', large);
 		}
 	}
 }
