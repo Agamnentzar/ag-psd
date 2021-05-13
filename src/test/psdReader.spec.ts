@@ -68,7 +68,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /text-simple2/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /groups-big/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';

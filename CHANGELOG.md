@@ -1,5 +1,8 @@
 # Changelog
 
+## v13.0.1
+- Fixed reading layer groups with missing section divider info
+
 ## v13.0.0
 - **BREAKING CHANGE:** Changed how `meshPoints` are represented in warps
 ```ts

@@ -570,6 +570,19 @@ addHandler(
 	},
 );
 
+// some kind of ID ? ignore
+addHandler(
+	'lsdk',
+	target => (target as any)._lsdk !== undefined,
+	(reader, target) => {
+		const id = readInt32(reader);
+		if (MOCK_HANDLERS) (target as any)._lsdk = id;
+	},
+	(writer, target) => {
+		if (MOCK_HANDLERS) writeInt32(writer, (target as any)._lsdk);
+	},
+);
+
 addHandler(
 	'lsct',
 	hasKey('sectionDivider'),
