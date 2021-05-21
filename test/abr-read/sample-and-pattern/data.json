@@ -1,0 +1,151 @@
+{
+  "samples": [
+    {
+      "id": "a8f34db0-4814-634e-807c-c61aecde18fd",
+      "bounds": {
+        "x": 2,
+        "y": 1,
+        "w": 112,
+        "h": 105
+      }
+    }
+  ],
+  "patterns": [
+    {
+      "id": "d667d14d-41d6-894d-b613-58c58768aab0",
+      "name": "Bobbys Paint",
+      "x": 597,
+      "y": 595,
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 595,
+        "h": 597
+      }
+    }
+  ],
+  "brushes": [
+    {
+      "name": "Bobbys Brush 743",
+      "shape": {
+        "size": 112,
+        "angle": 0,
+        "roundness": 1,
+        "spacingOn": true,
+        "spacing": 0.02,
+        "flipX": false,
+        "flipY": false,
+        "name": "Bobbys Brush",
+        "sampledData": "a8f34db0-4814-634e-807c-c61aecde18fd"
+      },
+      "spacing": 1,
+      "wetEdges": false,
+      "noise": false,
+      "useBrushSize": true,
+      "interpretation": true,
+      "protectTexture": false,
+      "shapeDynamics": {
+        "tiltScale": 2,
+        "sizeDynamics": {
+          "control": "pen pressure",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "angleDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "roundnessDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "flipX": false,
+        "flipY": false,
+        "brushProjection": false,
+        "minimumDiameter": 0,
+        "minimumRoundness": 0.25
+      },
+      "scatter": {
+        "count": 1,
+        "bothAxes": false,
+        "countDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "scatterDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0.44,
+          "minimum": 0
+        }
+      },
+      "texture": {
+        "id": "d667d14d-41d6-894d-b613-58c58768aab0",
+        "name": "Bobbys Paint",
+        "blendMode": "color burn",
+        "depth": 1,
+        "depthMinimum": 0,
+        "depthDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "scale": 0.66,
+        "invert": false,
+        "brightness": 0,
+        "contrast": 0
+      },
+      "transfer": {
+        "flowDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "opacityDynamics": {
+          "control": "pen pressure",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "wetnessDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "mixDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        }
+      },
+      "toolOptions": {
+        "brushPreset": true,
+        "flow": 100,
+        "smooth": 0,
+        "mode": "normal",
+        "opacity": 100,
+        "smoothing": true,
+        "smoothingValue": 0,
+        "smoothingRadiusMode": false,
+        "smoothingCatchup": true,
+        "smoothingCatchupAtEnd": false,
+        "smoothingZoomCompensation": true,
+        "pressureSmoothing": false,
+        "usePressureOverridesSize": false,
+        "usePressureOverridesOpacity": false,
+        "useLegacy": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,844 @@
+{
+  "width": 549,
+  "height": 864,
+  "channels": 1,
+  "bitsPerChannel": 8,
+  "colorMode": 1,
+  "imageResources": {
+    "captionDigest": "ffe7b7b1a803a0818360bea8891f7c70",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 600,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Inches",
+      "verticalResolution": 600,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Inches"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "globalAngle": 30,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 10,
+    "layersGroup": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      72
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": [
+        {
+          "location": 134217573.78125,
+          "direction": "vertical"
+        },
+        {
+          "location": 1617.03125,
+          "direction": "vertical"
+        },
+        {
+          "location": 134216090.71875,
+          "direction": "horizontal"
+        },
+        {
+          "location": 864.28125,
+          "direction": "horizontal"
+        },
+        {
+          "location": 126.78125,
+          "direction": "vertical"
+        }
+      ]
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 77,
+    "versionInfo": {
+      "hasRealMergedData": false,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 864,
+      "right": 549,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": true,
+      "hidden": true,
+      "name": "Background",
+      "nameSource": "layr",
+      "id": 61,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.0355046,
+      "referencePoint": {
+        "x": -155,
+        "y": -1636
+      }
+    },
+    {
+      "top": 3,
+      "left": 0,
+      "bottom": 864,
+      "right": 389,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Background",
+      "effects": {
+        "scale": 8.333333333333334,
+        "outerGlow": {
+          "enabled": false,
+          "blendMode": "screen",
+          "color": {
+            "k": 0
+          },
+          "opacity": 0.35,
+          "technique": "softer",
+          "choke": {
+            "value": 0,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 12,
+            "units": "Pixels"
+          },
+          "noise": 0,
+          "jitter": 0,
+          "antialiased": false,
+          "contour": {
+            "name": "線形",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "range": 0.5
+        },
+        "innerGlow": {
+          "enabled": false,
+          "blendMode": "screen",
+          "color": {
+            "k": 0
+          },
+          "opacity": 0.35,
+          "technique": "softer",
+          "choke": {
+            "value": 0,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 12,
+            "units": "Pixels"
+          },
+          "jitter": 0,
+          "noise": 0,
+          "antialiased": false,
+          "source": "edge",
+          "contour": {
+            "name": "線形",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "range": 0.5
+        },
+        "bevel": {
+          "enabled": false,
+          "highlightBlendMode": "screen",
+          "highlightColor": {
+            "k": 0
+          },
+          "highlightOpacity": 0.5,
+          "shadowBlendMode": "multiply",
+          "shadowColor": {
+            "k": 99.99999776482582
+          },
+          "shadowOpacity": 0.5,
+          "technique": "smooth",
+          "style": "inner bevel",
+          "useGlobalLight": true,
+          "angle": 90,
+          "altitude": 30,
+          "strength": 1,
+          "size": {
+            "value": 12,
+            "units": "Pixels"
+          },
+          "direction": "up",
+          "contour": {
+            "name": "線形",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          },
+          "antialiasGloss": false,
+          "soften": {
+            "value": 0,
+            "units": "Pixels"
+          },
+          "useShape": false,
+          "useTexture": false
+        },
+        "satin": {
+          "enabled": false,
+          "blendMode": "multiply",
+          "color": {
+            "k": 99.99999776482582
+          },
+          "antialiased": true,
+          "invert": true,
+          "opacity": 0.5,
+          "angle": 90,
+          "distance": {
+            "value": 85,
+            "units": "Pixels"
+          },
+          "size": {
+            "value": 137,
+            "units": "Pixels"
+          },
+          "contour": {
+            "name": "線形",
+            "curve": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 255,
+                "y": 255
+              }
+            ]
+          }
+        },
+        "stroke": [
+          {
+            "enabled": true,
+            "position": "inside",
+            "fillType": "color",
+            "blendMode": "multiply",
+            "opacity": 1,
+            "size": {
+              "value": 5,
+              "units": "Pixels"
+            },
+            "color": {
+              "k": 99.99999776482582
+            }
+          }
+        ]
+      },
+      "nameSource": "layr",
+      "id": 65,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.035525,
+      "referencePoint": {
+        "x": -155,
+        "y": -1636
+      }
+    },
+    {
+      "top": 456,
+      "left": 276,
+      "bottom": 861,
+      "right": 408,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "レイヤー 1",
+      "nameSource": "layr",
+      "id": 68,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.035537,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 452,
+      "left": 275,
+      "bottom": 868,
+      "right": 520,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "ウニフラ白",
+      "nameSource": "layr",
+      "id": 67,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.035553,
+      "placedLayer": {
+        "id": "ae510cb7-a61b-11e9-94bb-fc5c6d69ac5c",
+        "placed": "ae510cb6-a61b-11e9-94bb-fc5c6d69ac5c",
+        "type": "raster",
+        "transform": [
+          275,
+          452,
+          520,
+          452,
+          520,
+          868,
+          275,
+          868
+        ],
+        "width": 425,
+        "height": 612,
+        "resolution": {
+          "value": 600,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "custom",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 612,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 425,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4,
+          "customEnvelopeWarp": {
+            "meshPoints": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 141.66666666666666,
+                "y": 0
+              },
+              {
+                "x": 283.3333333333333,
+                "y": 0
+              },
+              {
+                "x": 425,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 204
+              },
+              {
+                "x": 141.66666666666666,
+                "y": 204
+              },
+              {
+                "x": 283.3333333333333,
+                "y": 204
+              },
+              {
+                "x": 425,
+                "y": 204
+              },
+              {
+                "x": 0,
+                "y": 408
+              },
+              {
+                "x": 141.66666666666666,
+                "y": 408
+              },
+              {
+                "x": 283.3333333333333,
+                "y": 408
+              },
+              {
+                "x": 425,
+                "y": 408
+              },
+              {
+                "x": 0,
+                "y": 612
+              },
+              {
+                "x": 141.66666666666666,
+                "y": 612
+              },
+              {
+                "x": 283.3333333333333,
+                "y": 612
+              },
+              {
+                "x": 425,
+                "y": 612
+              }
+            ]
+          }
+        }
+      },
+      "referencePoint": {
+        "x": 315.9294117647059,
+        "y": 416.89063985871474
+      }
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Clean",
+      "id": 70,
+      "sectionDivider": {
+        "type": 2,
+        "key": "pass",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.03559,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "opened": false,
+      "children": [
+        {
+          "top": 537,
+          "left": 360,
+          "bottom": 761,
+          "right": 435,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": false,
+          "name": "Clean",
+          "nameSource": "layr",
+          "id": 62,
+          "blendClippendElements": true,
+          "blendInteriorElements": false,
+          "knockout": false,
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1563097343.0355792,
+          "referencePoint": {
+            "x": -98,
+            "y": -1566
+          }
+        }
+      ]
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Text",
+      "id": 72,
+      "sectionDivider": {
+        "type": 2,
+        "key": "pass",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.0408916,
+      "referencePoint": {
+        "x": -2.684281436078095,
+        "y": -0.78606166674831
+      },
+      "opened": false,
+      "children": [
+        {
+          "top": 644,
+          "left": 333,
+          "bottom": 676,
+          "right": 465,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": true,
+          "name": "Text",
+          "nameSource": "layr",
+          "id": 63,
+          "blendClippendElements": true,
+          "blendInteriorElements": false,
+          "knockout": false,
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1563097343.0356157,
+          "referencePoint": {
+            "x": 193.8997188919217,
+            "y": -1474.321752285059
+          }
+        },
+        {
+          "top": 644,
+          "left": 320,
+          "bottom": 674,
+          "right": 477,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": false,
+          "name": "… hein !? ",
+          "text": {
+            "transform": [
+              0.9978883265380701,
+              0,
+              0,
+              1.0017237869601023,
+              286.99999999999994,
+              644
+            ],
+            "left": 0,
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "text": "… hein !? ",
+            "index": 0,
+            "gridding": "none",
+            "antiAlias": "strong",
+            "orientation": "horizontal",
+            "warp": {
+              "style": "none",
+              "value": 0,
+              "perspective": 0,
+              "perspectiveOther": 0,
+              "rotate": "horizontal"
+            },
+            "useFractionalGlyphWidths": true,
+            "superscriptSize": 0.583,
+            "superscriptPosition": 0.333,
+            "subscriptSize": 0.583,
+            "subscriptPosition": 0.333,
+            "smallCapSize": 0.7,
+            "shapeType": "box",
+            "boxBounds": [
+              0,
+              0,
+              218.46132,
+              106.81587
+            ],
+            "paragraphStyle": {
+              "justification": "center",
+              "firstLineIndent": 0,
+              "startIndent": 0,
+              "endIndent": 0,
+              "spaceBefore": 0,
+              "spaceAfter": 0,
+              "autoHyphenate": true,
+              "hyphenatedWordSize": 6,
+              "preHyphen": 2,
+              "postHyphen": 2,
+              "consecutiveHyphens": 8,
+              "zone": 36,
+              "wordSpacing": [
+                0.8,
+                1,
+                1.33
+              ],
+              "letterSpacing": [
+                0,
+                0,
+                0
+              ],
+              "glyphSpacing": [
+                1,
+                1,
+                1
+              ],
+              "autoLeading": 1.2,
+              "leadingType": 0,
+              "hanging": false,
+              "burasagari": false,
+              "kinsokuOrder": 0,
+              "everyLineComposer": true
+            },
+            "style": {
+              "font": {
+                "name": "GargleRg-Italic",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
+              },
+              "fontSize": 39.09927,
+              "autoKerning": true,
+              "kerning": 0,
+              "fontCaps": 2,
+              "language": 2,
+              "fillColor": {
+                "r": 0,
+                "g": 0,
+                "b": 0
+              },
+              "strokeColor": {
+                "r": 0,
+                "g": 0,
+                "b": 0
+              }
+            }
+          },
+          "nameSource": "rend",
+          "id": 76,
+          "blendClippendElements": true,
+          "blendInteriorElements": false,
+          "knockout": false,
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1563097343.0408692,
+          "referencePoint": {
+            "x": -165.34007866178354,
+            "y": -1605.5475683768323
+          }
+        }
+      ]
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "SFX",
+      "id": 74,
+      "sectionDivider": {
+        "type": 2,
+        "key": "pass",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1563097343.0409343,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "opened": false,
+      "children": [
+        {
+          "top": 0,
+          "left": 0,
+          "bottom": 0,
+          "right": 0,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": false,
+          "name": "SFX",
+          "nameSource": "layr",
+          "id": 64,
+          "blendClippendElements": true,
+          "blendInteriorElements": false,
+          "knockout": false,
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1563097343.0409224,
+          "referencePoint": {
+            "x": -131,
+            "y": -1272
+          }
+        }
+      ]
+    }
+  ],
+  "engineData": "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/yAdKSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDggLzEgKP7/AKspIC8yICj+/wC7KSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDkgLzEgKP7/AKspIC8yICj+/wC7KSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDEwIC8xICj+/yAcKSAvMiAo/v8gHSkgLzMgKP7/IBgpIC80ICj+/yAZKSA+PiA8PCAvMCAxMSAvMSAo/v8gHCkgLzIgKP7/IB0pIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMTIgLzEgKP7/IBwpIC8yICj+/yAdKSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDEzIC8xICj+/yAdKSAvMiAo/v8gHSkgLzMgKP7/IBkpIC80ICj+/yAZKSA+PiA8PCAvMCAxNCAvMSAo/v8gHCkgLzIgKP7/IB0pIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMTUgLzEgKP7/IBwpIC8yICj+/yAdKSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDE2IC8xICj+/yAdKSAvMiAo/v8gHSkgLzMgKP7/IBkpIC80ICj+/yAZKSA+PiA8PCAvMCAxNyAvMSAo/v8gHCkgLzIgKP7/IB0pIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMTggLzEgKP7/AKspIC8yICj+/wC7KSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDE5IC8xICj+/wCrKSAvMiAo/v8AuykgLzMgKP7/IBgpIC80ICj+/yAZKSA+PiA8PCAvMCAyMCAvMSAo/v8gHikgLzIgKP7/IBwpIC8zICj+/yAaKSAvNCAo/v8gGCkgPj4gPDwgLzAgMjEgLzEgKP7/IB4pIC8yICj+/yAcKSAvMyAo/v8gGikgLzQgKP7/IBgpID4+IDw8IC8wIDIyIC8xICj+/yAeKSAvMiAo/v8gHCkgLzMgKP7/IBopIC80ICj+/yAYKSA+PiA8PCAvMCAyMyAvMSAo/v8gHikgLzIgKP7/IB0pIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMjQgLzEgKP7/IB4pIC8yICj+/yAdKSAvMyAo/v8gGikgLzQg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MzIgOS44OTIzNSBdIC82IFsgPDwgLzk5IC9TIC8xNSA8PCAvMCAxMSAvMiAwIC81IGZhbHNlID4+IC8wIDw8IC8wIFsgMzEuNTgxMDIgMC4wIF0gPj4gLzYgWyA8PCAvOTkgL0cgLzEgWyAwLjAgLTMzLjExNzA4IDE2OC45MDU1MiA5Ljg5MjM1IF0gLzUgWyAzNDEgMiA0MTYgNDgwIDQzIDQyMiA0NjEgMyA0MDggNDYxIDIgXSAvOCBbIDMxLjU4MTAyIC00LjQ1Nzg1IDIwMC40ODY1NCAzOC41NTE1OCBdIC85IFsgMzEuNTgxMDIgLTQuNDU3ODUgMjE5LjI1NDAxIDM4LjU1MTU4IF0gLzEwIDw8IC8wIFsgPDwgLzQgMiAvOCBmYWxzZSAvOSAwIC8xMCAwID4+IF0gLzEgWyAxMSBdID4+IC8xMSB0cnVlIC8xMiAtMzMuMTE3MDggLzEzIDkuODkyMzUgLzIwIDAgPj4gXSA+PiBdID4+IF0gPj4gXSA+PiBdID4+IF0gPj4gXSA+PiA+PiBdIC8yIDw8IC8wIDIgLzEgMTIuMCAvMiBmYWxzZSAvMyBmYWxzZSAvNCB0cnVlIC81IDAuMCAvNiAxLjAgLzcgMS4wIC84IDAgLzkgMC4wIC8xMCAwLjAgLzExIDEgLzEyIDAgLzEzIDAgLzE0IDAgLzE1IDAgLzE2IDAgLzE3IDAuMCAvMTggdHJ1ZSAvMTkgZmFsc2UgLzIwIGZhbHNlIC8yMSBmYWxzZSAvMjIgZmFsc2UgLzIzIGZhbHNlIC8yNCBmYWxzZSAvMjUgZmFsc2UgLzI2IGZhbHNlIC8yNyBmYWxzZSAvMjggZmFsc2UgLzI5IGZhbHNlIC8zMCAwIC8zMSBmYWxzZSAvMzIgZmFsc2UgLzMzIGZhbHNlIC8zNCBmYWxzZSAvMzUgMiAvMzYgMC4wIC8zNyAyIC8zOCAwIC8zOSAwIC80MCBmYWxzZSAvNDEgMiAvNDIgMCAvNDMgPDwgLzAgLjUgPj4gLzQ0IDIgLzQ1IDIgLzQ2IDcgLzQ3IDAgLzQ4IDAgLzQ5IC0xLjAgLzUwIC0xLjAgLzUxIDAgLzUyIGZhbHNlIC81MyA8PCAvOTkgL1NpbXBsZVBhaW50IC8wIDw8IC8wIDEgLzEgWyAxLjAgMC4wIDAuMCAwLjAgXSA+PiA+PiAvNTQgPDwgLzk5IC9TaW1wbGVQYWludCAvMCA8PCAvMCAxIC8xIFsgMS4wIDAuMCAwLjAgMC4wIF0gPj4gPj4gLzU1IDw8IC85OSAvU2ltcGxlQmxlbmRlciA+PiAvNTYgdHJ1ZSAvNTcgZmFsc2UgLzU4IHRydWUgLzU5IGZhbHNlIC82MCBmYWxzZSAvNjEgMCAvNjIgMCAvNjMgMS4wIC82NCA0LjAgLzY1IDAuMCAvNjYgWyBdIC82NyBbIF0gLzY4IDAgLzY5IDAgLzcwIDAgLzcxIDQgLzcyIDAuMCAvNzMgMC4wIC83NCBmYWxzZSAvNzUgZmFsc2UgLzc2IGZhbHNlIC83NyB0cnVlIC83OCB0cnVlIC83OSA8PCAvOTkgL1NpbXBsZVBhaW50IC8wIDw8IC8wIDEgLzEgWyAxLjAgMS4wIDEuMCAwLjAgXSA+PiA+PiAvODAgZmFsc2UgLzgxIDAgLzgyIDMuMCAvODMgMy4wIC84NCBmYWxzZSAvODUgMCAvODYgPDwgLzk5IC9TaW1wbGVDdXN0b21GZWF0dXJlID4+IC84NyAxMDAuMCAvODggdHJ1ZSA+PiAvMyA8PCAvMCAwIC8xIDAuMCAvMiAwLjAgLzMgMC4wIC80IDAuMCAvNSAwLjAgLzYgMSAvNyAxLjIgLzggMCAvOSB0cnVlIC8xMCA2IC8xMSAyIC8xMiAyIC8xMyAwIC8xNCAzNi4wIC8xNSB0cnVlIC8xNiAuNSAvMTcgWyAuOCAxLjAgMS4zMyBdIC8xOCBbIDAuMCAwLjAgMC4wIF0gLzE5IFsgMS4wIDEuMCAxLjAgXSAvMjAgNiAvMjEgZmFsc2UgLzIyIDAgLzIzIHRydWUgLzI0IDAgLzI1IDAgLzI3IC9uaWwgLzI2IGZhbHNlIC8yOCAvbmlsIC8yOSBmYWxzZSAvMzAgPDwgPj4gLzMxIDM2LjAgLzMyIDw8ID4+IC8zMyAwIC8zNCA3IC8zNSAwIC8zNiAvbmlsIC8zNyAwIC8zOCBmYWxzZSAvMzkgMCAvNDAgMiA+PiA+Pg==",
+  "linkedFiles": [
+    {
+      "id": "ae510cb7-a61b-11e9-94bb-fc5c6d69ac5c",
+      "name": "ウニフラ白.psb",
+      "type": "8BPB",
+      "creator": "8BIM",
+      "descriptor": {
+        "compInfo": {
+          "compID": -1,
+          "originalCompID": -1
+        }
+      }
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  }
+}

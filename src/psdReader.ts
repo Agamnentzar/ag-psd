@@ -540,6 +540,7 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo,
 	const sig = readSignature(reader);
 	if (sig !== '8BIM' && sig !== '8B64') throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
 	const key = readSignature(reader);
+	const u64 = sig === '8B64' || (options.large && key === 'lnk2');
 
 	readSection(reader, 2, left => {
 		const handler = infoHandlersMap[key];
@@ -559,7 +560,7 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo,
 			options.logMissingFeatures && console.log(`Unread ${left()} bytes left for tag: ${key}`);
 			skipBytes(reader, left());
 		}
-	}, false, sig === '8B64');
+	}, false, u64);
 }
 
 function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, options: ReadOptionsExt) {
@@ -824,8 +825,8 @@ export function readPattern(reader: PsdReader): PatternInfo {
 			const dataLength = length - (4 + 16 + 2 + 1);
 			const cdata = readBytes(reader, dataLength);
 
-			if (pixelDepth !== 8 || pixelDepth2 !== 8) throw new Error('16bit pixel depth not supported in palettes');
-			if (compressionMode !== 0) throw new Error('Zip compression not supported in palettes');
+			if (pixelDepth !== 8 || pixelDepth2 !== 8) throw new Error('16bit pixel depth not supported for palettes');
+			if (compressionMode !== 0) throw new Error('Zip compression not supported for palettes');
 
 			const w = cright - cleft;
 			const h = cbottom - ctop;

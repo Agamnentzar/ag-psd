@@ -67,9 +67,10 @@ describe('PsdReader', () => {
 		console.log(psd2.width);
 	});
 
-	fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /groups-big/.test(f)).forEach(f => {
-		it(`reads PSD file (${f})`, () => {
+	// skipping "pattern" test because it requires zip cimpression of patterns
+	// fs.readdirSync(readFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => /psb-x/.test(f)).forEach(f => {
+		it.only(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
 			const psd = readPsdFromFile(path.join(basePath, fileName), { ...opts });

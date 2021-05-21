@@ -1,5 +1,8 @@
 # Changelog
 
+## v13.0.2
+- Fixed error when opening PSB file with smart objects
+
 ## v13.0.1
 - Fixed reading layer groups with missing section divider info
 

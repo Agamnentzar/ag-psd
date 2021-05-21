@@ -5,6 +5,137 @@ import {
 	readSignature, readUint16, readUint32, readUint8, skipBytes
 } from './psdReader';
 
+export interface Abr {
+	brushes: Brush[];
+	samples: SampleInfo[];
+	patterns: PatternInfo[];
+}
+
+export interface SampleInfo {
+	id: string;
+	bounds: { x: number; y: number; w: number; h: number; };
+	alpha: Uint8Array;
+}
+
+export interface BrushDynamics {
+	control: 'off' | 'fade' | 'pen pressure' | 'pen tilt' | 'stylus wheel' | 'initial direction' | 'direction' | 'initial rotation' | 'rotation';
+	steps: number;
+	jitter: number;
+	minimum: number;
+}
+
+const dynamicsControl = ['off', 'fade', 'pen pressure', 'pen tilt', 'stylus sheel', 'initial direction', 'direction', 'initial rotation', 'rotation'];
+
+export interface BrushShape {
+	name?: string;
+	size: number;
+	angle: number;
+	roundness: number;
+	hardness?: number;
+	spacingOn: boolean;
+	spacing: number;
+	flipX: boolean;
+	flipY: boolean;
+	sampledData?: string;
+}
+
+export interface Brush {
+	name: string;
+	shape: BrushShape;
+	shapeDynamics?: {
+		sizeDynamics: BrushDynamics;
+		minimumDiameter: number;
+		tiltScale: number;
+		angleDynamics: BrushDynamics;
+		roundnessDynamics: BrushDynamics;
+		minimumRoundness: number;
+		flipX: boolean;
+		flipY: boolean;
+		brushProjection: boolean;
+	};
+	scatter?: {
+		bothAxes: boolean;
+		scatterDynamics: BrushDynamics;
+		countDynamics: BrushDynamics;
+		count: number;
+	};
+	texture?: {
+		id: string;
+		name: string;
+		invert: boolean;
+		scale: number;
+		brightness: number;
+		contrast: number;
+		blendMode: BlendMode;
+		depth: number;
+		depthMinimum: number;
+		depthDynamics: BrushDynamics;
+	};
+	dualBrush?: {
+		flip: boolean;
+		shape: BrushShape;
+		blendMode: BlendMode;
+		useScatter: boolean;
+		spacing: number;
+		count: number;
+		bothAxes: boolean;
+		countDynamics: BrushDynamics;
+		scatterDynamics: BrushDynamics;
+	};
+	colorDynamics?: {
+		foregroundBackground: BrushDynamics;
+		hue: number;
+		saturation: number;
+		brightness: number;
+		purity: number;
+		perTip: boolean;
+	};
+	transfer?: {
+		flowDynamics: BrushDynamics;
+		opacityDynamics: BrushDynamics;
+		wetnessDynamics: BrushDynamics;
+		mixDynamics: BrushDynamics;
+	};
+	brushPose?: {
+		overrideAngle: boolean;
+		overrideTiltX: boolean;
+		overrideTiltY: boolean;
+		overridePressure: boolean;
+		pressure: number;
+		tiltX: number;
+		tiltY: number;
+		angle: number;
+	};
+	noise: boolean;
+	wetEdges: boolean;
+	// TODO: build-up
+	// TODO: smoothing
+	protectTexture?: boolean;
+	spacing: number;
+	brushGroup?: undefined; // ?
+	interpretation?: boolean; // ?
+	useBrushSize: boolean; // ?
+	toolOptions?: {
+		brushPreset: boolean;
+		flow: number;
+		smooth: number; // ?
+		mode: BlendMode;
+		opacity: number;
+		smoothing: boolean;
+		smoothingValue: number;
+		smoothingRadiusMode: boolean;
+		smoothingCatchup: boolean;
+		smoothingCatchupAtEnd: boolean;
+		smoothingZoomCompensation: boolean;
+		pressureSmoothing: boolean;
+		usePressureOverridesSize: boolean;
+		usePressureOverridesOpacity: boolean;
+		useLegacy: boolean;
+	};
+}
+
+// internal
+
 interface PhryDescriptor {
 	hierarchy: any[];
 }
@@ -123,130 +254,7 @@ interface DescDescriptor {
 	}[];
 }
 
-interface Sample {
-	id: string;
-	bounds: { x: number; y: number; w: number; h: number; };
-	alpha: Uint8Array;
-}
-
-interface Dynamics {
-	control: 'off' | 'fade' | 'pen pressure' | 'pen tilt' | 'stylus wheel' | 'initial direction' | 'direction' | 'initial rotation' | 'rotation';
-	steps: number;
-	jitter: number;
-	minimum: number;
-}
-
-const dynamicsControl = ['off', 'fade', 'pen pressure', 'pen tilt', 'stylus sheel', 'initial direction', 'direction', 'initial rotation', 'rotation'];
-
-interface BrushShape {
-	name?: string;
-	size: number;
-	angle: number;
-	roundness: number;
-	hardness?: number;
-	spacingOn: boolean;
-	spacing: number;
-	flipX: boolean;
-	flipY: boolean;
-	sampledData?: string;
-}
-
-interface Brush {
-	name: string;
-	shape: BrushShape;
-	shapeDynamics?: {
-		sizeDynamics: Dynamics;
-		minimumDiameter: number;
-		tiltScale: number;
-		angleDynamics: Dynamics;
-		roundnessDynamics: Dynamics;
-		minimumRoundness: number;
-		flipX: boolean;
-		flipY: boolean;
-		brushProjection: boolean;
-	};
-	scatter?: {
-		bothAxes: boolean;
-		scatterDynamics: Dynamics;
-		countDynamics: Dynamics;
-		count: number;
-	};
-	texture?: {
-		id: string;
-		name: string;
-		invert: boolean;
-		scale: number;
-		brightness: number;
-		contrast: number;
-		blendMode: BlendMode;
-		depth: number;
-		depthMinimum: number;
-		depthDynamics: Dynamics;
-	};
-	dualBrush?: {
-		flip: boolean;
-		shape: BrushShape;
-		blendMode: BlendMode;
-		useScatter: boolean;
-		spacing: number;
-		count: number;
-		bothAxes: boolean;
-		countDynamics: Dynamics;
-		scatterDynamics: Dynamics;
-	};
-	colorDynamics?: {
-		foregroundBackground: Dynamics;
-		hue: number;
-		saturation: number;
-		brightness: number;
-		purity: number;
-		perTip: boolean;
-	};
-	transfer?: {
-		flowDynamics: Dynamics;
-		opacityDynamics: Dynamics;
-		wetnessDynamics: Dynamics;
-		mixDynamics: Dynamics;
-	};
-	brushPose?: {
-		overrideAngle: boolean;
-		overrideTiltX: boolean;
-		overrideTiltY: boolean;
-		overridePressure: boolean;
-		pressure: number;
-		tiltX: number;
-		tiltY: number;
-		angle: number;
-	};
-	noise: boolean;
-	wetEdges: boolean;
-	// TODO: build-up
-	// TODO: smoothing
-	protectTexture?: boolean;
-	spacing: number;
-	brushGroup?: undefined; // ?
-	interpretation: boolean; // ?
-	useBrushSize: boolean; // ?
-	toolOptions?: {
-		brushPreset: boolean;
-		flow: number;
-		smooth: number; // ?
-		mode: BlendMode;
-		opacity: number;
-		smoothing: boolean;
-		smoothingValue: number;
-		smoothingRadiusMode: boolean;
-		smoothingCatchup: boolean;
-		smoothingCatchupAtEnd: boolean;
-		smoothingZoomCompensation: boolean;
-		pressureSmoothing: boolean;
-		usePressureOverridesSize: boolean;
-		usePressureOverridesOpacity: boolean;
-		useLegacy: boolean;
-	};
-}
-
-function parseDynamics(desc: DynamicsDescriptor): Dynamics {
+function parseDynamics(desc: DynamicsDescriptor): BrushDynamics {
 	return {
 		control: dynamicsControl[desc.bVTy] as any,
 		steps: desc.fStp,
@@ -256,38 +264,40 @@ function parseDynamics(desc: DynamicsDescriptor): Dynamics {
 }
 
 function parseBrushShape(desc: BrushShapeDescriptor): BrushShape {
-	return {
+	const shape: BrushShape = {
 		size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
 		angle: parseAngle(desc.Angl),
 		roundness: parsePercent(desc.Rndn),
-		name: desc['Nm  '],
 		spacingOn: desc.Intr,
 		spacing: parsePercent(desc.Spcn),
-		hardness: desc.Hrdn && parsePercent(desc.Hrdn),
 		flipX: desc.flipX,
 		flipY: desc.flipY,
-		sampledData: desc.sampledData,
 	};
+
+	if (desc['Nm  ']) shape.name = desc['Nm  '];
+	if (desc.Hrdn) shape.hardness = parsePercent(desc.Hrdn);
+	if (desc.sampledData) shape.sampledData = desc.sampledData;
+
+	return shape;
 }
 
-export function readAbr(buffer: ArrayBufferView) {
+export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?: boolean; } = {}): Abr {
 	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 	const version = readInt16(reader);
-	const samples: Sample[] = [];
+	const samples: SampleInfo[] = [];
 	const brushes: Brush[] = [];
 	const patterns: PatternInfo[] = [];
 
 	if (version === 1 || version === 2) {
-		throw new Error('not implemented (version 1/2)'); // TODO: ...
+		throw new Error(`Unsupported ABR version (${version})`); // TODO: ...
 	} else if (version === 6 || version === 7 || version === 10) {
 		const minorVersion = readInt16(reader);
-		if (minorVersion !== 1 && minorVersion !== 2) throw new Error('Unsupported ABR version');
+		if (minorVersion !== 1 && minorVersion !== 2) throw new Error('Unsupported ABR minor version');
 
 		while (reader.offset < reader.view.byteLength) {
-			// console.log('left', reader.view.byteLength - reader.offset, 'at', reader.offset.toString(16));
 			checkSignature(reader, '8BIM');
-			const type = readSignature(reader); // samp | desc | patt | phry
-			const size = readUint32(reader);
+			const type = readSignature(reader) as 'samp' | 'desc' | 'patt' | 'phry';
+			let size = readUint32(reader);
 			const end = reader.offset + size;
 
 			switch (type) {
@@ -342,7 +352,7 @@ export function readAbr(buffer: ArrayBufferView) {
 				}
 				case 'desc': {
 					const desc: DescDescriptor = readVersionAndDescriptor(reader);
-					console.log(require('util').inspect(desc, false, 99, true));
+					// console.log(require('util').inspect(desc, false, 99, true));
 
 					for (const brush of desc.Brsh) {
 						const b: Brush = {
@@ -350,14 +360,15 @@ export function readAbr(buffer: ArrayBufferView) {
 							shape: parseBrushShape(brush.Brsh),
 							spacing: parsePercent(brush.Spcn),
 							// TODO: brushGroup ???
-							interpretation: brush.interpretation, // ???
-							protectTexture: brush.protectTexture,
 							wetEdges: brush.Wtdg,
 							noise: brush.Nose,
 							// TODO: TxtC ??? smoothing / build-up ?
 							// TODO: 'Rpt ' ???
 							useBrushSize: brush.useBrushSize, // ???
 						};
+
+						if (brush.interpretation != null) b.interpretation = brush.interpretation;
+						if (brush.protectTexture != null) b.protectTexture = brush.protectTexture;
 
 						if (brush.useTipDynamics) {
 							b.shapeDynamics = {
@@ -397,17 +408,18 @@ export function readAbr(buffer: ArrayBufferView) {
 							};
 						}
 
-						if (brush.dualBrush && brush.dualBrush.useDualBrush) {
+						const db = brush.dualBrush;
+						if (db && db.useDualBrush) {
 							b.dualBrush = {
-								flip: brush.dualBrush.Flip,
-								shape: parseBrushShape(brush.dualBrush.Brsh),
-								blendMode: BlnM.decode(brush.dualBrush.BlnM),
-								useScatter: brush.dualBrush.useScatter,
-								spacing: parsePercent(brush.dualBrush.Spcn),
-								count: brush.dualBrush['Cnt '],
-								bothAxes: brush.dualBrush.bothAxes,
-								countDynamics: parseDynamics(brush.dualBrush.countDynamics),
-								scatterDynamics: parseDynamics(brush.dualBrush.scatterDynamics),
+								flip: db.Flip,
+								shape: parseBrushShape(db.Brsh),
+								blendMode: BlnM.decode(db.BlnM),
+								useScatter: db.useScatter,
+								spacing: parsePercent(db.Spcn),
+								count: db['Cnt '],
+								bothAxes: db.bothAxes,
+								countDynamics: parseDynamics(db.countDynamics),
+								scatterDynamics: parseDynamics(db.scatterDynamics),
 							};
 						}
 
@@ -444,23 +456,24 @@ export function readAbr(buffer: ArrayBufferView) {
 							};
 						}
 
-						if (brush.toolOptions) {
+						const to = brush.toolOptions;
+						if (to) {
 							b.toolOptions = {
-								brushPreset: brush.toolOptions.brushPreset,
-								flow: brush.toolOptions.flow,
-								smooth: brush.toolOptions.Smoo,
-								mode: BlnM.decode(brush.toolOptions['Md  ']),
-								opacity: brush.toolOptions.Opct,
-								smoothing: brush.toolOptions.smoothing,
-								smoothingValue: brush.toolOptions.smoothingValue,
-								smoothingRadiusMode: brush.toolOptions.smoothingRadiusMode,
-								smoothingCatchup: brush.toolOptions.smoothingCatchup,
-								smoothingCatchupAtEnd: brush.toolOptions.smoothingCatchupAtEnd,
-								smoothingZoomCompensation: brush.toolOptions.smoothingZoomCompensation,
-								pressureSmoothing: brush.toolOptions.pressureSmoothing,
-								usePressureOverridesSize: brush.toolOptions.usePressureOverridesSize,
-								usePressureOverridesOpacity: brush.toolOptions.usePressureOverridesOpacity,
-								useLegacy: brush.toolOptions.useLegacy,
+								brushPreset: to.brushPreset,
+								flow: to.flow,
+								smooth: to.Smoo,
+								mode: BlnM.decode(to['Md  ']),
+								opacity: to.Opct,
+								smoothing: to.smoothing,
+								smoothingValue: to.smoothingValue,
+								smoothingRadiusMode: to.smoothingRadiusMode,
+								smoothingCatchup: to.smoothingCatchup,
+								smoothingCatchupAtEnd: to.smoothingCatchupAtEnd,
+								smoothingZoomCompensation: to.smoothingZoomCompensation,
+								pressureSmoothing: to.pressureSmoothing,
+								usePressureOverridesSize: to.usePressureOverridesSize,
+								usePressureOverridesOpacity: to.usePressureOverridesOpacity,
+								useLegacy: to.useLegacy,
 							};
 						}
 
@@ -469,18 +482,30 @@ export function readAbr(buffer: ArrayBufferView) {
 					break;
 				}
 				case 'patt': {
-					patterns.push(readPattern(reader));
-					reader.offset = end;
+					if (reader.offset < end) { // TODO: check multiple patterns
+						patterns.push(readPattern(reader));
+						reader.offset = end;
+					}
 					break;
 				}
 				case 'phry': {
 					// TODO: what is this ?
 					const desc: PhryDescriptor = readVersionAndDescriptor(reader);
-					desc; // ignore
+					if (options.logMissingFeatures) {
+						if (desc.hierarchy?.length) {
+							console.log('unhandled phry section', desc);
+						}
+					}
 					break;
 				}
 				default:
 					throw new Error(`Invalid brush type: ${type}`);
+			}
+
+			// align to 4 bytes
+			while (size % 4) {
+				reader.offset++;
+				size++;
 			}
 		}
 	} else {

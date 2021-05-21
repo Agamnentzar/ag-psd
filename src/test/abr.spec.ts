@@ -1,29 +1,82 @@
+import { createCanvas } from 'canvas';
+import { expect } from 'chai';
 import * as fs from 'fs';
+import * as path from 'path';
 import { readAbr } from '../abr';
+import { compareCanvases, loadImagesFromDirectory } from './common';
+
+const testFilesPath = path.join(__dirname, '..', '..', 'test');
+const readFilesPath = path.join(testFilesPath, 'abr-read');
+const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
 
 describe('ABR', () => {
-	// TODO: write actual tests
-	it.skip('readAbr', () => {
-		const buffer = fs.readFileSync('resources/test3.abr');
-		const abr = readAbr(buffer);
+	fs.readdirSync(readFilesPath).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /s/.test(f)).forEach(f => {
+		it(`reads ABR file (${f})`, () => {
+			const basePath = path.join(readFilesPath, f);
+			const fileName = path.join(basePath, 'src.abr');
+			const abr = readAbr(fs.readFileSync(fileName), { logMissingFeatures: true });
 
-		if (0) console.log(require('util').inspect(abr, false, 99, true));
-		// const canvas = createCanvas(w, h);
-		// const context = canvas.getContext('2d')!;
-		// const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-		// for (let i = 0, j = 0; i < alpha.byteLength; i++, j += 4) {
-		// 	imageData.data[j + 3] = alpha[i];
-		// }
-		// context.putImageData(imageData, 0, 0);
-		// saveCanvas('brush_shape.png', canvas);
+			const resultsPath = path.join(resultsFilesPath, 'abr', f);
+			fs.mkdirSync(resultsPath, { recursive: true });
 
-		// const pattern = abr.patterns[0];
-		// if (1) console.log(require('util').inspect(pattern, false, 99, true));
-		// const canvas = createCanvas(pattern.bounds.w, pattern.bounds.h);
-		// const context = canvas.getContext('2d')!;
-		// const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-		// imageData.data.set(pattern.data);
-		// context.putImageData(imageData, 0, 0);
-		// saveCanvas('brush_pattern.png', canvas);
+			const images = loadImagesFromDirectory(basePath);
+			const compare: { name: string; canvas: HTMLCanvasElement | undefined; }[] = [];
+
+			for (const sample of abr.samples) {
+				const canvas = alphaToCanvas(sample.alpha, sample.bounds.w, sample.bounds.h);
+				delete (sample as any).alpha;
+				const name = `sample-${sample.id}.png`;
+				fs.writeFileSync(path.join(resultsPath, name), canvas.toBuffer());
+				compare.push({ name, canvas });
+			}
+
+			for (const pattern of abr.patterns) {
+				const canvas = rgbToCanvas(pattern.data, pattern.bounds.w, pattern.bounds.h);
+				delete (pattern as any).data;
+				const name = `pattern-${pattern.id}.png`;
+				fs.writeFileSync(path.join(resultsPath, name), canvas.toBuffer());
+				compare.push({ name, canvas });
+			}
+
+			// console.log(require('util').inspect(abr, false, 99, true));
+
+			fs.writeFileSync(path.join(resultsPath, 'data.json'), JSON.stringify(abr, null, 2), 'utf8');
+			const expected = JSON.parse(fs.readFileSync(path.join(basePath, 'data.json'), 'utf8'));
+
+			expect(abr).eql(expected, f);
+			compare.forEach(i => compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
+		});
+	});
+
+	it.skip('test', () => {
+		const fileName = `E:\\Downloads\\Fire_Brushes_-_Pixivu.abr`;
+		const abr = readAbr(fs.readFileSync(fileName), { logMissingFeatures: true });
+		console.log(require('util').inspect(abr, false, 99, true));
 	});
 });
+
+function alphaToCanvas(alpha: Uint8Array, width: number, height: number) {
+	const canvas = createCanvas(width, height);
+	const context = canvas.getContext('2d')!;
+	const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+	for (let src = 0, dst = 0; src < alpha.length; src++, dst += 4) {
+		imageData.data[dst + 0] = 255;
+		imageData.data[dst + 1] = 255;
+		imageData.data[dst + 2] = 255;
+		imageData.data[dst + 3] = alpha[src];
+	}
+
+	context.putImageData(imageData, 0, 0);
+	return canvas;
+}
+
+function rgbToCanvas(rgb: Uint8Array, width: number, height: number) {
+	const canvas = createCanvas(width, height);
+	const context = canvas.getContext('2d')!;
+	const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+	imageData.data.set(rgb);
+	context.putImageData(imageData, 0, 0);
+	return canvas;
+}

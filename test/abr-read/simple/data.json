@@ -1,0 +1,23 @@
+{
+  "samples": [],
+  "patterns": [],
+  "brushes": [
+    {
+      "name": "Soft Round",
+      "shape": {
+        "size": 30,
+        "angle": 0,
+        "roundness": 1,
+        "spacingOn": true,
+        "spacing": 0.25,
+        "flipX": false,
+        "flipY": false,
+        "hardness": 0
+      },
+      "spacing": 1,
+      "wetEdges": false,
+      "noise": false,
+      "useBrushSize": true
+    }
+  ]
+}

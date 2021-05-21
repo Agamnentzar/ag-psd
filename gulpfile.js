@@ -54,7 +54,9 @@ const coverage = () => gulp.src(['dist/test/**/*.js'], { read: false })
 const useCoverage = process.argv.indexOf('--coverage') !== -1;
 
 const watch = cb => {
-	gulp.watch([...scripts, 'test/**/*.psd', 'test/**/*.png', 'test/**/*.json'], useCoverage ? cov : test);
+	gulp.watch([
+		...scripts, 'test/**/*.psd', 'test/**/*.psb', 'test/**/*.abr', 'test/**/*.png', 'test/**/*.json'
+	], useCoverage ? cov : test);
 	cb();
 };
 

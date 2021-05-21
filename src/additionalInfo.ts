@@ -1160,10 +1160,11 @@ if (MOCK_HANDLERS) {
 	addHandler(
 		'Patt', // TODO: handle also Pat2 & Pat3
 		target => !target,
-		(reader, _target, left) => {
+		(reader, target, left) => {
 			if (!left()) return;
 
 			skipBytes(reader, left()); return; // not supported yet
+			target;
 
 			// if (!target.patterns) target.patterns = [];
 			// target.patterns.push(readPattern(reader));
@@ -1173,6 +1174,25 @@ if (MOCK_HANDLERS) {
 		},
 	);
 }
+
+addHandler(
+	'Anno',
+	target => (target as any)._Anno !== undefined,
+	(reader, _target, left, _, options) => {
+		const major = readUint16(reader);
+		const minor = readUint16(reader);
+		if (major !== 2 || minor !== 1) throw new Error('Invalid Anno version');
+		const count = readUint32(reader);
+
+		if (count && options.logMissingFeatures) {
+			console.log('Annotations not implemented');
+		}
+
+		skipBytes(reader, left()); // not supported yet
+	},
+	(_writer, _target) => {
+	}
+);
 
 interface FileOpenDescriptor {
 	compInfo: { compID: number; originalCompID: number; };
