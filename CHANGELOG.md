@@ -1,5 +1,19 @@
 # Changelog
 
+## v14.0.0
+- Added handling for annotations
+- **BREAKING CHANGE:** Fixed reading and writing non-RGB colors and documented value ranges (value ranger for HSB, CMYK, Lab and Grayscale colors different from previous versions)
+  ```ts
+  export type RGBA = { r: number; g: number; b: number; a: number; }; // values from 0 to 255
+  export type RGB = { r: number; g: number; b: number; }; // values from 0 to 255
+  export type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
+  export type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
+  export type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
+  export type Grayscale = { k: number }; // values from 0 to 255
+  export type Color = RGBA | RGB | HSB | CMYK | LAB | Grayscale;
+  ```
+- Fixed not handling correct value for text gridding
+
 ## v13.0.2
 - Fixed error when opening PSB file with smart objects
 

@@ -22,12 +22,12 @@ export const enum SectionDividerType {
 	BoundingSectionDivider = 3,
 }
 
-export type RGBA = { r: number; g: number; b: number; a: number; };
-export type RGB = { r: number; g: number; b: number; };
-export type HSB = { h: number; s: number; b: number; };
-export type CMYK = { c: number; m: number; y: number; k: number; };
-export type LAB = { l: number; a: number; b: number; };
-export type Grayscale = { k: number };
+export type RGBA = { r: number; g: number; b: number; a: number; }; // values from 0 to 255
+export type RGB = { r: number; g: number; b: number; }; // values from 0 to 255
+export type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
+export type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
+export type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
+export type Grayscale = { k: number }; // values from 0 to 255
 export type Color = RGBA | RGB | HSB | CMYK | LAB | Grayscale;
 
 export interface EffectContour {
@@ -237,7 +237,7 @@ export interface LayerMaskData {
 	imageData?: ImageData;
 }
 
-export type TextGridding = 'none'; // TODO: other values
+export type TextGridding = 'none' | 'round'; // TODO: other values (no idea where to set it up in Photoshop)
 export type Orientation = 'horizontal' | 'vertical';
 export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
 export type WarpStyle =
@@ -891,6 +891,18 @@ export interface GlobalLayerMaskInfo {
 	kind: number;
 }
 
+export interface Annotation {
+	type: 'text' | 'sound';
+	open: boolean;
+	iconLocation: { left: number; top: number; right: number; bottom: number };
+	popupLocation: { left: number; top: number; right: number; bottom: number };
+	color: Color;
+	author: string;
+	name: string;
+	date: string;
+	data: string | Uint8Array;
+}
+
 export interface Layer extends LayerAdditionalInfo {
 	top?: number;
 	left?: number;
@@ -931,6 +943,7 @@ export interface Psd extends LayerAdditionalInfo {
 		docDefaultNewArtboardBackgroundType?: number;
 	};
 	globalLayerMaskInfo?: GlobalLayerMaskInfo;
+	annotations?: Annotation[];
 }
 
 export interface ReadOptions {

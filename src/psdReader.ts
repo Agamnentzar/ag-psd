@@ -4,7 +4,7 @@ import {
 } from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
-	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA
+	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys
 } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
@@ -540,7 +540,9 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo,
 	const sig = readSignature(reader);
 	if (sig !== '8BIM' && sig !== '8B64') throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
 	const key = readSignature(reader);
-	const u64 = sig === '8B64' || (options.large && key === 'lnk2');
+
+	// `largeAdditionalInfoKeys` fallback, because some keys don't have 8B64 signature even when they are 64bit
+	const u64 = sig === '8B64' || (options.large && largeAdditionalInfoKeys.indexOf(key) !== -1);
 
 	readSection(reader, 2, left => {
 		const handler = infoHandlersMap[key];
@@ -744,31 +746,33 @@ export function readColor(reader: PsdReader): Color {
 			skipBytes(reader, 2);
 			return { r, g, b };
 		}
+		case ColorSpace.HSB: {
+			const h = readUint16(reader) / 0xffff;
+			const s = readUint16(reader) / 0xffff;
+			const b = readUint16(reader) / 0xffff;
+			skipBytes(reader, 2);
+			return { h, s, b };
+		}
+		case ColorSpace.CMYK: {
+			const c = readUint16(reader) / 257;
+			const m = readUint16(reader) / 257;
+			const y = readUint16(reader) / 257;
+			const k = readUint16(reader) / 257;
+			return { c, m, y, k };
+		}
 		case ColorSpace.Lab: {
-			const l = readInt16(reader) / 100;
-			const a = readInt16(reader) / 100;
-			const b = readInt16(reader) / 100;
+			const l = readInt16(reader) / 10000;
+			const ta = readInt16(reader);
+			const tb = readInt16(reader);
+			const a = ta < 0 ? (ta / 12800) : (ta / 12700);
+			const b = tb < 0 ? (tb / 12800) : (tb / 12700);
 			skipBytes(reader, 2);
 			return { l, a, b };
 		}
-		case ColorSpace.CMYK: {
-			const c = readInt16(reader);
-			const m = readInt16(reader);
-			const y = readInt16(reader);
-			const k = readInt16(reader);
-			return { c, m, y, k };
-		}
 		case ColorSpace.Grayscale: {
-			const k = readInt16(reader);
+			const k = readUint16(reader) * 255 / 10000;
 			skipBytes(reader, 6);
 			return { k };
-		}
-		case ColorSpace.HSB: {
-			const h = readInt16(reader);
-			const s = readInt16(reader);
-			const b = readInt16(reader);
-			skipBytes(reader, 2);
-			return { h, s, b };
 		}
 		default:
 			throw new Error('Invalid color space');

@@ -399,7 +399,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 
 			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
-				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd';
+				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno';
 
 			writeSection(writer, fourBytes ? 4 : 2, () => {
 				handler.write(writer, target, psd, options);
@@ -702,25 +702,25 @@ export function writeColor(writer: PsdWriter, color: Color | undefined) {
 		writeUint16(writer, 0);
 	} else if ('l' in color) {
 		writeUint16(writer, ColorSpace.Lab);
-		writeUint16(writer, Math.round(color.l * 100));
-		writeUint16(writer, Math.round(color.a * 100));
-		writeUint16(writer, Math.round(color.b * 100));
+		writeInt16(writer, Math.round(color.l * 10000));
+		writeInt16(writer, Math.round(color.a < 0 ? (color.a * 12800) : (color.a * 12700)));
+		writeInt16(writer, Math.round(color.b < 0 ? (color.b * 12800) : (color.b * 12700)));
 		writeUint16(writer, 0);
 	} else if ('h' in color) {
 		writeUint16(writer, ColorSpace.HSB);
-		writeUint16(writer, Math.round(color.h));
-		writeUint16(writer, Math.round(color.s));
-		writeUint16(writer, Math.round(color.b));
+		writeUint16(writer, Math.round(color.h * 0xffff));
+		writeUint16(writer, Math.round(color.s * 0xffff));
+		writeUint16(writer, Math.round(color.b * 0xffff));
 		writeUint16(writer, 0);
 	} else if ('c' in color) {
 		writeUint16(writer, ColorSpace.CMYK);
-		writeUint16(writer, Math.round(color.c));
-		writeUint16(writer, Math.round(color.m));
-		writeUint16(writer, Math.round(color.y));
-		writeUint16(writer, Math.round(color.k));
+		writeUint16(writer, Math.round(color.c * 257));
+		writeUint16(writer, Math.round(color.m * 257));
+		writeUint16(writer, Math.round(color.y * 257));
+		writeUint16(writer, Math.round(color.k * 257));
 	} else {
 		writeUint16(writer, ColorSpace.Grayscale);
-		writeUint16(writer, Math.round(color.k));
+		writeUint16(writer, Math.round(color.k * 10000 / 255));
 		writeZeros(writer, 6);
 	}
 }

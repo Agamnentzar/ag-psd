@@ -828,6 +828,7 @@ export function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUn
 
 export const textGridding = createEnum<TextGridding>('textGridding', 'none', {
 	none: 'None',
+	round: 'Rnd ',
 });
 
 export const Ornt = createEnum<Orientation>('Ornt', 'horizontal', {

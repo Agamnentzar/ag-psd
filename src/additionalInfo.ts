@@ -11,12 +11,12 @@ import {
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
 	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient,
-	KeyDescriptorItem, BooleanOperation, LayerEffectsInfo,
+	KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
 	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32,
-	readPascalString,
+	readPascalString, readUnicodeStringWithLength, readAsciiString,
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8,
@@ -1175,22 +1175,114 @@ if (MOCK_HANDLERS) {
 	);
 }
 
+function readRect(reader: PsdReader) {
+	const top = readInt32(reader);
+	const left = readInt32(reader);
+	const bottom = readInt32(reader);
+	const right = readInt32(reader);
+	return { top, left, bottom, right };
+}
+
+function writeRect(writer: PsdWriter, rect: { left: number; top: number; right: number; bottom: number }) {
+	writeInt32(writer, rect.top);
+	writeInt32(writer, rect.left);
+	writeInt32(writer, rect.bottom);
+	writeInt32(writer, rect.right);
+}
+
 addHandler(
 	'Anno',
-	target => (target as any)._Anno !== undefined,
-	(reader, _target, left, _, options) => {
+	target => (target as Psd).annotations !== undefined,
+	(reader, target, left) => {
 		const major = readUint16(reader);
 		const minor = readUint16(reader);
 		if (major !== 2 || minor !== 1) throw new Error('Invalid Anno version');
 		const count = readUint32(reader);
+		const annotations: Annotation[] = [];
 
-		if (count && options.logMissingFeatures) {
-			console.log('Annotations not implemented');
+		for (let i = 0; i < count; i++) {
+			/*const length =*/ readUint32(reader);
+			const type = readSignature(reader);
+			const open = !!readUint8(reader);
+			/*const flags =*/ readUint8(reader); // always 28
+			/*const optionalBlocks =*/ readUint16(reader);
+			const iconLocation = readRect(reader);
+			const popupLocation = readRect(reader);
+			const color = readColor(reader);
+			const author = readPascalString(reader, 2);
+			const name = readPascalString(reader, 2);
+			const date = readPascalString(reader, 2);
+			/*const contentLength =*/ readUint32(reader);
+			/*const dataType =*/ readSignature(reader);
+			const dataLength = readUint32(reader);
+			let data: string | Uint8Array;
+
+			if (type === 'txtA') {
+				if (dataLength >= 2 && readUint16(reader) === 0xfeff) {
+					data = readUnicodeStringWithLength(reader, (dataLength - 2) / 2);
+				} else {
+					reader.offset -= 2;
+					data = readAsciiString(reader, dataLength);
+				}
+
+				data = data.replace(/\r/g, '\n');
+			} else if (type === 'sndA') {
+				data = readBytes(reader, dataLength);
+			} else {
+				throw new Error('Unknown annotation type');
+			}
+
+			annotations.push({
+				type: type === 'txtA' ? 'text' : 'sound', open, iconLocation, popupLocation, color, author, name, date, data,
+			});
 		}
 
-		skipBytes(reader, left()); // not supported yet
+		(target as Psd).annotations = annotations;
+		skipBytes(reader, left());
 	},
-	(_writer, _target) => {
+	(writer, target) => {
+		const annotations = (target as Psd).annotations!;
+
+		writeUint16(writer, 2);
+		writeUint16(writer, 1);
+		writeUint32(writer, annotations.length);
+
+		for (const annotation of annotations) {
+			const sound = annotation.type === 'sound';
+
+			if (sound && !(annotation.data instanceof Uint8Array)) throw new Error('Sound annotation data should be Uint8Array');
+			if (!sound && typeof annotation.data !== 'string') throw new Error('Text annotation data should be string');
+
+			const lengthOffset = writer.offset;
+			writeUint32(writer, 0); // length
+			writeSignature(writer, sound ? 'sndA' : 'txtA');
+			writeUint8(writer, annotation.open ? 1 : 0);
+			writeUint8(writer, 28);
+			writeUint16(writer, 1);
+			writeRect(writer, annotation.iconLocation);
+			writeRect(writer, annotation.popupLocation);
+			writeColor(writer, annotation.color);
+			writePascalString(writer, annotation.author || '', 2);
+			writePascalString(writer, annotation.name || '', 2);
+			writePascalString(writer, annotation.date || '', 2);
+			const contentOffset = writer.offset;
+			writeUint32(writer, 0); // content length
+			writeSignature(writer, sound ? 'sndM' : 'txtC');
+			writeUint32(writer, 0); // data length
+			const dataOffset = writer.offset;
+
+			if (sound) {
+				writeBytes(writer, annotation.data as Uint8Array);
+			} else {
+				writeUint16(writer, 0xfeff); // unicode string indicator
+				const text = (annotation.data as string).replace(/\n/g, '\r');
+				for (let i = 0; i < text.length; i++) writeUint16(writer, text.charCodeAt(i));
+			}
+
+			writer.view.setUint32(lengthOffset, writer.offset - lengthOffset, false);
+			writer.view.setUint32(contentOffset, writer.offset - contentOffset, false);
+			writer.view.setUint32(dataOffset - 4, writer.offset - dataOffset, false);
+		}
 	}
 );
 
