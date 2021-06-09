@@ -1,5 +1,8 @@
 # Changelog
 
+## v14.0.1
+- Added missing handling for new platform and platformLCD text anti-aliasing modes
+
 ## v14.0.0
 - Added handling for annotations
 - **BREAKING CHANGE:** Fixed reading and writing non-RGB colors and documented value ranges (value ranger for HSB, CMYK, Lab and Grayscale colors different from previous versions)

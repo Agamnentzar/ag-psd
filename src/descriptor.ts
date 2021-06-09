@@ -842,6 +842,8 @@ export const Annt = createEnum<AntiAlias>('Annt', 'sharp', {
 	crisp: 'AnCr',
 	strong: 'AnSt',
 	smooth: 'AnSm',
+	platform: 'antiAliasPlatformGray',
+	platformLCD: 'antiAliasPlatformLCD',
 });
 
 export const warpStyle = createEnum<WarpStyle>('warpStyle', 'none', {

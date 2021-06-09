@@ -239,7 +239,7 @@ export interface LayerMaskData {
 
 export type TextGridding = 'none' | 'round'; // TODO: other values (no idea where to set it up in Photoshop)
 export type Orientation = 'horizontal' | 'vertical';
-export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth';
+export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth' | 'platform' | 'platformLCD';
 export type WarpStyle =
 	'none' | 'arc' | 'arcLower' | 'arcUpper' | 'arch' | 'bulge' | 'shellLower' | 'shellUpper' | 'flag' |
 	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist' | 'custom';

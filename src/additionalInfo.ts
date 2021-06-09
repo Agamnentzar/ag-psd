@@ -16,7 +16,7 @@ import {
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
 	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32,
-	readPascalString, readUnicodeStringWithLength, readAsciiString,
+	readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern,
 } from './psdReader';
 import {
 	PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8,
@@ -300,6 +300,23 @@ addHandler(
 				default: throw new Error('Invalid vmsk section');
 			}
 		}
+
+		// const canvas = require('canvas').createCanvas(width, height);
+		// const context = canvas.getContext('2d')!;
+		// context.fillStyle = 'red';
+		// for (const path of paths) {
+		// 	context.beginPath();
+		// 	context.moveTo(path.knots[0].points[2], path.knots[0].points[3]);
+		// 	for (let i = 1; i < path.knots.length; i++) {
+		// 		console.log(path.knots[i].points.map(x => x.toFixed(2)));
+		// 		context.bezierCurveTo(
+		// 			path.knots[i - 1].points[4], path.knots[i - 1].points[5],
+		// 			path.knots[i].points[0], path.knots[i].points[1], path.knots[i].points[2], path.knots[i].points[3]);
+		// 	}
+		// 	if (!path.open) context.closePath();
+		// 	context.fill();
+		// }
+		// require('fs').writeFileSync('out.png', canvas.toBuffer());
 
 		skipBytes(reader, left());
 	},
@@ -1164,7 +1181,7 @@ if (MOCK_HANDLERS) {
 			if (!left()) return;
 
 			skipBytes(reader, left()); return; // not supported yet
-			target;
+			target; readPattern;
 
 			// if (!target.patterns) target.patterns = [];
 			// target.patterns.push(readPattern(reader));

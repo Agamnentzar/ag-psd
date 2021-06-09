@@ -1,0 +1,421 @@
+{
+  "width": 817,
+  "height": 533,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Inches",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Inches"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "globalAngle": 90,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      2
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 6,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop 2021",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": -137,
+      "left": -514,
+      "bottom": 903,
+      "right": 1406,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 0",
+      "nameSource": "layr",
+      "id": 4,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1623260989.780705,
+      "referencePoint": {
+        "x": -514,
+        "y": -137
+      }
+    },
+    {
+      "top": 131,
+      "left": 249,
+      "bottom": 191,
+      "right": 553,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Windows",
+      "text": {
+        "transform": [
+          1,
+          0,
+          0,
+          1,
+          44,
+          131.24207492795387
+        ],
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "text": "Windows",
+        "index": 0,
+        "gridding": "none",
+        "antiAlias": "smooth",
+        "orientation": "horizontal",
+        "warp": {
+          "style": "none",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal"
+        },
+        "useFractionalGlyphWidths": true,
+        "superscriptSize": 0.583,
+        "superscriptPosition": 0.333,
+        "subscriptSize": 0.583,
+        "subscriptPosition": 0.333,
+        "smallCapSize": 0.7,
+        "shapeType": "box",
+        "boxBounds": [
+          0,
+          0,
+          714,
+          119.88473
+        ],
+        "paragraphStyle": {
+          "justification": "center",
+          "firstLineIndent": 0,
+          "startIndent": 0,
+          "endIndent": 0,
+          "spaceBefore": 0,
+          "spaceAfter": 0,
+          "autoHyphenate": true,
+          "hyphenatedWordSize": 6,
+          "preHyphen": 2,
+          "postHyphen": 2,
+          "consecutiveHyphens": 8,
+          "zone": 36,
+          "wordSpacing": [
+            0.8,
+            1,
+            1.33
+          ],
+          "letterSpacing": [
+            0,
+            0,
+            0
+          ],
+          "glyphSpacing": [
+            1,
+            1,
+            1
+          ],
+          "autoLeading": 1.2,
+          "leadingType": 0,
+          "hanging": false,
+          "burasagari": false,
+          "kinsokuOrder": 0,
+          "everyLineComposer": false
+        },
+        "style": {
+          "font": {
+            "name": "NotoSansKR-Regular",
+            "script": 4,
+            "type": 2,
+            "synthetic": 0
+          },
+          "fontSize": 72,
+          "fauxBold": false,
+          "fauxItalic": false,
+          "autoLeading": true,
+          "leading": 0.01,
+          "horizontalScale": 1,
+          "verticalScale": 1,
+          "tracking": 0,
+          "autoKerning": true,
+          "kerning": 0,
+          "baselineShift": 0,
+          "fontCaps": 0,
+          "fontBaseline": 0,
+          "underline": false,
+          "strikethrough": false,
+          "ligatures": true,
+          "dLigatures": false,
+          "baselineDirection": 1,
+          "tsume": 0,
+          "styleRunAlignment": 2,
+          "language": 0,
+          "noBreak": false,
+          "fillColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "strokeColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "yUnderline": 1,
+          "hindiNumbers": false,
+          "kashida": 1
+        }
+      },
+      "nameSource": "rend",
+      "id": 2,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1623260989.7835357,
+      "referencePoint": {
+        "x": -514,
+        "y": -137
+      }
+    },
+    {
+      "top": 312,
+      "left": 175,
+      "bottom": 372,
+      "right": 625,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Windows LCD",
+      "text": {
+        "transform": [
+          1,
+          0,
+          0,
+          1,
+          44,
+          312.2420749279538
+        ],
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0,
+        "text": "Windows LCD",
+        "index": 1,
+        "gridding": "none",
+        "antiAlias": "smooth",
+        "orientation": "horizontal",
+        "warp": {
+          "style": "none",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal"
+        },
+        "useFractionalGlyphWidths": true,
+        "superscriptSize": 0.583,
+        "superscriptPosition": 0.333,
+        "subscriptSize": 0.583,
+        "subscriptPosition": 0.333,
+        "smallCapSize": 0.7,
+        "shapeType": "box",
+        "boxBounds": [
+          0,
+          0,
+          714,
+          125.87897
+        ],
+        "paragraphStyle": {
+          "justification": "center",
+          "firstLineIndent": 0,
+          "startIndent": 0,
+          "endIndent": 0,
+          "spaceBefore": 0,
+          "spaceAfter": 0,
+          "autoHyphenate": true,
+          "hyphenatedWordSize": 6,
+          "preHyphen": 2,
+          "postHyphen": 2,
+          "consecutiveHyphens": 8,
+          "zone": 36,
+          "wordSpacing": [
+            0.8,
+            1,
+            1.33
+          ],
+          "letterSpacing": [
+            0,
+            0,
+            0
+          ],
+          "glyphSpacing": [
+            1,
+            1,
+            1
+          ],
+          "autoLeading": 1.2,
+          "leadingType": 0,
+          "hanging": false,
+          "burasagari": false,
+          "kinsokuOrder": 0,
+          "everyLineComposer": false
+        },
+        "style": {
+          "font": {
+            "name": "NotoSansKR-Regular",
+            "script": 4,
+            "type": 2,
+            "synthetic": 0
+          },
+          "fontSize": 72,
+          "fauxBold": false,
+          "fauxItalic": false,
+          "autoLeading": true,
+          "leading": 0.01,
+          "horizontalScale": 1,
+          "verticalScale": 1,
+          "tracking": 0,
+          "autoKerning": true,
+          "kerning": 0,
+          "baselineShift": 0,
+          "fontCaps": 0,
+          "fontBaseline": 0,
+          "underline": false,
+          "strikethrough": false,
+          "ligatures": true,
+          "dLigatures": false,
+          "baselineDirection": 1,
+          "tsume": 0,
+          "styleRunAlignment": 2,
+          "language": 0,
+          "noBreak": false,
+          "fillColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "strokeColor": {
+            "r": 0,
+            "g": 0,
+            "b": 0,
+            "a": 1
+          },
+          "yUnderline": 1,
+          "hindiNumbers": false,
+          "kashida": 1
+        }
+      },
+      "nameSource": "rend",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1623260989.784566,
+      "referencePoint": {
+        "x": -514,
+        "y": 44
+      }
+    }
+  ],
+  "engineData": "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MyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDIwIC8xICj+/yAeKSAvMiAo/v8gHCkgLzMgKP7/IBopIC80ICj+/yAYKSA+PiA8PCAvMCAyMSAvMSAo/v8gHikgLzIgKP7/IBwpIC8zICj+/yAaKSAvNCAo/v8gGCkgPj4gPDwgLzAgMjIgLzEgKP7/IB4pIC8yICj+/yAcKSAvMyAo/v8gGikgLzQgKP7/IBgpID4+IDw8IC8wIDIzIC8xICj+/yAeKSAvMiAo/v8gHSkgLzMgKP7/IBgpIC80ICj+/yAZKSA+PiA8PCAvMCAyNCAvMSAo/v8gHikgLzIgKP7/IB0pIC8zICj+/yAaKSAvNCAo/v8gGSkgPj4gPDwgLzAgMjUgLzEgKP7/AKspIC8yICj+/wC7KSAvMyAo/v8gOSkgLzQgKP7/IDopID4+IDw8IC8wIDI2IC8xICj+/yAcKSAvMiAo/v8gHSkgLzMgKP7/IBgpIC80ICj+/yAZKSA+PiA8PCAvMCAyNyAvMSAo/v8gHCkgLzIgKP7/IB0pIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMjggLzEgKP7/IB4pIC8yICj+/yAdKSAvMyAo/v8gGSkgLzQgKP7/IBkpID4+IDw8IC8wIDI5IC8xICj+/zAdKSAvMiAo/v8wHikgPj4gPDwgLzAgMzAgLzEgKP7/MAwpIC8yICj+/zANKSA+PiA8PCAvMCAzMSAvMSAo/v8gHikgLzIgKP7/IBwpIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMzIgLzEgKP7/IBwpIC8yICj+/yAdKSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDMzIC8xICj+/yAeKSAvMiAo/v8gHCkgLzMgKP7/IBopIC80ICj+/yAYKSA+PiA8PCAvMCAzNCAvMSAo/v8AqykgLzIgKP7/ALspIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMzUgLzEgKP7/IBwpIC8yICj+/yAdKSAvMyAo/v8gGCkgLzQgKP7/IBkpID4+IDw8IC8wIDM2IC8xICj+/yAeKSAvMiAo/v8gHCkgLzMgKP7/IBopIC80ICj+/yAYKSA+PiA8PCAvMCAzNyAvMSAo/v8AqykgLzIgKP7/ALspIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgMzggLzEgKP7/IB4pIC8yICj+/yAcKSAvMyAo/v8gGikgLzQgKP7/IBgpID4+IDw8IC8wIDM5IC8xICj+/wCrKSAvMiAo/v8AuykgLzMgKP7/ADwpIC80ICj+/wA+KSA+PiA8PCAvMCA0MCAvMSAo/v8gHikgLzIgKP7/IBwpIC8zICj+/yAaKSAvNCAo/v8gGCkgPj4gPDwgLzAgNDEgLzEgKP7/AKspIC8yICj+/wC7KSAvMyAo/v8APCkgLzQgKP7/AD4pID4+IDw8IC8wIDQyIC8xICj+/yAeKSAvMiAo/v8gHCkgLzMgKP7/IBopIC80ICj+/yAYKSA+PiA8PCAvMCA0MyAvMSAo/v8gHCkgLzIgKP7/IB0pIC8zICj+/yAYKSAvNCAo/v8gGSkgPj4gPDwgLzAgNDQgLzEgKP7/AKspIC8yICj+/wC7KSAvMyAo/v8gOSkgLzQgKP7/IDopID4+IDw8IC8wIDQ1IC8xICj+/yAcKSAvMiAo/v8gHSkgLzMgKP7/IBgpIC80ICj+/yAZKSA+PiBdIC8xNSA8PCAvMCAo/v8ASAB1AG4AcwBwAGUAbABsKSA+PiAvMTYgZmFsc2UgLzE3IDAgPj4gLzEgWyA8PCAvMCA8PCAvMCAo/v8AVwBpAG4AZABvAHcAcwANKSAvNSA8PCAvMCBbIDw8IC8wIDw8IC8wIDw8IC8wICj+/ykgLzUgPDwgLzAgMiAvOSB0cnVlID4+IC82IDEgPj4gPj4gLzEgOCA+PiBdID4+IC82IDw8IC8wIFsgPDwgLzAgPDwgLzAgPDwgLzAgKP7/KSAvNSAwIC82IDw8IC8wIDAgLzEgNzIuMCAvMiBmYWxzZSAvMyBmYWxzZSAvNCB0cnVlIC81IC4wMSAvNiAxLjAgLzcgMS4wIC84IDAgLzkgMC4wIC8xMiAwIC8xMyAwIC8xNCAwIC8xNSAwIC8xNiAwIC8xOCB0cnVlIC8xOSBmYWxzZSAvMjAgdHJ1ZSAvMjMgZmFsc2UgLzI0IGZhbHNlIC8yNSBmYWxzZSAvMjYgZmFsc2UgLzI3IHRydWUgLzI4IGZhbHNlIC8yOSBmYWxzZSAvMzAgMCAvMzEgZmFsc2UgLzMyIGZhbHNlIC8zMyBmYWxzZSAvMzUgMSAvMzYgMC4wIC8zNyAyIC8zOCAwIC8zOSAwIC81MiBmYWxzZSAvNTMgPDwgLzk5IC9TaW1wbGVQYWludCAvMCA8PCAvMCAxIC8xIFsgMS4wIDAuMCAwLjAgMC4wIF0gPj4gPj4gLzU0IDw8IC85OSAvU2ltcGxlUGFpbnQgLzAgPDwgLzAgMSAvMSBbIDEuMCAwLjAgMC4wIDAuMCBdID4+ID4+IC82OCAwIC83MCAwIC83MiAwLjAgLzczIDAuMCAvNzUgZmFsc2UgLzg1IDAgLzg3IDUuNTI4MjIgLzg4IGZhbHNlID4+ID4+ID4+IC8xIDggPj4gXSA+PiAvMTAgPDwgLzAgNyAvMiB0cnVlID4+ID4+IC8xIDw8IC8wIFsgPDwgLzAgMCA+PiBdIC8yIFsgPDwgLzk5IC9QQyAvNSAwIC82IFsgPDwgLzk5IC9GIC8xMCAwIC8xIFsgMC4wIDAuMCA3MTQuMCAxMTkuODg0NzMgXSAvNSAyIC82IFsgPDwgLzk5IC9SIC8xIFsgMC4wIDAuMCA3MTQuMCAxMTkuODg0NzMgXSAvNiBbIDw8IC85OSAvUiAvMSBbIDAuMCAwLjAgNzE0LjAgMTE5Ljg4NDczIF0gLzUgMiAvNiBbIDw8IC85OSAvTCAvMTAgNTcuMzExMjggLzE0IC02My4zNjAzNSAvMTUgNzUuNDU2MyAvMCA8PCAvMCBbIDAuMCA1Ny4zMTEyOCBdID4+IC8xIFsgMC4wIC02My4zNjAzNSA3MTQuMCA3NS40NTYzIF0gLzYgWyA8PCAvOTkgL1MgLzE1IDw8IC8wIDggLzIgMCAvNSBmYWxzZSA+PiAvMjAgMCAvMCA8PCAvMCBbIDIwMy43ODYzOCAwLjAgXSA+PiAvNiBbIDw8IC85OSAvRyAvMSBbIDAuMCAtNjMuMzYwMzUgMzA2LjQyNzM3IDc1LjQ1NjMgXSAvNSBbIDU2IDc0IDc5IDY5IDgwIDg4IDg0IDEgXSAvOCBbIDIwMy43ODYzOCAtNi4wNDkwNyA1MTAuMjEzNzUgMTMyLjc2NzU4IF0gLzkgWyAyMDMuNzg2MzggLTYuMDQ5MDcgNTQzLjQwNTY0IDEzMi43Njc1OCBdIC8xMCA8PCAvMCBbIDw8IC80IDIgLzkgMCAvMTAgMCA+PiBdIC8xIFsgOCBdID4+IC8xMSB0cnVlIC8xMiAtNjMuMzYwMzUgLzEzIDc1LjQ1NjMgLzIwIDAgPj4gXSA+PiBdID4+IF0gPj4gXSA+PiBdID4+IF0gPj4gXSA+PiA+PiA8PCAvMCA8PCAvMCAo/v8AVwBpAG4AZABvAHcAcwAgAEwAQwBEAA0pIC81IDw8IC8wIFsgPDwgLzAgPDwgLzAgPDwgLzAgKP7/KSAvNSA8PCAvMCAyIC85IHRydWUgPj4gLzYgMSA+PiA+PiAvMSAxMiA+PiBdID4+IC82IDw8IC8wIFsgPDwgLzAgPDwgLzAgPDwgLzAgKP7/KSAvNSAwIC82IDw8IC8wIDAgLzEgNzIuMCAvMiBmYWxzZSAvMyBmYWxzZSAvNCB0cnVlIC81IC4wMSAvNiAxLjAgLzcgMS4wIC84IDAgLzkgMC4wIC8xMiAwIC8xMyAwIC8xNCAwIC8xNSAwIC8xNiAwIC8xOCB0cnVlIC8xOSBmYWxzZSAvMjAgdHJ1ZSAvMjMgZmFsc2UgLzI0IGZhbHNlIC8yNSBmYWxzZSAvMjYgZmFsc2UgLzI3IHRydWUgLzI4IGZhbHNlIC8yOSBmYWxzZSAvMzAgMCAvMzEgZmFsc2UgLzMyIGZhbHNlIC8zMyBmYWxzZSAvMzUgMSAvMzYgMC4wIC8zNyAyIC8zOCAwIC8zOSAwIC81MiBmYWxzZSAvNTMgPDwgLzk5IC9TaW1wbGVQYWludCAvMCA8PCAvMCAxIC8xIFsgMS4wIDAuMCAwLjAgMC4wIF0gPj4gPj4gLzU0IDw8IC85OSAvU2ltcGxlUGFpbnQgLzAgPDwgLzAgMSAvMSBbIDEuMCAwLjAgMC4wIDAuMCBdID4+ID4+IC82OCAwIC83MCAwIC83MiAwLjAgLzczIDAuMCAvNzUgZmFsc2UgLzg1IDAgLzg3IDUuNTI4MjIgLzg4IGZhbHNlID4+ID4+ID4+IC8xIDEyID4+IF0gPj4gLzEwIDw8IC8wIDYgLzIgdHJ1ZSA+PiA+PiAvMSA8PCAvMCBbIDw8IC8wIDEgPj4gXSAvMiBbIDw8IC85OSAvUEMgLzUgMCAvNiBbIDw8IC85OSAvRiAvMTAgMSAvMSBbIDAuMCAwLjAgNzE0LjAgMTI1Ljg3ODk3IF0gLzUgMiAvNiBbIDw8IC85OSAvUiAvMSBbIDAuMCAwLjAgNzE0LjAgMTI1Ljg3ODk3IF0gLzYgWyA8PCAvOTkgL1IgLzEgWyAwLjAgMC4wIDcxNC4wIDEyNS44Nzg5NyBdIC81IDIgLzYgWyA8PCAvOTkgL0wgLzEwIDU3LjMxMTI4IC8xNCAtNjMuMzYwMzUgLzE1IDc1LjQ1NjMgLzAgPDwgLzAgWyAwLjAgNTcuMzExMjggXSA+PiAvMSBbIDAuMCAtNjMuMzYwMzUgNzE0LjAgNzUuNDU2MyBdIC82IFsgPDwgLzk5IC9TIC8xNSA8PCAvMCAxMiAvMiAwIC81IGZhbHNlID4+IC8yMCAwIC8wIDw8IC8wIFsgMTI5LjUxODggMC4wIF0gPj4gLzYgWyA8PCAvOTkgL0cgLzEgWyAwLjAgLTYzLjM2MDM1IDQ1NC45NjI1MiA3NS40NTYzIF0gLzUgWyA1NiA3NCA3OSA2OSA4MCA4OCA4NCAxIDQ1IDM2IDM3IDEgXSAvOCBbIDEyOS41MTg4IC02LjA0OTA3IDU4NC40ODEzMiAxMzIuNzY3NTggXSAvOSBbIDEyOS41MTg4IC02LjA0OTA3IDYxNy42NzMyMiAxMzIuNzY3NTggXSAvMTAgPDwgLzAgWyA8PCAvNCAyIC85IDAgLzEwIDAgPj4gXSAvMSBbIDEyIF0gPj4gLzExIHRydWUgLzEyIC02My4zNjAzNSAvMTMgNzUuNDU2MyAvMjAgMCA+PiBdID4+IF0gPj4gXSA+PiBdID4+IF0gPj4gXSA+PiBdID4+ID4+IF0gLzIgPDwgLzAgMiAvMSAxMi4wIC8yIGZhbHNlIC8zIGZhbHNlIC80IHRydWUgLzUgMC4wIC82IDEuMCAvNyAxLjAgLzggMCAvOSAwLjAgLzEwIDAuMCAvMTEgMSAvMTIgMCAvMTMgMCAvMTQgMCAvMTUgMCAvMTYgMCAvMTcgMC4wIC8xOCB0cnVlIC8xOSBmYWxzZSAvMjAgZmFsc2UgLzIxIGZhbHNlIC8yMiBmYWxzZSAvMjMgZmFsc2UgLzI0IGZhbHNlIC8yNSBmYWxzZSAvMjYgZmFsc2UgLzI3IGZhbHNlIC8yOCBmYWxzZSAvMjkgZmFsc2UgLzMwIDAgLzMxIGZhbHNlIC8zMiBmYWxzZSAvMzMgZmFsc2UgLzM0IGZhbHNlIC8zNSAyIC8zNiAwLjAgLzM3IDIgLzM4IDAgLzM5IDAgLzQwIGZhbHNlIC80MSAyIC80MiAwIC80MyA8PCAvMCAuNSA+PiAvNDQgMiAvNDUgMiAvNDYgNyAvNDcgMCAvNDggMCAvNDkgLTEuMCAvNTAgLTEuMCAvNTEgMCAvNTIgZmFsc2UgLzUzIDw8IC85OSAvU2ltcGxlUGFpbnQgLzAgPDwgLzAgMSAvMSBbIDEuMCAwLjAgMC4wIDAuMCBdID4+ID4+IC81NCA8PCAvOTkgL1NpbXBsZVBhaW50IC8wIDw8IC8wIDEgLzEgWyAxLjAgMC4wIDAuMCAwLjAgXSA+PiA+PiAvNTUgPDwgLzk5IC9TaW1wbGVCbGVuZGVyID4+IC81NiB0cnVlIC81NyBmYWxzZSAvNTggdHJ1ZSAvNTkgZmFsc2UgLzYwIGZhbHNlIC82MSAwIC82MiAwIC82MyAxLjAgLzY0IDQuMCAvNjUgMC4wIC82NiBbIF0gLzY3IFsgXSAvNjggMCAvNjkgMCAvNzAgMCAvNzEgNCAvNzIgMC4wIC83MyAwLjAgLzc0IGZhbHNlIC83NSBmYWxzZSAvNzYgZmFsc2UgLzc3IHRydWUgLzc4IHRydWUgLzc5IDw8IC85OSAvU2ltcGxlUGFpbnQgLzAgPDwgLzAgMSAvMSBbIDEuMCAxLjAgMS4wIDAuMCBdID4+ID4+IC84MCBmYWxzZSAvODEgMCAvODIgMy4wIC84MyAzLjAgLzg0IGZhbHNlIC84NSAwIC84NiA8PCAvOTkgL1NpbXBsZUN1c3RvbUZlYXR1cmUgPj4gLzg3IDEwMC4wIC84OCB0cnVlID4+IC8zIDw8IC8wIDAgLzEgMC4wIC8yIDAuMCAvMyAwLjAgLzQgMC4wIC81IDAuMCAvNiAxIC83IDEuMiAvOCAwIC85IHRydWUgLzEwIDYgLzExIDIgLzEyIDIgLzEzIDAgLzE0IDM2LjAgLzE1IHRydWUgLzE2IC41IC8xNyBbIC44IDEuMCAxLjMzIF0gLzE4IFsgMC4wIDAuMCAwLjAgXSAvMTkgWyAxLjAgMS4wIDEuMCBdIC8yMCA2IC8yMSBmYWxzZSAvMjIgMCAvMjMgdHJ1ZSAvMjQgMCAvMjUgMCAvMjcgL25pbCAvMjYgZmFsc2UgLzI4IC9uaWwgLzI5IGZhbHNlIC8zMCA8PCA+PiAvMzEgMzYuMCAvMzIgPDwgPj4gLzMzIDAgLzM0IDcgLzM1IDAgLzM2IC9uaWwgLzM3IDAgLzM4IGZhbHNlIC8zOSAwIC80MCAyID4+ID4+",
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  },
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "compCore",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "supported",
+    "compCoreGPUSupport": "featureDisabled"
+  }
+}

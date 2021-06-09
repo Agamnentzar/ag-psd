@@ -1,3 +1,4 @@
+// import * as zlib from 'zlib';
 import {
 	Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color,
 	PatternInfo, GlobalLayerMaskInfo
@@ -830,34 +831,44 @@ export function readPattern(reader: PsdReader): PatternInfo {
 			const cdata = readBytes(reader, dataLength);
 
 			if (pixelDepth !== 8 || pixelDepth2 !== 8) throw new Error('16bit pixel depth not supported for palettes');
-			if (compressionMode !== 0) throw new Error('Zip compression not supported for palettes');
 
 			const w = cright - cleft;
 			const h = cbottom - ctop;
 			const ox = cleft - left;
 			const oy = ctop - top;
 
-			if (colorMode === ColorMode.RGB && ch < 3) {
-				for (let y = 0; y < h; y++) {
-					for (let x = 0; x < w; x++) {
-						const src = x + y * w;
-						const dst = (ox + x + (y + oy) * width) * 4;
-						data[dst + ch] = cdata[src];
+			if (compressionMode === 0) {
+				if (colorMode === ColorMode.RGB && ch < 3) {
+					for (let y = 0; y < h; y++) {
+						for (let x = 0; x < w; x++) {
+							const src = x + y * w;
+							const dst = (ox + x + (y + oy) * width) * 4;
+							data[dst + ch] = cdata[src];
+						}
 					}
 				}
-			}
 
-			if (colorMode === ColorMode.Grayscale && ch < 1) {
-				for (let y = 0; y < h; y++) {
-					for (let x = 0; x < w; x++) {
-						const src = x + y * w;
-						const dst = (ox + x + (y + oy) * width) * 4;
-						const value = cdata[src];
-						data[dst + 0] = value;
-						data[dst + 1] = value;
-						data[dst + 2] = value;
+				if (colorMode === ColorMode.Grayscale && ch < 1) {
+					for (let y = 0; y < h; y++) {
+						for (let x = 0; x < w; x++) {
+							const src = x + y * w;
+							const dst = (ox + x + (y + oy) * width) * 4;
+							const value = cdata[src];
+							data[dst + 0] = value;
+							data[dst + 1] = value;
+							data[dst + 2] = value;
+						}
 					}
 				}
+			} else if (compressionMode === 1) {
+				throw new Error('Unsupported palette compression mode');
+				// console.log({ colorMode });
+				// require('fs').writeFileSync('zip.bin', Buffer.from(cdata));
+				// const data = zlib.inflateRawSync(cdata);
+				// console.log(data);
+				// throw new Error('Zip compression not supported for palettes');
+			} else {
+				throw new Error('Invalid palette compression mode');
 			}
 
 			ch++;
