@@ -1,9 +1,10 @@
 {
   "name": "ag-psd",
-  "version": "14.0.1",
+  "version": "14.0.2",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
+  "es2015": "dist-es/index.js",
   "browser": "dist/index.js",
   "sideEffects": true,
   "repository": {
