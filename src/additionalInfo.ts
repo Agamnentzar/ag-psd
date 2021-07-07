@@ -427,24 +427,27 @@ addHandler(
 					right: parseUnits(i.keyOriginShapeBBox.Rght),
 				};
 			}
-			if (i.keyOriginRRectRadii) {
+			const rectRadii = i.keyOriginRRectRadii;
+			if (rectRadii) {
 				item.keyOriginRRectRadii = {
-					topRight: parseUnits(i.keyOriginRRectRadii.topRight),
-					topLeft: parseUnits(i.keyOriginRRectRadii.topLeft),
-					bottomLeft: parseUnits(i.keyOriginRRectRadii.bottomLeft),
-					bottomRight: parseUnits(i.keyOriginRRectRadii.bottomRight),
+					topRight: parseUnits(rectRadii.topRight),
+					topLeft: parseUnits(rectRadii.topLeft),
+					bottomLeft: parseUnits(rectRadii.bottomLeft),
+					bottomRight: parseUnits(rectRadii.bottomRight),
 				};
 			}
-			if (i.keyOriginBoxCorners) {
+			const corners = i.keyOriginBoxCorners;
+			if (corners) {
 				item.keyOriginBoxCorners = [
-					{ x: i.keyOriginBoxCorners.rectangleCornerA.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerA.Vrtc },
-					{ x: i.keyOriginBoxCorners.rectangleCornerB.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerB.Vrtc },
-					{ x: i.keyOriginBoxCorners.rectangleCornerC.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerC.Vrtc },
-					{ x: i.keyOriginBoxCorners.rectangleCornerD.Hrzn, y: i.keyOriginBoxCorners.rectangleCornerD.Vrtc },
+					{ x: corners.rectangleCornerA.Hrzn, y: corners.rectangleCornerA.Vrtc },
+					{ x: corners.rectangleCornerB.Hrzn, y: corners.rectangleCornerB.Vrtc },
+					{ x: corners.rectangleCornerC.Hrzn, y: corners.rectangleCornerC.Vrtc },
+					{ x: corners.rectangleCornerD.Hrzn, y: corners.rectangleCornerD.Vrtc },
 				];
 			}
-			if (i.Trnf) {
-				item.transform = [i.Trnf.xx, i.Trnf.xy, i.Trnf.xy, i.Trnf.yy, i.Trnf.tx, i.Trnf.ty];
+			const trnf = i.Trnf;
+			if (trnf) {
+				item.transform = [trnf.xx, trnf.xy, trnf.xy, trnf.yy, trnf.tx, trnf.ty];
 			}
 
 			target.vectorOrigination.keyDescriptorList.push(item);
@@ -470,43 +473,47 @@ addHandler(
 
 				const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
 
-				if (item.keyOriginRRectRadii) {
+				const radii = item.keyOriginRRectRadii;
+				if (radii) {
 					out.keyOriginRRectRadii = {
 						unitValueQuadVersion: 1,
-						topRight: unitsValue(item.keyOriginRRectRadii.topRight, 'topRight'),
-						topLeft: unitsValue(item.keyOriginRRectRadii.topLeft, 'topLeft'),
-						bottomLeft: unitsValue(item.keyOriginRRectRadii.bottomLeft, 'bottomLeft'),
-						bottomRight: unitsValue(item.keyOriginRRectRadii.bottomRight, 'bottomRight'),
+						topRight: unitsValue(radii.topRight, 'topRight'),
+						topLeft: unitsValue(radii.topLeft, 'topLeft'),
+						bottomLeft: unitsValue(radii.bottomLeft, 'bottomLeft'),
+						bottomRight: unitsValue(radii.bottomRight, 'bottomRight'),
 					};
 				}
 
-				if (item.keyOriginShapeBoundingBox) {
+				const box = item.keyOriginShapeBoundingBox;
+				if (box) {
 					out.keyOriginShapeBBox = {
 						unitValueQuadVersion: 1,
-						'Top ': unitsValue(item.keyOriginShapeBoundingBox.top, 'top'),
-						Left: unitsValue(item.keyOriginShapeBoundingBox.left, 'left'),
-						Btom: unitsValue(item.keyOriginShapeBoundingBox.bottom, 'bottom'),
-						Rght: unitsValue(item.keyOriginShapeBoundingBox.right, 'right'),
+						'Top ': unitsValue(box.top, 'top'),
+						Left: unitsValue(box.left, 'left'),
+						Btom: unitsValue(box.bottom, 'bottom'),
+						Rght: unitsValue(box.right, 'right'),
 					};
 				}
 
-				if (item.keyOriginBoxCorners && item.keyOriginBoxCorners.length === 4) {
+				const corners = item.keyOriginBoxCorners;
+				if (corners && corners.length === 4) {
 					out.keyOriginBoxCorners = {
-						rectangleCornerA: { Hrzn: item.keyOriginBoxCorners[0].x, Vrtc: item.keyOriginBoxCorners[0].y },
-						rectangleCornerB: { Hrzn: item.keyOriginBoxCorners[1].x, Vrtc: item.keyOriginBoxCorners[1].y },
-						rectangleCornerC: { Hrzn: item.keyOriginBoxCorners[2].x, Vrtc: item.keyOriginBoxCorners[2].y },
-						rectangleCornerD: { Hrzn: item.keyOriginBoxCorners[3].x, Vrtc: item.keyOriginBoxCorners[3].y },
+						rectangleCornerA: { Hrzn: corners[0].x, Vrtc: corners[0].y },
+						rectangleCornerB: { Hrzn: corners[1].x, Vrtc: corners[1].y },
+						rectangleCornerC: { Hrzn: corners[2].x, Vrtc: corners[2].y },
+						rectangleCornerD: { Hrzn: corners[3].x, Vrtc: corners[3].y },
 					};
 				}
 
-				if (item.transform && item.transform.length === 6) {
+				const transform = item.transform;
+				if (transform && transform.length === 6) {
 					out.Trnf = {
-						xx: item.transform[0],
-						xy: item.transform[1],
-						yx: item.transform[2],
-						yy: item.transform[3],
-						tx: item.transform[4],
-						ty: item.transform[5],
+						xx: transform[0],
+						xy: transform[1],
+						yx: transform[2],
+						yy: transform[3],
+						tx: transform[4],
+						ty: transform[5],
 					};
 				}
 
@@ -849,8 +856,9 @@ addHandler(
 	hasKey('artboard'),
 	(reader, target, left) => {
 		const desc = readVersionAndDescriptor(reader) as ArtbDescriptor;
+		const rect = desc.artboardRect;
 		target.artboard = {
-			rect: { top: desc.artboardRect['Top '], left: desc.artboardRect.Left, bottom: desc.artboardRect.Btom, right: desc.artboardRect.Rght },
+			rect: { top: rect['Top '], left: rect.Left, bottom: rect.Btom, right: rect.Rght },
 			guideIndices: desc.guideIndeces,
 			presetName: desc.artboardPresetName,
 			color: parseColor(desc['Clr ']),
@@ -860,13 +868,14 @@ addHandler(
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		const artb = target.artboard!;
+		const artboard = target.artboard!;
+		const rect = artboard.rect;
 		const desc: ArtbDescriptor = {
-			artboardRect: { 'Top ': artb.rect.top, Left: artb.rect.left, Btom: artb.rect.bottom, Rght: artb.rect.right },
-			guideIndeces: artb.guideIndices || [],
-			artboardPresetName: artb.presetName || '',
-			'Clr ': serializeColor(artb.color),
-			artboardBackgroundType: artb.backgroundType ?? 1,
+			artboardRect: { 'Top ': rect.top, Left: rect.left, Btom: rect.bottom, Rght: rect.right },
+			guideIndeces: artboard.guideIndices || [],
+			artboardPresetName: artboard.presetName || '',
+			'Clr ': serializeColor(artboard.color),
+			artboardBackgroundType: artboard.backgroundType ?? 1,
 		};
 
 		writeVersionAndDescriptor(writer, '', 'artboard', desc);
@@ -904,21 +913,22 @@ function parseWarp(warp: WarpDescriptor & QuiltWarpDescriptor): Warp {
 		result.deformNumCols = warp.deformNumCols;
 	}
 
-	if (warp.customEnvelopeWarp) {
+	const envelopeWarp = warp.customEnvelopeWarp;
+	if (envelopeWarp) {
 		result.customEnvelopeWarp = {
 			meshPoints: [],
 		};
 
-		const xs = warp.customEnvelopeWarp!.meshPoints.find(i => i.type === 'Hrzn')?.values || [];
-		const ys = warp.customEnvelopeWarp!.meshPoints.find(i => i.type === 'Vrtc')?.values || [];
+		const xs = envelopeWarp.meshPoints.find(i => i.type === 'Hrzn')?.values || [];
+		const ys = envelopeWarp.meshPoints.find(i => i.type === 'Vrtc')?.values || [];
 
 		for (let i = 0; i < xs.length; i++) {
 			result.customEnvelopeWarp!.meshPoints.push({ x: xs[i], y: ys[i] });
 		}
 
-		if (warp.customEnvelopeWarp.quiltSliceX || warp.customEnvelopeWarp.quiltSliceY) {
-			result.customEnvelopeWarp.quiltSliceX = warp.customEnvelopeWarp.quiltSliceX?.[0]?.values || [];
-			result.customEnvelopeWarp.quiltSliceY = warp.customEnvelopeWarp.quiltSliceY?.[0]?.values || [];
+		if (envelopeWarp.quiltSliceX || envelopeWarp.quiltSliceY) {
+			result.customEnvelopeWarp.quiltSliceX = envelopeWarp.quiltSliceX?.[0]?.values || [];
+			result.customEnvelopeWarp.quiltSliceY = envelopeWarp.quiltSliceY?.[0]?.values || [];
 		}
 	}
 
@@ -931,6 +941,7 @@ function isQuiltWarp(warp: Warp) {
 }
 
 function encodeWarp(warp: Warp): WarpDescriptor {
+	const bounds = warp.bounds;
 	const desc: WarpDescriptor = {
 		warpStyle: warpStyle.encode(warp.style),
 		warpValue: warp.value || 0,
@@ -938,10 +949,10 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 		warpPerspectiveOther: warp.perspectiveOther || 0,
 		warpRotate: Ornt.encode(warp.rotate),
 		bounds: {
-			'Top ': unitsValue(warp.bounds?.top || { units: 'Pixels', value: 0 }, 'bounds.top'),
-			Left: unitsValue(warp.bounds?.left || { units: 'Pixels', value: 0 }, 'bounds.left'),
-			Btom: unitsValue(warp.bounds?.bottom || { units: 'Pixels', value: 0 }, 'bounds.bottom'),
-			Rght: unitsValue(warp.bounds?.right || { units: 'Pixels', value: 0 }, 'bounds.right'),
+			'Top ': unitsValue(bounds && bounds.top || { units: 'Pixels', value: 0 }, 'bounds.top'),
+			Left: unitsValue(bounds && bounds.left || { units: 'Pixels', value: 0 }, 'bounds.left'),
+			Btom: unitsValue(bounds && bounds.bottom || { units: 'Pixels', value: 0 }, 'bounds.bottom'),
+			Rght: unitsValue(bounds && bounds.right || { units: 'Pixels', value: 0 }, 'bounds.right'),
 		},
 		uOrder: warp.uOrder || 0,
 		vOrder: warp.vOrder || 0,
@@ -955,19 +966,20 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 		desc2.deformNumCols = warp.deformNumCols || 0;
 	}
 
-	if (warp.customEnvelopeWarp) {
-		const meshPoints = warp.customEnvelopeWarp.meshPoints || [];
+	const customEnvelopeWarp = warp.customEnvelopeWarp;
+	if (customEnvelopeWarp) {
+		const meshPoints = customEnvelopeWarp.meshPoints || [];
 
 		if (isQuilt) {
 			const desc2 = desc as QuiltWarpDescriptor;
 			desc2.customEnvelopeWarp = {
 				quiltSliceX: [{
 					type: 'quiltSliceX',
-					values: warp.customEnvelopeWarp.quiltSliceX || [],
+					values: customEnvelopeWarp.quiltSliceX || [],
 				}],
 				quiltSliceY: [{
 					type: 'quiltSliceY',
-					values: warp.customEnvelopeWarp.quiltSliceY || [],
+					values: customEnvelopeWarp.quiltSliceY || [],
 				}],
 				meshPoints: [
 					{ type: 'Hrzn', values: meshPoints.map(p => p.x) },

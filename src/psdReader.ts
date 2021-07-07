@@ -106,10 +106,10 @@ export function readSignature(reader: PsdReader) {
 
 export function readPascalString(reader: PsdReader, padTo: number) {
 	let length = readUint8(reader);
-	const text = readShortString(reader, length);
+	const text = length ? readShortString(reader, length) : '';
 
 	while (++length % padTo) {
-		skipBytes(reader, 1);
+		reader.offset++;
 	}
 
 	return text;
@@ -190,7 +190,11 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	// image resources
 	readSection(reader, 1, left => {
 		while (left()) {
-			checkSignature(reader, '8BIM');
+			const sig = readSignature(reader);
+
+			if (sig !== '8BIM' && sig !== 'MeSa' && sig !== 'AgHg' && sig !== 'PHUT' && sig !== 'DCSR') {
+				throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
+			}
 
 			const id = readUint16(reader);
 			readPascalString(reader, 2); // name

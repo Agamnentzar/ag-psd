@@ -1,5 +1,9 @@
 # Changelog
 
+## v14.1.0
+- Added support for `imageReadyVariables` and `imageReadyDataSets` image resources
+- Fix missing support for alternative image resource block signatures
+
 ## v14.0.1
 - Added missing handling for new platform and platformLCD text anti-aliasing modes
 

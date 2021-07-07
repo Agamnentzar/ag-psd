@@ -690,6 +690,28 @@ MOCK_HANDLERS && addHandler(
 	},
 );
 
+addHandler(
+	7000,
+	target => target.imageReadyVariables !== undefined,
+	(reader, target, left) => {
+		target.imageReadyVariables = readUtf8String(reader, left());
+	},
+	(writer, target) => {
+		writeUtf8String(writer, target.imageReadyVariables!);
+	},
+);
+
+addHandler(
+	7001,
+	target => target.imageReadyDataSets !== undefined,
+	(reader, target, left) => {
+		target.imageReadyDataSets = readUtf8String(reader, left());
+	},
+	(writer, target) => {
+		writeUtf8String(writer, target.imageReadyDataSets!);
+	},
+);
+
 interface Descriptor1088 {
 	'null': string[];
 }
@@ -757,7 +779,7 @@ interface Animations {
 
 // TODO: Unfinished
 MOCK_HANDLERS && addHandler(
-	4000,
+	4000, // Plug-In resource(s)
 	target => (target as any)._ir4000 !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
 		if (MOCK_HANDLERS) {
@@ -824,7 +846,7 @@ MOCK_HANDLERS && addHandler(
 
 // TODO: Unfinished
 MOCK_HANDLERS && addHandler(
-	4001,
+	4001, // Plug-In resource(s)
 	target => (target as any)._ir4001 !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
 		if (MOCK_HANDLERS) {
