@@ -11,7 +11,7 @@ import {
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
 	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient,
-	KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation,
+	KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -221,7 +221,7 @@ addHandler(
 	},
 );
 
-function readBezierKnot(reader: PsdReader, width: number, height: number) {
+export function readBezierKnot(reader: PsdReader, width: number, height: number) {
 	const y0 = readFixedPointPath32(reader) * height;
 	const x0 = readFixedPointPath32(reader) * width;
 	const y1 = readFixedPointPath32(reader) * height;
@@ -240,7 +240,58 @@ function writeBezierKnot(writer: PsdWriter, points: number[], width: number, hei
 	writeFixedPointPath32(writer, points[4] / width); // x2
 }
 
-const booleanOperations: BooleanOperation[] = ['exclude', 'combine', 'subtract', 'intersect'];
+export const booleanOperations: BooleanOperation[] = ['exclude', 'combine', 'subtract', 'intersect'];
+
+export function readVectorMask(reader: PsdReader, vectorMask: LayerVectorMask, width: number, height: number, size: number) {
+	const end = reader.offset + size;
+	const paths = vectorMask.paths;
+	let path: BezierPath | undefined = undefined;
+
+	while ((end - reader.offset) >= 26) {
+		const selector = readUint16(reader);
+
+		switch (selector) {
+			case 0: // Closed subpath length record
+			case 3: { // Open subpath length record
+				readUint16(reader); // count
+				const boolOp = readInt16(reader);
+				readUint16(reader); // always 1 ?
+				skipBytes(reader, 18);
+				// TODO: 'combine' here might be wrong
+				path = { open: selector === 3, operation: boolOp === -1 ? 'combine' : booleanOperations[boolOp], knots: [] };
+				paths.push(path);
+				break;
+			}
+			case 1: // Closed subpath Bezier knot, linked
+			case 2: // Closed subpath Bezier knot, unlinked
+			case 4: // Open subpath Bezier knot, linked
+			case 5: // Open subpath Bezier knot, unlinked
+				path!.knots.push({ linked: (selector === 1 || selector === 4), points: readBezierKnot(reader, width, height) });
+				break;
+			case 6: // Path fill rule record
+				skipBytes(reader, 24);
+				break;
+			case 7: { // Clipboard record
+				// TODO: check if these need to be multiplied by document size
+				const top = readFixedPointPath32(reader);
+				const left = readFixedPointPath32(reader);
+				const bottom = readFixedPointPath32(reader);
+				const right = readFixedPointPath32(reader);
+				const resolution = readFixedPointPath32(reader);
+				skipBytes(reader, 4);
+				vectorMask.clipboard = { top, left, bottom, right, resolution };
+				break;
+			}
+			case 8: // Initial fill rule record
+				vectorMask.fillStartsWithAllPixels = !!readUint16(reader);
+				skipBytes(reader, 22);
+				break;
+			default: throw new Error('Invalid vmsk section');
+		}
+	}
+
+	return paths;
+}
 
 addHandler(
 	'vmsk',
@@ -256,67 +307,9 @@ addHandler(
 		vectorMask.notLink = (flags & 2) !== 0;
 		vectorMask.disable = (flags & 4) !== 0;
 
-		const paths = vectorMask.paths;
-		let path: BezierPath | undefined = undefined;
+		readVectorMask(reader, vectorMask, width, height, left());
 
-		while (left() >= 26) {
-			const selector = readUint16(reader);
-
-			switch (selector) {
-				case 0: // Closed subpath length record
-				case 3: { // Open subpath length record
-					readUint16(reader); // count
-					const boolOp = readUint16(reader);
-					readUint16(reader); // always 1 ?
-					skipBytes(reader, 18);
-					path = { open: selector === 3, operation: booleanOperations[boolOp], knots: [] };
-					paths.push(path);
-					break;
-				}
-				case 1: // Closed subpath Bezier knot, linked
-				case 2: // Closed subpath Bezier knot, unlinked
-				case 4: // Open subpath Bezier knot, linked
-				case 5: // Open subpath Bezier knot, unlinked
-					path!.knots.push({ linked: (selector === 1 || selector === 4), points: readBezierKnot(reader, width, height) });
-					break;
-				case 6: // Path fill rule record
-					skipBytes(reader, 24);
-					break;
-				case 7: { // Clipboard record
-					// TODO: check if these need to be multiplied by document size
-					const top = readFixedPointPath32(reader);
-					const left = readFixedPointPath32(reader);
-					const bottom = readFixedPointPath32(reader);
-					const right = readFixedPointPath32(reader);
-					const resolution = readFixedPointPath32(reader);
-					skipBytes(reader, 4);
-					vectorMask.clipboard = { top, left, bottom, right, resolution };
-					break;
-				}
-				case 8: // Initial fill rule record
-					vectorMask.fillStartsWithAllPixels = !!readUint16(reader);
-					skipBytes(reader, 22);
-					break;
-				default: throw new Error('Invalid vmsk section');
-			}
-		}
-
-		// const canvas = require('canvas').createCanvas(width, height);
-		// const context = canvas.getContext('2d')!;
-		// context.fillStyle = 'red';
-		// for (const path of paths) {
-		// 	context.beginPath();
-		// 	context.moveTo(path.knots[0].points[2], path.knots[0].points[3]);
-		// 	for (let i = 1; i < path.knots.length; i++) {
-		// 		console.log(path.knots[i].points.map(x => x.toFixed(2)));
-		// 		context.bezierCurveTo(
-		// 			path.knots[i - 1].points[4], path.knots[i - 1].points[5],
-		// 			path.knots[i].points[0], path.knots[i].points[1], path.knots[i].points[2], path.knots[i].points[3]);
-		// 	}
-		// 	if (!path.open) context.closePath();
-		// 	context.fill();
-		// }
-		// require('fs').writeFileSync('out.png', canvas.toBuffer());
+		// drawBezierPaths(vectorMask.paths, width, height, 'out.png');
 
 		skipBytes(reader, left());
 	},

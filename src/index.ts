@@ -2,6 +2,7 @@ import { Psd, ReadOptions, WriteOptions } from './psd';
 import { PsdWriter, writePsd as writePsdInternal, getWriterBuffer, createWriter, getWriterBufferNoCopy } from './psdWriter';
 import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
 export * from './abr';
+export * from './csh';
 export { initializeCanvas } from './helpers';
 export * from './psd';
 import { fromByteArray } from 'base64-js';

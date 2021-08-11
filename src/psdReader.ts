@@ -158,8 +158,14 @@ export function checkSignature(reader: PsdReader, a: string, b?: string) {
 }
 
 function readShortString(reader: PsdReader, length: number) {
-	const buffer: any = readBytes(reader, length);
-	return String.fromCharCode(...buffer);
+	const buffer = readBytes(reader, length);
+	let result = '';
+
+	for (let i = 0; i < buffer.length; i++) {
+		result += String.fromCharCode(buffer[i]);
+	}
+
+	return result;
 }
 
 export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
@@ -865,12 +871,13 @@ export function readPattern(reader: PsdReader): PatternInfo {
 					}
 				}
 			} else if (compressionMode === 1) {
-				throw new Error('Unsupported palette compression mode');
 				// console.log({ colorMode });
 				// require('fs').writeFileSync('zip.bin', Buffer.from(cdata));
-				// const data = zlib.inflateRawSync(cdata);
+				// const data = require('zlib').inflateRawSync(cdata);
+				// const data = require('zlib').unzipSync(cdata);
 				// console.log(data);
 				// throw new Error('Zip compression not supported for palettes');
+				throw new Error('Unsupported palette compression mode');
 			} else {
 				throw new Error('Invalid palette compression mode');
 			}

@@ -1,5 +1,8 @@
 # Changelog
 
+## v14.2.0
+- Added `readCsh` function for reading photoshop custom shape files
+
 ## v14.1.0
 - Added support for `imageReadyVariables` and `imageReadyDataSets` image resources
 - Fix missing support for alternative image resource block signatures

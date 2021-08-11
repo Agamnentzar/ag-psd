@@ -363,7 +363,7 @@ export interface TextGridInfo {
 
 export interface LayerTextData {
 	text: string;
-	transform?: number[];
+	transform?: number[]; // 2d transform matrix [xx, xy, yx, yy, tx, ty]
 	antiAlias?: AntiAlias;
 	gridding?: TextGridding;
 	orientation?: Orientation;
@@ -702,7 +702,22 @@ export interface KeyDescriptorItem {
 		right: UnitsValue;
 	};
 	keyOriginBoxCorners?: { x: number; y: number; }[];
-	transform?: number[]; // [xx, xy, yx, yy, tx, ty]
+	transform?: number[]; // 2d transform matrix [xx, xy, yx, yy, tx, ty]
+}
+
+export interface LayerVectorMask {
+	invert?: boolean;
+	notLink?: boolean;
+	disable?: boolean;
+	fillStartsWithAllPixels?: boolean;
+	clipboard?: {
+		top: number;
+		left: number;
+		bottom: number;
+		right: number;
+		resolution: number;
+	};
+	paths: BezierPath[];
 }
 
 export interface LayerAdditionalInfo {
@@ -755,20 +770,7 @@ export interface LayerAdditionalInfo {
 		content?: VectorContent;
 		resolution?: number;
 	};
-	vectorMask?: {
-		invert?: boolean;
-		notLink?: boolean;
-		disable?: boolean;
-		fillStartsWithAllPixels?: boolean;
-		clipboard?: {
-			top: number;
-			left: number;
-			bottom: number;
-			right: number;
-			resolution: number;
-		};
-		paths: BezierPath[];
-	};
+	vectorMask?: LayerVectorMask;
 	usingAlignedRendering?: boolean;
 	timestamp?: number; // seconds
 	pathList?: {
