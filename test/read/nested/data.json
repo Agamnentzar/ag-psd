@@ -1,0 +1,515 @@
+{
+  "width": 1,
+  "height": 1,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "perceptual",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 71.99998474121094,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Inches",
+      "verticalResolution": 71.99998474121094,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Inches"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "globalAngle": 30,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 0,
+    "layersGroup": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      2
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 23,
+    "versionInfo": {
+      "hasRealMergedData": true,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CC 2019",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 1,
+      "right": 1,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer1 (#ff)",
+      "id": 2,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1629472131.7731357,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Folder1",
+      "id": 4,
+      "sectionDivider": {
+        "type": 1,
+        "key": "norm",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1629472131.7732773,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "opened": true,
+      "children": [
+        {
+          "top": 0,
+          "left": 0,
+          "bottom": 0,
+          "right": 0,
+          "blendMode": "normal",
+          "opacity": 1,
+          "clipping": false,
+          "transparencyProtected": false,
+          "hidden": false,
+          "name": "Folder2",
+          "id": 5,
+          "sectionDivider": {
+            "type": 1,
+            "key": "norm",
+            "subType": 0
+          },
+          "protected": {
+            "transparency": false,
+            "composite": false,
+            "position": false
+          },
+          "layerColor": "none",
+          "timestamp": 1629472131.7732718,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          },
+          "version": 80,
+          "opened": true,
+          "children": [
+            {
+              "top": 0,
+              "left": 0,
+              "bottom": 0,
+              "right": 0,
+              "blendMode": "normal",
+              "opacity": 1,
+              "clipping": false,
+              "transparencyProtected": false,
+              "hidden": false,
+              "name": "Folder3",
+              "id": 6,
+              "sectionDivider": {
+                "type": 1,
+                "key": "norm",
+                "subType": 0
+              },
+              "protected": {
+                "transparency": false,
+                "composite": false,
+                "position": false
+              },
+              "layerColor": "none",
+              "timestamp": 1629472131.7732656,
+              "referencePoint": {
+                "x": 0,
+                "y": 0
+              },
+              "opened": true,
+              "children": [
+                {
+                  "top": 0,
+                  "left": 0,
+                  "bottom": 0,
+                  "right": 0,
+                  "blendMode": "normal",
+                  "opacity": 1,
+                  "clipping": false,
+                  "transparencyProtected": false,
+                  "hidden": false,
+                  "name": "Folder4",
+                  "id": 7,
+                  "sectionDivider": {
+                    "type": 1,
+                    "key": "norm",
+                    "subType": 0
+                  },
+                  "protected": {
+                    "transparency": false,
+                    "composite": false,
+                    "position": false
+                  },
+                  "layerColor": "none",
+                  "timestamp": 1629472131.7732592,
+                  "referencePoint": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "opened": true,
+                  "children": [
+                    {
+                      "top": 0,
+                      "left": 0,
+                      "bottom": 0,
+                      "right": 0,
+                      "blendMode": "normal",
+                      "opacity": 1,
+                      "clipping": false,
+                      "transparencyProtected": false,
+                      "hidden": false,
+                      "name": "Folder5",
+                      "id": 8,
+                      "sectionDivider": {
+                        "type": 1,
+                        "key": "norm",
+                        "subType": 0
+                      },
+                      "protected": {
+                        "transparency": false,
+                        "composite": false,
+                        "position": false
+                      },
+                      "layerColor": "none",
+                      "timestamp": 1629472131.7732532,
+                      "referencePoint": {
+                        "x": 0,
+                        "y": 0
+                      },
+                      "opened": true,
+                      "children": [
+                        {
+                          "top": 0,
+                          "left": 0,
+                          "bottom": 0,
+                          "right": 0,
+                          "blendMode": "normal",
+                          "opacity": 1,
+                          "clipping": false,
+                          "transparencyProtected": false,
+                          "hidden": false,
+                          "name": "Folder6",
+                          "id": 9,
+                          "sectionDivider": {
+                            "type": 1,
+                            "key": "norm",
+                            "subType": 0
+                          },
+                          "protected": {
+                            "transparency": false,
+                            "composite": false,
+                            "position": false
+                          },
+                          "layerColor": "none",
+                          "timestamp": 1629472131.7732465,
+                          "referencePoint": {
+                            "x": 0,
+                            "y": 0
+                          },
+                          "opened": true,
+                          "children": [
+                            {
+                              "top": 0,
+                              "left": 0,
+                              "bottom": 0,
+                              "right": 0,
+                              "blendMode": "normal",
+                              "opacity": 1,
+                              "clipping": false,
+                              "transparencyProtected": false,
+                              "hidden": false,
+                              "name": "Folder7",
+                              "id": 10,
+                              "sectionDivider": {
+                                "type": 1,
+                                "key": "norm",
+                                "subType": 0
+                              },
+                              "protected": {
+                                "transparency": false,
+                                "composite": false,
+                                "position": false
+                              },
+                              "layerColor": "none",
+                              "timestamp": 1629472131.7732396,
+                              "referencePoint": {
+                                "x": 0,
+                                "y": 0
+                              },
+                              "version": 120,
+                              "opened": true,
+                              "children": [
+                                {
+                                  "top": 0,
+                                  "left": 0,
+                                  "bottom": 0,
+                                  "right": 0,
+                                  "blendMode": "normal",
+                                  "opacity": 1,
+                                  "clipping": false,
+                                  "transparencyProtected": false,
+                                  "hidden": false,
+                                  "name": "Folder8",
+                                  "id": 11,
+                                  "sectionDivider": {
+                                    "type": 1,
+                                    "key": "norm",
+                                    "subType": 0
+                                  },
+                                  "protected": {
+                                    "transparency": false,
+                                    "composite": false,
+                                    "position": false
+                                  },
+                                  "layerColor": "none",
+                                  "timestamp": 1629472131.7732337,
+                                  "referencePoint": {
+                                    "x": 0,
+                                    "y": 0
+                                  },
+                                  "version": 120,
+                                  "opened": true,
+                                  "children": [
+                                    {
+                                      "top": 0,
+                                      "left": 0,
+                                      "bottom": 0,
+                                      "right": 0,
+                                      "blendMode": "normal",
+                                      "opacity": 1,
+                                      "clipping": false,
+                                      "transparencyProtected": false,
+                                      "hidden": false,
+                                      "name": "Folder9",
+                                      "id": 12,
+                                      "sectionDivider": {
+                                        "type": 1,
+                                        "key": "norm",
+                                        "subType": 0
+                                      },
+                                      "protected": {
+                                        "transparency": false,
+                                        "composite": false,
+                                        "position": false
+                                      },
+                                      "layerColor": "none",
+                                      "timestamp": 1629472131.7732275,
+                                      "referencePoint": {
+                                        "x": 0,
+                                        "y": 0
+                                      },
+                                      "version": 120,
+                                      "opened": true,
+                                      "children": [
+                                        {
+                                          "top": 0,
+                                          "left": 0,
+                                          "bottom": 0,
+                                          "right": 0,
+                                          "blendMode": "normal",
+                                          "opacity": 1,
+                                          "clipping": false,
+                                          "transparencyProtected": false,
+                                          "hidden": false,
+                                          "name": "Folder10",
+                                          "id": 13,
+                                          "sectionDivider": {
+                                            "type": 1,
+                                            "key": "norm",
+                                            "subType": 0
+                                          },
+                                          "protected": {
+                                            "transparency": false,
+                                            "composite": false,
+                                            "position": false
+                                          },
+                                          "layerColor": "none",
+                                          "timestamp": 1629472131.773221,
+                                          "referencePoint": {
+                                            "x": 0,
+                                            "y": 0
+                                          },
+                                          "version": 120,
+                                          "opened": true,
+                                          "children": [
+                                            {
+                                              "top": 0,
+                                              "left": 0,
+                                              "bottom": 1,
+                                              "right": 1,
+                                              "blendMode": "normal",
+                                              "opacity": 1,
+                                              "clipping": false,
+                                              "transparencyProtected": false,
+                                              "hidden": false,
+                                              "name": "Layer10 (#00)",
+                                              "id": 3,
+                                              "blendClippendElements": true,
+                                              "blendInteriorElements": false,
+                                              "knockout": false,
+                                              "protected": {
+                                                "transparency": false,
+                                                "composite": false,
+                                                "position": false
+                                              },
+                                              "layerColor": "none",
+                                              "timestamp": 1629472131.7732139,
+                                              "referencePoint": {
+                                                "x": 0,
+                                                "y": 0
+                                              }
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  },
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "compCore",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "supported",
+    "compCoreGPUSupport": "featureDisabled"
+  }
+}

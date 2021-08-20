@@ -313,9 +313,10 @@ function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 				stack.push(l);
 			} else if (type === SectionDividerType.BoundingSectionDivider) {
 				stack.pop();
-			} else if (l.name === '</Layer group>' && !l.sectionDivider && !l.top && !l.left && !l.bottom && !l.right) {
-				// sometimes layer group terminator doesn't have sectionDivider, so we just guess here (PS bug ?)
-				stack.pop();
+				// this was workaround because I didn't know what `lsdk` section was, now it's probably not needed anymore
+				// } else if (l.name === '</Layer group>' && !l.sectionDivider && !l.top && !l.left && !l.bottom && !l.right) {
+				// 	// sometimes layer group terminator doesn't have sectionDivider, so we just guess here (PS bug ?)
+				// 	stack.pop();
 			} else {
 				stack[stack.length - 1].children!.unshift(l);
 			}
@@ -570,7 +571,7 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo,
 		}
 
 		if (left()) {
-			options.logMissingFeatures && console.log(`Unread ${left()} bytes left for tag: ${key}`);
+			options.logMissingFeatures && console.log(`Unread ${left()} bytes left for additional info: ${key}`);
 			skipBytes(reader, left());
 		}
 	}, false, u64);

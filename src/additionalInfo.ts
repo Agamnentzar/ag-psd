@@ -587,19 +587,6 @@ addHandler(
 	},
 );
 
-// some kind of ID ? ignore
-addHandler(
-	'lsdk',
-	target => (target as any)._lsdk !== undefined,
-	(reader, target) => {
-		const id = readInt32(reader);
-		if (MOCK_HANDLERS) (target as any)._lsdk = id;
-	},
-	(writer, target) => {
-		if (MOCK_HANDLERS) writeInt32(writer, (target as any)._lsdk);
-	},
-);
-
 addHandler(
 	'lsct',
 	hasKey('sectionDivider'),
@@ -630,6 +617,10 @@ addHandler(
 		}
 	},
 );
+
+// it seems lsdk is used when there's a layer is nested more than 6 levels, but I don't know why?
+// maybe some limitation of old version of PS?
+addHandlerAlias('lsdk', 'lsct');
 
 addHandler(
 	'clbl',
@@ -2685,6 +2676,32 @@ addHandler(
 	(writer, target) => {
 		// TODO: need to add correct types for desc fields (resources/src.psd)
 		if (MOCK_HANDLERS) writeVersionAndDescriptor(writer, '', 'null', (target as any)._extn);
+	},
+);
+
+addHandler(
+	'iOpa',
+	hasKey('fillOpacity'),
+	(reader, target) => {
+		target.fillOpacity = readUint8(reader) / 0xff;
+		skipBytes(reader, 3);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.fillOpacity! * 0xff);
+		writeZeros(writer, 3);
+	},
+);
+
+addHandler(
+	'tsly',
+	hasKey('transparencyShapesLayer'),
+	(reader, target) => {
+		target.transparencyShapesLayer = !!readUint8(reader);
+		skipBytes(reader, 3);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.transparencyShapesLayer ? 1 : 0);
+		writeZeros(writer, 3);
 	},
 );
 

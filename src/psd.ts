@@ -796,6 +796,8 @@ export interface LayerAdditionalInfo {
 		color?: Color;
 		backgroundType?: number;
 	};
+	fillOpacity?: number;
+	transparencyShapesLayer?: boolean;
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.

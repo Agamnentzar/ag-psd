@@ -1,5 +1,9 @@
 # Changelog
 
+## v14.3.0
+- Added support for `fillOpacity` and `transparencyShapesLayer`
+- Fixed error in some cases when reading files with deeply nested layers
+
 ## v14.2.0
 - Added `readCsh` function for reading photoshop custom shape files
 

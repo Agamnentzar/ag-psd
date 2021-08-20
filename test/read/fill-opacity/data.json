@@ -1,0 +1,72 @@
+{
+  "width": 1,
+  "height": 1,
+  "channels": 4,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 71.99998474121094,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 71.99998474121094,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "layerState": 2,
+    "layersGroup": [
+      0,
+      0,
+      0
+    ],
+    "alphaChannelNames": [
+      "Opacities"
+    ],
+    "alphaIdentifiers": [
+      0
+    ]
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 1,
+      "right": 1,
+      "blendMode": "normal",
+      "opacity": 0.6,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "[#00f] Normal opacity 60% (Normal mode)",
+      "id": 3
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 1,
+      "right": 1,
+      "blendMode": "linear light",
+      "opacity": 0.4,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "[#0f0] Normal opacity 40% (TS Linear light mode)",
+      "id": 4
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 1,
+      "right": 1,
+      "blendMode": "linear light",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "[#f00] Fill opacity 20% (non-TS Linear light mode)",
+      "id": 5,
+      "fillOpacity": 0.2,
+      "transparencyShapesLayer": false
+    }
+  ]
+}
