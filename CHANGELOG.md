@@ -1,5 +1,8 @@
 # Changelog
 
+## v14.3.1
+- Fixed writing paragraphStyle autoLeading property (previous it was writing incorrectly for whole values, like 1.0 or 2.0)
+
 ## v14.3.0
 - Added support for `fillOpacity` and `transparencyShapesLayer`
 - Fixed error in some cases when reading files with deeply nested layers
