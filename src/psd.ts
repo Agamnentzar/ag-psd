@@ -667,6 +667,7 @@ export interface PlacedLayer {
 	// duration?: { numerator: number; denominator: number; };
 	// frameCount?: number; // ???
 	transform: number[]; // x, y of 4 corners of the transform
+	nonAffineTransform?: number[]; // x, y of 4 corners of the transform
 	width?: number;
 	height?: number;
 	resolution?: UnitsValue;

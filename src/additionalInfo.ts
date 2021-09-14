@@ -1081,6 +1081,10 @@ addHandler(
 			warp: parseWarp((desc.quiltWarp || desc.warp) as any),
 		};
 
+		if (desc.nonAffineTransform && desc.nonAffineTransform.some((x, i) => x !== desc.Trnf[i])) {
+			target.placedLayer.nonAffineTransform = desc.nonAffineTransform;
+		}
+
 		if (desc.Crop) target.placedLayer.crop = desc.Crop;
 		if (desc.comp) target.placedLayer.comp = desc.comp;
 		if (desc.compInfo) target.placedLayer.compInfo = desc.compInfo;
@@ -1110,7 +1114,7 @@ addHandler(
 			Annt: 16,
 			Type: placedLayerTypes.indexOf(placed.type),
 			Trnf: placed.transform,
-			nonAffineTransform: placed.transform,
+			nonAffineTransform: placed.nonAffineTransform ?? placed.transform,
 			quiltWarp: {} as any,
 			warp: encodeWarp(placed.warp || {}),
 			'Sz  ': {

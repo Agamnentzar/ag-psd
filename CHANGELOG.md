@@ -1,5 +1,8 @@
 # Changelog
 
+## v14.3.2
+- Added `nonAffineTransform` field to smart object transform when nonAffineTransform is diferent than regular transform
+
 ## v14.3.1
 - Fixed writing paragraphStyle autoLeading property (previous it was writing incorrectly for whole values, like 1.0 or 2.0)
 

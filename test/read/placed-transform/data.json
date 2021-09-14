@@ -1,0 +1,138 @@
+{
+  "width": 1280,
+  "height": 1920,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "idsSeedNumber": 3,
+    "layerSelectionIds": [
+      3
+    ]
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 1920,
+      "right": 1280,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Background",
+      "id": 1,
+      "sectionDivider": {
+        "type": 0
+      },
+      "layerColor": "none",
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 550,
+      "left": 513,
+      "bottom": 986,
+      "right": 772,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 1",
+      "id": 3,
+      "sectionDivider": {
+        "type": 0
+      },
+      "layerColor": "none",
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "placedLayer": {
+        "id": "05999d50-d71c-11e5-b1ae-a548a96e5f9f",
+        "placed": "d7b41059-d71c-11e5-b1ae-a548a96e5f9f",
+        "type": "raster",
+        "transform": [
+          513,
+          550.9999999999999,
+          772,
+          550.9999999999999,
+          965.8417195920413,
+          1283.4753860198482,
+          706.8417195920413,
+          1283.4753860198482
+        ],
+        "width": 259,
+        "height": 435,
+        "resolution": {
+          "value": 72,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "none",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 435,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 259,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4
+        },
+        "nonAffineTransform": [
+          513,
+          550.9999999999999,
+          772,
+          550.9999999999999,
+          741.9853515625001,
+          986,
+          543.0146484375001,
+          986
+        ]
+      }
+    }
+  ],
+  "linkedFiles": [
+    {
+      "id": "05999d50-d71c-11e5-b1ae-a548a96e5f9f",
+      "name": "Layer 1.psd",
+      "type": "8BPB",
+      "creator": "8BIM"
+    }
+  ]
+}
