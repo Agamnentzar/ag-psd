@@ -54,6 +54,46 @@ describe('ABR', () => {
 		const abr = readAbr(fs.readFileSync(fileName), { logMissingFeatures: true });
 		console.log(require('util').inspect(abr, false, 99, true));
 	});
+
+	it.skip('test', function () {
+		this.timeout(60 * 1000);
+
+		const basePath = `E:\\Downloads\\Brushes-20211231T151021Z-001\\Brushes`;
+		const outputPath = `E:\\Downloads\\output`;
+
+		for (const dir of fs.readdirSync(basePath)) {
+			const dirPath = path.join(basePath, dir);
+
+			for (const file of fs.readdirSync(dirPath)) {
+				if (!/\.abr$/.test(file)) continue;
+
+				const filePath = path.join(basePath, dir, file);
+
+				console.log(filePath);
+				const abr = readAbr(fs.readFileSync(filePath));
+				console.log(require('util').inspect(abr, false, 99, true));
+
+				if (0) {
+					fs.rmSync(path.join(outputPath, file), { recursive: true, force: true });
+					fs.mkdirSync(path.join(outputPath, file));
+
+					for (const sample of abr.samples) {
+						const canvas = alphaToCanvas(sample.alpha, sample.bounds.w, sample.bounds.h);
+						fs.writeFileSync(path.join(outputPath, file, 'sample-' + sample.id + '.png'), canvas.toBuffer());
+						delete (sample as any).alpha;
+					}
+
+					for (const pattern of abr.patterns) {
+						const canvas = rgbToCanvas(pattern.data, pattern.bounds.w, pattern.bounds.h);
+						fs.writeFileSync(path.join(outputPath, file, 'pattern-' + pattern.id + '.png'), canvas.toBuffer());
+						delete (pattern as any).data;
+					}
+
+					fs.writeFileSync(path.join(outputPath, file, 'info.json'), JSON.stringify(abr, null, 2), 'utf8');
+				}
+			}
+		}
+	})
 });
 
 function alphaToCanvas(alpha: Uint8Array, width: number, height: number) {

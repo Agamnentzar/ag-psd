@@ -1,7 +1,6 @@
-// import * as zlib from 'zlib';
 import {
 	Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color,
-	PatternInfo, GlobalLayerMaskInfo
+	PatternInfo, GlobalLayerMaskInfo, RGB
 } from './psd';
 import {
 	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
@@ -267,6 +266,10 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 		readImageData(reader, psd, globalAlpha, opt);
 	}
 
+	// TODO: show converted color mode instead of original PSD file color mode
+	//       but add option to preserve file color mode (need to return image data instead of canvas in that case)
+	// psd.colorMode = ColorMode.RGB; // we convert all color modes to RGB
+
 	return psd;
 }
 
@@ -441,17 +444,21 @@ function readLayerChannelImageData(
 ) {
 	const layerWidth = (layer.right || 0) - (layer.left || 0);
 	const layerHeight = (layer.bottom || 0) - (layer.top || 0);
+	const cmyk = psd.colorMode === ColorMode.CMYK;
 
 	let imageData: ImageData | undefined;
 
 	if (layerWidth && layerHeight) {
-		imageData = createImageData(layerWidth, layerHeight);
-		resetImageData(imageData);
+		if (cmyk) {
+			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) };
+			for (let p = 4; p < imageData.data.byteLength; p += 5) imageData.data[p] = 255;
+		} else {
+			imageData = createImageData(layerWidth, layerHeight);
+			resetImageData(imageData);
+		}
 	}
 
-	if (RAW_IMAGE_DATA) {
-		(layer as any).imageDataRaw = [];
-	}
+	if (RAW_IMAGE_DATA) (layer as any).imageDataRaw = [];
 
 	for (const channel of channels) {
 		const compression = readUint16(reader) as Compression;
@@ -469,7 +476,7 @@ function readLayerChannelImageData(
 				resetImageData(maskData);
 
 				const start = reader.offset;
-				readData(reader, maskData, compression, maskWidth, maskHeight, 0, options.large);
+				readData(reader, maskData, compression, maskWidth, maskHeight, 0, options.large, 4);
 
 				if (RAW_IMAGE_DATA) {
 					(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
@@ -485,7 +492,7 @@ function readLayerChannelImageData(
 				}
 			}
 		} else {
-			const offset = offsetForChannel(channel.id);
+			const offset = offsetForChannel(channel.id, cmyk);
 			let targetData = imageData;
 
 			if (offset < 0) {
@@ -497,7 +504,7 @@ function readLayerChannelImageData(
 			}
 
 			const start = reader.offset;
-			readData(reader, targetData, compression, layerWidth, layerHeight, offset, options.large);
+			readData(reader, targetData, compression, layerWidth, layerHeight, offset, options.large, cmyk ? 5 : 4);
 
 			if (RAW_IMAGE_DATA) {
 				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
@@ -510,6 +517,12 @@ function readLayerChannelImageData(
 	}
 
 	if (imageData) {
+		if (cmyk) {
+			const cmykData = imageData;
+			imageData = createImageData(cmykData.width, cmykData.height);
+			cmykToRgb(cmykData, imageData, false);
+		}
+
 		if (options.useImageData) {
 			layer.imageData = imageData;
 		} else {
@@ -521,12 +534,12 @@ function readLayerChannelImageData(
 
 function readData(
 	reader: PsdReader, data: ImageData | undefined, compression: Compression, width: number, height: number,
-	offset: number, large: boolean
+	offset: number, large: boolean, step: number
 ) {
 	if (compression === Compression.RawData) {
-		readDataRaw(reader, data, offset, width, height);
+		readDataRaw(reader, data, offset, width, height, step);
 	} else if (compression === Compression.RleCompressed) {
-		readDataRLE(reader, data, width, height, 4, [offset], large);
+		readDataRLE(reader, data, width, height, step, [offset], large);
 	} else {
 		throw new Error(`Compression type not supported: ${compression}`);
 	}
@@ -589,47 +602,79 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 	const imageData = createImageData(psd.width, psd.height);
 	resetImageData(imageData);
 
-	if (psd.colorMode === ColorMode.Bitmap) {
-		let bytes: Uint8Array;
+	switch (psd.colorMode) {
+		case ColorMode.Bitmap: {
+			let bytes: Uint8Array;
 
-		if (compression === Compression.RawData) {
-			bytes = readBytes(reader, Math.ceil(psd.width / 8) * psd.height);
-		} else if (compression === Compression.RleCompressed) {
-			bytes = new Uint8Array(psd.width * psd.height);
-			readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 1, [0], options.large);
-		} else {
-			throw new Error(`Bitmap compression not supported: ${compression}`);
-		}
-
-		decodeBitmap(bytes, imageData.data, psd.width, psd.height);
-	} else {
-		const channels = psd.colorMode === ColorMode.Grayscale ? [0] : [0, 1, 2];
-
-		if (psd.channels && psd.channels > 3) {
-			for (let i = 3; i < psd.channels; i++) {
-				// TODO: store these channels in additional image data
-				channels.push(i);
+			if (compression === Compression.RawData) {
+				bytes = readBytes(reader, Math.ceil(psd.width / 8) * psd.height);
+			} else if (compression === Compression.RleCompressed) {
+				bytes = new Uint8Array(psd.width * psd.height);
+				readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 1, [0], options.large);
+			} else {
+				throw new Error(`Bitmap compression not supported: ${compression}`);
 			}
-		} else if (globalAlpha) {
-			channels.push(3);
-		}
 
-		if (compression === Compression.RawData) {
-			for (let i = 0; i < channels.length; i++) {
-				readDataRaw(reader, imageData, channels[i], psd.width, psd.height);
+			decodeBitmap(bytes, imageData.data, psd.width, psd.height);
+			break;
+		}
+		case ColorMode.RGB:
+		case ColorMode.Grayscale: {
+			const channels = psd.colorMode === ColorMode.Grayscale ? [0] : [0, 1, 2];
+
+			if (psd.channels && psd.channels > 3) {
+				for (let i = 3; i < psd.channels; i++) {
+					// TODO: store these channels in additional image data
+					channels.push(i);
+				}
+			} else if (globalAlpha) {
+				channels.push(3);
 			}
-		} else if (compression === Compression.RleCompressed) {
-			const start = reader.offset;
-			readDataRLE(reader, imageData, psd.width, psd.height, 4, channels, options.large);
 
-			if (RAW_IMAGE_DATA) {
-				(psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+			if (compression === Compression.RawData) {
+				for (let i = 0; i < channels.length; i++) {
+					readDataRaw(reader, imageData, channels[i], psd.width, psd.height, 4);
+				}
+			} else if (compression === Compression.RleCompressed) {
+				const start = reader.offset;
+				readDataRLE(reader, imageData, psd.width, psd.height, 4, channels, options.large);
+				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
 			}
-		}
 
-		if (psd.colorMode === ColorMode.Grayscale) {
-			setupGrayscale(imageData);
+			if (psd.colorMode === ColorMode.Grayscale) {
+				setupGrayscale(imageData);
+			}
+			break;
 		}
+		case ColorMode.CMYK: {
+			if (psd.channels !== 4) throw new Error(`Invalid channel count`);
+
+			const channels = [0, 1, 2, 3];
+			if (globalAlpha) channels.push(4);
+
+			if (compression === Compression.RawData) {
+				throw new Error(`Not implemented`);
+				// TODO: ...
+				// for (let i = 0; i < channels.length; i++) {
+				// 	readDataRaw(reader, imageData, channels[i], psd.width, psd.height);
+				// }
+			} else if (compression === Compression.RleCompressed) {
+				const cmykImageData: PixelData = {
+					width: imageData.width,
+					height: imageData.height,
+					data: new Uint8Array(imageData.width * imageData.height * 5),
+				};
+
+				const start = reader.offset;
+				readDataRLE(reader, cmykImageData, psd.width, psd.height, 5, channels, options.large);
+				cmykToRgb(cmykImageData, imageData, true);
+
+				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+			}
+
+			break;
+		}
+		default: throw new Error(`Color mode not supported: ${psd.colorMode}`);
 	}
 
 	if (options.useImageData) {
@@ -640,14 +685,42 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 	}
 }
 
-function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset: number, width: number, height: number) {
+function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
+	const size = rgb.width * rgb.height * 4;
+	const srcData = cmyk.data;
+	const dstData = rgb.data;
+
+	for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
+		const c = srcData[src];
+		const m = srcData[src + 1];
+		const y = srcData[src + 2];
+		const k = srcData[src + 3];
+		dstData[dst] = ((((c * k) | 0) / 255) | 0);
+		dstData[dst + 1] = ((((m * k) | 0) / 255) | 0);
+		dstData[dst + 2] = ((((y * k) | 0) / 255) | 0);
+		dstData[dst + 3] = reverseAlpha ? 255 - srcData[src + 4] : srcData[src + 4];
+	}
+
+	// for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
+	// 	const c = 1 - (srcData[src + 0] / 255);
+	// 	const m = 1 - (srcData[src + 1] / 255);
+	// 	const y = 1 - (srcData[src + 2] / 255);
+	// 	// const k = srcData[src + 3] / 255;
+	// 	dstData[dst + 0] = ((1 - c * 0.8) * 255) | 0;
+	// 	dstData[dst + 1] = ((1 - m * 0.8) * 255) | 0;
+	// 	dstData[dst + 2] = ((1 - y * 0.8) * 255) | 0;
+	// 	dstData[dst + 3] = reverseAlpha ? 255 - srcData[src + 4] : srcData[src + 4];
+	// }
+}
+
+function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset: number, width: number, height: number, step: number) {
 	const size = width * height;
 	const buffer = readBytes(reader, size);
 
-	if (pixelData && offset < 4) {
+	if (pixelData && offset < step) {
 		const data = pixelData.data;
 
-		for (let i = 0, p = offset | 0; i < size; i++, p = (p + 4) | 0) {
+		for (let i = 0, p = offset | 0; i < size; i++, p = (p + step) | 0) {
 			data[p] = buffer[i];
 		}
 	}
@@ -678,9 +751,11 @@ export function readDataRLE(
 		}
 	}
 
+	const extraLimit = (step - 1) | 0; // 3 for rgb, 4 for cmyk
+
 	for (let c = 0, li = 0; c < offsets.length; c++) {
 		const offset = offsets[c] | 0;
-		const extra = c > 3 || offset > 3;
+		const extra = c > extraLimit || offset > extraLimit;
 
 		if (!data || extra) {
 			for (let y = 0; y < height; y++, li++) {
@@ -801,12 +876,25 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	const y = readInt16(reader);
 
 	// we only support RGB and grayscale for now
-	if (colorMode !== ColorMode.RGB && colorMode !== ColorMode.Grayscale) throw new Error('Unsupported pattern color mode');
+	if (colorMode !== ColorMode.RGB && colorMode !== ColorMode.Grayscale && colorMode !== ColorMode.Indexed) {
+		throw new Error(`Unsupported pattern color mode: ${colorMode}`);
+	}
 
-	const name = readUnicodeString(reader);
+	let name = readUnicodeString(reader);
 	const id = readPascalString(reader, 1);
+	const palette: RGB[] = [];
 
-	// TODO: index color table here (only for indexed color mode, not supported right now)
+	if (colorMode === ColorMode.Indexed) {
+		for (let i = 0; i < 256; i++) {
+			palette.push({
+				r: readUint8(reader),
+				g: readUint8(reader),
+				b: readUint8(reader),
+			})
+		}
+
+		skipBytes(reader, 4); // no idea what this is
+	}
 
 	// virtual memory array list
 	const version2 = readUint32(reader);
@@ -828,63 +916,71 @@ export function readPattern(reader: PsdReader): PatternInfo {
 
 	for (let i = 0, ch = 0; i < (channelsCount + 2); i++) {
 		const has = readUint32(reader);
+		if (!has) continue;
 
-		if (has) {
-			const length = readUint32(reader);
-			const pixelDepth = readUint32(reader);
-			const ctop = readUint32(reader);
-			const cleft = readUint32(reader);
-			const cbottom = readUint32(reader);
-			const cright = readUint32(reader);
-			const pixelDepth2 = readUint16(reader);
-			const compressionMode = readUint8(reader); // 0 - raw, 1 - zip
-			const dataLength = length - (4 + 16 + 2 + 1);
-			const cdata = readBytes(reader, dataLength);
+		const length = readUint32(reader);
+		const pixelDepth = readUint32(reader);
+		const ctop = readUint32(reader);
+		const cleft = readUint32(reader);
+		const cbottom = readUint32(reader);
+		const cright = readUint32(reader);
+		const pixelDepth2 = readUint16(reader);
+		const compressionMode = readUint8(reader); // 0 - raw, 1 - zip
+		const dataLength = length - (4 + 16 + 2 + 1);
+		const cdata = readBytes(reader, dataLength);
 
-			if (pixelDepth !== 8 || pixelDepth2 !== 8) throw new Error('16bit pixel depth not supported for palettes');
+		if (pixelDepth !== 8 || pixelDepth2 !== 8) {
+			throw new Error('16bit pixel depth not supported for patterns');
+		}
 
-			const w = cright - cleft;
-			const h = cbottom - ctop;
-			const ox = cleft - left;
-			const oy = ctop - top;
+		const w = cright - cleft;
+		const h = cbottom - ctop;
+		const ox = cleft - left;
+		const oy = ctop - top;
 
-			if (compressionMode === 0) {
-				if (colorMode === ColorMode.RGB && ch < 3) {
-					for (let y = 0; y < h; y++) {
-						for (let x = 0; x < w; x++) {
-							const src = x + y * w;
-							const dst = (ox + x + (y + oy) * width) * 4;
-							data[dst + ch] = cdata[src];
-						}
+		if (compressionMode === 0) {
+			if (colorMode === ColorMode.RGB && ch < 3) {
+				for (let y = 0; y < h; y++) {
+					for (let x = 0; x < w; x++) {
+						const src = x + y * w;
+						const dst = (ox + x + (y + oy) * width) * 4;
+						data[dst + ch] = cdata[src];
 					}
 				}
-
-				if (colorMode === ColorMode.Grayscale && ch < 1) {
-					for (let y = 0; y < h; y++) {
-						for (let x = 0; x < w; x++) {
-							const src = x + y * w;
-							const dst = (ox + x + (y + oy) * width) * 4;
-							const value = cdata[src];
-							data[dst + 0] = value;
-							data[dst + 1] = value;
-							data[dst + 2] = value;
-						}
-					}
-				}
-			} else if (compressionMode === 1) {
-				// console.log({ colorMode });
-				// require('fs').writeFileSync('zip.bin', Buffer.from(cdata));
-				// const data = require('zlib').inflateRawSync(cdata);
-				// const data = require('zlib').unzipSync(cdata);
-				// console.log(data);
-				// throw new Error('Zip compression not supported for palettes');
-				throw new Error('Unsupported palette compression mode');
-			} else {
-				throw new Error('Invalid palette compression mode');
 			}
 
-			ch++;
+			if (colorMode === ColorMode.Grayscale && ch < 1) {
+				for (let y = 0; y < h; y++) {
+					for (let x = 0; x < w; x++) {
+						const src = x + y * w;
+						const dst = (ox + x + (y + oy) * width) * 4;
+						const value = cdata[src];
+						data[dst + 0] = value;
+						data[dst + 1] = value;
+						data[dst + 2] = value;
+					}
+				}
+			}
+
+			if (colorMode === ColorMode.Indexed) {
+				// TODO:
+				throw new Error('Indexed pattern color mode not implemented');
+			}
+		} else if (compressionMode === 1) {
+			// console.log({ colorMode });
+			// require('fs').writeFileSync('zip.bin', Buffer.from(cdata));
+			// const data = require('zlib').inflateRawSync(cdata);
+			// const data = require('zlib').unzipSync(cdata);
+			// console.log(data);
+			// throw new Error('Zip compression not supported for pattern');
+			// throw new Error('Unsupported pattern compression');
+			console.error('Unsupported pattern compression');
+			name += ' (failed to decode)';
+		} else {
+			throw new Error('Invalid pattern compression mode');
 		}
+
+		ch++;
 	}
 
 	// TODO: use canvas instead of data ?

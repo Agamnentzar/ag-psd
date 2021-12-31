@@ -290,7 +290,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 
 	if (version === 1 || version === 2) {
 		throw new Error(`Unsupported ABR version (${version})`); // TODO: ...
-	} else if (version === 6 || version === 7 || version === 10) {
+	} else if (version === 6 || version === 7 || version === 9 || version === 10) {
 		const minorVersion = readInt16(reader);
 		if (minorVersion !== 1 && minorVersion !== 2) throw new Error('Unsupported ABR minor version');
 
@@ -509,7 +509,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 			}
 		}
 	} else {
-		throw new Error('Unsupported ABR version');
+		throw new Error(`Unsupported ABR version (${version})`);
 	}
 
 	return { samples, patterns, brushes };

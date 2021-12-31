@@ -97,9 +97,10 @@ export const enum MaskParams {
 }
 
 export const enum ChannelID {
-	Red = 0,
-	Green = 1,
-	Blue = 2,
+	Color0 = 0, // red (rgb) / cyan (cmyk)
+	Color1 = 1, // green (rgb) / magenta (cmyk)
+	Color2 = 2, // blue (rgb) / yellow (cmyk)
+	Color3 = 3, // - (rgb) / black (cmyk)
 	Transparency = -1,
 	UserMask = -2,
 	RealUserMask = -3,
@@ -144,12 +145,13 @@ export interface PixelData {
 	height: number;
 }
 
-export function offsetForChannel(channelId: ChannelID) {
+export function offsetForChannel(channelId: ChannelID, cmyk: boolean) {
 	switch (channelId) {
-		case ChannelID.Red: return 0;
-		case ChannelID.Green: return 1;
-		case ChannelID.Blue: return 2;
-		case ChannelID.Transparency: return 3;
+		case ChannelID.Color0: return 0;
+		case ChannelID.Color1: return 1;
+		case ChannelID.Color2: return 2;
+		case ChannelID.Color3: return cmyk ? 3 : channelId + 1;
+		case ChannelID.Transparency: return cmyk ? 4 : 3;
 		default: return channelId + 1;
 	}
 }
@@ -170,9 +172,9 @@ export function hasAlpha(data: PixelData) {
 	return false;
 }
 
-export function resetImageData({ width, height, data }: PixelData) {
-	const size = (width * height) | 0;
+export function resetImageData({ data }: PixelData) {
 	const buffer = new Uint32Array(data.buffer);
+	const size = buffer.length | 0;
 
 	for (let p = 0; p < size; p = (p + 1) | 0) {
 		buffer[p] = 0xff000000;

@@ -894,6 +894,10 @@ export const BlnM = createEnum<BlendMode>('BlnM', 'normal', {
 	'saturation': 'Strt',
 	'color': 'Clr ',
 	'luminosity': 'Lmns',
+	// used in ABR
+	'linear height': 'linearHeight',
+	'height': 'Hght',
+	'subtraction': 'Sbtr', // 2nd version of subtract ?
 });
 
 export const BESl = createEnum<BevelStyle>('BESl', 'inner bevel', {

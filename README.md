@@ -10,7 +10,8 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 
 ## Limitations
 
-* Does not support Indexed, CMYK, Multichannel, Duotone and LAB color modes
+* Does not support reading Indexed, CMYK, Multichannel, Duotone and LAB color modes (all supported color modes are converted to RGB mode when reading)
+* Does not support writing any color modes other than RGB
 * Does not support 16 bits per channel
 * Does not support The Large Document Format (8BPB/PSB) 
 * Does not support color palettes

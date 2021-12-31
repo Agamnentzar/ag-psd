@@ -121,7 +121,7 @@ describe('helpers', () => {
 
 	describe('offsetForChannel()', () => {
 		it('returns offset for other channelId', () => {
-			expect(offsetForChannel(10)).equal(11);
+			expect(offsetForChannel(10, false)).equal(11);
 		});
 	});
 });

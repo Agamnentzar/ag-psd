@@ -204,7 +204,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	writeUint32(writer, psd.height);
 	writeUint32(writer, psd.width);
 	writeUint16(writer, 8); // bits per channel
-	writeUint16(writer, ColorMode.RGB);
+	writeUint16(writer, ColorMode.RGB); // we only support saving RGB right now
 
 	// color mode data
 	writeSection(writer, 1, () => {
@@ -575,9 +575,9 @@ function getLayerChannels(
 	let { top = 0, left = 0, right = 0, bottom = 0 } = layer;
 	let channels: ChannelData[] = [
 		{ channelId: ChannelID.Transparency, compression: Compression.RawData, buffer: undefined, length: 2 },
-		{ channelId: ChannelID.Red, compression: Compression.RawData, buffer: undefined, length: 2 },
-		{ channelId: ChannelID.Green, compression: Compression.RawData, buffer: undefined, length: 2 },
-		{ channelId: ChannelID.Blue, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ channelId: ChannelID.Color0, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ channelId: ChannelID.Color1, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ channelId: ChannelID.Color2, compression: Compression.RawData, buffer: undefined, length: 2 },
 	];
 
 	let { width, height } = getLayerDimentions(layer);
@@ -617,9 +617,9 @@ function getLayerChannels(
 	}
 
 	const channelIds = [
-		ChannelID.Red,
-		ChannelID.Green,
-		ChannelID.Blue,
+		ChannelID.Color0,
+		ChannelID.Color1,
+		ChannelID.Color2,
 	];
 
 	if (!background || options.noBackground || layer.mask || hasAlpha(data) || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
@@ -627,7 +627,7 @@ function getLayerChannels(
 	}
 
 	channels = channelIds.map(channel => {
-		const offset = offsetForChannel(channel);
+		const offset = offsetForChannel(channel, false); // TODO: psd.colorMode === ColorMode.CMYK);
 		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset], !!options.psb)!;
 
 		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {

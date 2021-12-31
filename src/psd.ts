@@ -269,6 +269,7 @@ export interface Warp {
 	customEnvelopeWarp?: {
 		quiltSliceX?: number[];
 		quiltSliceY?: number[];
+		// 16 points from top left to bottom right, rows first, all points are relative to the first point
 		meshPoints: { x: number; y: number; }[];
 	};
 }
