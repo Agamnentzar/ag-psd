@@ -19,12 +19,12 @@ export interface SampleInfo {
 
 export interface BrushDynamics {
 	control: 'off' | 'fade' | 'pen pressure' | 'pen tilt' | 'stylus wheel' | 'initial direction' | 'direction' | 'initial rotation' | 'rotation';
-	steps: number;
+	steps: number; // for fade
 	jitter: number;
 	minimum: number;
 }
 
-const dynamicsControl = ['off', 'fade', 'pen pressure', 'pen tilt', 'stylus sheel', 'initial direction', 'direction', 'initial rotation', 'rotation'];
+const dynamicsControl = ['off', 'fade', 'pen pressure', 'pen tilt', 'stylus wheel', 'initial direction', 'direction', 'initial rotation', 'rotation'];
 
 export interface BrushShape {
 	name?: string;
