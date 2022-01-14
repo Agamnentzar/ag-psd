@@ -1,7 +1,7 @@
 {
   "width": 300,
   "height": 200,
-  "channels": 4,
+  "channels": 3,
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
@@ -29,12 +29,6 @@
       "y": 0,
       "scale": 1
     },
-    "alphaChannelNames": [
-      "Transparency"
-    ],
-    "alphaIdentifiers": [
-      0
-    ],
     "globalAngle": 120,
     "globalAltitude": 30,
     "printFlags": {
@@ -48,10 +42,8 @@
       "caption": false,
       "printFlags": true
     },
-    "layerState": 6,
+    "layerState": 3,
     "layersGroup": [
-      0,
-      0,
       0,
       0,
       0,
@@ -63,11 +55,11 @@
       1,
       1,
       1,
-      1,
-      1,
       1
     ],
-    "layerSelectionIds": [],
+    "layerSelectionIds": [
+      3
+    ],
     "gridAndGuidesInformation": {
       "grid": {
         "horizontal": 576,
@@ -79,20 +71,20 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 8,
+    "idsSeedNumber": 6,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
-      "readerName": "Adobe Photoshop CS6",
+      "readerName": "Adobe Photoshop 2022",
       "fileVersion": 1
     }
   },
   "children": [
     {
       "top": 0,
-      "left": 36,
+      "left": 0,
       "bottom": 200,
-      "right": 279,
+      "right": 300,
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
@@ -110,7 +102,34 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1450198418.5244036,
+      "timestamp": 1642159066.511753,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 3",
+      "id": 4,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1642159066.5117667,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -140,7 +159,7 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1450198418.5245173,
+      "timestamp": 1642159066.5117958,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -150,77 +169,14 @@
         {
           "top": 0,
           "left": 0,
-          "bottom": 0,
-          "right": 0,
-          "blendMode": "normal",
-          "opacity": 0.5019607843137255,
-          "clipping": false,
-          "transparencyProtected": false,
-          "hidden": true,
-          "name": "Group 2",
-          "nameSource": "lset",
-          "id": 7,
-          "sectionDivider": {
-            "type": 1,
-            "key": "pass",
-            "subType": 0
-          },
-          "protected": {
-            "transparency": false,
-            "composite": false,
-            "position": false
-          },
-          "layerColor": "none",
-          "timestamp": 1450198418.5244923,
-          "referencePoint": {
-            "x": 0,
-            "y": 0
-          },
-          "version": 80,
-          "opened": true,
-          "children": [],
-          "parentPath": "Group 1"
-        },
-        {
-          "top": 15,
-          "left": 0,
           "bottom": 200,
-          "right": 273,
+          "right": 300,
           "blendMode": "normal",
           "opacity": 1,
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
-          "name": "Layer 3",
-          "id": 4,
-          "blendClippendElements": true,
-          "blendInteriorElements": false,
-          "knockout": false,
-          "protected": {
-            "transparency": false,
-            "composite": false,
-            "position": false
-          },
-          "layerColor": "none",
-          "timestamp": 1450198418.5245013,
-          "referencePoint": {
-            "x": 0,
-            "y": 0
-          },
-          "parentPath": "Group 1"
-        },
-        {
-          "top": 11,
-          "left": 24,
-          "bottom": 168,
-          "right": 268,
-          "blendMode": "normal",
-          "opacity": 1,
-          "clipping": false,
-          "transparencyProtected": false,
-          "hidden": false,
-          "name": "Layer 1",
-          "nameSource": "layr",
+          "name": "GroupChild1",
           "id": 3,
           "blendClippendElements": true,
           "blendInteriorElements": false,
@@ -231,7 +187,7 @@
             "position": false
           },
           "layerColor": "none",
-          "timestamp": 1450198418.5245092,
+          "timestamp": 1642159066.5117877,
           "referencePoint": {
             "x": 0,
             "y": 0
@@ -248,5 +204,14 @@
       "b": 0
     },
     "opacity": 0.19607843137254902
+  },
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "compCore",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "supported",
+    "compCoreGPUSupport": "featureDisabled"
   }
 }

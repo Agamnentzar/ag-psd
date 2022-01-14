@@ -308,10 +308,13 @@ function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 		for (let i = layers.length - 1; i >= 0; i--) {
 			const l = layers[i];
 			const type = l.sectionDivider ? l.sectionDivider.type : SectionDividerType.Other;
-
 			if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
 				l.opened = type === SectionDividerType.OpenFolder;
 				l.children = [];
+				const parent = stack[stack.length - 1];
+				if (parent && parent.name) {
+					l.parentPath = parent.name;
+				}
 				stack[stack.length - 1].children!.unshift(l);
 				stack.push(l);
 			} else if (type === SectionDividerType.BoundingSectionDivider) {
@@ -321,6 +324,10 @@ function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 				// 	// sometimes layer group terminator doesn't have sectionDivider, so we just guess here (PS bug ?)
 				// 	stack.pop();
 			} else {
+				const parent = stack[stack.length - 1];
+				if (parent && parent.name) {
+					l.parentPath = parent.name;
+				}
 				stack[stack.length - 1].children!.unshift(l);
 			}
 		}
@@ -890,7 +897,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 				r: readUint8(reader),
 				g: readUint8(reader),
 				b: readUint8(reader),
-			})
+			});
 		}
 
 		skipBytes(reader, 4); // no idea what this is

@@ -172,7 +172,8 @@
           "referencePoint": {
             "x": 0,
             "y": 0
-          }
+          },
+          "parentPath": "white board"
         }
       ]
     },
@@ -281,7 +282,8 @@
               "referencePoint": {
                 "x": 0,
                 "y": 0
-              }
+              },
+              "parentPath": "Group 1"
             },
             {
               "top": 365,
@@ -309,9 +311,11 @@
               "referencePoint": {
                 "x": 0,
                 "y": 0
-              }
+              },
+              "parentPath": "Group 1"
             }
-          ]
+          ],
+          "parentPath": "transparent board"
         }
       ]
     },

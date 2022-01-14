@@ -568,7 +568,8 @@
           "referencePoint": {
             "x": -98,
             "y": -1566
-          }
+          },
+          "parentPath": "Clean"
         }
       ]
     },
@@ -628,7 +629,8 @@
           "referencePoint": {
             "x": 193.8997188919217,
             "y": -1474.321752285059
-          }
+          },
+          "parentPath": "Text"
         },
         {
           "top": 644,
@@ -753,7 +755,8 @@
           "referencePoint": {
             "x": -165.34007866178354,
             "y": -1605.5475683768323
-          }
+          },
+          "parentPath": "Text"
         }
       ]
     },
@@ -813,7 +816,8 @@
           "referencePoint": {
             "x": -131,
             "y": -1272
-          }
+          },
+          "parentPath": "SFX"
         }
       ]
     }

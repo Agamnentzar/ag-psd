@@ -30,9 +30,11 @@ describe('PsdReader', () => {
 		expect(psd.canvas).not.ok;
 	});
 
-	it('skips layer image data', () => {
-		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { ...opts, skipLayerImageData: true });
-		expect(psd.children![0].canvas).not.ok;
+	it('fetches a layer group', () => {
+		const psd = readPsdFromFile(path.join(readFilesPath, 'nested-layers', 'src.psd'), { ...opts, skipLayerImageData: true });
+		expect(psd.children![2].name).to.equal('Group 1');
+		expect(psd.children![2].children![0].name).to.equal('GroupChild1');
+		expect(psd.children![2].children![0].parentPath).to.equal('Group 1');
 	});
 
 	it('reads PSD from Buffer with offset', () => {
