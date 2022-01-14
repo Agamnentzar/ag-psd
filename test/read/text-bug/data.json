@@ -330,7 +330,8 @@
             "x": 102.00000000000006,
             "y": -3403
           },
-          "version": 130
+          "version": 130,
+          "parentPath": "组 7"
         },
         {
           "top": 1012,
@@ -468,7 +469,8 @@
           "referencePoint": {
             "x": 97,
             "y": -3622
-          }
+          },
+          "parentPath": "组 7"
         },
         {
           "top": 1034,
@@ -606,7 +608,8 @@
           "referencePoint": {
             "x": 51,
             "y": -3413
-          }
+          },
+          "parentPath": "组 7"
         },
         {
           "top": 1054,
@@ -744,7 +747,8 @@
           "referencePoint": {
             "x": 48,
             "y": -3412
-          }
+          },
+          "parentPath": "组 7"
         }
       ]
     }
