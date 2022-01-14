@@ -1,4 +1,4 @@
-# ag-psd
+# ag-psd (Moonpig fork)
 
 [![Build Status](https://travis-ci.org/Agamnentzar/ag-psd.svg)](https://travis-ci.org/Agamnentzar/ag-psd)
 [![npm version](https://img.shields.io/npm/v/ag-psd)](https://www.npmjs.com/package/ag-psd)
@@ -7,6 +7,10 @@ JavaScript library for reading and writing PSD files (Photoshop Document files)
 
 Implemented according to [official documentation](https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/)
 , [fileformat.info](http://www.fileformat.info/format/psd/egff.htm) and a lot of trial and error.
+
+## Moonpig additions to this library
+
+* Layers now expose `parentPath`, which is the name of the layer's parent. 
 
 ## Limitations
 
