@@ -1,0 +1,22 @@
+stages:
+  - Build
+  - Release
+
+variables:
+  GIT_DEPTH: 1
+
+image: '$MNPG_BUILD_NODE_IMAGE:14alpine-latest'
+
+Build:
+  stage: Build
+  script:
+    - yarn install --frozen-lockfile
+    - yarn build
+    - yarn test
+
+Release:
+  stage: Release
+  script:
+    - ./scripts/release.sh
+  only:
+    - master

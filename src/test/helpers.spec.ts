@@ -111,7 +111,7 @@ describe('helpers', () => {
 					readDataRLE(reader, output, width, height, 4, [0], false);
 					result = fromData(output.data);
 				} catch (e) {
-					throw new Error(`Error for image: [${array}] ${e.stack}`);
+					throw new Error(`Error for image: [${array}] ${(<any>e).stack}`);
 				}
 
 				expect(result, `image: [${array}]`).eql(data);
