@@ -1,5 +1,5 @@
 default:
-  image: '$MNPG_BUILD_NODE_IMAGE:12alpine-latest'
+  image: '$MNPG_BUILD_NODE_IMAGE:14alpine-latest'
   before_script:
     - ./scripts/install_deps.sh
     - npm install
