@@ -2,7 +2,7 @@ default:
   image: '$MNPG_BUILD_NODE_IMAGE:14alpine-latest'
   before_script:
     - ./scripts/install_deps.sh
-    - yarn install --frozen-lockfile
+    - npm install
     - npm ci --cache .npm --prefer-offline
     - |
       {
