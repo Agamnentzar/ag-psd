@@ -214,8 +214,8 @@ export declare const FStl: {
     encode: (val: "center" | "inside" | "outside" | undefined) => string;
 };
 export declare const FrFl: {
-    decode: (val: string) => "pattern" | "color" | "gradient";
-    encode: (val: "pattern" | "color" | "gradient" | undefined) => string;
+    decode: (val: string) => "color" | "pattern" | "gradient";
+    encode: (val: "color" | "pattern" | "gradient" | undefined) => string;
 };
 export declare const strokeStyleLineCapType: {
     decode: (val: string) => LineCapType;
