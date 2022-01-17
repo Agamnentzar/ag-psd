@@ -10,6 +10,7 @@ image: '$MNPG_BUILD_NODE_IMAGE:14alpine-latest'
 Build:
   stage: Build
   script:
+    - ./scripts/install_deps.sh
     - yarn install --frozen-lockfile
     - yarn build
     - yarn test
@@ -17,6 +18,7 @@ Build:
 Release:
   stage: Release
   script:
+    - ./scripts/install_deps.sh
     - ./scripts/release.sh
   only:
     - master
