@@ -18,6 +18,9 @@
     "prepublishOnly": "npm run build",
     "release": "semantic-release"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "jspm": {
     "main": "dist/index.js",
     "jspmNodeConversion": false,
@@ -32,6 +35,9 @@
   "author": "Moonpig",
   "license": "MIT",
   "devDependencies": {
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/gitlab": "^7.0.4",
+    "@semantic-release/npm": "^8.0.3",
     "@types/mocha": "^8.2.2",
     "@types/node": "^14.17.0",
     "browserify": "^17.0.0",

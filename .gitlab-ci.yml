@@ -1,24 +1,31 @@
-stages:
-  - Build
-  - Release
+default:
+  image: '$MNPG_BUILD_NODE_IMAGE:14alpine-latest'
+  before_script:
+    - ./scripts/install_deps.sh
+    - npm ci --cache .npm --prefer-offline
+    - |
+      {
+        echo "@${CI_PROJECT_ROOT_NAMESPACE}:registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/"
+        echo "${CI_API_V4_URL#https?}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
+      } | tee -a .npmrc
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .npm/
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH
 
 variables:
-  GIT_DEPTH: 1
+  NPM_TOKEN: ${CI_JOB_TOKEN}
 
-image: '$MNPG_BUILD_NODE_IMAGE:14alpine-latest'
+stages:
+  - release
 
-Build:
-  stage: Build
+publish:
+  stage: release
   script:
-    - ./scripts/install_deps.sh
-    - yarn install --frozen-lockfile
-    - yarn build
-    - yarn test
-
-Release:
-  stage: Release
-  script:
-    - ./scripts/install_deps.sh
-    - ./scripts/release.sh
-  only:
-    - master
+    - npm run semantic-release
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
