@@ -7,10 +7,7 @@
   "es2015": "dist-es/index.js",
   "browser": "dist/index.js",
   "sideEffects": true,
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Moonpig/ag-psd.git"
-  },
+  "repository": "git@github.com:Moonpig/ag-psd.git",
   "scripts": {
     "test": "gulp test",
     "test2": "mocha -R dot dist/test",
@@ -32,7 +29,7 @@
     "psd",
     "photoshop"
   ],
-  "author": "Agamnentzar",
+  "author": "Moonpig",
   "license": "MIT",
   "devDependencies": {
     "@types/mocha": "^8.2.2",
