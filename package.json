@@ -9,6 +9,7 @@
   "sideEffects": true,
   "repository": "git@github.com:Moonpig/ag-psd.git",
   "scripts": {
+    "semantic-release": "semantic-release",
     "test": "gulp test",
     "test2": "mocha -R dot dist/test",
     "dev": "gulp dev --tests",
