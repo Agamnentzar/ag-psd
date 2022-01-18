@@ -1,5 +1,6 @@
 {
   "repositoryUrl": "git@github.com:Moonpig/ag-psd.git",
+  "githubApiPathPrefix": "/api/v3",
   "branches": ["master"],
   "plugins": [
     "@semantic-release/commit-analyzer",
