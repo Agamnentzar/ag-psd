@@ -9,7 +9,6 @@
   "sideEffects": true,
   "repository": "git@github.com:Moonpig/ag-psd.git",
   "scripts": {
-    "semantic-release": "semantic-release",
     "test": "gulp test",
     "test2": "mocha -R dot dist/test",
     "dev": "gulp dev --tests",
@@ -17,7 +16,7 @@
     "build": "gulp build && browserify dist/index.js --standalone agPsd -o dist/bundle.js",
     "rollup": "rollup --format=cjs --external base64-js --file=dist-es/bundle.js --sourcemap --sourcemapFile dist-es/bundle.js.map dist-es/index.js",
     "prepublishOnly": "npm run build",
-    "release": "semantic-release"
+    "release": "./scripts/release.sh"
   },
   "publishConfig": {
     "access": "public"
@@ -52,14 +51,14 @@
     "merge2": "^1.4.1",
     "mocha": "^8.4.0",
     "remap-istanbul": "^0.13.0",
-    "semantic-release": "^18.0.1",
     "source-map-support": "^0.5.19",
     "tslint": "^6.1.3",
     "typescript": "^4.5.4"
   },
   "dependencies": {
     "@types/base64-js": "^1.3.0",
-    "base64-js": "^1.5.1"
+    "base64-js": "^1.5.1",
+    "lerna": "^4.0.0"
   },
   "bugs": {
     "url": "https://github.com/Moonpig/ag-psd/issues"
