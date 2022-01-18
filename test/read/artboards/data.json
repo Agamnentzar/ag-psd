@@ -173,7 +173,7 @@
             "x": 0,
             "y": 0
           },
-          "parentPath": "white board"
+          "parentId": 3
         }
       ]
     },
@@ -283,7 +283,7 @@
                 "x": 0,
                 "y": 0
               },
-              "parentPath": "Group 1"
+              "parentId": 10
             },
             {
               "top": 365,
@@ -312,10 +312,10 @@
                 "x": 0,
                 "y": 0
               },
-              "parentPath": "Group 1"
+              "parentId": 10
             }
           ],
-          "parentPath": "transparent board"
+          "parentId": 7
         }
       ]
     },

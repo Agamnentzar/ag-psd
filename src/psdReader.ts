@@ -314,7 +314,7 @@ function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 				l.children = [];
 				const parent = stack[stack.length - 1];
 				if (parent && parent.name) {
-					l.parentPath = parent.name;
+					l.parentId = parent.id;
 				}
 				stack[stack.length - 1].children!.unshift(l);
 				stack.push(l);
@@ -327,7 +327,7 @@ function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 			} else {
 				const parent = stack[stack.length - 1];
 				if (parent && parent.name) {
-					l.parentPath = parent.name;
+					l.parentId = parent.id;
 				}
 				stack[stack.length - 1].children!.unshift(l);
 			}
@@ -389,7 +389,6 @@ function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 			readAdditionalLayerInfo(reader, layer, psd, options);
 		}
 	});
-
 	return { layer, channels };
 }
 
