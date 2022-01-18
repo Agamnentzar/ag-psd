@@ -9491,7 +9491,9 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":15,"buffer":16,"ieee754":17}],17:[function(require,module,exports){
+},{"base64-js":17,"buffer":16,"ieee754":18}],17:[function(require,module,exports){
+arguments[4][15][0].apply(exports,arguments)
+},{"dup":15}],18:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m

@@ -3,12 +3,6 @@ default:
   before_script:
     - ./scripts/install_deps.sh
     - npm install
-    - npm ci --cache .npm --prefer-offline
-    - |
-      {
-        echo "@${CI_PROJECT_ROOT_NAMESPACE}:registry=${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/npm/"
-        echo "${CI_API_V4_URL#https?}/projects/${CI_PROJECT_ID}/packages/npm/:_authToken=\${CI_JOB_TOKEN}"
-      } | tee -a .npmrc
   cache:
     key: ${CI_COMMIT_REF_SLUG}
     paths:
@@ -27,6 +21,6 @@ stages:
 publish:
   stage: release
   script:
-    - npm run semantic-release
+    - npm run release
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
