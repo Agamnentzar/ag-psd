@@ -179,7 +179,7 @@
           "version": 80,
           "opened": true,
           "children": [],
-          "parentPath": "Group 1"
+          "parentId": 5
         },
         {
           "top": 15,
@@ -207,7 +207,7 @@
             "x": 0,
             "y": 0
           },
-          "parentPath": "Group 1"
+          "parentId": 5
         },
         {
           "top": 11,
@@ -236,7 +236,7 @@
             "x": 0,
             "y": 0
           },
-          "parentPath": "Group 1"
+          "parentId": 5
         }
       ]
     }

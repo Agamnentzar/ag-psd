@@ -21,6 +21,7 @@ const opts: ReadOptions = {
 describe('PsdReader', () => {
 	it('reads width and height properly', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'blend-mode', 'src.psd'), { ...opts });
+		console.log(require('util').inspect(psd, false, 99, true));
 		expect(psd.width).equal(300);
 		expect(psd.height).equal(200);
 	});
@@ -34,7 +35,7 @@ describe('PsdReader', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'nested-layers', 'src.psd'), { ...opts, skipLayerImageData: true });
 		expect(psd.children![2].name).to.equal('Group 1');
 		expect(psd.children![2].children![0].name).to.equal('GroupChild1');
-		expect(psd.children![2].children![0].parentPath).to.equal('Group 1');
+		expect(psd.children![2].children![0].parentId).to.equal(5);
 	});
 
 	it('reads PSD from Buffer with offset', () => {
@@ -218,7 +219,7 @@ describe('PsdReader', () => {
 
 		// console.log(require('util').inspect(psd.children![0].text, false, 99, true));
 		// console.log(require('util').inspect(psd.children![1].text, false, 99, true));
-		// console.log(require('util').inspect(psd.engineData, false, 99, true));
+
 	});
 
 	it.skip('READ TEST', () => {
@@ -283,7 +284,6 @@ describe('PsdReader', () => {
 		});
 		delete psd.engineData;
 		psd.imageResources = {};
-		console.log(require('util').inspect(psd, false, 99, true));
 	});
 
 	it.skip('test', () => {

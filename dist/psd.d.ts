@@ -907,7 +907,8 @@ export interface Layer extends LayerAdditionalInfo {
     canvas?: HTMLCanvasElement;
     imageData?: ImageData;
     children?: Layer[];
-    parentPath?: string;
+    uuid?: string;
+    parentId?: number;
     /** applies only for layer groups */
     opened?: boolean;
 }
