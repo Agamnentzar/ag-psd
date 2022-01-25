@@ -33,11 +33,12 @@ function setupGrayscale(data: PixelData) {
 export interface PsdReader {
 	offset: number;
 	view: DataView;
+	strict: boolean;
 }
 
 export function createReader(buffer: ArrayBuffer, offset?: number, length?: number): PsdReader {
 	const view = new DataView(buffer, offset, length);
-	return { view, offset: 0 };
+	return { view, offset: 0, strict: false };
 }
 
 export function readUint8(reader: PsdReader) {
@@ -810,11 +811,14 @@ export function readSection<T>(
 	let end = reader.offset + length;
 	const result = func(() => end - reader.offset);
 
-	if (reader.offset > end)
+	if (reader.offset > end) {
 		throw new Error('Exceeded section limits');
+	}
 
-	if (reader.offset !== end)
-		throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
+	if (reader.offset !== end && reader.strict) {
+		// throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
+		console.warn('Unread section data');
+	}
 
 	while (end % round) end++;
 
