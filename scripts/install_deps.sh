@@ -1,6 +1,7 @@
 #!/bin/bash -e
+apk update
 apk add --no-cache --virtual build-deps \
-      python \
+      python3 \
       g++ \
       build-base \
       cairo-dev \
