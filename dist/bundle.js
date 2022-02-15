@@ -5305,7 +5305,7 @@ function setupGrayscale(data) {
 }
 function createReader(buffer, offset, length) {
     var view = new DataView(buffer, offset, length);
-    return { view: view, offset: 0 };
+    return { view: view, offset: 0, strict: false };
 }
 exports.createReader = createReader;
 function readUint8(reader) {
@@ -5556,7 +5556,7 @@ function readLayerInfo(reader, psd, options) {
                 l.children = [];
                 var parent_1 = stack[stack.length - 1];
                 if (parent_1 && parent_1.name) {
-                    l.parentPath = parent_1.name;
+                    l.parentId = parent_1.id;
                 }
                 stack[stack.length - 1].children.unshift(l);
                 stack.push(l);
@@ -5571,7 +5571,7 @@ function readLayerInfo(reader, psd, options) {
             else {
                 var parent_2 = stack[stack.length - 1];
                 if (parent_2 && parent_2.name) {
-                    l.parentPath = parent_2.name;
+                    l.parentId = parent_2.id;
                 }
                 stack[stack.length - 1].children.unshift(l);
             }
@@ -6005,10 +6005,13 @@ function readSection(reader, round, func, skipEmpty, eightBytes) {
         return undefined;
     var end = reader.offset + length;
     var result = func(function () { return end - reader.offset; });
-    if (reader.offset > end)
+    if (reader.offset > end) {
         throw new Error('Exceeded section limits');
-    if (reader.offset !== end)
-        throw new Error("Unread section data: ".concat(end - reader.offset, " bytes at 0x").concat(reader.offset.toString(16)));
+    }
+    if (reader.offset !== end && reader.strict) {
+        // throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
+        console.warn('Unread section data');
+    }
     while (end % round)
         end++;
     reader.offset = end;

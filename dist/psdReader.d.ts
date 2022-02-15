@@ -4,6 +4,7 @@ export declare const supportedColorModes: ColorMode[];
 export interface PsdReader {
     offset: number;
     view: DataView;
+    strict: boolean;
 }
 export declare function createReader(buffer: ArrayBuffer, offset?: number, length?: number): PsdReader;
 export declare function readUint8(reader: PsdReader): number;

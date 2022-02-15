@@ -74,7 +74,9 @@ export function loadImagesFromDirectory(dirName: string) {
 }
 
 export function createReaderFromBuffer(buffer: Buffer) {
-	return createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	reader.strict = true; // for testing
+	return reader;
 }
 
 export function readPsdFromFile(fileName: string, options?: ReadOptions): Psd {
