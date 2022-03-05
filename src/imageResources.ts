@@ -876,3 +876,16 @@ MOCK_HANDLERS && addHandler(
 		writeBytes(writer, (target as any)._ir4001);
 	},
 );
+
+// TODO: Unfinished
+MOCK_HANDLERS && addHandler(
+	4002, // Plug-In resource(s)
+	target => (target as any)._ir4002 !== undefined,
+	(reader, target, left) => {
+		LOG_MOCK_HANDLERS && console.log('image resource 4002', left());
+		(target as any)._ir4002 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir4002);
+	},
+);

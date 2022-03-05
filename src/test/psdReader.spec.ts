@@ -89,19 +89,22 @@ describe('PsdReader', () => {
 
 			function pushLayerCanvases(layers: Layer[]) {
 				for (const l of layers) {
+					const layerId = i;
+
+					if (!l.children || l.mask) i++;
+
 					if (l.children) {
 						pushLayerCanvases(l.children);
 					} else {
-						const layerId = i++;
 						compare.push({ name: `layer-${layerId}.png`, canvas: l.canvas });
 						l.canvas = undefined;
 						delete l.imageData;
+					}
 
-						if (l.mask) {
-							compare.push({ name: `layer-${layerId}-mask.png`, canvas: l.mask.canvas });
-							delete l.mask.canvas;
-							delete l.mask.imageData;
-						}
+					if (l.mask) {
+						compare.push({ name: `layer-${layerId}-mask.png`, canvas: l.mask.canvas });
+						delete l.mask.canvas;
+						delete l.mask.imageData;
 					}
 				}
 			}
@@ -140,7 +143,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /annot/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /^test$/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {
@@ -156,7 +159,7 @@ describe('PsdReader', () => {
 			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, false), 'utf8');
 			// fs.writeFileSync('temp2.txt', require('util').inspect(psd2, false, 99, false), 'utf8');
 
-			compareBuffers(actual, expected, `read-write-${f}`, 0);
+			compareBuffers(actual, expected, `read-write-${f}`, 0x0);
 		});
 	});
 
