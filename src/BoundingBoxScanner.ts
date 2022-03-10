@@ -29,6 +29,18 @@ export class BoundingBoxScan {
 		}
 	}
 
+	/**
+	 * Find the bounding box of the layer's channel
+	 */
+	public scanLayerChannel(layer: Layer | LayerMaskData, channel: number = BoundingBoxScan.SCAN_OFFSET_RED): IBoundingBox | undefined {
+		const imageData = layer.canvas?.getContext('2d')?.getImageData(0,0,layer.canvas?.width, layer.canvas?.height)?.data.buffer;
+		if (imageData && layer.canvas) {
+			return this.scan(new Uint8ClampedArray(imageData), layer.canvas.width, layer.canvas.height, channel);
+		} else {
+			return undefined;
+		}
+	}
+
 	public cropLayerToBoundingBox(layer: Layer): void {
 		const boundingBox: IBoundingBox | undefined = this.scanLayerTransparency(layer);
 		if (boundingBox) {
