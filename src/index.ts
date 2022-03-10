@@ -1,4 +1,4 @@
-import { Psd, ReadOptions, WriteOptions } from './psd';
+import {Layer, LayerMaskData, Psd, ReadOptions, WriteOptions} from './psd';
 import { PsdWriter, writePsd as writePsdInternal, getWriterBuffer, createWriter, getWriterBufferNoCopy } from './psdWriter';
 import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
 export * from './abr';
@@ -6,6 +6,7 @@ export * from './csh';
 export { initializeCanvas } from './helpers';
 export * from './psd';
 import { fromByteArray } from 'base64-js';
+import {BoundingBoxScan, IBoundingBox} from './BoundingBoxScanner';
 export { PsdReader, PsdWriter };
 
 interface BufferLike {
@@ -15,6 +16,7 @@ interface BufferLike {
 }
 
 export const byteArrayToBase64 = fromByteArray;
+export const boundingBoxScanner = new BoundingBoxScan();
 
 export function readPsd(buffer: ArrayBuffer | BufferLike, options?: ReadOptions): Psd {
 	const reader = 'buffer' in buffer ?
@@ -39,6 +41,9 @@ export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
 	if (typeof Buffer === 'undefined') {
 		throw new Error('Buffer not supported on this platform');
 	}
-
 	return Buffer.from(writePsdUint8Array(psd, options));
+}
+
+export function getLayerOrMaskContentBoundingBox(layer: Layer | LayerMaskData): IBoundingBox | undefined {
+	return boundingBoxScanner.scanLayerTransparency(layer);
 }

@@ -1,6 +1,83 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.agPsd = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.BoundingBoxScan = void 0;
+var helpers_1 = require("./helpers");
+var BoundingBoxScan = /** @class */ (function () {
+    function BoundingBoxScan() {
+    }
+    /**
+     * Find the bounding box of the layer's transparency
+     */
+    BoundingBoxScan.prototype.scanLayerTransparency = function (layer) {
+        var _a, _b, _c, _d, _e;
+        var imageData = (_e = (_b = (_a = layer.canvas) === null || _a === void 0 ? void 0 : _a.getContext('2d')) === null || _b === void 0 ? void 0 : _b.getImageData(0, 0, (_c = layer.canvas) === null || _c === void 0 ? void 0 : _c.width, (_d = layer.canvas) === null || _d === void 0 ? void 0 : _d.height)) === null || _e === void 0 ? void 0 : _e.data.buffer;
+        if (imageData && layer.canvas) {
+            return this.scan(new Uint8ClampedArray(imageData), layer.canvas.width, layer.canvas.height);
+        }
+        else {
+            return undefined;
+        }
+    };
+    BoundingBoxScan.prototype.cropLayerToBoundingBox = function (layer) {
+        var boundingBox = this.scanLayerTransparency(layer);
+        if (boundingBox) {
+            var width = boundingBox.right - boundingBox.left;
+            var height = boundingBox.bottom - boundingBox.top;
+            var newCanvas = (0, helpers_1.createCanvas)(width, height);
+            var ctx = newCanvas.getContext('2d');
+            ctx.drawImage(layer.canvas, boundingBox.left, boundingBox.top, width, height, 0, 0, width, height);
+            layer.canvas = newCanvas;
+            layer.top = boundingBox.top;
+            layer.bottom = boundingBox.bottom;
+            layer.left = boundingBox.left;
+            layer.right = boundingBox.right;
+            layer.imageData = ctx.getImageData(0, 0, width, height);
+        }
+    };
+    /**
+     * Scan the entire image for a rectangle in the set channel
+     */
+    BoundingBoxScan.prototype.scan = function (d, w, h, scanOffset) {
+        if (scanOffset === void 0) { scanOffset = BoundingBoxScan.SCAN_OFFSET_ALPHA; }
+        var x;
+        var y;
+        var ptr;
+        var output = {
+            left: 0,
+            top: 0,
+            right: 0,
+            bottom: 0,
+        };
+        for (x = 0; x < w; x += 1) {
+            for (y = 0; y < h; y += 1) {
+                ptr = (x + (y * w)) * 4;
+                if (d[ptr + scanOffset] > 250) {
+                    if (output.left === 0) {
+                        output.left = x;
+                    }
+                    if (output.top === 0) {
+                        output.top = y;
+                    }
+                    output.right = Math.max(output.right, x);
+                    output.bottom = Math.max(output.bottom, y);
+                }
+            }
+        }
+        return output;
+    };
+    BoundingBoxScan.SCAN_OFFSET_RED = 0;
+    BoundingBoxScan.SCAN_OFFSET_GREEN = 1;
+    BoundingBoxScan.SCAN_OFFSET_BLUE = 2;
+    BoundingBoxScan.SCAN_OFFSET_ALPHA = 3;
+    return BoundingBoxScan;
+}());
+exports.BoundingBoxScan = BoundingBoxScan;
+
+
+},{"./helpers":8}],2:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.readAbr = void 0;
 var descriptor_1 = require("./descriptor");
 var psdReader_1 = require("./psdReader");
@@ -261,7 +338,7 @@ function readAbr(buffer, options) {
 exports.readAbr = readAbr;
 
 
-},{"./descriptor":4,"./psdReader":11}],2:[function(require,module,exports){
+},{"./descriptor":5,"./psdReader":12}],3:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -2822,7 +2899,7 @@ function serializeEffectObject(obj, objName, reportErrors) {
 }
 
 
-},{"./descriptor":4,"./effectsHelpers":5,"./engineData":6,"./helpers":7,"./psdReader":11,"./psdWriter":12,"./text":13,"base64-js":15}],3:[function(require,module,exports){
+},{"./descriptor":5,"./effectsHelpers":6,"./engineData":7,"./helpers":8,"./psdReader":12,"./psdWriter":13,"./text":14,"base64-js":16}],4:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -2872,7 +2949,7 @@ function readCsh(buffer) {
 exports.readCsh = readCsh;
 
 
-},{"./additionalInfo":2,"./psdReader":11}],4:[function(require,module,exports){
+},{"./additionalInfo":3,"./psdReader":12}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.strokeStyleLineAlignment = exports.strokeStyleLineJoinType = exports.strokeStyleLineCapType = exports.FrFl = exports.FStl = exports.ClrS = exports.GrdT = exports.IGSr = exports.BETE = exports.BESs = exports.bvlT = exports.BESl = exports.BlnM = exports.warpStyle = exports.Annt = exports.Ornt = exports.textGridding = exports.unitsValue = exports.unitsPercent = exports.unitsAngle = exports.parseUnitsToNumber = exports.parseUnitsOrNumber = exports.parseUnits = exports.parsePercentOrAngle = exports.parsePercent = exports.parseAngle = exports.writeVersionAndDescriptor = exports.readVersionAndDescriptor = exports.writeDescriptorStructure = exports.readDescriptorStructure = exports.readAsciiStringOrClassId = exports.setLogErrors = void 0;
@@ -3659,7 +3736,7 @@ exports.strokeStyleLineAlignment = (0, helpers_1.createEnum)('strokeStyleLineAli
 });
 
 
-},{"./helpers":7,"./psdReader":11,"./psdWriter":12}],5:[function(require,module,exports){
+},{"./helpers":8,"./psdReader":12,"./psdWriter":13}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.writeEffects = exports.readEffects = void 0;
@@ -3970,7 +4047,7 @@ function writeEffects(writer, effects) {
 exports.writeEffects = writeEffects;
 
 
-},{"./helpers":7,"./psdReader":11,"./psdWriter":12}],6:[function(require,module,exports){
+},{"./helpers":8,"./psdReader":12,"./psdWriter":13}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.serializeEngineData = exports.parseEngineData = void 0;
@@ -4309,7 +4386,7 @@ function serializeEngineData(data, condensed) {
 exports.serializeEngineData = serializeEngineData;
 
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.initializeCanvas = exports.createImageData = exports.createCanvasFromData = exports.createCanvas = exports.writeDataRLE = exports.writeDataRaw = exports.decodeBitmap = exports.resetImageData = exports.hasAlpha = exports.clamp = exports.offsetForChannel = exports.Compression = exports.ChannelID = exports.MaskParams = exports.LayerMaskFlags = exports.ColorSpace = exports.createEnum = exports.revMap = exports.largeAdditionalInfoKeys = exports.layerColors = exports.toBlendMode = exports.fromBlendMode = exports.RAW_IMAGE_DATA = exports.MOCK_HANDLERS = void 0;
@@ -4612,7 +4689,7 @@ function initializeCanvas(createCanvasMethod, createCanvasFromDataMethod, create
 exports.initializeCanvas = initializeCanvas;
 
 
-},{"base64-js":15}],8:[function(require,module,exports){
+},{"base64-js":16}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.resourceHandlersMap = exports.resourceHandlers = void 0;
@@ -5199,7 +5276,7 @@ target) { return target._ir4001 !== undefined; }, function (reader, target, left
 });
 
 
-},{"./descriptor":4,"./helpers":7,"./psdReader":11,"./psdWriter":12,"./utf8":14,"base64-js":15}],9:[function(require,module,exports){
+},{"./descriptor":5,"./helpers":8,"./psdReader":12,"./psdWriter":13,"./utf8":15,"base64-js":16}],10:[function(require,module,exports){
 (function (Buffer){(function (){
 "use strict";
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
@@ -5213,7 +5290,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.writePsdBuffer = exports.writePsdUint8Array = exports.writePsd = exports.readPsd = exports.byteArrayToBase64 = exports.initializeCanvas = void 0;
+exports.getLayerOrMaskContentBoundingBox = exports.writePsdBuffer = exports.writePsdUint8Array = exports.writePsd = exports.readPsd = exports.boundingBoxScanner = exports.byteArrayToBase64 = exports.initializeCanvas = void 0;
 var psdWriter_1 = require("./psdWriter");
 var psdReader_1 = require("./psdReader");
 __exportStar(require("./abr"), exports);
@@ -5222,7 +5299,9 @@ var helpers_1 = require("./helpers");
 Object.defineProperty(exports, "initializeCanvas", { enumerable: true, get: function () { return helpers_1.initializeCanvas; } });
 __exportStar(require("./psd"), exports);
 var base64_js_1 = require("base64-js");
+var BoundingBoxScanner_1 = require("./BoundingBoxScanner");
 exports.byteArrayToBase64 = base64_js_1.fromByteArray;
+exports.boundingBoxScanner = new BoundingBoxScanner_1.BoundingBoxScan();
 function readPsd(buffer, options) {
     var reader = 'buffer' in buffer ?
         (0, psdReader_1.createReader)(buffer.buffer, buffer.byteOffset, buffer.byteLength) :
@@ -5249,10 +5328,14 @@ function writePsdBuffer(psd, options) {
     return Buffer.from(writePsdUint8Array(psd, options));
 }
 exports.writePsdBuffer = writePsdBuffer;
+function getLayerOrMaskContentBoundingBox(layer) {
+    return exports.boundingBoxScanner.scanLayerTransparency(layer);
+}
+exports.getLayerOrMaskContentBoundingBox = getLayerOrMaskContentBoundingBox;
 
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"./abr":1,"./csh":3,"./helpers":7,"./psd":10,"./psdReader":11,"./psdWriter":12,"base64-js":15,"buffer":16}],10:[function(require,module,exports){
+},{"./BoundingBoxScanner":1,"./abr":2,"./csh":4,"./helpers":8,"./psd":11,"./psdReader":12,"./psdWriter":13,"base64-js":16,"buffer":17}],11:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SectionDividerType = exports.ColorMode = void 0;
@@ -5276,7 +5359,7 @@ var SectionDividerType;
 })(SectionDividerType = exports.SectionDividerType || (exports.SectionDividerType = {}));
 
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -6169,7 +6252,7 @@ function readPattern(reader) {
 exports.readPattern = readPattern;
 
 
-},{"./additionalInfo":2,"./helpers":7,"./imageResources":8}],12:[function(require,module,exports){
+},{"./additionalInfo":3,"./helpers":8,"./imageResources":9}],13:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -6845,7 +6928,7 @@ function writeColor(writer, color) {
 exports.writeColor = writeColor;
 
 
-},{"./additionalInfo":2,"./helpers":7,"./imageResources":8}],13:[function(require,module,exports){
+},{"./additionalInfo":3,"./helpers":8,"./imageResources":9}],14:[function(require,module,exports){
 "use strict";
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
@@ -7404,7 +7487,7 @@ function encodeEngineData(data) {
 exports.encodeEngineData = encodeEngineData;
 
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.decodeString = exports.encodeString = exports.encodeStringTo = exports.stringLengthInBytes = void 0;
@@ -7558,7 +7641,7 @@ function decodeString(value) {
 exports.decodeString = decodeString;
 
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -7710,7 +7793,7 @@ function fromByteArray (uint8) {
   return parts.join('')
 }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 (function (Buffer){(function (){
 /*!
  * The buffer module from node.js, for the browser.
@@ -9491,9 +9574,9 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":17,"buffer":16,"ieee754":18}],17:[function(require,module,exports){
-arguments[4][15][0].apply(exports,arguments)
-},{"dup":15}],18:[function(require,module,exports){
+},{"base64-js":18,"buffer":17,"ieee754":19}],18:[function(require,module,exports){
+arguments[4][16][0].apply(exports,arguments)
+},{"dup":16}],19:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -9580,5 +9663,5 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}]},{},[9])(9)
+},{}]},{},[10])(10)
 });
