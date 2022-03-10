@@ -47,3 +47,7 @@ export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
 export function getLayerOrMaskContentBoundingBox(layer: Layer | LayerMaskData): IBoundingBox | undefined {
 	return boundingBoxScanner.scanLayerTransparency(layer);
 }
+
+export function getLayerOrMaskChannelBoundingBox(layer: Layer | LayerMaskData, channel: number = BoundingBoxScan.SCAN_OFFSET_RED): IBoundingBox | undefined {
+	return boundingBoxScanner.scanLayerChannel(layer, channel);
+}
