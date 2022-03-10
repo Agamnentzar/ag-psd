@@ -287,9 +287,10 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other)) {
 				flags |= 0x10; // pixel data irrelevant to appearance of document
 			}
-			if (layer.effects && hasMultiEffects(layer.effects)) {
+			if (layer.effects && hasMultiEffects(layer.effects)) { // TODO: this is not correct
 				flags |= 0x20; // just guessing this one, might be completely incorrect
 			}
+			// if ('_2' in layer) flags |= 0x20; // TEMP!!!
 
 			writeUint8(writer, flags);
 			writeUint8(writer, 0); // filler

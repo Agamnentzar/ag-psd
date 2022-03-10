@@ -1,0 +1,234 @@
+{
+  "width": 100,
+  "height": 100,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 71.99998474121094,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 71.99998474121094,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 0,
+    "layersGroup": [
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1
+    ],
+    "layerSelectionIds": [
+      3
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "idsSeedNumber": 3,
+    "versionInfo": {
+      "hasRealMergedData": false,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": 28,
+      "left": 29,
+      "bottom": 82,
+      "right": 83,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "apolaugh",
+      "nameSource": "rend",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1645501206.784337,
+      "placedLayer": {
+        "id": "20953ddb-9391-11ec-b4f1-c15674f50bc4",
+        "placed": "20953dda-9391-11ec-b4f1-c15674f50bc4",
+        "type": "raster",
+        "transform": [
+          29,
+          28,
+          83,
+          28,
+          83,
+          82,
+          29,
+          82
+        ],
+        "width": 32,
+        "height": 32,
+        "resolution": {
+          "value": 299.99940490722656,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "custom",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 32,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 32,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4,
+          "customEnvelopeWarp": {
+            "meshPoints": [
+              {
+                "x": 0,
+                "y": 0
+              },
+              {
+                "x": 10.666666666666666,
+                "y": 0
+              },
+              {
+                "x": 21.333333333333332,
+                "y": 0
+              },
+              {
+                "x": 32,
+                "y": 0
+              },
+              {
+                "x": 0,
+                "y": 10.666666666666666
+              },
+              {
+                "x": 10.666666666666666,
+                "y": 10.666666666666666
+              },
+              {
+                "x": 21.333333333333332,
+                "y": 10.666666666666666
+              },
+              {
+                "x": 32,
+                "y": 10.666666666666666
+              },
+              {
+                "x": 0,
+                "y": 21.333333333333332
+              },
+              {
+                "x": 10.666666666666666,
+                "y": 21.333333333333332
+              },
+              {
+                "x": 21.333333333333332,
+                "y": 21.333333333333332
+              },
+              {
+                "x": 32,
+                "y": 21.333333333333332
+              },
+              {
+                "x": 0,
+                "y": 32
+              },
+              {
+                "x": 10.666666666666666,
+                "y": 32
+              },
+              {
+                "x": 21.333333333333332,
+                "y": 32
+              },
+              {
+                "x": 32,
+                "y": 32
+              }
+            ]
+          }
+        }
+      },
+      "referencePoint": {
+        "x": 29,
+        "y": 28
+      }
+    }
+  ],
+  "linkedFiles": [
+    {
+      "id": "20953ddb-9391-11ec-b4f1-c15674f50bc4",
+      "name": "apolaugh.png"
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  }
+}

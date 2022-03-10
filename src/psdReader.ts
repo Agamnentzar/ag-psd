@@ -373,6 +373,8 @@ function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 	// 0x04 - obsolete
 	// 0x08 - 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
 	// 0x10 - pixel data irrelevant to appearance of document
+	// 0x20 - ???
+	// if (flags & 0x20) (layer as any)._2 = true; // TEMP !!!!
 
 	skipBytes(reader, 1);
 

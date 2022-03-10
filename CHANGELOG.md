@@ -1,5 +1,8 @@
 # Changelog
 
+## v14.3.6
+- Fixed incorrect writing of `vogk` section in some cases resulting in a broken file
+
 ## v14.3.2
 - Added `nonAffineTransform` field to smart object transform when nonAffineTransform is diferent than regular transform
 

@@ -459,12 +459,12 @@ addHandler(
 			if (item.keyShapeInvalidated) {
 				desc.keyDescriptorList.push({ keyShapeInvalidated: true, keyOriginIndex: i });
 			} else {
-				desc.keyDescriptorList.push({
-					keyOriginType: item.keyOriginType ?? 4,
-					keyOriginResolution: item.keyOriginResolution ?? 72,
-				} as any);
+				desc.keyDescriptorList.push({} as any); // we're adding keyOriginIndex at the end
 
 				const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
+
+				if (item.keyOriginType != null) out.keyOriginType = item.keyOriginType;
+				if (item.keyOriginResolution != null) out.keyOriginResolution = item.keyOriginResolution;
 
 				const radii = item.keyOriginRRectRadii;
 				if (radii) {
@@ -1382,8 +1382,8 @@ addHandler(
 			writeInt32(writer, version);
 			writePascalString(writer, file.id || '', 1);
 			writeUnicodeStringWithPadding(writer, file.name || '');
-			writeSignature(writer, file.type ? `${file.type}    `.substr(0, 4) : '    ');
-			writeSignature(writer, file.creator ? `${file.creator}    `.substr(0, 4) : '\0\0\0\0');
+			writeSignature(writer, file.type ? `${file.type}    `.substring(0, 4) : '    ');
+			writeSignature(writer, file.creator ? `${file.creator}    `.substring(0, 4) : '\0\0\0\0');
 			writeLength64(writer, file.data ? file.data.byteLength : 0);
 
 			if (file.descriptor && file.descriptor.compInfo) {
