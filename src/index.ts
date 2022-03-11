@@ -51,3 +51,46 @@ export function getLayerOrMaskContentBoundingBox(layer: Layer | LayerMaskData): 
 export function getLayerOrMaskChannelBoundingBox(layer: Layer | LayerMaskData, channel: number = BoundingBoxScan.SCAN_OFFSET_RED): IBoundingBox | undefined {
 	return boundingBoxScanner.scanLayerChannel(layer, channel);
 }
+
+export interface IPSRectangle {
+	left: number;
+	right: number;
+	top: number;
+	bottom: number;
+}
+
+export const getMaskedLayerSize = (layer: Layer, margin: number = 0): IPSRectangle => {
+	const { right, left, bottom, top } = layer;
+	const mask: LayerMaskData = layer.mask!;
+	if (mask) {
+		let maskBoundingBox: IBoundingBox = getLayerOrMaskChannelBoundingBox(
+			mask,
+		) as IBoundingBox;
+		if (!maskBoundingBox) {
+			maskBoundingBox = {
+				left: 0,
+				top: 0,
+				right: mask.right! - mask.left!,
+				bottom: mask.bottom! - mask.top!,
+			};
+		}
+		const maskBoundingBoxWidth = maskBoundingBox.right - maskBoundingBox.left;
+		const maskBoundingBoxHeight = maskBoundingBox.bottom - maskBoundingBox.top;
+		const layerLeft = mask.left! + maskBoundingBox.left - margin;
+		const layerRight = layerLeft + maskBoundingBoxWidth + margin * 2;
+		const layerTop = mask.top! + maskBoundingBox.top - margin;
+		const layerBottom = layerTop + maskBoundingBoxHeight + margin * 2;
+		return {
+			left: layerLeft,
+			right: layerRight,
+			top: layerTop,
+			bottom: layerBottom,
+		};
+	}
+	return <IPSRectangle> {
+		left,
+		right,
+		top,
+		bottom,
+	};
+};
