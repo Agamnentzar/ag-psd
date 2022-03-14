@@ -74,11 +74,11 @@ export const getMaskedLayerSize = (layer: Layer, margin: number = 0): IPSRectang
 				bottom: mask.bottom! - mask.top!,
 			};
 		}
-		const maskBoundingBoxWidth = maskBoundingBox.right - maskBoundingBox.left;
-		const maskBoundingBoxHeight = maskBoundingBox.bottom - maskBoundingBox.top;
-		const layerLeft = mask.left! + maskBoundingBox.left - margin;
+		const maskBoundingBoxWidth = maskBoundingBox.right! - maskBoundingBox.left!;
+		const maskBoundingBoxHeight = maskBoundingBox.bottom! - maskBoundingBox.top!;
+		const layerLeft = mask.left! + maskBoundingBox.left! - margin;
 		const layerRight = layerLeft + maskBoundingBoxWidth + margin * 2;
-		const layerTop = mask.top! + maskBoundingBox.top - margin;
+		const layerTop = mask.top! + maskBoundingBox.top! - margin;
 		const layerBottom = layerTop + maskBoundingBoxHeight + margin * 2;
 		return {
 			left: layerLeft,
