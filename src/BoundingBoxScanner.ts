@@ -5,10 +5,10 @@ import {Layer, LayerMaskData} from './psd';
 import {createCanvas} from './helpers';
 
 export interface IBoundingBox {
-	left: number;
-	top: number;
-	right: number;
-	bottom: number;
+	left: number | undefined;
+	top: number | undefined;
+	right: number | undefined;
+	bottom: number | undefined;
 }
 
 export class BoundingBoxScan {
@@ -44,11 +44,11 @@ export class BoundingBoxScan {
 	public cropLayerToBoundingBox(layer: Layer): void {
 		const boundingBox: IBoundingBox | undefined = this.scanLayerTransparency(layer);
 		if (boundingBox) {
-			const width: number = boundingBox.right - boundingBox.left;
-			const height: number = boundingBox.bottom - boundingBox.top;
+			const width: number = boundingBox.right! - boundingBox.left!;
+			const height: number = boundingBox.bottom! - boundingBox.top!;
 			const newCanvas = createCanvas(width, height);
 			const ctx: CanvasRenderingContext2D = newCanvas.getContext('2d') as CanvasRenderingContext2D;
-			ctx.drawImage(layer.canvas!, boundingBox.left, boundingBox.top, width, height, 0, 0, width, height);
+			ctx.drawImage(layer.canvas!, boundingBox.left!, boundingBox.top!, width, height, 0, 0, width, height);
 			layer.canvas = newCanvas;
 			layer.top = boundingBox.top;
 			layer.bottom = boundingBox.bottom;
@@ -67,11 +67,11 @@ export class BoundingBoxScan {
 		}
 		let l = data.length,
 			i,
-			bound = {
-				top: null,
-				left: null,
-				right: null,
-				bottom: null
+			bound: IBoundingBox = {
+				top: undefined,
+				left: undefined,
+				right: undefined,
+				bottom: undefined
 			},
 			x, y;
 
@@ -81,34 +81,26 @@ export class BoundingBoxScan {
 			if (data[i + scanOffset] > 10) {
 				x = (i / 4) % w;
 				y = ~~((i / 4) / w);
-				if (bound.top === null) {
-					// @ts-ignore
+				if (bound.top === undefined) {
 					bound.top = y;
 				}
-				if (bound.left === null) {
-					// @ts-ignore
+				if (bound.left === undefined) {
 					bound.left = x;
 				} else if (x < bound.left) {
-					// @ts-ignore
 					bound.left = x;
 				}
-				if (bound.right === null) {
-					// @ts-ignore
+				if (bound.right === undefined) {
 					bound.right = x;
 				} else if (bound.right < x) {
-					// @ts-ignore
 					bound.right = x;
 				}
-				if (bound.bottom === null) {
-					// @ts-ignore
+				if (bound.bottom === undefined) {
 					bound.bottom = y;
 				} else if (bound.bottom < y) {
-					// @ts-ignore
 					bound.bottom = y;
 				}
 			}
 		}
 		return <any>bound as IBoundingBox;
 	}
-
 }
