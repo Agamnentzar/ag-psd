@@ -59,7 +59,7 @@ export interface IPSRectangle {
 	bottom: number;
 }
 
-export const getMaskedLayerSize = (layer: Layer, margin: number = 0): IPSRectangle => {
+export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): IPSRectangle => {
 	const { right, left, bottom, top } = layer;
 	const mask: LayerMaskData = layer.mask!;
 	if (mask) {
@@ -76,10 +76,10 @@ export const getMaskedLayerSize = (layer: Layer, margin: number = 0): IPSRectang
 		}
 		const maskBoundingBoxWidth = maskBoundingBox.right! - maskBoundingBox.left!;
 		const maskBoundingBoxHeight = maskBoundingBox.bottom! - maskBoundingBox.top!;
-		const layerLeft = mask.left! + maskBoundingBox.left! - margin;
-		const layerRight = layerLeft + maskBoundingBoxWidth + margin * 2;
-		const layerTop = mask.top! + maskBoundingBox.top! - margin;
-		const layerBottom = layerTop + maskBoundingBoxHeight + margin * 2;
+		const layerLeft = Math.max(0, mask.left!) + maskBoundingBox.left! - margin;
+		const layerRight = Math.min(layerLeft + maskBoundingBoxWidth + margin * 2, psd.width - margin);
+		const layerTop = Math.min(0, mask.top!) + maskBoundingBox.top! - margin;
+		const layerBottom = Math.min(layerTop + maskBoundingBoxHeight + margin * 2, psd.height - margin);
 		return {
 			left: layerLeft,
 			right: layerRight,
