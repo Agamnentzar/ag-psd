@@ -47,3 +47,50 @@ export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
 export function getLayerOrMaskContentBoundingBox(layer: Layer | LayerMaskData): IBoundingBox | undefined {
 	return boundingBoxScanner.scanLayerTransparency(layer);
 }
+
+export function getLayerOrMaskChannelBoundingBox(layer: Layer | LayerMaskData, channel: number = BoundingBoxScan.SCAN_OFFSET_RED): IBoundingBox | undefined {
+	return boundingBoxScanner.scanLayerChannel(layer, channel);
+}
+
+export interface IPSRectangle {
+	left: number;
+	right: number;
+	top: number;
+	bottom: number;
+}
+
+export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): IPSRectangle => {
+	const { right, left, bottom, top } = layer;
+	const mask: LayerMaskData = layer.mask!;
+	if (mask) {
+		let maskBoundingBox: IBoundingBox = getLayerOrMaskChannelBoundingBox(
+			mask,
+		) as IBoundingBox;
+		if (!maskBoundingBox) {
+			maskBoundingBox = {
+				left: 0,
+				top: 0,
+				right: mask.right! - mask.left!,
+				bottom: mask.bottom! - mask.top!,
+			};
+		}
+		const maskBoundingBoxWidth = maskBoundingBox.right! - maskBoundingBox.left!;
+		const maskBoundingBoxHeight = maskBoundingBox.bottom! - maskBoundingBox.top!;
+		const layerLeft = Math.max(0, mask.left!) + maskBoundingBox.left! - margin;
+		const layerRight = Math.min(layerLeft + maskBoundingBoxWidth + margin * 2, psd.width - margin);
+		const layerTop = Math.min(0, mask.top!) + maskBoundingBox.top! - margin;
+		const layerBottom = Math.min(layerTop + maskBoundingBoxHeight + margin * 2, psd.height - margin);
+		return {
+			left: layerLeft,
+			right: layerRight,
+			top: layerTop,
+			bottom: layerBottom,
+		};
+	}
+	return <IPSRectangle> {
+		left,
+		right,
+		top,
+		bottom,
+	};
+};
