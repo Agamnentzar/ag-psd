@@ -61,7 +61,7 @@ export class BoundingBoxScan {
 	/**
 	 * Scan the entire image for a rectangle in the set channel
 	 */
-	private scan(data: Uint8ClampedArray, w: number, _h: number, scanOffset: number = BoundingBoxScan.SCAN_OFFSET_ALPHA): IBoundingBox {
+	public scan(data: Uint8ClampedArray, w: number, _h: number, scanOffset: number = BoundingBoxScan.SCAN_OFFSET_ALPHA): IBoundingBox {
 		if (scanOffset === void 0) {
 			scanOffset = BoundingBoxScan.SCAN_OFFSET_ALPHA;
 		}
