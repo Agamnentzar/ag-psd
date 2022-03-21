@@ -8,6 +8,7 @@ export * from './psd';
 import { fromByteArray } from 'base64-js';
 import {BoundingBoxScan, IBoundingBox} from './BoundingBoxScanner';
 export { PsdReader, PsdWriter };
+import { createCanvas } from 'canvas';
 
 interface BufferLike {
 	buffer: ArrayBuffer;
@@ -62,10 +63,49 @@ export interface IPSRectangle {
 export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): IPSRectangle => {
 	const { right, left, bottom, top } = layer;
 	const mask: LayerMaskData = layer.mask!;
+	// Place the layer on the canvas
+	// Mask the layer using the mask
 	if (mask) {
-		let maskBoundingBox: IBoundingBox = getLayerOrMaskChannelBoundingBox(
-			mask,
-		) as IBoundingBox;
+
+		// First, create a canvas PSD size
+		const compCanvas = createCanvas(psd.width, psd.height);
+		const compCtx = compCanvas.getContext('2d');
+		const maskCanvas = createCanvas(psd.width, psd.height);
+		const maskCtx = maskCanvas.getContext('2d');
+
+		maskCtx!.drawImage(layer.mask!.canvas!, layer.mask!.left!, layer.mask!.top!);
+		compCtx!.drawImage(layer.canvas!, layer.left!, layer.top!);
+
+		const compImageData = compCtx!.getImageData(
+			0,
+			0,
+			psd.width,
+			psd.height,
+		);
+
+		const maskImageData = maskCtx!.getImageData(
+			0,
+			0,
+			psd.width,
+			psd.height,
+		);
+
+		const compImageDataArray = compImageData.data;
+		const maskImageDataArray = maskImageData.data;
+
+		for (let i = 0; i < compImageDataArray.length; i += 4) {
+			const alphaFromMask = maskImageDataArray[i];
+			const alphaFromLayer = compImageDataArray[i + 3];
+			const concatValue = Math.ceil(
+				(alphaFromMask * alphaFromLayer) / 255,
+			);
+			compImageDataArray[i + 3] = concatValue;
+		}
+
+		compCanvas.width = psd.width; // Reset
+		compCtx!.putImageData(compImageData, 0, 0);
+
+		let maskBoundingBox: IBoundingBox = boundingBoxScanner.scan(compImageDataArray, psd.width, psd.height);
 		if (!maskBoundingBox) {
 			maskBoundingBox = {
 				left: 0,
@@ -74,12 +114,10 @@ export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): 
 				bottom: mask.bottom! - mask.top!,
 			};
 		}
-		const maskBoundingBoxWidth = maskBoundingBox.right! - maskBoundingBox.left!;
-		const maskBoundingBoxHeight = maskBoundingBox.bottom! - maskBoundingBox.top!;
-		const layerLeft = Math.max(0, mask.left!) + maskBoundingBox.left! - margin;
-		const layerRight = Math.min(layerLeft + maskBoundingBoxWidth + margin * 2, psd.width - margin);
-		const layerTop = Math.min(0, mask.top!) + maskBoundingBox.top! - margin;
-		const layerBottom = Math.min(layerTop + maskBoundingBoxHeight + margin * 2, psd.height - margin);
+		const layerLeft = maskBoundingBox.left! - margin;
+		const layerRight = maskBoundingBox.right! + margin;
+		const layerTop = maskBoundingBox.top! - margin;
+		const layerBottom = maskBoundingBox.bottom! + margin;
 		return {
 			left: layerLeft,
 			right: layerRight,
