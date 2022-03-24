@@ -11,7 +11,9 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 ## Moonpig additions to this library
 
 * Layers now expose `parentPath`, which is the name of the layer's parent. 
-
+* `getLayerOrMaskContentBoundingBox` calculates a bounding box for a layer or layer mask
+* `getLayerOrMaskChannelBoundingBox` calculates a bounding box for a specific channel on a layer or mask
+* `getMaskedLayerSize` returns the bounding box of the masked layer content
 ## Limitations
 
 * Does not support reading Indexed, CMYK, Multichannel, Duotone and LAB color modes (all supported color modes are converted to RGB mode when reading)
