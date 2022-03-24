@@ -90,14 +90,26 @@ export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): 
 			psd.height,
 		);
 
+		/*
+		this is getting the raw pixel data, which is an array of uint8's, out of the ImageData instances.
+		You end up with a raw array that is sorted in RGBARGBARGBA.... fashion.
+		Hence looping through it in steps of 4.
+		We then need the Alpha (4th byte in each 4-byte block) of the image layer,
+		and we pick the Red (1st byte) of the mask layer, since the mask layer is black-and-white at this point.
+		(R===G===B in that case, so we can pick any of these).
+		 */
+
 		const compImageDataArray = compImageData.data;
 		const maskImageDataArray = maskImageData.data;
 
 		for (let i = 0; i < compImageDataArray.length; i += 4) {
-			const alphaFromMask = maskImageDataArray[i];
+			// On the mask, white (R,G,B is 255) equals opaque, black (R,G,B is 0) equals transparent.
+			const maskBrightness = maskImageDataArray[i];
+			// On the image layer, we get the Alpha channel
 			const alphaFromLayer = compImageDataArray[i + 3];
+			// The alpha of the masked layer equals the multiplied brightness value of the mask and the image layer's alpha
 			const concatValue = Math.ceil(
-				(alphaFromMask * alphaFromLayer) / 255,
+				(maskBrightness * alphaFromLayer) / 255,
 			);
 			compImageDataArray[i + 3] = concatValue;
 		}
