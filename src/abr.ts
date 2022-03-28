@@ -137,7 +137,10 @@ export interface Brush {
 // internal
 
 interface PhryDescriptor {
-	hierarchy: any[];
+	hierarchy: ({} | {
+		'Nm  ': string;
+		zuid: string;
+	})[];
 }
 
 interface DynamicsDescriptor {
@@ -200,7 +203,7 @@ interface DescDescriptor {
 		textureDepth: DescriptorUnitsValue;
 		minimumDepth: DescriptorUnitsValue;
 		textureDepthDynamics: DynamicsDescriptor;
-		Txtr: {
+		Txtr?: {
 			'Nm  ': string;
 			Idnt: string;
 		};
@@ -393,7 +396,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 							};
 						}
 
-						if (brush.useTexture) {
+						if (brush.useTexture && brush.Txtr) {
 							b.texture = {
 								id: brush.Txtr.Idnt,
 								name: brush.Txtr['Nm  '],
