@@ -1,4 +1,4 @@
-import { createCanvas } from 'canvas';
+import { createCanvas, HTMLCanvasElement } from '../canvas/Canvas';
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -27,7 +27,7 @@ describe('ABR', () => {
 				const canvas = alphaToCanvas(sample.alpha, sample.bounds.w, sample.bounds.h);
 				delete (sample as any).alpha;
 				const name = `sample-${sample.id}.png`;
-				fs.writeFileSync(path.join(resultsPath, name), canvas.toBuffer());
+				fs.writeFileSync(path.join(resultsPath, name), canvas.toBufferSync('png'));
 				compare.push({ name, canvas });
 			}
 
@@ -35,7 +35,7 @@ describe('ABR', () => {
 				const canvas = rgbToCanvas(pattern.data, pattern.bounds.w, pattern.bounds.h);
 				delete (pattern as any).data;
 				const name = `pattern-${pattern.id}.png`;
-				fs.writeFileSync(path.join(resultsPath, name), canvas.toBuffer());
+				fs.writeFileSync(path.join(resultsPath, name), canvas.toBufferSync('png'));
 				compare.push({ name, canvas });
 			}
 
@@ -71,7 +71,7 @@ describe('ABR', () => {
 
 				console.log(filePath);
 				const abr = readAbr(fs.readFileSync(filePath));
-				console.log(require('util').inspect(abr, false, 99, true));
+				//console.log(require('util').inspect(abr, false, 99, true));
 
 				if (0) {
 					fs.rmSync(path.join(outputPath, file), { recursive: true, force: true });
@@ -79,13 +79,13 @@ describe('ABR', () => {
 
 					for (const sample of abr.samples) {
 						const canvas = alphaToCanvas(sample.alpha, sample.bounds.w, sample.bounds.h);
-						fs.writeFileSync(path.join(outputPath, file, 'sample-' + sample.id + '.png'), canvas.toBuffer());
+						fs.writeFileSync(path.join(outputPath, file, 'sample-' + sample.id + '.png'), canvas.toBufferSync('png'));
 						delete (sample as any).alpha;
 					}
 
 					for (const pattern of abr.patterns) {
 						const canvas = rgbToCanvas(pattern.data, pattern.bounds.w, pattern.bounds.h);
-						fs.writeFileSync(path.join(outputPath, file, 'pattern-' + pattern.id + '.png'), canvas.toBuffer());
+						fs.writeFileSync(path.join(outputPath, file, 'pattern-' + pattern.id + '.png'), canvas.toBufferSync('png'));
 						delete (pattern as any).data;
 					}
 
@@ -93,7 +93,7 @@ describe('ABR', () => {
 				}
 			}
 		}
-	})
+	});
 });
 
 function alphaToCanvas(alpha: Uint8Array, width: number, height: number) {

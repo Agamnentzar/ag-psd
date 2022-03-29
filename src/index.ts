@@ -8,7 +8,8 @@ export * from './psd';
 import { fromByteArray } from 'base64-js';
 import {BoundingBoxScan, IBoundingBox} from './BoundingBoxScanner';
 export { PsdReader, PsdWriter };
-import { createCanvas } from 'canvas';
+import { createCanvas } from './canvas/Canvas';
+import {_flattenPsd} from './flatten';
 
 interface BufferLike {
 	buffer: ArrayBuffer;
@@ -59,6 +60,8 @@ export interface IPSRectangle {
 	top: number;
 	bottom: number;
 }
+
+export const flattenPsd = _flattenPsd;
 
 export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): IPSRectangle => {
 	const { right, left, bottom, top } = layer;
