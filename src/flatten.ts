@@ -3,7 +3,7 @@ import {createCanvas} from './helpers';
 import {findPsdLayerById} from './findLayer';
 import {CanvasRenderingContext2D} from 'skia-canvas';
 import {Canvas} from 'skia-canvas/lib';
-export const _flattenPsd = (psd: Psd) => {
+export const flattenPsd = (psd: Psd) => {
 	const layers: Layer[] | undefined = psd.children;
 	if (layers) {
 		let lastMergingLayer: Layer = layers[0];

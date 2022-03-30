@@ -1,8 +1,8 @@
 import {expect} from 'chai';
 import {createCanvas, createCanvasFromData, initializeCanvas} from '../helpers';
 import {Layer, Psd} from '../psd';
-import {flattenPsd} from '../index';
 import {readPsdFromFile} from './common';
+import {flattenPsd} from '../flatten';
 
 const psdFileToTest = './test-manual/flatten_test_nomask.psd';
 initializeCanvas(createCanvas, createCanvasFromData);

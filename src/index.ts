@@ -9,7 +9,6 @@ import { fromByteArray } from 'base64-js';
 import {BoundingBoxScan, IBoundingBox} from './BoundingBoxScanner';
 export { PsdReader, PsdWriter };
 import { createCanvas } from './canvas/Canvas';
-import {_flattenPsd} from './flatten';
 import {Canvas} from 'skia-canvas/lib';
 
 interface BufferLike {
@@ -61,8 +60,6 @@ export interface IPSRectangle {
 	top: number;
 	bottom: number;
 }
-
-export const flattenPsd = _flattenPsd;
 
 export const resizeLayerToMask = (layer: Layer, psd: Psd, maskMargin: number = 0) => {
 	const layerBoundingBox = getMaskedLayerSize(layer, maskMargin, psd);
