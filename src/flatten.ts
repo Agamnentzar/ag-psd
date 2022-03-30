@@ -8,25 +8,27 @@ export const _flattenPsd = (psd: Psd) => {
 	if (layers) {
 		let lastMergingLayer: Layer = layers[0];
 		let layer: Layer;
+		// Create a new output PSD
 		const psdOut: Psd = {
 			width: psd.width,
 			height: psd.height,
 			channels: psd.channels,
 			children: [],
 		};
-		// TODO
+		// Loop through all the layers. If we find a simple layer without mask or text, we concatenate all previous simple layers into it
 		for (let i = 0; i < layers.length; i++) {
 			layer = layers[i];
-			concatenateMasksRecursively(layer, psd);
 			if (layer.mask || layer.text) {
 				// Pass through
-				psdOut.children!.push(lastMergingLayer);
+				if (lastMergingLayer !== layer) {
+					psdOut.children!.push(lastMergingLayer);
+				}
 				psdOut.children!.push(layer);
 				lastMergingLayer = layers[i + 1];
 			} else {
 				const newLayerCanvas: Canvas = createCanvas(psd.width, psd.height);
 				const newLayerCanvasContext: CanvasRenderingContext2D = newLayerCanvas.getContext('2d');
-				const {bottom, canvas, left, right,top} = layers[i];
+				const {bottom, canvas, left, right,top} = layer;
 				if (lastMergingLayer !== layer) {
 					newLayerCanvasContext.drawImage(lastMergingLayer.canvas!, 0, 0, lastMergingLayer.canvas!.width,
 						lastMergingLayer.canvas!.height,
@@ -35,7 +37,8 @@ export const _flattenPsd = (psd: Psd) => {
 						lastMergingLayer.right! - lastMergingLayer.left!,
 						lastMergingLayer.bottom! - lastMergingLayer.top!);
 				}
-				newLayerCanvasContext.drawImage(canvas!,
+				newLayerCanvasContext.globalAlpha = layer.opacity as number;
+					newLayerCanvasContext.drawImage(canvas!,
 					0,
 					0,
 					(canvas)!.width,
@@ -49,6 +52,7 @@ export const _flattenPsd = (psd: Psd) => {
 				lastMergingLayer.bottom = psd.height;
 				lastMergingLayer.left = 0;
 				lastMergingLayer.right = psd.width;
+				concatenateMasks(layer, lastMergingLayer);
 			}
 		}
 		if (layer! && !(layer.mask || layer.text)) {
