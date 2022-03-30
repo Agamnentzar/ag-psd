@@ -3,6 +3,7 @@
  */
 import {Layer, LayerMaskData} from './psd';
 import {createCanvas} from './helpers';
+import {CanvasRenderingContext2D} from 'skia-canvas';
 
 export interface IBoundingBox {
 	left: number | undefined;
