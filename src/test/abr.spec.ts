@@ -1,4 +1,4 @@
-import { createCanvas, HTMLCanvasElement } from '../canvas/Canvas';
+import { createCanvas, HTMLCanvasElement } from '../canvas/canvashelpers';
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';

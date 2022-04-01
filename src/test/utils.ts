@@ -1,5 +1,5 @@
 import { BezierPath } from '../psd';
-import {createCanvas} from '../canvas/Canvas';
+import {createCanvas} from '../canvas/canvashelpers';
 
 export function drawBezierPaths(paths: BezierPath[], width: number, height: number, fileName: string, ox = 0, oy = 0) {
 	const canvas = createCanvas(width, height);

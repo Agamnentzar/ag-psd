@@ -1,6 +1,6 @@
 /// <reference types="mocha" />
 /// <reference path="../../typings/chai.d.ts" />
-import {HTMLCanvasElement} from '../canvas/canvas';
+import {HTMLCanvasElement} from '../canvas/canvashelpers';
 import {Image} from 'skia-canvas/lib';
 
 require('source-map-support').install();

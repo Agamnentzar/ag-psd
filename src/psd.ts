@@ -1,4 +1,4 @@
-import {HTMLCanvasElement} from './canvas/canvas';
+import {HTMLCanvasElement} from './canvas/canvashelpers';
 
 export type BlendMode = 'pass through' | 'normal' | 'dissolve' | 'darken' | 'multiply' |
 	'color burn' | 'linear burn' | 'darker color' | 'lighten' | 'screen' | 'color dodge' |
