@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import { HTMLCanvasElement } from '../canvas/Canvas';
+import { HTMLCanvasElement } from '../canvas/canvashelpers';
 import * as path from 'path';
 import { expect } from 'chai';
 import {

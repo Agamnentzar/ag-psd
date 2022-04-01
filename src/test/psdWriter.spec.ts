@@ -6,7 +6,7 @@ import { Psd, WriteOptions, ReadOptions } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
 import { readPsd, createReader } from '../psdReader';
 import { writePsdBuffer } from '../index';
-import {createCanvas} from '../canvas/Canvas';
+import {createCanvas} from '../canvas/canvashelpers';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
