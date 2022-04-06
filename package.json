@@ -1,6 +1,6 @@
 {
   "name": "@moonpig/ag-psd",
-  "version": "15.4.13",
+  "version": "15.4.14",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -60,7 +60,6 @@
     "base64-js": "^1.5.1",
     "canvas": "^2.9.1",
     "fancy-log": "^2.0.0",
-    "imagejs": "git+https://github.com/guyonroche/imagejs.git",
     "lerna": "^4.0.0"
   },
   "bugs": {
