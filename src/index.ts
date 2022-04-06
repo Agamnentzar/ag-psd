@@ -60,6 +60,36 @@ export interface IPSRectangle {
 	bottom: number;
 }
 
+export const resizeLayerToMask = (layer: Layer, psd: Psd, maskMargin: number = 0) => {
+	const layerBoundingBox = getMaskedLayerSize(layer, maskMargin, psd);
+	// Create new layer of correct size
+	const layerCanvas = layer.canvas!;
+	const layerImageData = layerCanvas
+		.getContext('2d')!
+		.getImageData(
+			layerBoundingBox.left - layer.left!,
+			layerBoundingBox.top - layer.top!,
+			layerBoundingBox.right - layerBoundingBox.left,
+			layerBoundingBox.bottom - layerBoundingBox.top,
+		);
+	// Apply new layer
+	const newLayerCanvas = createCanvas(
+		layerBoundingBox.right - layerBoundingBox.left,
+		layerBoundingBox.bottom - layerBoundingBox.top,
+	);
+	newLayerCanvas.getContext('2d')!.putImageData(layerImageData, 0, 0);
+	// eslint-disable-next-line no-param-reassign
+	layer.canvas = <any>newLayerCanvas;
+	// eslint-disable-next-line no-param-reassign
+	layer.left = layerBoundingBox.left;
+	// eslint-disable-next-line no-param-reassign
+	layer.right = layerBoundingBox.right;
+	// eslint-disable-next-line no-param-reassign
+	layer.top = layerBoundingBox.top;
+	// eslint-disable-next-line no-param-reassign
+	layer.bottom = layerBoundingBox.bottom;
+};
+
 export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): IPSRectangle => {
 	const { right, left, bottom, top } = layer;
 	const mask: LayerMaskData = layer.mask!;
