@@ -6,15 +6,6 @@
   "colorMode": 1,
   "imageResources": {
     "captionDigest": "deb1bd4b8cac8b2c496c97087a0f961e",
-    "printInformation": {
-      "printerName": "",
-      "renderingIntent": "relative colorimetric",
-      "printerManagesColors": true,
-      "printSixteenBit": false,
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      }
-    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -22,6 +13,15 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
+    },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -35,24 +35,8 @@
     "alphaIdentifiers": [
       0
     ],
-    "backgroundColor": {
-      "r": 255,
-      "g": 255,
-      "b": 255
-    },
     "globalAngle": 120,
     "globalAltitude": 30,
-    "printFlags": {
-      "labels": false,
-      "cropMarks": false,
-      "colorBars": false,
-      "registrationMarks": false,
-      "negative": false,
-      "flip": false,
-      "interpolate": false,
-      "caption": false,
-      "printFlags": true
-    },
     "layerState": 0,
     "layersGroup": [
       0
@@ -74,12 +58,28 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 4,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "idsSeedNumber": 4,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -91,6 +91,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1451266097.3939025,
       "transparencyProtected": false,
       "hidden": false,
       "name": "Layer 0",
@@ -105,7 +106,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1451266097.3939025,
       "referencePoint": {
         "x": 0,
         "y": 0

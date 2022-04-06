@@ -632,7 +632,7 @@ addHandler(
 			if (!target.thumbnail) throw new Error('Missing thumbnail');
 			width = target.thumbnail.width;
 			height = target.thumbnail.height;
-			data = toByteArray(target.thumbnail.toDataURLSync('jpeg', {quality: 1}).substr('data:image/jpeg;base64,'.length));
+			data = toByteArray(target.thumbnail.toDataURL('jpeg', {quality: 1}).substr('data:image/jpeg;base64,'.length));
 		}
 
 		const bitsPerPixel = 24;

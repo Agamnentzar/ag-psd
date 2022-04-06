@@ -6,7 +6,7 @@ import { Psd, WriteOptions, ReadOptions } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
 import { readPsd, createReader } from '../psdReader';
 import { writePsdBuffer } from '../index';
-import {createCanvas} from '../canvas/canvashelpers';
+import {createCanvas} from '../helpers';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
@@ -359,7 +359,7 @@ describe('PsdWriter', () => {
 
 			const reader = createReader(buffer.buffer);
 			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
-			fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBufferSync('png'));
+			fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBuffer());
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
 
 			const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));

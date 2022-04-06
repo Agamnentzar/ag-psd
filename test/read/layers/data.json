@@ -6,15 +6,6 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "530debad6e6f1574de31a814966976b5",
-    "printInformation": {
-      "printerName": "",
-      "renderingIntent": "relative colorimetric",
-      "printerManagesColors": true,
-      "printSixteenBit": false,
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      }
-    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -23,30 +14,23 @@
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
     },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
+    },
     "printScale": {
       "style": "centered",
       "x": 0,
       "y": 0,
       "scale": 1
     },
-    "backgroundColor": {
-      "r": 255,
-      "g": 255,
-      "b": 255
-    },
     "globalAngle": 120,
     "globalAltitude": 30,
-    "printFlags": {
-      "labels": false,
-      "cropMarks": false,
-      "colorBars": false,
-      "registrationMarks": false,
-      "negative": false,
-      "flip": false,
-      "interpolate": false,
-      "caption": false,
-      "printFlags": true
-    },
     "layerState": 2,
     "layersGroup": [
       0,
@@ -72,12 +56,28 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 4,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "idsSeedNumber": 4,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -89,6 +89,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1448458536.4110048,
       "transparencyProtected": false,
       "hidden": false,
       "name": "Layer 0",
@@ -103,7 +104,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1448458536.4110048,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -117,6 +117,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1448458536.41102,
       "transparencyProtected": false,
       "hidden": false,
       "name": "Layer 3",
@@ -130,7 +131,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1448458536.41102,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -144,6 +144,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1448458536.4110327,
       "transparencyProtected": false,
       "hidden": false,
       "name": "Layer 1",
@@ -158,7 +159,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1448458536.4110327,
       "referencePoint": {
         "x": 0,
         "y": 0

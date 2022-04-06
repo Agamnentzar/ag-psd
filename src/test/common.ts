@@ -1,17 +1,17 @@
 /// <reference types="mocha" />
 /// <reference path="../../typings/chai.d.ts" />
-import {HTMLCanvasElement} from '../canvas/canvashelpers';
-import {Image} from 'skia-canvas/lib';
+/// <reference path="../../typings/canvas.d.ts" />
 
 require('source-map-support').install();
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { createCanvas, Image } from 'canvas';
 import '../initializeCanvas';
 import { Psd, ReadOptions } from '../index';
 import { readPsd, createReader } from '../psdReader';
 import { setLogErrors } from '../descriptor';
-import {Canvas} from 'skia-canvas/lib';
+export { createCanvas };
 
 setLogErrors(true);
 
@@ -92,13 +92,13 @@ export function extractPSD(filePath: string, psd: Psd) {
 		fs.mkdirSync(basePath);
 
 	if (psd.canvas) {
-		fs.writeFileSync(path.join(basePath, 'canvas.png'), psd.canvas.toBufferSync('png'));
+		fs.writeFileSync(path.join(basePath, 'canvas.png'), psd.canvas.toBuffer());
 		psd.canvas = undefined;
 	}
 
 	psd.children!.forEach((l, i) => {
 		if (l.canvas) {
-			fs.writeFileSync(path.join(basePath, `layer-${i}.png`), l.canvas.toBufferSync('png'));
+			fs.writeFileSync(path.join(basePath, `layer-${i}.png`), l.canvas.toBuffer());
 			l.canvas = undefined;
 		}
 	});
@@ -108,14 +108,14 @@ export function extractPSD(filePath: string, psd: Psd) {
 
 export function saveCanvas(fileName: string, canvas: HTMLCanvasElement | undefined) {
 	if (canvas) {
-		fs.writeFileSync(fileName, canvas.toBufferSync('png'));
+		fs.writeFileSync(fileName, canvas.toBuffer());
 	}
 }
 
 export function loadCanvasFromFile(filePath: string) {
 	const img = new Image();
-	img.src = <any>fs.readFileSync(filePath);
-	const canvas = new Canvas(img.width, img.height);
+	img.src = fs.readFileSync(filePath);
+	const canvas = createCanvas(img.width, img.height);
 	canvas.getContext('2d')!.drawImage(img, 0, 0);
 	return canvas;
 }
@@ -141,7 +141,7 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 		if (!fs.existsSync(failuresDir)) {
 			fs.mkdirSync(failuresDir);
 		}
-		fs.writeFileSync(path.join(failuresDir, `${name.replace(/[\\/]/, '-')}`), actual!.toBufferSync('png'));
+		fs.writeFileSync(path.join(failuresDir, `${name.replace(/[\\/]/, '-')}`), actual!.toBuffer());
 	};
 
 	if (expected === actual)

@@ -6,15 +6,6 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "00000000000000000000000000000000",
-    "printInformation": {
-      "printerName": "",
-      "renderingIntent": "relative colorimetric",
-      "printerManagesColors": true,
-      "printSixteenBit": false,
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      }
-    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -22,6 +13,15 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
+    },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -37,17 +37,6 @@
     ],
     "globalAngle": 120,
     "globalAltitude": 30,
-    "printFlags": {
-      "labels": false,
-      "cropMarks": false,
-      "colorBars": false,
-      "registrationMarks": false,
-      "negative": false,
-      "flip": false,
-      "interpolate": false,
-      "caption": false,
-      "printFlags": true
-    },
     "layerState": 0,
     "layersGroup": [
       0
@@ -69,12 +58,23 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 2,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "idsSeedNumber": 2,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -86,6 +86,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1552518513.2147706,
       "transparencyProtected": false,
       "hidden": false,
       "mask": {
@@ -94,9 +95,9 @@
         "bottom": 172,
         "right": 189,
         "defaultColor": 0,
-        "positionRelativeToLayer": false,
         "disabled": false,
-        "fromVectorData": false
+        "fromVectorData": false,
+        "positionRelativeToLayer": false
       },
       "name": "Layer 1",
       "nameSource": "layr",
@@ -110,22 +111,12 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1552518513.2147706,
       "referencePoint": {
         "x": 0,
         "y": 0
       }
     }
   ],
-  "globalLayerMaskInfo": {
-    "overlayColorSpace": 0,
-    "colorSpace1": 65535,
-    "colorSpace2": 0,
-    "colorSpace3": 0,
-    "colorSpace4": 0,
-    "opacity": 0.19607843137254902,
-    "kind": 128
-  },
   "filterMask": {
     "colorSpace": {
       "r": 255,
@@ -133,5 +124,14 @@
       "b": 0
     },
     "opacity": 0.19607843137254902
+  },
+  "globalLayerMaskInfo": {
+    "colorSpace1": 65535,
+    "colorSpace2": 0,
+    "colorSpace3": 0,
+    "colorSpace4": 0,
+    "kind": 128,
+    "opacity": 0.19607843137254902,
+    "overlayColorSpace": 0
   }
 }

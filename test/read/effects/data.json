@@ -6,15 +6,6 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "de4d6e53ba306d367985e3f0d5099d3c",
-    "printInformation": {
-      "printerName": "",
-      "renderingIntent": "relative colorimetric",
-      "printerManagesColors": true,
-      "printSixteenBit": false,
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      }
-    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -22,6 +13,15 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
+    },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -37,17 +37,6 @@
     ],
     "globalAngle": 132,
     "globalAltitude": 30,
-    "printFlags": {
-      "labels": false,
-      "cropMarks": false,
-      "colorBars": false,
-      "registrationMarks": false,
-      "negative": false,
-      "flip": false,
-      "interpolate": false,
-      "caption": false,
-      "printFlags": true
-    },
     "layerState": 0,
     "layersGroup": [
       0,
@@ -81,12 +70,23 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 12,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "idsSeedNumber": 12,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -98,6 +98,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.9989233,
       "transparencyProtected": false,
       "hidden": false,
       "name": "other2",
@@ -109,8 +110,8 @@
             "blendMode": "normal",
             "opacity": 0.9,
             "gradient": {
-              "type": "solid",
               "name": "$$$/DefaultGradient/BlueRedYellow=Blue, Red, Yellow",
+              "type": "solid",
               "smoothness": 1,
               "colorStops": [
                 {
@@ -177,7 +178,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.9989233,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -191,6 +191,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.9989355,
       "transparencyProtected": false,
       "hidden": false,
       "name": "other",
@@ -202,8 +203,8 @@
             "blendMode": "normal",
             "opacity": 1,
             "gradient": {
-              "type": "noise",
               "name": "Custom",
+              "type": "noise",
               "roughness": 0.5,
               "colorModel": "lab",
               "randomSeed": 43487260,
@@ -307,7 +308,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.9989355,
       "referencePoint": {
         "x": -56,
         "y": 7
@@ -321,6 +321,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.9989429,
       "transparencyProtected": false,
       "hidden": false,
       "name": "drop shadow",
@@ -328,26 +329,26 @@
         "scale": 1,
         "dropShadow": [
           {
-            "enabled": true,
-            "blendMode": "multiply",
-            "color": {
-              "r": 144.00000661611557,
-              "g": 58.16342577338219,
-              "b": 58.16342577338219
+            "size": {
+              "value": 5,
+              "units": "Pixels"
             },
-            "opacity": 0.75,
-            "useGlobalLight": true,
             "angle": 120,
             "distance": {
               "value": 5,
               "units": "Pixels"
             },
+            "color": {
+              "r": 144.00000661611557,
+              "g": 58.16342577338219,
+              "b": 58.16342577338219
+            },
+            "blendMode": "multiply",
+            "enabled": true,
+            "useGlobalLight": true,
+            "opacity": 0.75,
             "choke": {
               "value": 2,
-              "units": "Pixels"
-            },
-            "size": {
-              "value": 5,
               "units": "Pixels"
             },
             "noise": 0,
@@ -379,7 +380,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.9989429,
       "referencePoint": {
         "x": -1,
         "y": 49
@@ -393,6 +393,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.9989493,
       "transparencyProtected": false,
       "hidden": false,
       "name": "inner shadow",
@@ -400,26 +401,26 @@
         "scale": 1,
         "innerShadow": [
           {
-            "enabled": true,
-            "blendMode": "multiply",
-            "color": {
-              "r": 50.194554179906845,
-              "g": 200.00000327825546,
-              "b": 67.81711935997009
+            "size": {
+              "value": 4,
+              "units": "Pixels"
             },
-            "opacity": 0.63,
-            "useGlobalLight": false,
             "angle": 61,
             "distance": {
               "value": 14,
               "units": "Pixels"
             },
+            "color": {
+              "r": 50.194554179906845,
+              "g": 200.00000327825546,
+              "b": 67.81711935997009
+            },
+            "blendMode": "multiply",
+            "enabled": true,
+            "useGlobalLight": false,
+            "opacity": 0.63,
             "choke": {
               "value": 11,
-              "units": "Pixels"
-            },
-            "size": {
-              "value": 4,
               "units": "Pixels"
             },
             "noise": 0,
@@ -450,7 +451,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.9989493,
       "referencePoint": {
         "x": -16,
         "y": -10
@@ -464,27 +464,28 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.998956,
       "transparencyProtected": false,
       "hidden": false,
       "name": "inner outer glow",
       "effects": {
         "scale": 1,
         "outerGlow": {
-          "enabled": true,
-          "blendMode": "screen",
+          "size": {
+            "value": 5,
+            "units": "Pixels"
+          },
           "color": {
             "r": 255,
             "g": 93.00000205636024,
             "b": 226.42801076173782
           },
+          "blendMode": "screen",
+          "enabled": true,
           "opacity": 0.75,
           "technique": "softer",
           "choke": {
             "value": 0,
-            "units": "Pixels"
-          },
-          "size": {
-            "value": 5,
             "units": "Pixels"
           },
           "noise": 0,
@@ -506,21 +507,21 @@
           "range": 0.5
         },
         "innerGlow": {
-          "enabled": true,
-          "blendMode": "normal",
+          "size": {
+            "value": 4,
+            "units": "Pixels"
+          },
           "color": {
             "r": 251.67612075805664,
             "g": 251.67612075805664,
             "b": 251.67612075805664
           },
+          "blendMode": "normal",
+          "enabled": true,
           "opacity": 0.75,
           "technique": "softer",
           "choke": {
             "value": 2,
-            "units": "Pixels"
-          },
-          "size": {
-            "value": 4,
             "units": "Pixels"
           },
           "jitter": 0.09,
@@ -553,7 +554,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.998956,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -567,38 +567,39 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.9989626,
       "transparencyProtected": false,
       "hidden": false,
       "name": "bevel",
       "effects": {
         "scale": 1,
         "bevel": {
-          "enabled": true,
-          "highlightBlendMode": "screen",
-          "highlightColor": {
-            "r": 255,
-            "g": 255,
-            "b": 255
-          },
-          "highlightOpacity": 0.75,
-          "shadowBlendMode": "multiply",
-          "shadowColor": {
-            "r": 0.00043148465920239687,
-            "g": 0.00043148465920239687,
-            "b": 0.00043148465920239687
-          },
-          "shadowOpacity": 0.75,
-          "technique": "smooth",
-          "style": "inner bevel",
-          "useGlobalLight": true,
           "angle": 120,
-          "altitude": 30,
           "strength": 1,
           "size": {
             "value": 5,
             "units": "Pixels"
           },
+          "highlightBlendMode": "screen",
+          "shadowBlendMode": "multiply",
+          "highlightColor": {
+            "r": 255,
+            "g": 255,
+            "b": 255
+          },
+          "shadowColor": {
+            "r": 0.00043148465920239687,
+            "g": 0.00043148465920239687,
+            "b": 0.00043148465920239687
+          },
+          "style": "inner bevel",
+          "highlightOpacity": 0.75,
+          "shadowOpacity": 0.75,
+          "enabled": true,
+          "useGlobalLight": true,
           "direction": "up",
+          "technique": "smooth",
+          "altitude": 30,
           "contour": {
             "name": "Linear",
             "curve": [
@@ -631,7 +632,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.9989626,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -645,6 +645,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1579972765.9989698,
       "transparencyProtected": false,
       "hidden": false,
       "name": "solid fill",
@@ -653,14 +654,14 @@
         "scale": 1,
         "solidFill": [
           {
-            "enabled": true,
             "blendMode": "normal",
-            "opacity": 1,
             "color": {
               "r": 42.062257155776024,
               "g": 91.36575534939766,
               "b": 173.00000488758087
-            }
+            },
+            "opacity": 1,
+            "enabled": true
           }
         ]
       },
@@ -674,7 +675,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1579972765.9989698,
       "referencePoint": {
         "x": 0,
         "y": 0

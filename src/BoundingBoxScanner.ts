@@ -3,7 +3,6 @@
  */
 import {Layer, LayerMaskData} from './psd';
 import {createCanvas} from './helpers';
-import {CanvasRenderingContext2D} from 'skia-canvas';
 
 export interface IBoundingBox {
 	left: number | undefined;
@@ -48,14 +47,14 @@ export class BoundingBoxScan {
 			const width: number = boundingBox.right! - boundingBox.left!;
 			const height: number = boundingBox.bottom! - boundingBox.top!;
 			const newCanvas = createCanvas(width, height);
-			const ctx: CanvasRenderingContext2D = newCanvas.getContext('2d') as CanvasRenderingContext2D;
-			ctx.drawImage(layer.canvas!, boundingBox.left!, boundingBox.top!, width, height, 0, 0, width, height);
+			const ctx = newCanvas.getContext('2d');
+			ctx!.drawImage(layer.canvas!, boundingBox.left!, boundingBox.top!, width, height, 0, 0, width, height);
 			layer.canvas = newCanvas;
 			layer.top = boundingBox.top;
 			layer.bottom = boundingBox.bottom;
 			layer.left = boundingBox.left;
 			layer.right = boundingBox.right;
-			layer.imageData = ctx.getImageData(0, 0, width, height);
+			layer.imageData = ctx!.getImageData(0, 0, width, height);
 		}
 	}
 

@@ -6,15 +6,6 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "bba3ea8a192b9746701db58437de56e1",
-    "printInformation": {
-      "printerName": "Canon MP540 series Printer",
-      "renderingIntent": "relative colorimetric",
-      "printerManagesColors": true,
-      "printSixteenBit": false,
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      }
-    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -22,6 +13,15 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
+    },
+    "printInformation": {
+      "printSixteenBit": false,
+      "printerManagesColors": true,
+      "printerName": "Canon MP540 series Printer",
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      },
+      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -35,24 +35,8 @@
     "alphaIdentifiers": [
       18
     ],
-    "backgroundColor": {
-      "r": 255,
-      "g": 255,
-      "b": 255
-    },
     "globalAngle": 30,
     "globalAltitude": 30,
-    "printFlags": {
-      "labels": false,
-      "cropMarks": false,
-      "colorBars": false,
-      "registrationMarks": false,
-      "negative": false,
-      "flip": false,
-      "interpolate": false,
-      "caption": false,
-      "printFlags": true
-    },
     "layerState": 1,
     "layersGroup": [
       0,
@@ -76,13 +60,29 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "iccUntaggedProfile": true,
-    "idsSeedNumber": 22,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 22,
+    "printFlags": {
+      "caption": false,
+      "colorBars": false,
+      "cropMarks": false,
+      "flip": false,
+      "interpolate": false,
+      "labels": false,
+      "negative": false,
+      "printFlags": true,
+      "registrationMarks": false
     }
   },
   "children": [
@@ -94,6 +94,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1500672363.6438081,
       "transparencyProtected": true,
       "hidden": false,
       "name": "Background",
@@ -108,7 +109,6 @@
         "position": true
       },
       "layerColor": "none",
-      "timestamp": 1500672363.6438081,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -122,6 +122,7 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
+      "timestamp": 1500672363.643826,
       "transparencyProtected": false,
       "hidden": false,
       "name": "Layer 1",
@@ -136,7 +137,6 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1500672363.643826,
       "referencePoint": {
         "x": 0,
         "y": 0

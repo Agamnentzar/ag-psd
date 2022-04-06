@@ -1,5 +1,4 @@
 import { Layer, BlendMode, LayerColor } from './psd';
-import {HTMLCanvasElement} from './canvas/canvashelpers';
 export const MOCK_HANDLERS = false;
 export const RAW_IMAGE_DATA = false;
 

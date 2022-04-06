@@ -1,5 +1,5 @@
 import { BezierPath } from '../psd';
-import {createCanvas} from '../canvas/canvashelpers';
+import {createCanvas} from '../helpers';
 
 export function drawBezierPaths(paths: BezierPath[], width: number, height: number, fileName: string, ox = 0, oy = 0) {
 	const canvas = createCanvas(width, height);
@@ -18,5 +18,5 @@ export function drawBezierPaths(paths: BezierPath[], width: number, height: numb
 		if (!path.open) context.closePath();
 		context.fill();
 	}
-	require('fs').writeFileSync(fileName, canvas.toBufferSync('png'));
+	require('fs').writeFileSync(fileName, canvas.toBuffer());
 }

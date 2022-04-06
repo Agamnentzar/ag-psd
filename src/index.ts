@@ -7,8 +7,8 @@ export { initializeCanvas } from './helpers';
 export * from './psd';
 import { fromByteArray } from 'base64-js';
 import {BoundingBoxScan, IBoundingBox} from './BoundingBoxScanner';
+import {createCanvas} from './helpers';
 export { PsdReader, PsdWriter };
-import { createCanvas } from './canvas/canvashelpers';
 
 interface BufferLike {
 	buffer: ArrayBuffer;

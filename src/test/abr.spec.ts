@@ -1,9 +1,9 @@
-import { createCanvas, HTMLCanvasElement } from '../canvas/canvashelpers';
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { readAbr } from '../abr';
 import { compareCanvases, loadImagesFromDirectory } from './common';
+import {createCanvas} from '../helpers';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'abr-read');
@@ -27,7 +27,7 @@ describe('ABR', () => {
 				const canvas = alphaToCanvas(sample.alpha, sample.bounds.w, sample.bounds.h);
 				delete (sample as any).alpha;
 				const name = `sample-${sample.id}.png`;
-				fs.writeFileSync(path.join(resultsPath, name), canvas.toBufferSync('png'));
+				fs.writeFileSync(path.join(resultsPath, name), canvas.toBuffer());
 				compare.push({ name, canvas });
 			}
 
@@ -35,7 +35,7 @@ describe('ABR', () => {
 				const canvas = rgbToCanvas(pattern.data, pattern.bounds.w, pattern.bounds.h);
 				delete (pattern as any).data;
 				const name = `pattern-${pattern.id}.png`;
-				fs.writeFileSync(path.join(resultsPath, name), canvas.toBufferSync('png'));
+				fs.writeFileSync(path.join(resultsPath, name), canvas.toBuffer());
 				compare.push({ name, canvas });
 			}
 
@@ -79,13 +79,13 @@ describe('ABR', () => {
 
 					for (const sample of abr.samples) {
 						const canvas = alphaToCanvas(sample.alpha, sample.bounds.w, sample.bounds.h);
-						fs.writeFileSync(path.join(outputPath, file, 'sample-' + sample.id + '.png'), canvas.toBufferSync('png'));
+						fs.writeFileSync(path.join(outputPath, file, 'sample-' + sample.id + '.png'), canvas.toBuffer());
 						delete (sample as any).alpha;
 					}
 
 					for (const pattern of abr.patterns) {
 						const canvas = rgbToCanvas(pattern.data, pattern.bounds.w, pattern.bounds.h);
-						fs.writeFileSync(path.join(outputPath, file, 'pattern-' + pattern.id + '.png'), canvas.toBufferSync('png'));
+						fs.writeFileSync(path.join(outputPath, file, 'pattern-' + pattern.id + '.png'), canvas.toBuffer());
 						delete (pattern as any).data;
 					}
 
