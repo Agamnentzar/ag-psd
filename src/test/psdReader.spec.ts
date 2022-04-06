@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import { HTMLCanvasElement } from '../canvas/canvashelpers';
 import * as path from 'path';
 import { expect } from 'chai';
 import {
@@ -21,7 +22,7 @@ const opts: ReadOptions = {
 describe('PsdReader', () => {
 	it('reads width and height properly', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'blend-mode', 'src.psd'), { ...opts });
-		console.log(require('util').inspect(psd, false, 99, true));
+		//console.log(require('util').inspect(psd, false, 99, true));
 		expect(psd.width).equal(300);
 		expect(psd.height).equal(200);
 	});

@@ -1,6 +1,5 @@
-import { fromByteArray } from 'base64-js';
 import { Layer, BlendMode, LayerColor } from './psd';
-
+import {HTMLCanvasElement} from './canvas/canvashelpers';
 export const MOCK_HANDLERS = false;
 export const RAW_IMAGE_DATA = false;
 
@@ -327,25 +326,6 @@ export let createImageData: (width: number, height: number) => ImageData = (widt
 	if (!tempCanvas) tempCanvas = createCanvas(1, 1);
 	return tempCanvas.getContext('2d')!.createImageData(width, height);
 };
-
-if (typeof document !== 'undefined') {
-	createCanvas = (width, height) => {
-		const canvas = document.createElement('canvas');
-		canvas.width = width;
-		canvas.height = height;
-		return canvas;
-	};
-
-	createCanvasFromData = (data) => {
-		const image = new Image();
-		image.src = 'data:image/jpeg;base64,' + fromByteArray(data);
-		const canvas = document.createElement('canvas');
-		canvas.width = image.width;
-		canvas.height = image.height;
-		canvas.getContext('2d')!.drawImage(image, 0, 0);
-		return canvas;
-	};
-}
 
 export function initializeCanvas(
 	createCanvasMethod: (width: number, height: number) => HTMLCanvasElement,

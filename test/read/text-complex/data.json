@@ -6,6 +6,15 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "621f86d5b43d85316c35448631bf90e5",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -14,23 +23,30 @@
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
     },
-    "printInformation": {
-      "printSixteenBit": false,
-      "printerManagesColors": true,
-      "printerName": "",
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      },
-      "renderingIntent": "relative colorimetric"
-    },
     "printScale": {
       "style": "centered",
       "x": 0,
       "y": 0,
       "scale": 1
     },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
     "globalAngle": 120,
     "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
     "layerState": 1,
     "layersGroup": [
       0,
@@ -54,28 +70,12 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
+    "idsSeedNumber": 10,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
-    },
-    "backgroundColor": {
-      "r": 255,
-      "g": 255,
-      "b": 255
-    },
-    "idsSeedNumber": 10,
-    "printFlags": {
-      "caption": false,
-      "colorBars": false,
-      "cropMarks": false,
-      "flip": false,
-      "interpolate": false,
-      "labels": false,
-      "negative": false,
-      "printFlags": true,
-      "registrationMarks": false
     }
   },
   "children": [
@@ -87,7 +87,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1580104773.0428915,
       "transparencyProtected": true,
       "hidden": false,
       "name": "Background",
@@ -102,6 +101,7 @@
         "position": true
       },
       "layerColor": "none",
+      "timestamp": 1580104773.0428915,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -115,7 +115,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1580104773.0485427,
       "transparencyProtected": false,
       "hidden": false,
       "name": "Test text aaaa xxxxx  OMG !",
@@ -132,8 +131,6 @@
         "top": -20.925140380859375,
         "right": 72.88780212402344,
         "bottom": 126.11767578125,
-        "shapeType": "point",
-        "pointBase": [0, 0],
         "text": "Test text aaaa\nxxxxx\n\nOMG !",
         "index": 0,
         "gridding": "none",
@@ -152,6 +149,11 @@
         "subscriptSize": 0.583,
         "subscriptPosition": 0.333,
         "smallCapSize": 0.7,
+        "shapeType": "point",
+        "pointBase": [
+          0,
+          0
+        ],
         "paragraphStyle": {
           "justification": "center",
           "autoHyphenate": true,
@@ -240,10 +242,10 @@
               },
               "autoKerning": false,
               "fillColor": {
-                "a": 1,
                 "r": 255,
                 "g": 0,
-                "b": 0
+                "b": 0,
+                "a": 1
               }
             }
           },
@@ -258,10 +260,10 @@
               },
               "autoKerning": true,
               "fillColor": {
-                "a": 1,
                 "r": 255,
                 "g": 0,
-                "b": 0
+                "b": 0,
+                "a": 1
               }
             }
           },
@@ -270,10 +272,10 @@
             "style": {
               "autoKerning": true,
               "fillColor": {
-                "a": 1,
                 "r": 255,
                 "g": 0,
-                "b": 0
+                "b": 0,
+                "a": 1
               }
             }
           },
@@ -282,10 +284,10 @@
             "style": {
               "autoKerning": true,
               "fillColor": {
-                "a": 1,
                 "r": 12.00795,
                 "g": 255,
-                "b": 0
+                "b": 0,
+                "a": 1
               }
             }
           },
@@ -300,10 +302,10 @@
               },
               "autoKerning": true,
               "fillColor": {
-                "a": 1,
                 "r": 255,
                 "g": 0,
-                "b": 0
+                "b": 0,
+                "a": 1
               }
             }
           },
@@ -312,10 +314,10 @@
             "style": {
               "autoKerning": true,
               "fillColor": {
-                "a": 1,
                 "r": 255,
                 "g": 0,
-                "b": 0
+                "b": 0,
+                "a": 1
               }
             }
           },
@@ -325,10 +327,10 @@
               "autoKerning": true,
               "underline": true,
               "fillColor": {
-                "a": 1,
                 "r": 255,
                 "g": 0,
-                "b": 0
+                "b": 0,
+                "a": 1
               },
               "yUnderline": 0
             }
@@ -340,10 +342,10 @@
               "underline": false,
               "language": 14,
               "fillColor": {
-                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
-                "b": 156.75869999999998
+                "b": 156.75869999999998,
+                "a": 1
               },
               "yUnderline": 1
             }
@@ -354,10 +356,10 @@
               "autoKerning": true,
               "underline": false,
               "fillColor": {
-                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
-                "b": 156.75869999999998
+                "b": 156.75869999999998,
+                "a": 1
               },
               "yUnderline": 1
             }
@@ -374,10 +376,10 @@
               "autoKerning": true,
               "underline": false,
               "fillColor": {
-                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
-                "b": 156.75869999999998
+                "b": 156.75869999999998,
+                "a": 1
               },
               "yUnderline": 1
             }
@@ -388,10 +390,10 @@
               "autoKerning": true,
               "underline": false,
               "fillColor": {
-                "a": 1,
                 "r": 158.00055,
                 "g": 156.75869999999998,
-                "b": 156.75869999999998
+                "b": 156.75869999999998,
+                "a": 1
               },
               "yUnderline": 1
             }
@@ -409,6 +411,7 @@
         "position": false
       },
       "layerColor": "none",
+      "timestamp": 1580104773.0485427,
       "referencePoint": {
         "x": 90,
         "y": 72

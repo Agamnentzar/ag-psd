@@ -1,3 +1,5 @@
+import {HTMLCanvasElement} from './canvas/canvashelpers';
+
 export type BlendMode = 'pass through' | 'normal' | 'dissolve' | 'darken' | 'multiply' |
 	'color burn' | 'linear burn' | 'darker color' | 'lighten' | 'screen' | 'color dodge' |
 	'linear dodge' | 'lighter color' | 'overlay' | 'soft light' | 'hard light' |
@@ -235,6 +237,7 @@ export interface LayerMaskData {
 	vectorMaskFeather?: number;
 	canvas?: HTMLCanvasElement;
 	imageData?: ImageData;
+	imageDataRaw?: Uint8Array;
 }
 
 export type TextGridding = 'none' | 'round'; // TODO: other values (no idea where to set it up in Photoshop)
@@ -912,6 +915,7 @@ export interface Annotation {
 }
 
 export interface Layer extends LayerAdditionalInfo {
+	imageDataRaw?: Uint8Array;
 	top?: number;
 	left?: number;
 	bottom?: number;

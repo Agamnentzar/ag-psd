@@ -2,6 +2,7 @@
 	"compilerOptions": {
 		"target": "es5",
 		"module": "commonjs",
+		"moduleResolution": "Node",
 		"lib": ["es2016", "dom"],
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
