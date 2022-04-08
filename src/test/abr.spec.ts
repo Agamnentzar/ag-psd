@@ -1,9 +1,9 @@
-import { createCanvas } from 'canvas';
 import { expect } from 'chai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { readAbr } from '../abr';
 import { compareCanvases, loadImagesFromDirectory } from './common';
+import {createCanvas} from '../helpers';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'abr-read');
@@ -71,7 +71,7 @@ describe('ABR', () => {
 
 				console.log(filePath);
 				const abr = readAbr(fs.readFileSync(filePath));
-				console.log(require('util').inspect(abr, false, 99, true));
+				//console.log(require('util').inspect(abr, false, 99, true));
 
 				if (0) {
 					fs.rmSync(path.join(outputPath, file), { recursive: true, force: true });
@@ -93,7 +93,7 @@ describe('ABR', () => {
 				}
 			}
 		}
-	})
+	});
 });
 
 function alphaToCanvas(alpha: Uint8Array, width: number, height: number) {

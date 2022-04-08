@@ -1,11 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from 'chai';
-import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
+import { loadCanvasFromFile, compareBuffers, compareCanvases } from './common';
 import { Psd, WriteOptions, ReadOptions } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
 import { readPsd, createReader } from '../psdReader';
 import { writePsdBuffer } from '../index';
+import {createCanvas} from '../helpers';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');

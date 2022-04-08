@@ -1,7 +1,8 @@
 import { BezierPath } from '../psd';
+import {createCanvas} from '../helpers';
 
 export function drawBezierPaths(paths: BezierPath[], width: number, height: number, fileName: string, ox = 0, oy = 0) {
-	const canvas = require('canvas').createCanvas(width, height);
+	const canvas = createCanvas(width, height);
 	const context = canvas.getContext('2d')!;
 	context.fillStyle = 'red';
 	context.translate(-ox, -oy);
