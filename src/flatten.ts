@@ -3,26 +3,25 @@ import {createCanvas} from './helpers';
 import {findPsdLayerById} from './findLayer';
 
 
-export const flattenPsd = (psd: Psd) => {
-	const layers: Layer[] | undefined = psd.children;
+export const flattenPsd = (input: Psd | Layer, psd?: Psd) => {
+	const layers: Layer[] | undefined = input.children;
+	if (!psd) {
+		psd =  input as Psd;
+	}
 	if (layers) {
 		let lastMergingLayer: Layer = layers[0];
 		let layer: Layer;
-		// Pre-test for compatibility
-		for (let i = 0; i < layers.length; i++) {
-			layer = layers[i];
-			if (!layer.canvas && layer.mask?.canvas && layer.children && layer.children.length > 0) {
-				// TODO Support masked layer groups
-				console.warn('Layer groups with masks cannot be flattened yet. Returning unmodified PSD.');
-				return psd;
-			}
-		}
 		// Create a new output PSD
-		const psdOut: Psd = { ...psd };
+		const psdOut: Psd | Layer = { ...input };
 		psdOut.children = [];
 		// Loop through all the layers. If we find a simple layer without mask or text, we concatenate all previous simple layers into it
 		for (let i = 0; i < layers.length; i++) {
 			layer = layers[i];
+			if (layer.children && layer.children.length > 0) {
+				layer = flattenPsd(layer, psd);
+				psdOut.children!.push(layer);
+				continue;
+			}
 			if (layer.mask || layer.text || !layer.canvas) {
 				// Pass through
 				if (lastMergingLayer !== layer) {
@@ -65,7 +64,7 @@ export const flattenPsd = (psd: Psd) => {
 		}
 		return psdOut;
 	} else {
-		return psd;
+		return input;
 	}
 };
 

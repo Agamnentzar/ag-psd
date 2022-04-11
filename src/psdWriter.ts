@@ -218,7 +218,11 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 				writeSignature(writer, '8BIM');
 				writeUint16(writer, handler.key);
 				writePascalString(writer, '', 2);
-				writeSection(writer, 2, () => handler.write(writer, imageResources));
+				try {
+					writeSection(writer, 2, () => handler.write(writer, imageResources));
+				} catch (e) {
+					console.error(e);
+				}
 			}
 		}
 	});

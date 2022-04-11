@@ -3,8 +3,8 @@ import {createCanvas, createCanvasFromData, initializeCanvas} from '../helpers';
 import {Layer, Psd} from '../psd';
 import {readPsdFromFile} from './common';
 import {flattenPsd} from '../flatten';
-// import {writePsdBuffer} from '../index';
-// import * as fs from 'fs';
+//import {writePsdBuffer} from '../index';
+//import * as fs from 'fs';
 
 initializeCanvas(createCanvas, createCanvasFromData);
 
@@ -14,7 +14,7 @@ describe('When flattening a PSD file', () => {
 		psd = readPsdFromFile('./test-manual/flatten.psd');
 	});
 	it('Should create the correct PSD structure', async () => {
-		const flattenedPsd: Psd = flattenPsd(psd);
+		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
 		// Enable next lines to view test output
 		//const buffer = writePsdBuffer(flattenedPsd);
 		//fs.writeFileSync('flattenedtest.psd', buffer);
@@ -32,12 +32,34 @@ describe('When flattening a PSD file with groups', () => {
 		psd = readPsdFromFile('./test-manual/flatten_groups.psd');
 	});
 	it('Should create the correct PSD structure', async () => {
-		const flattenedPsd: Psd = flattenPsd(psd);
+		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
 		// Enable next lines to view test output
-		//const buffer = writePsdBuffer(flattenedPsd);
+		//const buffer = writePsdBuffer(flattenedPsd, {
+		//	generateThumbnail: true,
+		//});
 		//fs.writeFileSync('flattenedtest.psd', buffer);
 		const children: Layer[] = flattenedPsd.children!;
 		expect(children.length).to.equal(1);
 		expect(children[0].children!.length).to.equal(2);
+	});
+});
+
+describe('When flattening a PSD file with groups that can be flattened', () => {
+	let psd: Psd;
+	beforeEach(async () => {
+		psd = readPsdFromFile('./test-manual/flatten_groups_2.psd');
+	});
+	it('Should create the correct PSD structure', async () => {
+		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
+		// Enable next lines to view test output
+		//const buffer = writePsdBuffer(flattenedPsd, {
+		//	generateThumbnail: true,
+		//});
+		//fs.writeFileSync('flattenedtest.psd', buffer);
+		const children: Layer[] = flattenedPsd.children!;
+		expect(children.length).to.equal(1);
+		expect(children[0].children!.length).to.equal(3);
+		expect(children[0].children![1].name).to.equal('sofie');
+		expect(children[0].children![2].name).to.equal('Layer 1');
 	});
 });
