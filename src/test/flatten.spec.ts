@@ -65,6 +65,20 @@ describe('When flattening a complex PSD file with groups that can be flattened',
 	});
 });
 
+describe('When flattening a deep nesting complex PSD file with groups that can be flattened', () => {
+	let psd: Psd;
+	beforeEach(async () => {
+		psd = readPsdFromFile('./test-manual/group_mask.psd');
+	});
+	it('Should create the correct PSD structure', async () => {
+		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
+		writeLayers(flattenedPsd, 'group_mask_deep_nesting.png');
+		const children: Layer[] = flattenedPsd.children!;
+		expect(children.length).to.equal(7);
+	});
+});
+
+
 function writeLayers(psd: Psd, filename: string) {
 	for (let i = 0; i < psd.children!.length; i++) {
 		const canvas = psd.children![i].canvas;

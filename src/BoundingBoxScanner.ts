@@ -61,7 +61,7 @@ export class BoundingBoxScan {
 	/**
 	 * Scan the entire image for a rectangle in the set channel
 	 */
-	public scan(data: Uint8ClampedArray, w: number, _h: number, scanOffset: number = BoundingBoxScan.SCAN_OFFSET_ALPHA): IBoundingBox {
+	public scan(data: Uint8ClampedArray, w: number, h: number, scanOffset: number = BoundingBoxScan.SCAN_OFFSET_ALPHA): IBoundingBox {
 		if (scanOffset === void 0) {
 			scanOffset = BoundingBoxScan.SCAN_OFFSET_ALPHA;
 		}
@@ -100,6 +100,18 @@ export class BoundingBoxScan {
 					bound.bottom = y;
 				}
 			}
+		}
+		if (bound.left === undefined) {
+			bound.left = 0;
+		}
+		if (bound.right === undefined) {
+			bound.right = w;
+		}
+		if (bound.top === undefined) {
+			bound.top = 0;
+		}
+		if (bound.bottom === undefined) {
+			bound.bottom = h;
 		}
 		return <any>bound as IBoundingBox;
 	}
