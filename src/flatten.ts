@@ -14,6 +14,7 @@ export const recursiveListLayers = (layers: Layer[], psd: Psd): Layer[] => {
 	}
 	layersOut = layersOut.filter(value => !!value.canvas || !!value.text);
 	for (let i = 0; i < layersOut.length; i++) {
+		layersOut[i].id = i;
 		concatenateMasksRecursively(layersOut[i], psd);
 	}
 	return layersOut;

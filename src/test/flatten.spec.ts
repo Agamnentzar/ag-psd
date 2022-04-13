@@ -78,6 +78,19 @@ describe('When flattening a deep nesting complex PSD file with groups that can b
 	});
 });
 
+describe('When flattening a complex PSD file with clipped and nonclipped layers', () => {
+	let psd: Psd;
+	beforeEach(async () => {
+		psd = readPsdFromFile('./test-manual/clipped_vs_nonclipped_layer.psd');
+	});
+	it('Should create the correct PSD structure', async () => {
+		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
+		writeLayers(flattenedPsd, 'group_mask_deep_nesting.png');
+		const children: Layer[] = flattenedPsd.children!;
+		expect(children.length).to.equal(7);
+	});
+});
+
 
 function writeLayers(psd: Psd, filename: string) {
 	for (let i = 0; i < psd.children!.length; i++) {
