@@ -87,7 +87,7 @@ describe('When flattening a complex PSD file with clipped and nonclipped layers'
 		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
 		writeLayers(flattenedPsd, 'group_mask_deep_nesting.png');
 		const children: Layer[] = flattenedPsd.children!;
-		expect(children.length).to.equal(7);
+		expect(children.length).to.equal(3);
 	});
 });
 
