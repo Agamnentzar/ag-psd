@@ -1,6 +1,6 @@
 {
   "name": "@moonpig/ag-psd",
-  "version": "15.6.7",
+  "version": "15.6.8",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
