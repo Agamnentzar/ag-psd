@@ -78,11 +78,14 @@ export const flattenPsd = (input: Psd ) => {
 };
 
 export const concatenateMasks = (parentLayer: Layer, childLayer: Layer) => {
-	if (!childLayer.mask) {
-		if (parentLayer.mask) {
+	if (!childLayer.mask?.canvas) {
+		if (parentLayer.mask?.canvas) {
 			// eslint-disable-next-line no-param-reassign
 			childLayer.mask = parentLayer.mask;
 		}
+		return;
+	}
+	if (!parentLayer.mask?.canvas) {
 		return;
 	}
 	const parentCanvas = <any>parentLayer!.mask!.canvas;

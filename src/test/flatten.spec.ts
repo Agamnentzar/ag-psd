@@ -91,6 +91,20 @@ describe('When flattening a complex PSD file with clipped and nonclipped layers'
 	});
 });
 
+describe('When flattening a complex PSD file', () => {
+	let psd: Psd;
+	beforeEach(async () => {
+		psd = readPsdFromFile('./test-manual/PUE444_cropped2.psd');
+	});
+	it('Should create the correct PSD structure', async () => {
+		const flattenedPsd: Psd = flattenPsd(psd) as Psd;
+		writeLayers(flattenedPsd, 'PUE444_cropped2.png');
+		const children: Layer[] = flattenedPsd.children!;
+		expect(children.length).to.equal(20);
+	});
+});
+
+
 
 function writeLayers(psd: Psd, filename: string) {
 	for (let i = 0; i < psd.children!.length; i++) {
