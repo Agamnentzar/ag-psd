@@ -70,7 +70,7 @@ describe('PsdReader', () => {
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
 	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /krita/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /ignore-cat/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
@@ -161,6 +161,21 @@ describe('PsdReader', () => {
 
 			compareBuffers(actual, expected, `read-write-${f}`, 0x0);
 		});
+	});
+
+	it.skip('generate file', () => {
+		fs.writeFileSync('test.psd', writePsdBuffer({
+			width: 100,
+			height: 100,
+			children: [
+				{
+					name: 'test',
+					blendMode: 'color burn',
+					blendClippendElements: true,
+					// blendInteriorElements: false,
+				},
+			]
+		}));
 	});
 
 	it.skip('write text layer test', () => {

@@ -7,6 +7,6 @@
 /coverage
 /coverage-remapped
 /test.js
-/test/read/krita
-/test/read-write/weird-vogk
+/test/read/ignore-*
+/test/read-write/ignore-*
 .vscode

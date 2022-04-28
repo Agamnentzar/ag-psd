@@ -813,13 +813,14 @@ export function readSection<T>(
 	let end = reader.offset + length;
 	const result = func(() => end - reader.offset);
 
-	if (reader.offset > end) {
-		throw new Error('Exceeded section limits');
-	}
-
 	if (reader.offset !== end && reader.strict) {
-		// throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
-		console.warn('Unread section data');
+		if (reader.offset > end) {
+			// throw new Error('Exceeded section limits');
+			console.warn('Exceeded section limits');
+		} else {
+			// throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
+			console.warn('Unread section data');
+		}
 	}
 
 	while (end % round) end++;
