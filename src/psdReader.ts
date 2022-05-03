@@ -168,6 +168,10 @@ function readShortString(reader: PsdReader, length: number) {
 	return result;
 }
 
+function isValidSignature(sig: string) {
+	return sig === '8BIM' || sig === 'MeSa' || sig === 'AgHg' || sig === 'PHUT' || sig === 'DCSR';
+}
+
 export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	// header
 	checkSignature(reader, '8BPS');
@@ -186,6 +190,7 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 
 	const psd: Psd = { width, height, channels, bitsPerChannel, colorMode };
 	const opt: ReadOptionsExt = { ...options, large: version === 2 };
+	const fixOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
 
 	// color mode data
 	readSection(reader, 1, left => {
@@ -196,10 +201,20 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	// image resources
 	readSection(reader, 1, left => {
 		while (left()) {
-			const sig = readSignature(reader);
+			const sigOffset = reader.offset;
+			let sig = '';
 
-			if (sig !== '8BIM' && sig !== 'MeSa' && sig !== 'AgHg' && sig !== 'PHUT' && sig !== 'DCSR') {
-				throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
+			// attempt to fix broken document by realigning with the signature
+			for (const offset of fixOffsets) {
+				try {
+					reader.offset = sigOffset + offset;
+					sig = readSignature(reader);
+				} catch { }
+				if (isValidSignature(sig)) break;
+			}
+
+			if (!isValidSignature(sig)) {
+				throw new Error(`Invalid signature: '${sig}' at 0x${(sigOffset).toString(16)}`);
 			}
 
 			const id = readUint16(reader);
