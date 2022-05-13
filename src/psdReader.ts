@@ -184,7 +184,11 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	const width = readUint32(reader);
 	const bitsPerChannel = readUint16(reader);
 	const colorMode = readUint16(reader);
+	const maxSize = version === 1 ? 30000 : 300000;
 
+	if (width > maxSize || height > maxSize) throw new Error(`Invalid size`);
+	if (channels > 16) throw new Error(`Invalid channel count`);
+	if (bitsPerChannel > 32) throw new Error(`Invalid bitsPerChannel count`);
 	if (supportedColorModes.indexOf(colorMode) === -1)
 		throw new Error(`Color mode not supported: ${colorModes[colorMode] ?? colorMode}`);
 
@@ -826,6 +830,8 @@ export function readSection<T>(
 	if (length <= 0 && skipEmpty) return undefined;
 
 	let end = reader.offset + length;
+	if (end > reader.view.byteLength) throw new Error('Section exceeds file size');
+
 	const result = func(() => end - reader.offset);
 
 	if (reader.offset !== end && reader.strict) {
@@ -839,8 +845,8 @@ export function readSection<T>(
 	}
 
 	while (end % round) end++;
-
 	reader.offset = end;
+
 	return result;
 }
 
