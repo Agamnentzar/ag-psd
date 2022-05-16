@@ -340,7 +340,7 @@ describe('PsdWriter', () => {
 		});
 	});
 
-	// fs.readdirSync(writeFilesPath).filter(f => /smart-object/.test(f)).forEach(f => {
+	// fs.readdirSync(writeFilesPath).filter(f => /float-size/.test(f)).forEach(f => {
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
 			const basePath = path.join(writeFilesPath, f);

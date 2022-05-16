@@ -507,7 +507,10 @@ function getChannels(
 	const mask = layer.mask;
 
 	if (mask) {
-		let { top = 0, left = 0, right = 0, bottom = 0 } = mask;
+		let top = (mask.top as any) | 0;
+		let left = (mask.left as any) | 0;
+		let right = (mask.right as any) | 0;
+		let bottom = (mask.bottom as any) | 0;
 		let { width, height } = getLayerDimentions(mask);
 		let imageData = mask.imageData;
 
@@ -573,14 +576,16 @@ function cropImageData(data: ImageData, left: number, top: number, width: number
 function getLayerChannels(
 	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
 ): LayerChannelData {
-	let { top = 0, left = 0, right = 0, bottom = 0 } = layer;
+	let top = (layer.top as any) | 0;
+	let left = (layer.left as any) | 0;
+	let right = (layer.right as any) | 0;
+	let bottom = (layer.bottom as any) | 0;
 	let channels: ChannelData[] = [
 		{ channelId: ChannelID.Transparency, compression: Compression.RawData, buffer: undefined, length: 2 },
 		{ channelId: ChannelID.Color0, compression: Compression.RawData, buffer: undefined, length: 2 },
 		{ channelId: ChannelID.Color1, compression: Compression.RawData, buffer: undefined, length: 2 },
 		{ channelId: ChannelID.Color2, compression: Compression.RawData, buffer: undefined, length: 2 },
 	];
-
 	let { width, height } = getLayerDimentions(layer);
 
 	if (!(layer.canvas || layer.imageData) || !width || !height) {
