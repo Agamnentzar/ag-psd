@@ -1,5 +1,17 @@
 # Changelog
 
+## v14.3.11
+- Fixed corrupted file when passing non-integer values to `layer.left`, `.top`, `.right`, `.bottom`
+
+## v14.3.9
+- Fixed reading some corrupted files
+
+## v14.3.8
+- Fixed handling files with incorrect section sizes
+
+## v14.3.6
+- Fixed incorrect writing of `vogk` section in some cases resulting in a broken file
+
 ## v14.3.6
 - Fixed incorrect writing of `vogk` section in some cases resulting in a broken file
 
