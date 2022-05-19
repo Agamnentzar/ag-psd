@@ -380,9 +380,11 @@ Below is a simple example of document structure returned from `readPsd`. You can
 }
 ```
 
-### Updating document without corrupting image data
+## Modifying documents
 
-If you read and write the same document, image data can get corrupted by automatic alpha channel pre-multiplication that happens when you load data into the canvas element. To avoid that use raw image data, set `useImageData` option to `true` in `ReadOptions`. You can also use `useRawThumbnail` option to preserve original thumbnail data.
+General approach with `ag-psd` to modifying documents is to read the document, apply the updates and write the document back.
+
+If you read and write the same document, image data can get corrupted by automatic alpha channel pre-multiplication that happens when you load data into the canvas element. To avoid that, use raw image data, set `useImageData` option to `true` in `ReadOptions`. You can also use `useRawThumbnail` option to avoid any changes to thumbnail image.
 
 ```js
 const psd = readPsd(inputBuffer, { useImageData: true });
@@ -391,6 +393,12 @@ const psd = readPsd(inputBuffer, { useImageData: true });
 
 const outuptBuffer = writePsd(psd); 
 ```
+
+Updating general properties that don't have visual impact on the canvas, like printing info or layer name will work correctly without any extra work.
+
+This library does NOT generate new composite canvas based on the layer data, so changing layer order, adding or removing layers or changing layer canvas data, or blending mode, or any other property that has visual impact on the canvas will cause the composite image and thumbnail to not be valid anymore. If you need composite image or thumbnail to be correct you need to update them yourself by updating `psd.canvas` or `psd.imageData` and `psd.imageResources.thumbnail` or  `psd.imageResources.thumbnailRaw` fields. Composite image data is not required for PSD file to be readble in Photoshop so leaving old version or removing it completely may be good option. Thumbnail is only necessary for file preview in programs like Adobe Bridge or File Explorer, if you don't need to support that you can skip thumbnail as well.
+
+This library also does NOT generate new layer canvas based on layer settings, so if you're changing any layer properties, that impact layer bitmap, you also need to update `layer.canvas` or `layer.imageData`. This includes: text layer properties, vector layer properties, smart object, etc. (this does not include layer blending options)
 
 ### Writing text layers
 
