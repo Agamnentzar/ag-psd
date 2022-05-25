@@ -1,11 +1,20 @@
-import { createCanvas, Image } from 'canvas';
+import { createCanvas } from 'canvas';
 import { initializeCanvas } from './index';
+import { decodeJpeg } from './jpeg';
 
 function createCanvasFromData(data: Uint8Array) {
-	const image = new Image();
-	image.src = Buffer.from(data);
-	const canvas = createCanvas(image.width, image.height);
-	canvas.getContext('2d')!.drawImage(image, 0, 0);
+	const canvas = createCanvas(100, 100);
+
+	try {
+		const context = canvas.getContext('2d')!;
+		const imageData = decodeJpeg(data, (w, h) => context.createImageData(w, h));
+		canvas.width = imageData.width;
+		canvas.height = imageData.height;
+		context.putImageData(imageData, 0, 0);
+	} catch (e: any) {
+		console.error('JPEG decompression error', e.message);
+	}
+
 	return canvas;
 }
 

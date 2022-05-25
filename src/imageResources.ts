@@ -615,7 +615,7 @@ addHandler(
 
 		if (options.useRawThumbnail) {
 			target.thumbnailRaw = { width, height, data };
-		} else {
+		} else if (data.byteLength) {
 			target.thumbnail = createCanvasFromData(data);
 		}
 	},
@@ -629,10 +629,15 @@ addHandler(
 			height = target.thumbnailRaw.height;
 			data = target.thumbnailRaw.data;
 		} else {
-			if (!target.thumbnail) throw new Error('Missing thumbnail');
-			width = target.thumbnail.width;
-			height = target.thumbnail.height;
-			data = toByteArray(target.thumbnail.toDataURL('image/jpeg', 1).substr('data:image/jpeg;base64,'.length));
+			const dataUrl = target.thumbnail!.toDataURL('image/jpeg', 1)?.substring('data:image/jpeg;base64,'.length);
+
+			if (dataUrl) {
+				width = target.thumbnail!.width;
+				height = target.thumbnail!.height;
+				data = toByteArray(dataUrl);
+			} else {
+				data = new Uint8Array(0);
+			}
 		}
 
 		const bitsPerPixel = 24;
