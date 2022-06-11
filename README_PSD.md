@@ -606,7 +606,7 @@ interface LinkedFile {
 }
 ```
 
-`id` field in `PlacedLayer` refers to the `id `in `LinkedFile`. Example values:
+`id` field in `PlacedLayer` refers to the `id` in `LinkedFile`. Example values:
 
 ```js
   layer.placedLayer = {
