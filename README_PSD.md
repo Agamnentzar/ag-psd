@@ -1,4 +1,6 @@
-# PSD format
+# PSD document format
+
+This document describes structure of the Psd object used in `readPsd` and `writePsd` functions, you can see instructions on how to use these functions in our [main README document](/#functions)
 
 You can see examples of different PSD documents and their corresponding JSON data in our [test folder](/test/read)
 
@@ -6,7 +8,7 @@ You can see examples of different PSD documents and their corresponding JSON dat
 
 ```ts
 // example psd document structure
-var psd = {
+const psd: Psd = {
   "width": 300,
   "height": 200,
   "channels": 3,
@@ -20,7 +22,7 @@ var psd = {
   "annotations": [ /* ... */ ],
   "globalLayerMaskInfo": { /* ... */ },
   "filterMask": { /* ... */ },
-}
+};
 ```
 
 - The `width` and `height` properties specify PSD document size in pixels. These values are required when writing a document.
