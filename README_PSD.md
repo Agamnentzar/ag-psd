@@ -1,15 +1,18 @@
 # PSD format
 
+You can see examples of different PSD documents and their corresponding JSON data in our [test folder](/test/read)
+
 ## Basic document structure
 
-```json
-{
+```ts
+// example psd document structure
+var psd = {
   "width": 300,
   "height": 200,
   "channels": 3,
   "bitsPerChannel": 8,
   "colorMode": 3,
-  "canvas": <Canvas>
+  "canvas": <Canvas>,
   "children": [ /* ... */ ],
   "imageResources": { /* ... */ },
   "linkedFiles": [ /* ... */ ],
@@ -60,16 +63,16 @@
   
   If you're generating your own PSD file and want to provide this composite image data you will have to generate one yourself by composing all layer image data and effects yourself, this library does not provide any utilities to generate this image data for you.
 
-- `children` list of layers and groups at the root of the document. [see Layers and Groups](#-Layers-and-Groups)
+- `children` list of layers and groups at the root of the document. [see Layers and Groups](#layers-and-groups)
 
-- `imageResources` contains all document-wide parameters [see Image Resouces](#-Image-Resources)
+- `imageResources` contains all document-wide parameters [see Image Resouces](#image-resources)
 
-- `linkedFiles` contains list of files, linked in smart objects [see Smart Objects](#-Smart-Objects)
+- `linkedFiles` contains list of files, linked in smart objects [see Smart Objects](#smart-objects)
 
 - `artboards` contains global options for artboards. Artboards is a feature in new versions of Photoshop that lets you have multiple canvases in a single PSD document. The information about positioning, name and color of each artboard is stored inside each layer, in `artboard` property. This property will be absent if the document does not have any artboards specified. It can be ommited when writing.
 
   ```ts
-  artboards: {
+  type Artboards = {
     count: number; // number of artboards in the document
     autoExpandOffset?: { horizontal: number; vertical: number; };
     origin?: { horizontal: number; vertical: number; };
@@ -98,7 +101,7 @@
     author: string;
     name: string;
     date: string;
-    data: string | Uint8Array;
+    data: string | Uint8Array; // annotation text or sound buffer
   }
   ```
 
@@ -108,11 +111,51 @@
 
 ## Layers and Groups
 
-TODO: general information about layer vs groups
+_TODO: general information about layer vs groups_
 
-TODO: tree structure
+_TODO: tree structure_
 
-TODO: parsing layers
+### Layer types
+
+You can distinguish between different layer types by checking which properties thay have set on them. If a layer has `children` property set it meas the it's a group, if it has `text` property it's a text layer and so on. If you're only interested in the basic parsing of layers and want to just extract image data or layer parameter a simple parsing like this can be enough:
+
+```js
+// simple parsing
+function parseLayer(layer) {
+  if ('children' in layer) {
+    // group
+    layer.children.forEach(parseLayer);
+  } else if (layer.canvas) {
+    // regular layer with canvas
+  } else {
+    // empty or special layer
+  }
+}
+```
+
+If you need to know type of each layer, something like this could be a good approach:
+
+```ts
+// complex parsing
+function parseLayer(layer) {
+  if ('children' in layer) {
+    // group
+    layer.children.forEach(parseLayer);
+  } else if ('text' in layer) {
+    // text layer
+  } else if ('adjustment' in layer) {
+    // adjustment layer
+  } else if ('placedLayer' in layer) {
+    // smart object layer
+  } else if ('vectorMask' in layer) {
+    // vector layer
+  } else {
+    // bitmap layer
+  }
+}
+```
+
+But thake into account that a lot of properties are shared for different types of layers. Any layer can have a `mask` property for example.
 
 ### Layer
 
@@ -235,7 +278,7 @@ Example layer structure:
 - `transparencyShapesLayer` _TODO_
 - `engineData` _TODO_
 
-- `canvas` (or `imageData`) see `canvas` property description in [Basic document structure ](#-Basic-document-structure)
+- `canvas` (or `imageData`) see `canvas` property description in [Basic document structure ](#basic-socument-structure)
 
 _TODO: write what bitmaps contain and what they don't_
 

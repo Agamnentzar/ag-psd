@@ -34,6 +34,8 @@ npm install ag-psd
 
 ## Usage
 
+Description of the structure of Psd object used by `readPsd` and `writePsd` functions can be found in our [PSD Readme document](/README_PSD.md)
+
 ### Functions
 
 ```ts
