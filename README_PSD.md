@@ -15,13 +15,7 @@ const psd: Psd = {
   "bitsPerChannel": 8,
   "colorMode": 3,
   "canvas": <Canvas>,
-  "children": [ /* ... */ ],
-  "imageResources": { /* ... */ },
-  "linkedFiles": [ /* ... */ ],
-  "artboards": { /* ... */ },
-  "annotations": [ /* ... */ ],
-  "globalLayerMaskInfo": { /* ... */ },
-  "filterMask": { /* ... */ },
+  "children": [],
 };
 ```
 
