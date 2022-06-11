@@ -113,7 +113,7 @@ const psd: Psd = {
 
 ## Layers and Groups
 
-Psd document object has `children` property that contains all root level layers and groups in order from top to bottom as they appear in Photoshop (take note that if you want to draw the layer images to generate document image then you need to draw them in reverse order). The `children` property will contain both regular layers and groups in correct order. The groups will each have `children` property on their own, containing all the layers and groups that are inside that group. So the document will have a tree structure like this:
+Psd document object has `children` property that contains all root level layers and groups in order from top to bottom as they appear in Photoshop (take note that if you want to draw the layer images to generate document image then you need to draw them in reverse order). The `children` property will contain both regular layers and groups. Each group will have `children` property, containing all the layers and groups that are inside that group. So the document will have a tree structure like this:
 
 ```js
 var psd = {
@@ -128,8 +128,13 @@ var psd = {
       // ... other fields
       children: [
         {
-          name: "layer 2, inside group 1"
+          name: "layer 2, inside group 1",
           // ... other fields
+        },
+        {
+          name: "group 2, inside group 1",
+          // ... other fields
+          children: []
         }
       ]
     }
