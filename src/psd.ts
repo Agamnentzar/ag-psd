@@ -660,7 +660,7 @@ export type PlacedLayerType = 'unknown' | 'vector' | 'raster' | 'image stack';
 
 export interface PlacedLayer {
 	id: string; // id of linked image file (psd.linkedFiles)
-	placed?: string; // ???
+	placed?: string; // unique id
 	type: PlacedLayerType;
 	// pageNumber: number; // ???
 	// totalPages: number; // ???

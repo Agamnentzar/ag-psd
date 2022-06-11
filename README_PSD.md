@@ -69,7 +69,7 @@ const psd: Psd = {
 
 - `imageResources` contains all document-wide parameters [see Image Resouces](#image-resources)
 
-- `linkedFiles` contains list of files, linked in smart objects [see Smart Objects](#smart-objects)
+- `linkedFiles` contains list of files linked in smart objects [see Smart Objects](#smart-objects)
 
 - `artboards` contains global options for artboards. Artboards is a feature in new versions of Photoshop that lets you have multiple canvases in a single PSD document. The information about positioning, name and color of each artboard is stored inside each layer, in `artboard` property. This property will be absent if the document does not have any artboards specified. It can be ommited when writing.
 
@@ -241,6 +241,12 @@ Example layer structure:
 
   [](/files/blend-modes.png)
 
+- `canvas` (or `imageData`) see `canvas` property description in [Basic document structure](#basic-socument-structure)
+
+  Vector, text and smart object layers still have image data with pregenerated bitmap. You also need to provide that image data when writing PSD files.
+  
+  Reading this property can be skipped if `skipLayerImageData: true` option is passed to `readPsd` function. This can be done to save on memory usage and processing time if layer image data is not needed.
+
 - `opacity` specifies level of layer transparency (the value range is from 0 to 1). Can be ommited when writing, a default value of 1 will be assumed.
 
   ![](/files/opacity.png)
@@ -281,33 +287,151 @@ Example layer structure:
 
   ![](/files/layer-color.png)
 
-- `blendClippendElements` _TODO_
-- `blendInteriorElements` _TODO_
-- `knockout` _TODO_
-- `referencePoint` _TODO_
+- `version` _unknown functionality_
+
+- `referencePoint` _unknown functionality_
+
 - `mask` _TODO_
+
 - `filterMask` _TODO_
-- `effects` _TODO_
-- `text` _TODO_
-- `patterns` _TODO_
-- `vectorFill` _TODO_
-- `vectorStroke` _TODO_
-- `vectorMask` _TODO_
-- `usingAlignedRendering` _TODO_
-- `pathList` _TODO_
-- `adjustment` _TODO_
-- `placedLayer` _TODO_
-- `adjustment` _TODO_
+
+- `effects` Object describing layer "Blending Options"
+
+  ![](/files/effects.png)
+  
+  ![](/files/effects-2.png)
+
+  Effects property follows the following structure:
+
+  ```ts
+  interface LayerEffectsInfo {
+    disabled?: boolean; // indicates if all effects are disabled
+    scale?: number;
+    dropShadow?: LayerEffectShadow[];
+    innerShadow?: LayerEffectShadow[];
+    outerGlow?: LayerEffectsOuterGlow;
+    innerGlow?: LayerEffectInnerGlow;
+    bevel?: LayerEffectBevel;
+    solidFill?: LayerEffectSolidFill[];
+    satin?: LayerEffectSatin;
+    stroke?: LayerEffectStroke[];
+    gradientOverlay?: LayerEffectGradientOverlay[];
+    patternOverlay?: LayerEffectPatternOverlay; // not supported yet
+  }
+  ```
+
+  Some of the effects (specified here as arrays) can be specified multiple times. This is new feature, only supported in more recent versions of Photoshop.
+
+  This property is not present if there are not blending options set for the layer. This property can be ommited when writing.
+
+- `text` text properties of text layer
+
+  _TODO_
+
+- `patterns` _not supported yet_
+
+- `vectorFill` Fill color, gradient or pattern for the vector mask. Use `type` field to distinguish between different vector fill types, like this:
+
+  ```ts
+  switch (vectorFill.type) {
+    case 'color':
+      // solid color fill ({ color: Color } type)
+      break;
+    case 'solid':
+      // solid gradient fill (EffectSolidGradient type)
+      break;
+    case 'noise':
+      // noise gradient fill (EffectNoiseGradient type)
+      break;
+    case 'pattern':
+      // pattern fill (EffectPattern type)
+      break;
+  }
+  ```
+
+- `vectorStroke` Vector stroke parameters for the vector mask. This field also contains parameters related to `vectorFill`. This property has following structure:
+
+  ```ts
+  type VectorStroke = {
+		strokeEnabled?: boolean; // vector drawing has stroke
+		fillEnabled?: boolean; // vector drawing has fill (specified by vectorFill property)
+		lineWidth?: UnitsValue;
+		lineDashOffset?: UnitsValue;
+		miterLimit?: number;
+		lineCapType?: LineCapType;
+		lineJoinType?: LineJoinType;
+		lineAlignment?: LineAlignment;
+		scaleLock?: boolean;
+		strokeAdjust?: boolean;
+		lineDashSet?: UnitsValue[];
+		blendMode?: BlendMode;
+		opacity?: number;
+		content?: VectorContent; // stroke color, gradient or pattern (see `vectorFill` field for more information)
+		resolution?: number;
+	}
+  ```
+
+- `vectorMask` Specifies vector mask used by `vectorFill` and `vectorStroke` to draw vector images.
+
+   _TODO: expand this description_
+
+- `usingAlignedRendering` _unknown functionality_
+
+- `pathList` _not supported yet_
+
+- `adjustment` indicates that the layer is an adjustment layer. Adjustment layer do not have image data. This property is not present on non-adjustment layers.
+
+  ![](/files/adjustment.png)
+  
+  Use `type` field of the adjustment object to distinguish between different adjustment layer types.
+  
+  ```ts
+  switch (adjustment.type) {
+    case 'brightness/contrast':
+      // handle BrightnessAdjustment layer
+      break;
+    case 'levels':
+      // handle LevelsAdjustment layer
+      break;
+    // ... other cases ...
+  }
+  ```
+
+  see all Adjustment layer types in [psd.ts file](/src/psd.ts)
+
+- `placedLayer` indicates that this is smart object layer, see [Smart Objects section](#smart-objects) for more information. This property is only present on smart object layers.
+
 - `vectorOrigination` _TODO_
-- `compositorUsed` _TODO_
-- `artboard` _TODO_
-- `fillOpacity` _TODO_
-- `transparencyShapesLayer` _TODO_
-- `engineData` _TODO_
 
-- `canvas` (or `imageData`) see `canvas` property description in [Basic document structure ](#basic-socument-structure)
+- `compositorUsed` _internal photoshop information_
 
-_TODO: write what bitmaps contain and what they don't_
+- `artboard` Artboard location and parameters, this property is only present when using artboards. Artbord is object is following this structure:
+
+  ```ts
+  type Artboard = {
+    rect: { top: number; left: number; bottom: number; right: number; };
+    guideIndices?: any[];
+    presetName?: string;
+    color?: Color;
+    backgroundType?: number;
+  }
+  ```
+
+  ![](/files/artboards.png)
+
+- **Advance blending options**
+
+  ![](/files/advanced-blending-options.png)
+
+  - `fillOpacity`"Fill Opacity" level (value ranges from 0 to 1)
+  
+    ![](/files/fill-opacity.png)
+  - `knockout` "Knockout" value
+  - `blendClippendElements` "Blend Clipped Layers as Group" value
+  - `blendInteriorElements` "Blend Interior Effects as Group" value
+  - `transparencyShapesLayer` "Transparency Shapes Layer" value
+
+- `engineData` internal text information
 
 ### Group
 
@@ -364,11 +488,177 @@ Groups do not have `canvas` / `imageData` property, as you can't draw directly o
 
 ## Image Resources
 
-_TODO_
+Image resources are global document settings. Any of these settings can be ommited when writing. PSD file can have following global options:
+
+- `versionInfo` Version information of Program that generated the PSD file, example value:
+
+  ```js
+  versionInfo = {
+    "hasRealMergedData": true,
+    "writerName": "Adobe Photoshop",
+    "readerName": "Adobe Photoshop CS6",
+    "fileVersion": 1
+  }
+  ```
+
+- `layerSelectionIds` list of layer IDs of selected layers, these layers will be selected when you open PSD document in Photoshop.
+
+- `pixelAspectRatio` Specifies aspect ratio of the PSD document pixels, almost always 1
+
+  ```js
+  pixelAspectRatio = {
+    "aspect": 1
+  }
+  ```
+
+- `gridAndGuidesInformation` Information about document guides
+
+  ![](/files/guides.png)
+  
+  Example value:
+  
+  ```js
+  gridAndGuidesInformation = {
+    "grid": {
+      "horizontal": 576,
+      "vertical": 576
+    },
+    "guides": [
+      {
+        "location": 531.4375,
+        "direction": "vertical" // "horizontal" or "vertical"
+      },
+      // ... more guides here ...
+    ]
+  };
+  ```
+
+- `resolutionInfo` Image resolution info, specifies physical size of the image pixels. Example value:
+
+  ```js
+  resolutionInfo: {
+    "horizontalResolution": 72,
+    "horizontalResolutionUnit": "PPI", // 'PPI' (pixels per inch) or 'PPCM' (pixels per centimeter)
+    "widthUnit": "Inches",
+    "verticalResolution": 72,
+    "verticalResolutionUnit": "PPI",
+    "heightUnit": "Inches" // 'Inches', 'Centimeters', 'Points', 'Picas' or 'Columns'
+  },
+  ```
+
+- `thumbnail` Canvas element with thumbnail image for the document, this property can be missing in some PSD files. This property can be ommited when writing if there's no need to support tumbnails, this field can be automatically generated from composite image data if `generateThumbnail: true` option is passed to `writePsd` function.
+
+- `thumbnailRaw` This property will be used instead if `useRawThumbnail` option is specitied when reading PSD file.
+
+- `xmpMetadata` XMP metadata. File info as XML description. See http://www.adobe.com/devnet/xmp/
+
+- `iccUntaggedProfile` ICC Untagged Profile
+
+- `printInformation`, `printScale` and `printFlags` Specifies options for printing the document.
+
+- `layerState` _TODO_
+- `layersGroup` _TODO_
+- `layerGroupsEnabledId` _TODO_
+- `alphaIdentifiers` _TODO_
+- `alphaChannelNames` _TODO_
+- `globalAngle` _TODO_
+- `globalAltitude` _TODO_
+- `urlsList` _TODO_
+- `captionDigest` _TODO_
+- `backgroundColor` _TODO_
+- `idsSeedNumber` _TODO_
+- `pathSelectionState` _TODO_
+- `imageReadyVariables` _TODO_
+- `imageReadyDataSets` _TODO_
 
 ## Smart Objects
 
-_TODO_
+Layers with `placedLayer` property are smart object layers. `placedLayer` property has the following structure:
+
+```ts
+interface PlacedLayer {
+	id: string; // id of linked image file (psd.linkedFiles)
+	placed?: string; // unique id
+	type: PlacedLayerType;
+	transform: number[]; // x, y of 4 corners of the transform
+	nonAffineTransform?: number[]; // x, y of 4 corners of the transform
+	width?: number;
+	height?: number;
+	resolution?: UnitsValue;
+	warp?: Warp;
+	crop?: number;
+}
+```
+
+The Psd object has `linkedFiles` property, that specifies list of all files linked in smart objects. Each linked file has following structure:
+
+```ts
+interface LinkedFile {
+	id: string;
+	name: string;
+	type?: string;
+	creator?: string;
+	data?: Uint8Array;
+	time?: Date; // for external files
+	childDocumentID?: string;
+	assetModTime?: number;
+	assetLockedState?: number;
+}
+```
+
+`id` field in `PlacedLayer` refers to the `id `in `LinkedFile`. Example values:
+
+```js
+  layer.placedLayer = {
+    "id": "20953ddb-9391-11ec-b4f1-c15674f50bc4", // id that matches linkedFiles ID
+    "placed": "20953dda-9391-11ec-b4f1-c15674f50bc4", // unique id for this object
+    "type": "raster", // one of the 'unknown', 'vector', 'raster' or 'image stack'
+    "transform": [ // x, y of 4 corners of the transform box
+      29,
+      28,
+      83,
+      28,
+      83,
+      82,
+      29,
+      82
+    ],
+    "width": 32, // width and height of the target image
+    "height": 32,
+    "resolution": {
+      "value": 299.99940490722656,
+      "units": "Density"
+    }
+  };
+
+  psd.linkedFiles = [
+    {
+      "id": "20953ddb-9391-11ec-b4f1-c15674f50bc4",
+      "name": "cat.png"
+      "data": imageDataAsUint8Array,
+    }
+  ];
+```
+
+## Units value
+
+Some fields in the PSD document specity a value with units, those fields use `UnitsValue` type:
+
+```ts
+interface UnitsValue {
+	units: Units;
+	value: number;
+}
+```
+
+`value` fields can be any number value, `units` fields has to be one of the supported units: "Pixels", "Points", "Picas", "Millimeters", "Centimeters", "Inches", "None", "Density". Some fields only support some of the units, check with Photoshop for supported units.
+
+Example values:
+
+```ts
+var distance = { value: 5, units: "Pixels" };
+var lineWidth = { value: 3, units: "Points" };
+```
 
 ## Colors
 
