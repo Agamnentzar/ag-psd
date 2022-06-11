@@ -1,6 +1,6 @@
 # PSD document format
 
-This document describes structure of the Psd object used in `readPsd` and `writePsd` functions, you can see instructions on how to use these functions in our [main README document](/#functions)
+This document describes structure of the Psd object used in `readPsd` and `writePsd` functions, you can see instructions on how to use these functions in our [main README document](/README.md#functions)
 
 You can see examples of different PSD documents and their corresponding JSON data in our [test folder](/test/read)
 
