@@ -419,7 +419,7 @@ Example layer structure:
 
   ![](/files/artboards.png)
 
-- **Advance blending options**
+- **Advanced blending options**
 
   ![](/files/advanced-blending-options.png)
 
@@ -474,7 +474,7 @@ Example group structure:
 }
 ```
 
-Groups do not have `canvas` / `imageData` property, as you can't draw directly on a group. Groups cannot also have any other special layer property like `text`, `vectorFill`, `adjustment` or `placedLayer`.
+Groups don't have `canvas` / `imageData` property, as you can't draw directly on a group. Groups don't have any other special layer property like `text`, `vectorFill`, `adjustment` or `placedLayer`.
 
 **Group-only fields:**
 
@@ -635,7 +635,7 @@ interface LinkedFile {
     {
       "id": "20953ddb-9391-11ec-b4f1-c15674f50bc4",
       "name": "cat.png"
-      "data": imageDataAsUint8Array,
+      "data": fileContentsAsUint8Array,
     }
   ];
 ```
