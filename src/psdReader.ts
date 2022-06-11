@@ -472,7 +472,7 @@ function readLayerChannelImageData(
 
 	if (layerWidth && layerHeight) {
 		if (cmyk) {
-			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) };
+			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) } as any as ImageData;
 			for (let p = 4; p < imageData.data.byteLength; p += 5) imageData.data[p] = 255;
 		} else {
 			imageData = createImageData(layerWidth, layerHeight);

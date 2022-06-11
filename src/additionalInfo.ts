@@ -599,8 +599,6 @@ addHandler(
 		}
 
 		if (left()) {
-			// 0 = normal
-			// 1 = scene group, affects the animation timeline.
 			target.sectionDivider.subType = readUint32(reader);
 		}
 	},

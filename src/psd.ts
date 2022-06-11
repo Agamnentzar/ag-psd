@@ -745,7 +745,7 @@ export interface LayerAdditionalInfo {
 	sectionDivider?: {
 		type: SectionDividerType;
 		key?: string;
-		subType?: number;
+		subType?: number; // 0 = normal, 1 = scene group, affects the animation timeline.
 	};
 	filterMask?: {
 		colorSpace: Color;
@@ -776,6 +776,7 @@ export interface LayerAdditionalInfo {
 	usingAlignedRendering?: boolean;
 	timestamp?: number; // seconds
 	pathList?: {
+		// TODO: ...
 	}[];
 	adjustment?: AdjustmentLayer;
 	placedLayer?: PlacedLayer;
@@ -940,7 +941,7 @@ export interface Psd extends LayerAdditionalInfo {
 	imageResources?: ImageResources;
 	linkedFiles?: LinkedFile[]; // used in smart objects
 	artboards?: {
-		count: number;
+		count: number; // number of artboards in the document
 		autoExpandOffset?: { horizontal: number; vertical: number; };
 		origin?: { horizontal: number; vertical: number; };
 		autoExpandEnabled?: boolean;
