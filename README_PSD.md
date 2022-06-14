@@ -285,9 +285,34 @@ Example layer structure:
 
 - `referencePoint` _unknown functionality_
 
-- `mask` _TODO_
+- `mask` Layer mask, property has the following structure.
 
-- `filterMask` _TODO_
+  ```ts
+  interface LayerMaskData {
+    top?: number;
+    left?: number;
+    bottom?: number;
+    right?: number;
+    defaultColor?: number;
+    disabled?: boolean;
+    positionRelativeToLayer?: boolean;
+    fromVectorData?: boolean; // set to true if the mask is generated from vector data, false if it's a bitmap provided by user
+    userMaskDensity?: number;
+    userMaskFeather?: number; // px
+    vectorMaskDensity?: number;
+    vectorMaskFeather?: number;
+    canvas?: HTMLCanvasElement;
+    imageData?: ImageData;
+  }
+  ```
+
+  ![](/files/mask.png)
+
+  Similar to layer image data this data has `top`, `left`, `bottom` and `right` offsets specified.
+
+  `fromVectorData` Specifies if the mask image data was generated from `vectorMask`, if `fromVectorData` is set to false and both `vectorMask` and `mask` properties are present it means that the layer has 2 active masks, bitmap mask and a vector mask.
+
+  `mask` property will be missing when layer has no mask, it can be ommited when writing.
 
 - `effects` Object describing layer "Blending Options"
 

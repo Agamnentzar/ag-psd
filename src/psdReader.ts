@@ -483,6 +483,9 @@ function readLayerChannelImageData(
 	if (RAW_IMAGE_DATA) (layer as any).imageDataRaw = [];
 
 	for (const channel of channels) {
+		if (channel.length === 0) continue;
+		if (channel.length < 2) throw new Error('Invalid channel length');
+
 		const compression = readUint16(reader) as Compression;
 
 		if (channel.id === ChannelID.UserMask) {
@@ -531,6 +534,8 @@ function readLayerChannelImageData(
 			if (RAW_IMAGE_DATA) {
 				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
 			}
+
+			reader.offset = start + channel.length - 2; // 2 bytes for compression
 
 			if (targetData && psd.colorMode === ColorMode.Grayscale) {
 				setupGrayscale(targetData);
