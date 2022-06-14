@@ -1,5 +1,8 @@
 # Changelog
 
+## v14.3.13
+- Fixed handling files with incorrect channel image data length
+
 ## v14.3.11
 - Fixed corrupted file when passing non-integer values to `layer.left`, `.top`, `.right`, `.bottom`
 
