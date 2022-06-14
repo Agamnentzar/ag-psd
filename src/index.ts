@@ -145,3 +145,12 @@ export const getMaskedLayerSize = (layer: Layer, margin: number = 0, psd: Psd): 
 		bottom,
 	};
 };
+
+export const getMaskedLayerSizeConstrainedToPsd = (layer: Layer, margin: number = 0, psd: Psd): IPSRectangle => {
+	const layerSize: IPSRectangle = getMaskedLayerSize(layer, margin, psd);
+	layerSize.left = Math.max(0, layerSize.left);
+	layerSize.right = Math.min (psd.width, layerSize.right);
+	layerSize.top = Math.max(0, layerSize.top);
+	layerSize.bottom = Math.min(psd.height, layerSize.bottom);
+	return layerSize;
+};
