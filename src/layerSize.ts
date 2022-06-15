@@ -1,0 +1,105 @@
+import {LayerExtended, PsdExtended} from './ExtendedTypes';
+import {BoundingBoxScan, IBoundingBox} from './BoundingBoxScanner';
+import {LayerMaskData} from 'ag-psd';
+import {boundingBoxScanner} from './index';
+import {createCanvas} from './test/common';
+
+export function getLayerOrMaskContentBoundingBox(layer: LayerExtended | LayerMaskData): IBoundingBox | undefined {
+	return boundingBoxScanner.scanLayerTransparency(layer);
+}
+
+export function getLayerOrMaskChannelBoundingBox(layer: LayerExtended | LayerMaskData, channel: number = BoundingBoxScan.SCAN_OFFSET_RED): IBoundingBox | undefined {
+	return boundingBoxScanner.scanLayerChannel(layer, channel);
+}
+
+export interface IPSRectangle {
+	left: number;
+	right: number;
+	top: number;
+	bottom: number;
+}
+
+export const getMaskedLayerSize = (layer: LayerExtended, margin: number = 0, psd: PsdExtended): IPSRectangle => {
+	const { right, left, bottom, top } = layer;
+	const mask: LayerMaskData = layer.mask!;
+	// Place the layer on the canvas
+	// Mask the layer using the mask
+	if (mask) {
+
+		// First, create a canvas PSD size
+		const compCanvas = createCanvas(psd.width, psd.height);
+		const compCtx = compCanvas.getContext('2d');
+		const maskCanvas = createCanvas(psd.width, psd.height);
+		const maskCtx = maskCanvas.getContext('2d');
+
+		maskCtx!.drawImage(layer.mask!.canvas!, layer.mask!.left!, layer.mask!.top!);
+		compCtx!.drawImage(layer.canvas!, layer.left!, layer.top!);
+
+		const compImageData = compCtx!.getImageData(
+			0,
+			0,
+			psd.width,
+			psd.height,
+		);
+
+		const maskImageData = maskCtx!.getImageData(
+			0,
+			0,
+			psd.width,
+			psd.height,
+		);
+
+		/*
+		this is getting the raw pixel data, which is an array of uint8's, out of the ImageData instances.
+		You end up with a raw array that is sorted in RGBARGBARGBA.... fashion.
+		Hence looping through it in steps of 4.
+		We then need the Alpha (4th byte in each 4-byte block) of the image layer,
+		and we pick the Red (1st byte) of the mask layer, since the mask layer is black-and-white at this point.
+		(R===G===B in that case, so we can pick any of these).
+		 */
+
+		const compImageDataArray = compImageData.data;
+		const maskImageDataArray = maskImageData.data;
+
+		for (let i = 0; i < compImageDataArray.length; i += 4) {
+			// On the mask, white (R,G,B is 255) equals opaque, black (R,G,B is 0) equals transparent.
+			const maskBrightness = maskImageDataArray[i];
+			// On the image layer, we get the Alpha channel
+			const alphaFromLayer = compImageDataArray[i + 3];
+			// The alpha of the masked layer equals the multiplied brightness value of the mask and the image layer's alpha
+			const concatValue = Math.ceil(
+				(maskBrightness * alphaFromLayer) / 255,
+			);
+			compImageDataArray[i + 3] = concatValue;
+		}
+
+		compCanvas.width = psd.width; // Reset
+		compCtx!.putImageData(compImageData, 0, 0);
+
+		let maskBoundingBox: IBoundingBox = boundingBoxScanner.scan(compImageDataArray, psd.width, psd.height);
+		if (!maskBoundingBox) {
+			maskBoundingBox = {
+				left: 0,
+				top: 0,
+				right: mask.right! - mask.left!,
+				bottom: mask.bottom! - mask.top!,
+			};
+		}
+		const layerLeft = maskBoundingBox.left! - margin;
+		const layerRight = maskBoundingBox.right! + margin;
+		const layerTop = maskBoundingBox.top! - margin;
+		const layerBottom = maskBoundingBox.bottom! + margin;
+		return {
+			left: layerLeft,
+			right: layerRight,
+			top: layerTop,
+			bottom: layerBottom,
+		};
+	}
+	return <IPSRectangle> {
+		left,
+		right,
+		top,
+		bottom,
+	};
+};

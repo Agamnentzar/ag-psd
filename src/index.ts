@@ -1,6 +1,10 @@
+import {BoundingBoxScan} from './BoundingBoxScanner';
+export * from './BoundingBoxScanner';
 export * from 'ag-psd';
+export * from './initializeCanvas';
 export * from './ExtendedTypes';
 export * from './findLayer';
+export * from './layerSize';
 export * from './flatten';
 export * from './ReadPsdExtended';
-
+export const boundingBoxScanner = new BoundingBoxScan();
