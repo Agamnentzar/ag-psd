@@ -1,13 +1,13 @@
-import {Layer, Psd} from './psd';
-import {createCanvas} from './helpers';
+import {createCanvas} from 'ag-psd/dist/helpers';
 import {findPsdLayerById} from './findLayer';
+import {LayerExtended, PsdExtended} from './ExtendedTypes';
 
 
-export const recursiveListLayers = (layers: Layer[], psd: Psd): Layer[] => {
-	let layersOut: Layer[] = [];
+export const recursiveListLayers = (layers: LayerExtended[], psd: PsdExtended): LayerExtended[] => {
+	let layersOut: LayerExtended[] = [];
 	for (let i = 0; i < layers.length; i++) {
 		if (layers[i].children && layers[i].children!.length > 0) {
-			layersOut = layersOut.concat(recursiveListLayers(layers[i].children!, psd));
+			layersOut = layersOut.concat(recursiveListLayers(<LayerExtended[]>layers[i].children!, psd));
 		} else {
 			layersOut.push(layers[i]);
 		}
@@ -20,13 +20,13 @@ export const recursiveListLayers = (layers: Layer[], psd: Psd): Layer[] => {
 	return layersOut;
 };
 
-export const flattenPsd = (input: Psd ) => {
-	const layers: Layer[] = recursiveListLayers (input.children!, input);
+export const flattenPsd = (input: PsdExtended ) => {
+	const layers: LayerExtended[] = recursiveListLayers (input.children!, input);
 	if (layers) {
-		let lastMergingLayer: Layer = layers[0];
-		let layer: Layer;
+		let lastMergingLayer: LayerExtended = layers[0];
+		let layer: LayerExtended;
 		// Create a new output PSD
-		const psdOut: Psd | Layer = { ...input };
+		const psdOut: PsdExtended | LayerExtended = { ...input };
 		psdOut.children = [];
 		// Loop through all the layers. If we find a simple layer without mask or text, we concatenate all previous simple layers into it
 		for (let i = 0; i < layers.length; i++) {
@@ -77,7 +77,7 @@ export const flattenPsd = (input: Psd ) => {
 	}
 };
 
-export const concatenateMasks = (parentLayer: Layer, childLayer: Layer) => {
+export const concatenateMasks = (parentLayer: LayerExtended, childLayer: LayerExtended) => {
 	if (!childLayer.mask?.canvas) {
 		if (parentLayer.mask?.canvas) {
 			// eslint-disable-next-line no-param-reassign
@@ -141,10 +141,10 @@ export const concatenateMasks = (parentLayer: Layer, childLayer: Layer) => {
 };
 
 
-export const concatenateMasksRecursively = (layer: Layer, psd: Psd) => {
-	let currentLayer: Layer = layer;
+export const concatenateMasksRecursively = (layer: LayerExtended, psd: PsdExtended) => {
+	let currentLayer: LayerExtended = layer;
 	while (currentLayer?.parentId) {
-		const parentLayer: Layer = findPsdLayerById(currentLayer.parentId, psd)!;
+		const parentLayer: LayerExtended = findPsdLayerById(currentLayer.parentId, psd)!;
 		if (parentLayer && parentLayer.mask) {
 			concatenateMasks(parentLayer, currentLayer);
 		}

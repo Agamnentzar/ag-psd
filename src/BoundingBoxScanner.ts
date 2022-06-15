@@ -1,8 +1,8 @@
 /**
  * A tool for finding the bounding box around a set of colored pixels
  */
-import {Layer, LayerMaskData} from './psd';
-import {createCanvas} from './helpers';
+import {Layer, LayerMaskData} from 'ag-psd';
+import { createCanvas } from 'ag-psd/dist/helpers';
 
 export interface IBoundingBox {
 	left: number | undefined;
