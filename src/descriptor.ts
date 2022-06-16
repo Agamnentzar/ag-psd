@@ -1,7 +1,8 @@
 import { createEnum } from './helpers';
 import {
 	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, GlowSource, GlowTechnique, GradientStyle,
-	LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, Units, UnitsValue, WarpStyle
+	InterpolationMethod, LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, Units, UnitsValue,
+	WarpStyle
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
@@ -130,7 +131,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
-		'enableCompCoreThreads',
+		'enableCompCoreThreads', 'gs99',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -935,6 +936,12 @@ export const GrdT = createEnum<GradientStyle>('GrdT', 'linear', {
 	angle: 'Angl',
 	reflected: 'Rflc',
 	diamond: 'Dmnd',
+});
+
+export const gradientInterpolationMethodType = createEnum<InterpolationMethod>('gradientInterpolationMethodType', 'perceptual', {
+	perceptual: 'Perc',
+	linear: 'Lnr',
+	classic: 'Gcls',
 });
 
 export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {

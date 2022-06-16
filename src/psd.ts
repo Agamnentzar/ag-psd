@@ -203,6 +203,7 @@ export interface LayerEffectGradientOverlay {
 	type?: GradientStyle;
 	offset?: { x: number; y: number; };
 	gradient?: EffectSolidGradient | EffectNoiseGradient;
+	interpolationMethod?: InterpolationMethod;
 }
 
 export interface LayerEffectsInfo {
@@ -253,6 +254,7 @@ export type Justification = 'left' | 'right' | 'center';
 export type LineCapType = 'butt' | 'round' | 'square';
 export type LineJoinType = 'miter' | 'round' | 'bevel';
 export type LineAlignment = 'inside' | 'center' | 'outside';
+export type InterpolationMethod = 'classic' | 'perceptual' | 'linear';
 
 export interface Warp {
 	style?: WarpStyle;
@@ -731,6 +733,7 @@ export interface LayerAdditionalInfo {
 	blendClippendElements?: boolean; // has to be set to `true` when using `color burn` blend mode (otherwise `transparencyShapesLayer` is set incorrectly)
 	blendInteriorElements?: boolean;
 	knockout?: boolean;
+	layerMaskAsGlobalMask?: boolean;
 	protected?: {
 		transparency?: boolean;
 		composite?: boolean;

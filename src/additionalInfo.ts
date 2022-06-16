@@ -25,10 +25,11 @@ import {
 } from './psdWriter';
 import {
 	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
-	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, GrdT, IGSr, Ornt,
-	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, readVersionAndDescriptor, StrokeDescriptor,
+	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, gradientInterpolationMethodType,
+	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor,
 	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
-	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor
+	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor,
+	readVersionAndDescriptor, StrokeDescriptor, GrdT, IGSr, Ornt,
 } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
@@ -655,6 +656,19 @@ addHandler(
 	},
 	(writer, target) => {
 		writeUint8(writer, target.knockout ? 1 : 0);
+		writeZeros(writer, 3);
+	},
+);
+
+addHandler(
+	'lmgm',
+	hasKey('layerMaskAsGlobalMask'),
+	(reader, target) => {
+		target.layerMaskAsGlobalMask = !!readUint8(reader);
+		skipBytes(reader, 3);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.layerMaskAsGlobalMask ? 1 : 0);
 		writeZeros(writer, 3);
 	},
 );
@@ -2921,6 +2935,7 @@ function parseEffectObject(obj: any, reportErrors: boolean) {
 			case 'GlwT': result.technique = BETE.decode(val) as any; break;
 			case 'glwS': result.source = IGSr.decode(val); break;
 			case 'Type': result.type = GrdT.decode(val); break;
+			case 'gs99': result.interpolationMethod = gradientInterpolationMethodType.decode(val); break;
 			case 'Opct': result.opacity = parsePercent(val); break;
 			case 'hglO': result.highlightOpacity = parsePercent(val); break;
 			case 'sdwO': result.shadowOpacity = parsePercent(val); break;
@@ -2954,7 +2969,7 @@ function parseEffectObject(obj: any, reportErrors: boolean) {
 			case 'showInDialog':
 			case 'antialiasGloss': result[key] = val; break;
 			default:
-				reportErrors && console.log(`Invalid effect key: '${key}':`, val);
+				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
 		}
 	}
 
@@ -2994,6 +3009,7 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 				break;
 			case 'source': result.glwS = IGSr.encode(val); break;
 			case 'type': result.Type = GrdT.encode(val); break;
+			case 'interpolationMethod': result.gs99 = gradientInterpolationMethodType.encode(val); break;
 			case 'opacity': result.Opct = unitsPercent(val); break;
 			case 'highlightOpacity': result.hglO = unitsPercent(val); break;
 			case 'shadowOpacity': result.sdwO = unitsPercent(val); break;
@@ -3034,7 +3050,7 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 				result[key] = val;
 				break;
 			default:
-				reportErrors && console.log(`Invalid effect key: '${key}' value:`, val);
+				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
 		}
 	}
 

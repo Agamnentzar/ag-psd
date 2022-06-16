@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "14.3.13",
+  "version": "14.4.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -34,8 +34,8 @@
   "author": "Agamnentzar",
   "license": "MIT",
   "devDependencies": {
-    "@types/mocha": "^8.2.2",
-    "@types/node": "^14.17.0",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^17.0.42",
     "browserify": "^17.0.0",
     "canvas": "^2.8.0",
     "chai": "^4.3.4",
@@ -45,7 +45,7 @@
     "gulp-spawn-mocha": "^6.0.0",
     "gulp-typescript": "^5.0.1",
     "merge2": "^1.4.1",
-    "mocha": "^8.4.0",
+    "mocha": "^10.0.0",
     "remap-istanbul": "^0.13.0",
     "source-map-support": "^0.5.19",
     "tslint": "^6.1.3",

@@ -1,5 +1,9 @@
 # Changelog
 
+## v14.4.0
+- Added support for `layerMaskAsGlobalMask` flag
+- Added support for `interpolationMethod` for gradient overlay layer blending mode
+
 ## v14.3.13
 - Fixed handling files with incorrect channel image data length
 
