@@ -472,8 +472,8 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 						if (to) {
 							b.toolOptions = {
 								brushPreset: to.brushPreset,
-								flow: to.flow || 0,
-								smooth: to.Smoo || 0,
+								flow: to.flow ?? 1,
+								smooth: to.Smoo ?? 1,
 								mode: BlnM.decode(to['Md  '] || 'BlnM.Nrml'), // sometimes mode is missing
 								opacity: to.Opct ?? 1,
 								smoothing: !!to.smoothing,
@@ -488,9 +488,17 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 								useLegacy: !!to.useLegacy,
 							};
 
-							if (to.prVr) b.toolOptions.flowDynamics = parseDynamics(to.prVr);
-							if (to.opVr) b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
-							if (to.szVr) b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
+							if (to.prVr) {
+								b.toolOptions.flowDynamics = parseDynamics(to.prVr);
+							}
+
+							if (to.opVr) {
+								b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
+							}
+
+							if (to.szVr) {
+								b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
+							}
 						}
 
 						brushes.push(b);
