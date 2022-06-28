@@ -117,10 +117,10 @@ export interface Brush {
 	useBrushSize: boolean; // ?
 	toolOptions?: {
 		brushPreset: boolean;
-		flow: number;
+		flow: number; // 0-100
 		smooth: number; // ?
 		mode: BlendMode;
-		opacity: number;
+		opacity: number; // 0-100
 		smoothing: boolean;
 		smoothingValue: number;
 		smoothingRadiusMode: boolean;
@@ -472,10 +472,10 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 						if (to) {
 							b.toolOptions = {
 								brushPreset: to.brushPreset,
-								flow: to.flow ?? 1,
-								smooth: to.Smoo ?? 1,
+								flow: to.flow ?? 100,
+								smooth: to.Smoo ?? 0,
 								mode: BlnM.decode(to['Md  '] || 'BlnM.Nrml'), // sometimes mode is missing
-								opacity: to.Opct ?? 1,
+								opacity: to.Opct ?? 100,
 								smoothing: !!to.smoothing,
 								smoothingValue: to.smoothingValue || 0,
 								smoothingRadiusMode: !!to.smoothingRadiusMode,
