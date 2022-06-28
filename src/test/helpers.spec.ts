@@ -38,9 +38,9 @@ describe('helpers', () => {
 
 	describe('writeDataRLE()', () => {
 		it('returns undefined for 0 size', () => {
-			expect(writeDataRLE(new Uint8Array(1), {} as any, 0, 0, [0], false)).undefined;
-			expect(writeDataRLE(new Uint8Array(1), {} as any, 0, 100, [0], false)).undefined;
-			expect(writeDataRLE(new Uint8Array(1), {} as any, 100, 0, [0], false)).undefined;
+			expect(writeDataRLE(new Uint8Array(1), { width: 0, height: 0, data: [] } as any, [0], false)).undefined;
+			expect(writeDataRLE(new Uint8Array(1), { width: 0, height: 100, data: [] } as any, [0], false)).undefined;
+			expect(writeDataRLE(new Uint8Array(1), { width: 100, height: 0, data: [] } as any, [0], false)).undefined;
 		});
 
 		const rleTests: { name: string; width: number; height: number; data: number[]; }[] = [
@@ -101,11 +101,11 @@ describe('helpers', () => {
 				let result: number[];
 
 				try {
-					const input: PixelData = { width: width, height: height, data: toData(data) };
-					const output: PixelData = { width: width, height: height, data: new Uint8Array(width * height * 4) };
+					const input: PixelData = { width, height, data: toData(data) };
+					const output: PixelData = { width, height, data: new Uint8Array(width * height * 4) };
 
 					const buffer = new Uint8Array(16 * 1024 * 1024);
-					array = writeDataRLE(buffer, input, width, height, [0], false)!;
+					array = writeDataRLE(buffer, input, [0], false)!;
 
 					const reader = createReader(array!.buffer);
 					readDataRLE(reader, output, width, height, 4, [0], false);

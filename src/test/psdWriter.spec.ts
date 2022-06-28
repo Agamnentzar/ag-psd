@@ -343,11 +343,13 @@ describe('PsdWriter', () => {
 	// fs.readdirSync(writeFilesPath).filter(f => /float-size/.test(f)).forEach(f => {
 	fs.readdirSync(writeFilesPath).filter(f => !/pattern/.test(f)).forEach(f => {
 		it(`writes PSD file (${f})`, () => {
+			const compress = f.includes('-compress');
+
 			const basePath = path.join(writeFilesPath, f);
 			const psd = loadPsdFromJSONAndPNGFiles(basePath);
 
 			const before = JSON.stringify(psd, replacer);
-			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true });
+			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true, compress });
 			const after = JSON.stringify(psd, replacer);
 
 			expect(before).equal(after, 'psd object mutated');

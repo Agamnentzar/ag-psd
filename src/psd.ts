@@ -928,7 +928,7 @@ export interface Layer extends LayerAdditionalInfo {
 	canvas?: HTMLCanvasElement;
 	imageData?: ImageData;
 	children?: Layer[];
-	/** applies only for layer groups */
+	/** Applies only for layer groups. */
 	opened?: boolean;
 }
 
@@ -978,7 +978,7 @@ export interface ReadOptions {
 	/** Loads thumbnail raw data instead of decoding it's content into canvas.
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;
-	/** Usend only for development */
+	/** Usend only for development. */
 	logDevFeatures?: boolean;
 }
 
@@ -993,8 +993,11 @@ export interface WriteOptions {
 	/** Logs if features are missing. */
 	logMissingFeatures?: boolean;
 	/** Forces bottom layer to be treated as layer and not background even when it's missing any transparency
-	 * 	(by default Photoshop treats bottom layer as background it it doesn't have any transparent pixels) */
+	 * 	(by default Photoshop treats bottom layer as background it it doesn't have any transparent pixels). */
 	noBackground?: boolean;
-	/** Saves document as PSB (Large Document Format) file */
+	/** Saves document as PSB (Large Document Format) file. */
 	psb?: boolean;
+	/** Uses zip compression when writing PSD file, will result in smaller file size but may be incompatible
+	 *  with some software. It may also be significantly slower. */
+	compress?: boolean;
 }

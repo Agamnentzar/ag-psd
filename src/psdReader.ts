@@ -1,3 +1,4 @@
+import { inflate } from 'pako';
 import {
 	Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color,
 	PatternInfo, GlobalLayerMaskInfo, RGB
@@ -501,7 +502,7 @@ function readLayerChannelImageData(
 				resetImageData(maskData);
 
 				const start = reader.offset;
-				readData(reader, maskData, compression, maskWidth, maskHeight, 0, options.large, 4);
+				readData(reader, channel.length, maskData, compression, maskWidth, maskHeight, 0, options.large, 4);
 
 				if (RAW_IMAGE_DATA) {
 					(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
@@ -529,7 +530,7 @@ function readLayerChannelImageData(
 			}
 
 			const start = reader.offset;
-			readData(reader, targetData, compression, layerWidth, layerHeight, offset, options.large, cmyk ? 5 : 4);
+			readData(reader, channel.length, targetData, compression, layerWidth, layerHeight, offset, options.large, cmyk ? 5 : 4);
 
 			if (RAW_IMAGE_DATA) {
 				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
@@ -560,15 +561,19 @@ function readLayerChannelImageData(
 }
 
 function readData(
-	reader: PsdReader, data: ImageData | undefined, compression: Compression, width: number, height: number,
+	reader: PsdReader, length: number, data: ImageData | undefined, compression: Compression, width: number, height: number,
 	offset: number, large: boolean, step: number
 ) {
 	if (compression === Compression.RawData) {
-		readDataRaw(reader, data, offset, width, height, step);
+		readDataRaw(reader, data, width, height, step, offset);
 	} else if (compression === Compression.RleCompressed) {
 		readDataRLE(reader, data, width, height, step, [offset], large);
-	} else {
+	} else if (compression === Compression.ZipWithoutPrediction) {
+		readDataZipWithoutPrediction(reader, length, data, width, height, step, offset);
+	} else if (compression === Compression.ZipWithPrediction) {
 		throw new Error(`Compression type not supported: ${compression}`);
+	} else {
+		throw new Error(`Invalid Compression type: ${compression}`);
 	}
 }
 
@@ -660,7 +665,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 
 			if (compression === Compression.RawData) {
 				for (let i = 0; i < channels.length; i++) {
-					readDataRaw(reader, imageData, channels[i], psd.width, psd.height, 4);
+					readDataRaw(reader, imageData, psd.width, psd.height, 4, channels[i]);
 				}
 			} else if (compression === Compression.RleCompressed) {
 				const start = reader.offset;
@@ -740,7 +745,7 @@ function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
 	// }
 }
 
-function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset: number, width: number, height: number, step: number) {
+function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, step: number, offset: number) {
 	const size = width * height;
 	const buffer = readBytes(reader, size);
 
@@ -749,6 +754,23 @@ function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, offset
 
 		for (let i = 0, p = offset | 0; i < size; i++, p = (p + step) | 0) {
 			data[p] = buffer[i];
+		}
+	}
+}
+
+export function readDataZipWithoutPrediction(
+	reader: PsdReader, length: number, pixelData: PixelData | undefined, width: number, height: number,
+	step: number, offset: number
+) {
+	const compressed = readBytes(reader, length);
+	const decompressed = inflate(compressed);
+	const size = width * height;
+
+	if (pixelData && offset < step) {
+		const data = pixelData.data;
+
+		for (let i = 0, p = offset | 0; i < size; i++, p = (p + step) | 0) {
+			data[p] = decompressed[i];
 		}
 	}
 }

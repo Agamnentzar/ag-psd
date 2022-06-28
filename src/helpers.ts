@@ -1,4 +1,5 @@
 import { fromByteArray } from 'base64-js';
+import { deflate } from 'pako';
 import { Layer, BlendMode, LayerColor } from './psd';
 
 export const MOCK_HANDLERS = false;
@@ -211,10 +212,7 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	return array;
 }
 
-export function writeDataRLE(
-	buffer: Uint8Array, { data }: PixelData, width: number, height: number, offsets: number[],
-	large: boolean
-) {
+export function writeDataRLE(buffer: Uint8Array, { data, width, height }: PixelData, offsets: number[], large: boolean) {
 	if (!width || !height) return undefined;
 
 	const stride = (4 * width) | 0;
@@ -311,6 +309,37 @@ export function writeDataRLE(
 	}
 
 	return buffer.slice(0, o);
+}
+
+export function writeDataZipWithoutPrediction({ data, width, height }: PixelData, offsets: number[]) {
+	const size = width * height;
+	const channel = new Uint8Array(size);
+	const buffers: Uint8Array[] = [];
+	let totalLength = 0;
+
+	for (const offset of offsets) {
+		for (let i = 0, o = offset; i < size; i++, o += 4) {
+			channel[i] = data[o];
+		}
+
+		const buffer = deflate(channel);
+		buffers.push(buffer);
+		totalLength += buffer.byteLength;
+	}
+
+	if (buffers.length > 0) {
+		const buffer = new Uint8Array(totalLength);
+		let offset = 0;
+
+		for (const b of buffers) {
+			buffer.set(b, offset);
+			offset += b.byteLength;
+		}
+
+		return buffer;
+	} else {
+		return buffers[0];
+	}
 }
 
 export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {

@@ -131,6 +131,9 @@ export interface Brush {
 		usePressureOverridesSize: boolean;
 		usePressureOverridesOpacity: boolean;
 		useLegacy: boolean;
+		flowDynamics?: BrushDynamics;
+		opacityDynamics?: BrushDynamics;
+		sizeDynamics?: BrushDynamics;
 	};
 }
 
@@ -239,20 +242,26 @@ interface DescDescriptor {
 		brushPoseAngle?: number;
 		toolOptions?: {
 			brushPreset: boolean;
-			flow: number;
-			Smoo: number;
+			flow?: number;
+			Smoo?: number;
 			'Md  ': string;
-			Opct: number;
-			smoothing: boolean;
-			smoothingValue: number;
-			smoothingRadiusMode: boolean;
-			smoothingCatchup: boolean;
-			smoothingCatchupAtEnd: boolean;
-			smoothingZoomCompensation: boolean;
-			pressureSmoothing: boolean;
-			usePressureOverridesSize: boolean;
-			usePressureOverridesOpacity: boolean;
+			Opct?: number;
+			smoothing?: boolean;
+			smoothingValue?: number;
+			smoothingRadiusMode?: boolean;
+			smoothingCatchup?: boolean;
+			smoothingCatchupAtEnd?: boolean;
+			smoothingZoomCompensation?: boolean;
+			pressureSmoothing?: boolean;
+			usePressureOverridesSize?: boolean;
+			usePressureOverridesOpacity?: boolean;
 			useLegacy: boolean;
+			'Prs '?: number; // TODO: ???
+			MgcE?: boolean; // TODO: ???
+			ErsB?: number; // TODO: ???
+			prVr?: DynamicsDescriptor;
+			opVr?: DynamicsDescriptor;
+			szVr?: DynamicsDescriptor;
 		};
 	}[];
 }
@@ -463,21 +472,25 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 						if (to) {
 							b.toolOptions = {
 								brushPreset: to.brushPreset,
-								flow: to.flow,
-								smooth: to.Smoo,
-								mode: BlnM.decode(to['Md  ']),
-								opacity: to.Opct,
-								smoothing: to.smoothing,
-								smoothingValue: to.smoothingValue,
-								smoothingRadiusMode: to.smoothingRadiusMode,
-								smoothingCatchup: to.smoothingCatchup,
-								smoothingCatchupAtEnd: to.smoothingCatchupAtEnd,
-								smoothingZoomCompensation: to.smoothingZoomCompensation,
-								pressureSmoothing: to.pressureSmoothing,
-								usePressureOverridesSize: to.usePressureOverridesSize,
-								usePressureOverridesOpacity: to.usePressureOverridesOpacity,
-								useLegacy: to.useLegacy,
+								flow: to.flow || 0,
+								smooth: to.Smoo || 0,
+								mode: BlnM.decode(to['Md  '] || 'BlnM.Nrml'), // sometimes mode is missing
+								opacity: to.Opct ?? 1,
+								smoothing: !!to.smoothing,
+								smoothingValue: to.smoothingValue || 0,
+								smoothingRadiusMode: !!to.smoothingRadiusMode,
+								smoothingCatchup: !!to.smoothingCatchup,
+								smoothingCatchupAtEnd: !!to.smoothingCatchupAtEnd,
+								smoothingZoomCompensation: !!to.smoothingZoomCompensation,
+								pressureSmoothing: !!to.pressureSmoothing,
+								usePressureOverridesSize: !!to.usePressureOverridesSize,
+								usePressureOverridesOpacity: !!to.usePressureOverridesOpacity,
+								useLegacy: !!to.useLegacy,
 							};
+
+							if (to.prVr) b.toolOptions.flowDynamics = parseDynamics(to.prVr);
+							if (to.opVr) b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
+							if (to.szVr) b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
 						}
 
 						brushes.push(b);

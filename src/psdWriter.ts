@@ -2,7 +2,7 @@ import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOp
 import {
 	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
-	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA
+	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction
 } from './helpers';
 import { ExtendedWriteOptions, hasMultiEffects, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
@@ -238,13 +238,13 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		height: psd.height,
 	};
 
-	writeUint16(writer, Compression.RleCompressed);
+	writeUint16(writer, Compression.RleCompressed); // Photoshop doesn't support zip compression of composite image data
 
 	if (RAW_IMAGE_DATA && (psd as any).imageDataRaw) {
 		console.log('writing raw image data');
 		writeBytes(writer, (psd as any).imageDataRaw);
 	} else {
-		writeBytes(writer, writeDataRLE(tempBuffer, data, psd.width, psd.height, channels, !!options.psb));
+		writeBytes(writer, writeDataRLE(tempBuffer, data, channels, !!options.psb));
 	}
 }
 
@@ -522,28 +522,30 @@ function getChannels(
 			right = left + width;
 			bottom = top + height;
 
-			let buffer = writeDataRLE(tempBuffer, imageData, width, height, [0], !!options.psb)!;
+			if (imageData.width !== width || imageData.height !== height) {
+				throw new Error('Invalid imageData dimentions');
+			}
+
+			let buffer: Uint8Array;
+			let compression: Compression;
 
 			if (RAW_IMAGE_DATA && (layer as any).maskDataRaw) {
 				// console.log('written raw layer image data');
 				buffer = (layer as any).maskDataRaw;
+				compression = Compression.RleCompressed;
+			} else if (options.compress) {
+				buffer = writeDataZipWithoutPrediction(imageData, [0]);
+				compression = Compression.ZipWithoutPrediction;
+			} else {
+				buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb)!;
+				compression = Compression.RleCompressed;
 			}
 
 			layerData.mask = { top, left, right, bottom };
-			layerData.channels.push({
-				channelId: ChannelID.UserMask,
-				compression: Compression.RleCompressed,
-				buffer: buffer,
-				length: 2 + buffer.length,
-			});
+			layerData.channels.push({ channelId: ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
 		} else {
 			layerData.mask = { top: 0, left: 0, right: 0, bottom: 0 };
-			layerData.channels.push({
-				channelId: ChannelID.UserMask,
-				compression: Compression.RawData,
-				buffer: new Uint8Array(0),
-				length: 0,
-			});
+			layerData.channels.push({ channelId: ChannelID.UserMask, compression: Compression.RawData, buffer: new Uint8Array(0), length: 0 });
 		}
 	}
 
@@ -632,21 +634,24 @@ function getLayerChannels(
 		channelIds.unshift(ChannelID.Transparency);
 	}
 
-	channels = channelIds.map(channel => {
-		const offset = offsetForChannel(channel, false); // TODO: psd.colorMode === ColorMode.CMYK);
-		let buffer = writeDataRLE(tempBuffer, data, width, height, [offset], !!options.psb)!;
+	channels = channelIds.map(channelId => {
+		const offset = offsetForChannel(channelId, false); // TODO: psd.colorMode === ColorMode.CMYK);
+		let buffer: Uint8Array;
+		let compression: Compression;
 
 		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
 			// console.log('written raw layer image data');
-			buffer = (layer as any).imageDataRaw[channel];
+			buffer = (layer as any).imageDataRaw[channelId];
+			compression = Compression.RleCompressed;
+		} else if (options.compress) {
+			buffer = writeDataZipWithoutPrediction(data, [offset]);
+			compression = Compression.ZipWithoutPrediction;
+		} else {
+			buffer = writeDataRLE(tempBuffer, data, [offset], !!options.psb)!;
+			compression = Compression.RleCompressed;
 		}
 
-		return {
-			channelId: channel,
-			compression: Compression.RleCompressed,
-			buffer: buffer,
-			length: 2 + buffer.length,
-		};
+		return { channelId, compression, buffer, length: 2 + buffer.length };
 	});
 
 	return { layer, top, left, right, bottom, channels };
