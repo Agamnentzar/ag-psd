@@ -46,7 +46,7 @@ export interface Brush {
 		sizeDynamics: BrushDynamics;
 		minimumDiameter: number;
 		tiltScale: number;
-		angleDynamics: BrushDynamics;
+		angleDynamics: BrushDynamics; // jitter 0-1 -> 0-360 deg ?
 		roundnessDynamics: BrushDynamics;
 		minimumRoundness: number;
 		flipX: boolean;

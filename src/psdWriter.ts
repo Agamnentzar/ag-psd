@@ -147,7 +147,6 @@ function getLargestLayerSize(layers: Layer[] = []): number {
 
 export function writeSection(writer: PsdWriter, round: number, func: () => void, writeTotalLength = false, large = false) {
 	if (large) writeUint32(writer, 0);
-
 	const offset = writer.offset;
 	writeUint32(writer, 0);
 

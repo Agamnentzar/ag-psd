@@ -19,3 +19,7 @@ function createCanvasFromData(data: Uint8Array) {
 }
 
 initializeCanvas(createCanvas, createCanvasFromData);
+
+export function initialize() {
+	initializeCanvas(createCanvas, createCanvasFromData);
+}

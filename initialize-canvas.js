@@ -1,1 +1,2 @@
-require('./dist/initializeCanvas.js');
+const init = require('./dist/initializeCanvas.js');
+exports.initialize = init.initialize;
