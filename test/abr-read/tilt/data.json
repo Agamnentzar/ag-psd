@@ -1,0 +1,49 @@
+{
+  "samples": [],
+  "patterns": [],
+  "brushes": [
+    {
+      "name": "test2",
+      "shape": {
+        "size": 30,
+        "angle": 0,
+        "roundness": 1,
+        "spacingOn": true,
+        "spacing": 0.25,
+        "flipX": false,
+        "flipY": false,
+        "hardness": 1
+      },
+      "spacing": 1,
+      "wetEdges": false,
+      "noise": false,
+      "useBrushSize": false,
+      "shapeDynamics": {
+        "tiltScale": 2,
+        "sizeDynamics": {
+          "control": "pen tilt",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "angleDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "roundnessDynamics": {
+          "control": "off",
+          "steps": 25,
+          "jitter": 0,
+          "minimum": 0
+        },
+        "flipX": false,
+        "flipY": false,
+        "brushProjection": false,
+        "minimumDiameter": 0,
+        "minimumRoundness": 0.25
+      }
+    }
+  ]
+}

@@ -183,15 +183,14 @@ export function compareBuffers(actual: Buffer, expected: Buffer, test: string, s
 	for (let i = start; i < expected.length; i++) {
 		if (expected[i] !== actual[i + offset]) {
 			throw new Error(`Buffers differ ` +
-				`expected: 0x${expected[i].toString(16)} at [0x${i.toString(16)}] ` +
-				`actual: 0x${actual[i + offset].toString(16)} at [0x${(i + offset).toString(16)}] (${test})`);
+				`expected: 0x${expected[i]?.toString(16)} at [0x${i?.toString(16)}] ` +
+				`actual: 0x${actual[i + offset]?.toString(16)} at [0x${(i + offset)?.toString(16)}] (${test})`);
 		}
 	}
 
 	if (actual.length !== expected.length)
 		throw new Error(`Buffers differ in size actual: ${actual.length} expected: ${expected.length} (${test})`);
 }
-
 
 export function expectBuffersEqual(actual: Uint8Array, expected: Uint8Array, name: string) {
 	const length = Math.max(actual.length, expected.length);

@@ -276,6 +276,20 @@ export interface Warp {
 	};
 }
 
+export interface Animations {
+	frames: {
+		id: number;
+		delay: number;
+		dispose?: 'auto' | 'none' | 'dispose';
+	}[];
+	animations: {
+		id: number;
+		frames: number[];
+		repeats?: number;
+		activeFrame?: number;
+	}[];
+}
+
 export interface Font {
 	name: string;
 	script?: number;
@@ -664,11 +678,11 @@ export interface PlacedLayer {
 	id: string; // id of linked image file (psd.linkedFiles)
 	placed?: string; // unique id
 	type: PlacedLayerType;
-	// pageNumber: number; // ???
-	// totalPages: number; // ???
-	// frameStep?: { numerator: number; denominator: number; };
-	// duration?: { numerator: number; denominator: number; };
-	// frameCount?: number; // ???
+	pageNumber?: number;
+	totalPages?: number;
+	frameStep?: { numerator: number; denominator: number; };
+	duration?: { numerator: number; denominator: number; };
+	frameCount?: number;
 	transform: number[]; // x, y of 4 corners of the transform
 	nonAffineTransform?: number[]; // x, y of 4 corners of the transform
 	width?: number;
@@ -722,6 +736,71 @@ export interface LayerVectorMask {
 		resolution: number;
 	};
 	paths: BezierPath[];
+}
+
+export interface AnimationFrame {
+	frames: number[]; // IDs of frames that this modifiers applies to
+	enable?: boolean;
+	offset?: { x: number; y: number; };
+	referencePoint?: { x: number; y: number; };
+	opacity?: number;
+	effects?: LayerEffectsInfo;
+}
+
+export interface Fraction {
+	numerator: number;
+	denominator: number;
+}
+
+export type TimelineKeyInterpolation = 'linear' | 'hold';
+
+export type TimelineKey = {
+	interpolation: TimelineKeyInterpolation;
+	time: Fraction;
+	selected?: boolean;
+} & ({
+	type: 'opacity';
+	value: number;
+} | {
+	type: 'position';
+	x: number;
+	y: number;
+} | {
+	type: 'transform';
+	scale: { x: number; y: number; };
+	skew: { x: number; y: number; };
+	rotation: number;
+	translation: { x: number; y: number; };
+} | {
+	type: 'style';
+	style?: LayerEffectsInfo;
+} | {
+	type: 'globalLighting';
+	globalAngle: number;
+	globalAltitude: number;
+});
+
+export type TimelineTrackType = 'opacity' | 'style' | 'sheetTransform' | 'sheetPosition' | 'globalLighting';
+
+export interface TimelineTrack {
+	type: TimelineTrackType;
+	enabled?: boolean;
+	effectParams?: {
+		keys: TimelineKey[];
+		fillCanvas: boolean;
+		zoomOrigin: number;
+	};
+	keys: TimelineKey[];
+}
+
+export interface Timeline {
+	start: Fraction;
+	duration: Fraction;
+	inTime: Fraction;
+	outTime: Fraction;
+	autoScope: boolean;
+	audioLevel: number;
+	tracks?: TimelineTrack[];
 }
 
 export interface LayerAdditionalInfo {
@@ -804,6 +883,15 @@ export interface LayerAdditionalInfo {
 	};
 	fillOpacity?: number;
 	transparencyShapesLayer?: boolean;
+	channelBlendingRestrictions?: number[];
+	animationFrames?: AnimationFrame[];
+	animationFrameFlags?: {
+		propagateFrameOne?: boolean;
+		unifyLayerPosition?: boolean;
+		unifyLayerStyle?: boolean;
+		unifyLayerVisibility?: boolean;
+	};
+	timeline?: Timeline;
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
@@ -891,6 +979,59 @@ export interface ImageResources {
 	pathSelectionState?: string[];
 	imageReadyVariables?: string;
 	imageReadyDataSets?: string;
+	animations?: Animations;
+	onionSkins?: {
+		enabled: boolean;
+		framesBefore: number;
+		framesAfter: number;
+		frameSpacing: number;
+		minOpacity: number;
+		maxOpacity: number;
+		blendMode: BlendMode;
+	};
+	timelineInformation?: {
+		enabled: boolean;
+		frameStep: Fraction;
+		frameRate: number;
+		time: Fraction;
+		duration: Fraction;
+		workInTime: Fraction;
+		workOutTime: Fraction;
+		repeats: number;
+		hasMotion: boolean;
+		globalTracks: TimelineTrack[];
+		audioClipGroups?: {
+			id: string;
+			muted: boolean;
+			audioClips: {
+				id: string;
+				start: Fraction;
+				duration: Fraction;
+				inTime: Fraction;
+				outTime: Fraction;
+				muted: boolean;
+				audioLevel: number;
+				frameReader: {
+					type: number;
+					mediaDescriptor: string;
+					link: {
+						name: string;
+						fullPath: string;
+						relativePath: string;
+					};
+				};
+			}[];
+		}[];
+	};
+	sheetDisclosure?: {
+		sheetTimelineOptions?: {
+			sheetID: number;
+			sheetDisclosed: boolean;
+			lightsDisclosed: boolean;
+			meshesDisclosed: boolean;
+			materialsDisclosed: boolean;
+		}[];
+	};
 }
 
 export interface GlobalLayerMaskInfo {

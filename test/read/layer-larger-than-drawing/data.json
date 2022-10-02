@@ -6,6 +6,15 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "9a89ad5d286dba2102c8cba967053fdb",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
     "resolutionInfo": {
       "horizontalResolution": 300,
       "horizontalResolutionUnit": "PPI",
@@ -13,15 +22,6 @@
       "verticalResolution": 300,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
-    },
-    "printInformation": {
-      "printSixteenBit": false,
-      "printerManagesColors": true,
-      "printerName": "",
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      },
-      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -31,6 +31,17 @@
     },
     "globalAngle": 30,
     "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
     "layerState": 0,
     "layersGroup": [
       0
@@ -50,24 +61,122 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 728,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
     },
-    "iccUntaggedProfile": true,
-    "idsSeedNumber": 728,
-    "printFlags": {
-      "caption": false,
-      "colorBars": false,
-      "cropMarks": false,
-      "flip": false,
-      "interpolate": false,
-      "labels": false,
-      "negative": false,
-      "printFlags": true,
-      "registrationMarks": false
+    "animations": {
+      "frames": [
+        {
+          "id": 1507353885,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 1626767620,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 1639238414,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 1644801531,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 1663793441,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 538564582,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 528278698,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 541556228,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 544245348,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 547001696,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 550195026,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 553640461,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 1203043298,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 557892632,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 563069188,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 566632272,
+          "delay": 0.04,
+          "dispose": "auto"
+        }
+      ],
+      "animations": [
+        {
+          "id": 0,
+          "frames": [
+            1507353885,
+            1626767620,
+            1639238414,
+            1644801531,
+            1663793441,
+            538564582,
+            528278698,
+            541556228,
+            544245348,
+            547001696,
+            550195026,
+            553640461,
+            1203043298,
+            557892632,
+            563069188,
+            566632272
+          ],
+          "repeats": 0,
+          "activeFrame": 15
+        }
+      ]
     }
   },
   "children": [
@@ -79,7 +188,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1467155020.497492,
       "transparencyProtected": false,
       "hidden": false,
       "name": "bg",
@@ -93,6 +201,100 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            528278698
+          ],
+          "enable": true
+        },
+        {
+          "frames": [
+            538564582
+          ]
+        },
+        {
+          "frames": [
+            541556228
+          ]
+        },
+        {
+          "frames": [
+            544245348
+          ]
+        },
+        {
+          "frames": [
+            547001696
+          ]
+        },
+        {
+          "frames": [
+            550195026
+          ]
+        },
+        {
+          "frames": [
+            553640461
+          ]
+        },
+        {
+          "frames": [
+            557892632
+          ]
+        },
+        {
+          "frames": [
+            563069188
+          ]
+        },
+        {
+          "frames": [
+            566632272
+          ],
+          "enable": true,
+          "referencePoint": {
+            "x": 0,
+            "y": -2
+          }
+        },
+        {
+          "frames": [
+            1203043298
+          ],
+          "enable": true,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            1507353885
+          ]
+        },
+        {
+          "frames": [
+            1626767620
+          ]
+        },
+        {
+          "frames": [
+            1639238414
+          ]
+        },
+        {
+          "frames": [
+            1644801531
+          ]
+        },
+        {
+          "frames": [
+            1663793441
+          ]
+        }
+      ],
+      "timestamp": 1467155020.497492,
       "referencePoint": {
         "x": 0,
         "y": -2

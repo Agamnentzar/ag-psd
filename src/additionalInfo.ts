@@ -2,16 +2,13 @@ import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
 import {
-	LayerAdditionalInfo, LayerEffectShadow, LayerEffectsOuterGlow, LayerEffectInnerGlow, LayerEffectBevel,
-	LayerEffectSolidFill, LayerEffectPatternOverlay, LayerEffectGradientOverlay, LayerEffectSatin, EffectContour,
-	EffectNoiseGradient, BezierPath, Psd, VectorContent, LayerEffectStroke, ExtraGradientInfo, EffectPattern,
-	ExtraPatternInfo, ReadOptions, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment,
+	LayerAdditionalInfo, BezierPath, Psd, ReadOptions, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment,
 	ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel,
 	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, EffectSolidGradient,
-	KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask,
+	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem,
+	BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -24,18 +21,19 @@ import {
 	writeColor, writePascalString, writeInt32,
 } from './psdWriter';
 import {
-	Annt, BESl, BESs, BETE, BlnM, bvlT, ClrS, DesciptorGradient, DescriptorColor, DescriptorGradientContent,
-	DescriptorPatternContent, DescriptorUnitsValue, DescriptorVectorContent, FrFl, FStl, gradientInterpolationMethodType,
-	parseAngle, parsePercent, parsePercentOrAngle, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor,
+	Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor,
 	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
-	unitsAngle, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor,
-	readVersionAndDescriptor, StrokeDescriptor, GrdT, IGSr, Ornt,
+	unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor,
+	readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor,
+	FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects,
+	parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor,
 } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
 
 export interface ExtendedWriteOptions extends WriteOptions {
-	layerIds: number[];
+	layerIds: Set<number>;
+	layerToId: Map<any, number>;
 }
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
@@ -50,7 +48,7 @@ export interface InfoHandler {
 }
 
 export const infoHandlers: InfoHandler[] = [];
-export const infoHandlersMap: { [key: string]: InfoHandler } = {};
+export const infoHandlersMap: { [key: string]: InfoHandler; } = {};
 
 function addHandler(key: string, has: HasMethod, read: ReadMethod, write: WriteMethod) {
 	const handler: InfoHandler = { key, has, read, write };
@@ -582,9 +580,10 @@ addHandler(
 	(reader, target) => target.id = readUint32(reader),
 	(writer, target, _psd, options) => {
 		let id = target.id!;
-		while (options.layerIds.indexOf(id) !== -1) id += 100; // make sure we don't have duplicate layer ids
+		while (options.layerIds.has(id)) id += 100; // make sure we don't have duplicate layer ids
 		writeUint32(writer, id);
-		options.layerIds.push(id);
+		options.layerIds.add(id);
+		options.layerToId.set(target, id);
 	},
 );
 
@@ -716,20 +715,10 @@ interface CustomDescriptor {
 	layerTime?: number;
 }
 
-interface FrameListDescriptor {
-	LaID: number;
-	LaSt: {
-		enab?: boolean;
-		IMsk?: { Ofst: { Hrzn: number; Vrtc: number; } };
-		VMsk?: { Ofst: { Hrzn: number; Vrtc: number; } };
-		FXRf?: { Hrzn: number; Vrtc: number; };
-		FrLs: number[];
-	}[];
-}
-
 addHandler(
 	'shmd',
-	hasKey('timestamp'),
+	target => target.timestamp !== undefined || target.animationFrames !== undefined ||
+		target.animationFrameFlags !== undefined || target.timeline !== undefined,
 	(reader, target, left, _, options) => {
 		const count = readUint32(reader);
 
@@ -742,27 +731,58 @@ addHandler(
 			readSection(reader, 1, left => {
 				if (key === 'cust') {
 					const desc = readVersionAndDescriptor(reader) as CustomDescriptor;
+					// console.log('cust', target.name, require('util').inspect(desc, false, 99, true));
 					if (desc.layerTime !== undefined) target.timestamp = desc.layerTime;
 				} else if (key === 'mlst') {
 					const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
-					options.logDevFeatures && console.log('mlst', desc);
-					// options.logDevFeatures && console.log('mlst', require('util').inspect(desc, false, 99, true));
+					// console.log('mlst', target.name, require('util').inspect(desc, false, 99, true));
+
+					target.animationFrames = [];
+
+					for (let i = 0; i < desc.LaSt.length; i++) {
+						const f = desc.LaSt[i];
+						const frame: AnimationFrame = { frames: f.FrLs };
+						if (f.enab !== undefined) frame.enable = f.enab;
+						if (f.Ofst) frame.offset = horzVrtcToXY(f.Ofst);
+						if (f.FXRf) frame.referencePoint = horzVrtcToXY(f.FXRf);
+						if (f.Lefx) frame.effects = parseEffects(f.Lefx, !!options.logMissingFeatures);
+						if (f.blendOptions && f.blendOptions.Opct) frame.opacity = parsePercent(f.blendOptions.Opct);
+						target.animationFrames.push(frame);
+					}
 				} else if (key === 'mdyn') {
 					// frame flags
-					const unknown = readUint16(reader);
+					readUint16(reader); // unknown
 					const propagate = readUint8(reader);
 					const flags = readUint8(reader);
-					const unifyLayerPosition = (flags & 1) !== 0;
-					const unifyLayerStyle = (flags & 2) !== 0;
-					const unifyLayerVisibility = (flags & 4) !== 0;
-					options.logDevFeatures && console.log(
-						'mdyn', 'unknown:', unknown, 'propagate:', propagate,
-						'flags:', flags, { unifyLayerPosition, unifyLayerStyle, unifyLayerVisibility });
 
-					// const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
-					// console.log('mdyn', require('util').inspect(desc, false, 99, true));
+					target.animationFrameFlags = {
+						propagateFrameOne: !propagate,
+						unifyLayerPosition: (flags & 1) !== 0,
+						unifyLayerStyle: (flags & 2) !== 0,
+						unifyLayerVisibility: (flags & 4) !== 0,
+					};
+				} else if (key === 'tmln') {
+					const desc = readVersionAndDescriptor(reader) as TimelineDescriptor;
+					const timeScope = desc.timeScope;
+					// console.log('tmln', target.name, target.id, require('util').inspect(desc, false, 99, true));
+
+					const timeline: Timeline = {
+						start: timeScope.Strt,
+						duration: timeScope.duration,
+						inTime: timeScope.inTime,
+						outTime: timeScope.outTime,
+						autoScope: desc.autoScope,
+						audioLevel: desc.audioLevel,
+					};
+
+					if (desc.trackList) {
+						timeline.tracks = parseTrackList(desc.trackList, !!options.logMissingFeatures);
+					}
+
+					target.timeline = timeline;
+					// console.log('tmln:result', target.name, target.id, require('util').inspect(timeline, false, 99, true));
 				} else {
-					options.logDevFeatures && console.log('Unhandled metadata', key);
+					options.logDevFeatures && console.log('Unhandled "shmd" section key', key);
 				}
 
 				skipBytes(reader, left());
@@ -771,18 +791,102 @@ addHandler(
 
 		skipBytes(reader, left());
 	},
-	(writer, target) => {
-		const desc: CustomDescriptor = {
-			layerTime: target.timestamp!,
-		};
+	(writer, target, _, options) => {
+		const { animationFrames, animationFrameFlags, timestamp, timeline } = target;
 
-		writeUint32(writer, 1); // count
+		let count = 0;
+		if (animationFrames) count++;
+		if (animationFrameFlags) count++;
+		if (timeline) count++;
+		if (timestamp !== undefined) count++;
+		writeUint32(writer, count);
 
-		writeSignature(writer, '8BIM');
-		writeSignature(writer, 'cust');
-		writeUint8(writer, 0); // copy (always false)
-		writeZeros(writer, 3);
-		writeSection(writer, 2, () => writeVersionAndDescriptor(writer, '', 'metadata', desc), true);
+		if (animationFrames) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, 'mlst');
+			writeUint8(writer, 0); // copy (always false)
+			writeZeros(writer, 3);
+			writeSection(writer, 2, () => {
+				const desc: FrameListDescriptor = {
+					LaID: target.id ?? 0,
+					LaSt: [],
+				};
+
+				for (let i = 0; i < animationFrames.length; i++) {
+					const f = animationFrames[i];
+					const frame: FrameDescriptor = {} as any;
+					if (f.enable !== undefined) frame.enab = f.enable;
+					frame.FrLs = f.frames;
+					if (f.offset) frame.Ofst = xyToHorzVrtc(f.offset);
+					if (f.referencePoint) frame.FXRf = xyToHorzVrtc(f.referencePoint);
+					if (f.effects) frame.Lefx = serializeEffects(f.effects, false, false);
+					if (f.opacity !== undefined) frame.blendOptions = { Opct: unitsPercent(f.opacity) };
+					desc.LaSt.push(frame);
+				}
+
+				writeVersionAndDescriptor(writer, '', 'null', desc);
+			}, true);
+		}
+
+		if (animationFrameFlags) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, 'mdyn');
+			writeUint8(writer, 0); // copy (always false)
+			writeZeros(writer, 3);
+			writeSection(writer, 2, () => {
+				writeUint16(writer, 0); // unknown
+				writeUint8(writer, animationFrameFlags.propagateFrameOne ? 0x0 : 0xf);
+				writeUint8(writer,
+					(animationFrameFlags.unifyLayerPosition ? 1 : 0) |
+					(animationFrameFlags.unifyLayerStyle ? 2 : 0) |
+					(animationFrameFlags.unifyLayerVisibility ? 4 : 0));
+			});
+		}
+
+		if (timeline) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, 'tmln');
+			writeUint8(writer, 0); // copy (always false)
+			writeZeros(writer, 3);
+			writeSection(writer, 2, () => {
+				const desc: TimelineDescriptor = {
+					Vrsn: 1,
+					timeScope: {
+						Vrsn: 1,
+						Strt: timeline.start,
+						duration: timeline.duration,
+						inTime: timeline.inTime,
+						outTime: timeline.outTime,
+					},
+					autoScope: timeline.autoScope,
+					audioLevel: timeline.audioLevel,
+				} as any;
+
+				if (timeline.tracks) {
+					desc.trackList = serializeTrackList(timeline.tracks);
+				}
+
+				const id = options.layerToId.get(target) || target.id || 0;
+				if (!id) throw new Error('You need to provide layer.id value whan writing document with animations');
+				desc.LyrI = id;
+
+				// console.log('WRITE:tmln', target.name, target.id, require('util').inspect(desc, false, 99, true));
+				writeVersionAndDescriptor(writer, '', 'null', desc, 'anim');
+			}, true);
+		}
+
+		if (timestamp !== undefined) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, 'cust');
+			writeUint8(writer, 0); // copy (always false)
+			writeZeros(writer, 3);
+			writeSection(writer, 2, () => {
+				const desc: CustomDescriptor = {
+					layerTime: timestamp,
+				};
+				writeVersionAndDescriptor(writer, '', 'metadata', desc);
+			}, true);
+		}
 	},
 );
 
@@ -1002,8 +1106,8 @@ addHandler(
 		if (readSignature(reader) !== 'plcL') throw new Error(`Invalid PlLd signature`);
 		if (readInt32(reader) !== 3) throw new Error(`Invalid PlLd version`);
 		const id = readPascalString(reader, 1);
-		readInt32(reader); // pageNumber
-		readInt32(reader); // totalPages, TODO: check how this works ?
+		const pageNumber = readInt32(reader);
+		const totalPages = readInt32(reader); // TODO: check how this works ?
 		readInt32(reader); // anitAliasPolicy 16
 		const placedLayerType = readInt32(reader); // 0 = unknown, 1 = vector, 2 = raster, 3 = image stack
 		if (!placedLayerTypes[placedLayerType]) throw new Error('Invalid PlLd type');
@@ -1016,8 +1120,8 @@ addHandler(
 		target.placedLayer = target.placedLayer || { // skip if SoLd already set it
 			id,
 			type: placedLayerTypes[placedLayerType],
-			// pageNumber,
-			// totalPages,
+			pageNumber,
+			totalPages,
 			transform,
 			warp: parseWarp(warp),
 		};
@@ -1051,8 +1155,8 @@ interface SoLdDescriptor {
 	PgNm: number;
 	totalPages: number;
 	Crop?: number;
-	frameStep: { numerator: number; denominator: number; };
-	duration: { numerator: number; denominator: number; };
+	frameStep: FractionDescriptor;
+	duration: FractionDescriptor;
 	frameCount: number;
 	Annt: number;
 	Type: number;
@@ -1081,11 +1185,11 @@ addHandler(
 			id: desc.Idnt,
 			placed: desc.placed,
 			type: placedLayerTypes[desc.Type],
-			// pageNumber: info.PgNm,
-			// totalPages: info.totalPages,
-			// frameStep: info.frameStep,
-			// duration: info.duration,
-			// frameCount: info.frameCount,
+			pageNumber: desc.PgNm,
+			totalPages: desc.totalPages,
+			frameStep: desc.frameStep,
+			duration: desc.duration,
+			frameCount: desc.frameCount,
 			transform: desc.Trnf,
 			width: desc['Sz  '].Wdth,
 			height: desc['Sz  '].Hght,
@@ -1110,19 +1214,13 @@ addHandler(
 		const placed = target.placedLayer!;
 		const desc: SoLdDescriptor = {
 			Idnt: placed.id,
-			placed: placed.placed ?? placed.id, // ???
-			PgNm: 1,
-			totalPages: 1,
+			placed: placed.placed ?? placed.id,
+			PgNm: placed.pageNumber || 1,
+			totalPages: placed.totalPages || 1,
 			...(placed.crop ? { Crop: placed.crop } : {}),
-			frameStep: {
-				numerator: 0,
-				denominator: 600
-			},
-			duration: {
-				numerator: 0,
-				denominator: 600
-			},
-			frameCount: 1,
+			frameStep: placed.frameStep || { numerator: 0, denominator: 600 },
+			duration: placed.duration || { numerator: 0, denominator: 600 },
+			frameCount: placed.frameCount || 0,
 			Annt: 16,
 			Type: placedLayerTypes.indexOf(placed.type),
 			Trnf: placed.transform,
@@ -2451,155 +2549,6 @@ addHandler(
 	},
 );
 
-interface EffectDescriptor extends Partial<DescriptorGradientContent>, Partial<DescriptorPatternContent> {
-	enab?: boolean;
-	Styl: string;
-	PntT?: string;
-	'Md  '?: string;
-	Opct?: DescriptorUnitsValue;
-	'Sz  '?: DescriptorUnitsValue;
-	'Clr '?: DescriptorColor;
-	present?: boolean;
-	showInDialog?: boolean;
-	overprint?: boolean;
-}
-
-interface Lfx2Descriptor {
-	'Scl '?: DescriptorUnitsValue;
-	masterFXSwitch?: boolean;
-	DrSh?: EffectDescriptor;
-	IrSh?: EffectDescriptor;
-	OrGl?: EffectDescriptor;
-	IrGl?: EffectDescriptor;
-	ebbl?: EffectDescriptor;
-	SoFi?: EffectDescriptor;
-	patternFill?: EffectDescriptor;
-	GrFl?: EffectDescriptor;
-	ChFX?: EffectDescriptor;
-	FrFX?: EffectDescriptor;
-}
-
-interface LmfxDescriptor {
-	'Scl '?: DescriptorUnitsValue;
-	masterFXSwitch?: boolean;
-	numModifyingFX?: number;
-	OrGl?: EffectDescriptor;
-	IrGl?: EffectDescriptor;
-	ebbl?: EffectDescriptor;
-	ChFX?: EffectDescriptor;
-	dropShadowMulti?: EffectDescriptor[];
-	innerShadowMulti?: EffectDescriptor[];
-	solidFillMulti?: EffectDescriptor[];
-	gradientFillMulti?: EffectDescriptor[];
-	frameFXMulti?: EffectDescriptor[];
-	patternFill?: EffectDescriptor; // ???
-}
-
-function parseFxObject(fx: EffectDescriptor) {
-	const stroke: LayerEffectStroke = {
-		enabled: !!fx.enab,
-		position: FStl.decode(fx.Styl),
-		fillType: FrFl.decode(fx.PntT!),
-		blendMode: BlnM.decode(fx['Md  ']!),
-		opacity: parsePercent(fx.Opct),
-		size: parseUnits(fx['Sz  ']!),
-	};
-
-	if (fx.present !== undefined) stroke.present = fx.present;
-	if (fx.showInDialog !== undefined) stroke.showInDialog = fx.showInDialog;
-	if (fx.overprint !== undefined) stroke.overprint = fx.overprint;
-	if (fx['Clr ']) stroke.color = parseColor(fx['Clr ']);
-	if (fx.Grad) stroke.gradient = parseGradientContent(fx as any);
-	if (fx.Ptrn) stroke.pattern = parsePatternContent(fx as any);
-
-	return stroke;
-}
-
-function serializeFxObject(stroke: LayerEffectStroke) {
-	let FrFX: EffectDescriptor = {} as any;
-	FrFX.enab = !!stroke.enabled;
-	if (stroke.present !== undefined) FrFX.present = !!stroke.present;
-	if (stroke.showInDialog !== undefined) FrFX.showInDialog = !!stroke.showInDialog;
-	FrFX.Styl = FStl.encode(stroke.position);
-	FrFX.PntT = FrFl.encode(stroke.fillType);
-	FrFX['Md  '] = BlnM.encode(stroke.blendMode);
-	FrFX.Opct = unitsPercent(stroke.opacity);
-	FrFX['Sz  '] = unitsValue(stroke.size, 'size');
-	if (stroke.color) FrFX['Clr '] = serializeColor(stroke.color);
-	if (stroke.gradient) FrFX = { ...FrFX, ...serializeGradientContent(stroke.gradient) };
-	if (stroke.pattern) FrFX = { ...FrFX, ...serializePatternContent(stroke.pattern) };
-	if (stroke.overprint !== undefined) FrFX.overprint = !!stroke.overprint;
-	return FrFX;
-}
-
-function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean) {
-	const effects: LayerEffectsInfo = {};
-	if (!info.masterFXSwitch) effects.disabled = true;
-	if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
-	if (info.DrSh) effects.dropShadow = [parseEffectObject(info.DrSh, log)];
-	if (info.dropShadowMulti) effects.dropShadow = info.dropShadowMulti.map(i => parseEffectObject(i, log));
-	if (info.IrSh) effects.innerShadow = [parseEffectObject(info.IrSh, log)];
-	if (info.innerShadowMulti) effects.innerShadow = info.innerShadowMulti.map(i => parseEffectObject(i, log));
-	if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl, log);
-	if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl, log);
-	if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl, log);
-	if (info.SoFi) effects.solidFill = [parseEffectObject(info.SoFi, log)];
-	if (info.solidFillMulti) effects.solidFill = info.solidFillMulti.map(i => parseEffectObject(i, log));
-	if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill, log);
-	if (info.GrFl) effects.gradientOverlay = [parseEffectObject(info.GrFl, log)];
-	if (info.gradientFillMulti) effects.gradientOverlay = info.gradientFillMulti.map(i => parseEffectObject(i, log));
-	if (info.ChFX) effects.satin = parseEffectObject(info.ChFX, log);
-	if (info.FrFX) effects.stroke = [parseFxObject(info.FrFX)];
-	if (info.frameFXMulti) effects.stroke = info.frameFXMulti.map(i => parseFxObject(i));
-	return effects;
-}
-
-function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boolean) {
-	const info: Lfx2Descriptor & LmfxDescriptor = multi ? {
-		'Scl ': unitsPercent(e.scale ?? 1),
-		masterFXSwitch: !e.disabled,
-	} : {
-		masterFXSwitch: !e.disabled,
-		'Scl ': unitsPercent(e.scale ?? 1),
-	};
-
-	const arrayKeys: (keyof LayerEffectsInfo)[] = ['dropShadow', 'innerShadow', 'solidFill', 'gradientOverlay', 'stroke'];
-	for (const key of arrayKeys) {
-		if (e[key] && !Array.isArray(e[key])) throw new Error(`${key} should be an array`);
-	}
-
-	if (e.dropShadow?.[0] && !multi) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', log);
-	if (e.dropShadow?.[0] && multi) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', log));
-	if (e.innerShadow?.[0] && !multi) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', log);
-	if (e.innerShadow?.[0] && multi) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', log));
-	if (e.outerGlow) info.OrGl = serializeEffectObject(e.outerGlow, 'outerGlow', log);
-	if (e.solidFill?.[0] && multi) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', log));
-	if (e.gradientOverlay?.[0] && multi) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', log));
-	if (e.stroke?.[0] && multi) info.frameFXMulti = e.stroke.map(i => serializeFxObject(i));
-	if (e.innerGlow) info.IrGl = serializeEffectObject(e.innerGlow, 'innerGlow', log);
-	if (e.bevel) info.ebbl = serializeEffectObject(e.bevel, 'bevel', log);
-	if (e.solidFill?.[0] && !multi) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', log);
-	if (e.patternOverlay) info.patternFill = serializeEffectObject(e.patternOverlay, 'patternOverlay', log);
-	if (e.gradientOverlay?.[0] && !multi) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', log);
-	if (e.satin) info.ChFX = serializeEffectObject(e.satin, 'satin', log);
-	if (e.stroke?.[0] && !multi) info.FrFX = serializeFxObject(e.stroke?.[0]);
-
-	if (multi) {
-		info.numModifyingFX = 0;
-
-		for (const key of Object.keys(e)) {
-			const value = (e as any)[key];
-			if (Array.isArray(value)) {
-				for (const effect of value) {
-					if (effect.enabled) info.numModifyingFX++;
-				}
-			}
-		}
-	}
-
-	return info;
-}
-
 export function hasMultiEffects(effects: LayerEffectsInfo) {
 	return Object.keys(effects).map(key => (effects as any)[key]).some(v => Array.isArray(v) && v.length > 1);
 }
@@ -2709,6 +2658,23 @@ addHandler(
 );
 
 addHandler(
+	'brst',
+	hasKey('channelBlendingRestrictions'),
+	(reader, target, left) => {
+		target.channelBlendingRestrictions = [];
+
+		while (left() > 4) {
+			target.channelBlendingRestrictions.push(readInt32(reader));
+		}
+	},
+	(writer, target) => {
+		for (const channel of target.channelBlendingRestrictions!) {
+			writeInt32(writer, channel);
+		}
+	},
+);
+
+addHandler(
 	'tsly',
 	hasKey('transparencyShapesLayer'),
 	(reader, target) => {
@@ -2720,339 +2686,3 @@ addHandler(
 		writeZeros(writer, 3);
 	},
 );
-
-// descriptor helpers
-
-function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoiseGradient {
-	if (grad.GrdF === 'GrdF.CstS') {
-		const samples: number = grad.Intr || 4096;
-
-		return {
-			type: 'solid',
-			name: grad['Nm  '],
-			smoothness: grad.Intr / 4096,
-			colorStops: grad.Clrs.map(s => ({
-				color: parseColor(s['Clr ']),
-				location: s.Lctn / samples,
-				midpoint: s.Mdpn / 100,
-			})),
-			opacityStops: grad.Trns.map(s => ({
-				opacity: parsePercent(s.Opct),
-				location: s.Lctn / samples,
-				midpoint: s.Mdpn / 100,
-			})),
-		};
-	} else {
-		return {
-			type: 'noise',
-			name: grad['Nm  '],
-			roughness: grad.Smth / 4096,
-			colorModel: ClrS.decode(grad.ClrS),
-			randomSeed: grad.RndS,
-			restrictColors: !!grad.VctC,
-			addTransparency: !!grad.ShTr,
-			min: grad['Mnm '].map(x => x / 100),
-			max: grad['Mxm '].map(x => x / 100),
-		};
-	}
-}
-
-function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): DesciptorGradient {
-	if (grad.type === 'solid') {
-		const samples = Math.round((grad.smoothness ?? 1) * 4096);
-		return {
-			'Nm  ': grad.name || '',
-			GrdF: 'GrdF.CstS',
-			Intr: samples,
-			Clrs: grad.colorStops.map(s => ({
-				'Clr ': serializeColor(s.color),
-				Type: 'Clry.UsrS',
-				Lctn: Math.round(s.location * samples),
-				Mdpn: Math.round((s.midpoint ?? 0.5) * 100),
-			})),
-			Trns: grad.opacityStops.map(s => ({
-				Opct: unitsPercent(s.opacity),
-				Lctn: Math.round(s.location * samples),
-				Mdpn: Math.round((s.midpoint ?? 0.5) * 100),
-			})),
-		};
-	} else {
-		return {
-			GrdF: 'GrdF.ClNs',
-			'Nm  ': grad.name || '',
-			ShTr: !!grad.addTransparency,
-			VctC: !!grad.restrictColors,
-			ClrS: ClrS.encode(grad.colorModel),
-			RndS: grad.randomSeed || 0,
-			Smth: Math.round((grad.roughness ?? 1) * 4096),
-			'Mnm ': (grad.min || [0, 0, 0, 0]).map(x => x * 100),
-			'Mxm ': (grad.max || [1, 1, 1, 1]).map(x => x * 100),
-		};
-	}
-}
-
-function parseGradientContent(descriptor: DescriptorGradientContent) {
-	const result = parseGradient(descriptor.Grad) as (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
-	result.style = GrdT.decode(descriptor.Type);
-	if (descriptor.Dthr !== undefined) result.dither = descriptor.Dthr;
-	if (descriptor.Rvrs !== undefined) result.reverse = descriptor.Rvrs;
-	if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
-	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
-	if (descriptor.Algn !== undefined) result.align = descriptor.Algn;
-	if (descriptor.Ofst !== undefined) {
-		result.offset = {
-			x: parsePercent(descriptor.Ofst.Hrzn),
-			y: parsePercent(descriptor.Ofst.Vrtc)
-		};
-	}
-	return result;
-}
-
-function parsePatternContent(descriptor: DescriptorPatternContent) {
-	const result: EffectPattern & ExtraPatternInfo = {
-		name: descriptor.Ptrn['Nm  '],
-		id: descriptor.Ptrn.Idnt,
-	};
-	if (descriptor.Lnkd !== undefined) result.linked = descriptor.Lnkd;
-	if (descriptor.phase !== undefined) result.phase = { x: descriptor.phase.Hrzn, y: descriptor.phase.Vrtc };
-	return result;
-}
-
-function parseVectorContent(descriptor: DescriptorVectorContent): VectorContent {
-	if ('Grad' in descriptor) {
-		return parseGradientContent(descriptor);
-	} else if ('Ptrn' in descriptor) {
-		return { type: 'pattern', ...parsePatternContent(descriptor) };
-	} else if ('Clr ' in descriptor) {
-		return { type: 'color', color: parseColor(descriptor['Clr ']) };
-	} else {
-		throw new Error('Invalid vector content');
-	}
-}
-
-function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo) {
-	const result: DescriptorGradientContent = {} as any;
-	if (content.dither !== undefined) result.Dthr = content.dither;
-	if (content.reverse !== undefined) result.Rvrs = content.reverse;
-	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
-	result.Type = GrdT.encode(content.style);
-	if (content.align !== undefined) result.Algn = content.align;
-	if (content.scale !== undefined) result['Scl '] = unitsPercent(content.scale);
-	if (content.offset) {
-		result.Ofst = {
-			Hrzn: unitsPercent(content.offset.x),
-			Vrtc: unitsPercent(content.offset.y),
-		};
-	}
-	result.Grad = serializeGradient(content);
-	return result;
-}
-
-function serializePatternContent(content: EffectPattern & ExtraPatternInfo) {
-	const result: DescriptorPatternContent = {
-		Ptrn: {
-			'Nm  ': content.name || '',
-			Idnt: content.id || '',
-		}
-	};
-	if (content.linked !== undefined) result.Lnkd = !!content.linked;
-	if (content.phase !== undefined) result.phase = { Hrzn: content.phase.x, Vrtc: content.phase.y };
-	return result;
-}
-
-function serializeVectorContent(content: VectorContent): { descriptor: DescriptorVectorContent; key: string; } {
-	if (content.type === 'color') {
-		return { key: 'SoCo', descriptor: { 'Clr ': serializeColor(content.color) } };
-	} else if (content.type === 'pattern') {
-		return { key: 'PtFl', descriptor: serializePatternContent(content) };
-	} else {
-		return { key: 'GdFl', descriptor: serializeGradientContent(content) };
-	}
-}
-
-function parseColor(color: DescriptorColor): Color {
-	if ('H   ' in color) {
-		return { h: parsePercentOrAngle(color['H   ']), s: color.Strt, b: color.Brgh };
-	} else if ('Rd  ' in color) {
-		return { r: color['Rd  '], g: color['Grn '], b: color['Bl  '] };
-	} else if ('Cyn ' in color) {
-		return { c: color['Cyn '], m: color.Mgnt, y: color['Ylw '], k: color.Blck };
-	} else if ('Gry ' in color) {
-		return { k: color['Gry '] };
-	} else if ('Lmnc' in color) {
-		return { l: color.Lmnc, a: color['A   '], b: color['B   '] };
-	} else {
-		throw new Error('Unsupported color descriptor');
-	}
-}
-
-function serializeColor(color: Color | undefined): DescriptorColor {
-	if (!color) {
-		return { 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
-	} else if ('r' in color) {
-		return { 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
-	} else if ('h' in color) {
-		return { 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
-	} else if ('c' in color) {
-		return { 'Cyn ': color.c || 0, Mgnt: color.m || 0, 'Ylw ': color.y || 0, Blck: color.k || 0 };
-	} else if ('l' in color) {
-		return { Lmnc: color.l || 0, 'A   ': color.a || 0, 'B   ': color.b || 0 };
-	} else if ('k' in color) {
-		return { 'Gry ': color.k };
-	} else {
-		throw new Error('Invalid color value');
-	}
-}
-
-type AllEffects = LayerEffectShadow & LayerEffectsOuterGlow & LayerEffectStroke &
-	LayerEffectInnerGlow & LayerEffectBevel & LayerEffectSolidFill &
-	LayerEffectPatternOverlay & LayerEffectSatin & LayerEffectGradientOverlay;
-
-function parseEffectObject(obj: any, reportErrors: boolean) {
-	const result: AllEffects = {} as any;
-
-	for (const key of Object.keys(obj)) {
-		const val = obj[key];
-
-		switch (key) {
-			case 'enab': result.enabled = !!val; break;
-			case 'uglg': result.useGlobalLight = !!val; break;
-			case 'AntA': result.antialiased = !!val; break;
-			case 'Algn': result.align = !!val; break;
-			case 'Dthr': result.dither = !!val; break;
-			case 'Invr': result.invert = !!val; break;
-			case 'Rvrs': result.reverse = !!val; break;
-			case 'Clr ': result.color = parseColor(val); break;
-			case 'hglC': result.highlightColor = parseColor(val); break;
-			case 'sdwC': result.shadowColor = parseColor(val); break;
-			case 'Styl': result.position = FStl.decode(val); break;
-			case 'Md  ': result.blendMode = BlnM.decode(val); break;
-			case 'hglM': result.highlightBlendMode = BlnM.decode(val); break;
-			case 'sdwM': result.shadowBlendMode = BlnM.decode(val); break;
-			case 'bvlS': result.style = BESl.decode(val); break;
-			case 'bvlD': result.direction = BESs.decode(val); break;
-			case 'bvlT': result.technique = bvlT.decode(val) as any; break;
-			case 'GlwT': result.technique = BETE.decode(val) as any; break;
-			case 'glwS': result.source = IGSr.decode(val); break;
-			case 'Type': result.type = GrdT.decode(val); break;
-			case 'gs99': result.interpolationMethod = gradientInterpolationMethodType.decode(val); break;
-			case 'Opct': result.opacity = parsePercent(val); break;
-			case 'hglO': result.highlightOpacity = parsePercent(val); break;
-			case 'sdwO': result.shadowOpacity = parsePercent(val); break;
-			case 'lagl': result.angle = parseAngle(val); break;
-			case 'Angl': result.angle = parseAngle(val); break;
-			case 'Lald': result.altitude = parseAngle(val); break;
-			case 'Sftn': result.soften = parseUnits(val); break;
-			case 'srgR': result.strength = parsePercent(val); break;
-			case 'blur': result.size = parseUnits(val); break;
-			case 'Nose': result.noise = parsePercent(val); break;
-			case 'Inpr': result.range = parsePercent(val); break;
-			case 'Ckmt': result.choke = parseUnits(val); break;
-			case 'ShdN': result.jitter = parsePercent(val); break;
-			case 'Dstn': result.distance = parseUnits(val); break;
-			case 'Scl ': result.scale = parsePercent(val); break;
-			case 'Ptrn': result.pattern = { name: val['Nm  '], id: val.Idnt }; break;
-			case 'phase': result.phase = { x: val.Hrzn, y: val.Vrtc }; break;
-			case 'Ofst': result.offset = { x: parsePercent(val.Hrzn), y: parsePercent(val.Vrtc) }; break;
-			case 'MpgS':
-			case 'TrnS':
-				result.contour = {
-					name: val['Nm  '],
-					curve: (val['Crv '] as any[]).map(p => ({ x: p.Hrzn, y: p.Vrtc })),
-				};
-				break;
-			case 'Grad': result.gradient = parseGradient(val); break;
-			case 'useTexture':
-			case 'useShape':
-			case 'layerConceals':
-			case 'present':
-			case 'showInDialog':
-			case 'antialiasGloss': result[key] = val; break;
-			default:
-				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
-		}
-	}
-
-	return result;
-}
-
-function serializeEffectObject(obj: any, objName: string, reportErrors: boolean) {
-	const result: any = {};
-
-	for (const objKey of Object.keys(obj)) {
-		const key: keyof AllEffects = objKey as any;
-		const val = obj[key];
-
-		switch (key) {
-			case 'enabled': result.enab = !!val; break;
-			case 'useGlobalLight': result.uglg = !!val; break;
-			case 'antialiased': result.AntA = !!val; break;
-			case 'align': result.Algn = !!val; break;
-			case 'dither': result.Dthr = !!val; break;
-			case 'invert': result.Invr = !!val; break;
-			case 'reverse': result.Rvrs = !!val; break;
-			case 'color': result['Clr '] = serializeColor(val); break;
-			case 'highlightColor': result.hglC = serializeColor(val); break;
-			case 'shadowColor': result.sdwC = serializeColor(val); break;
-			case 'position': result.Styl = FStl.encode(val); break;
-			case 'blendMode': result['Md  '] = BlnM.encode(val); break;
-			case 'highlightBlendMode': result.hglM = BlnM.encode(val); break;
-			case 'shadowBlendMode': result.sdwM = BlnM.encode(val); break;
-			case 'style': result.bvlS = BESl.encode(val); break;
-			case 'direction': result.bvlD = BESs.encode(val); break;
-			case 'technique':
-				if (objName === 'bevel') {
-					result.bvlT = bvlT.encode(val);
-				} else {
-					result.GlwT = BETE.encode(val);
-				}
-				break;
-			case 'source': result.glwS = IGSr.encode(val); break;
-			case 'type': result.Type = GrdT.encode(val); break;
-			case 'interpolationMethod': result.gs99 = gradientInterpolationMethodType.encode(val); break;
-			case 'opacity': result.Opct = unitsPercent(val); break;
-			case 'highlightOpacity': result.hglO = unitsPercent(val); break;
-			case 'shadowOpacity': result.sdwO = unitsPercent(val); break;
-			case 'angle':
-				if (objName === 'gradientOverlay') {
-					result.Angl = unitsAngle(val);
-				} else {
-					result.lagl = unitsAngle(val);
-				}
-				break;
-			case 'altitude': result.Lald = unitsAngle(val); break;
-			case 'soften': result.Sftn = unitsValue(val, key); break;
-			case 'strength': result.srgR = unitsPercent(val); break;
-			case 'size': result.blur = unitsValue(val, key); break;
-			case 'noise': result.Nose = unitsPercent(val); break;
-			case 'range': result.Inpr = unitsPercent(val); break;
-			case 'choke': result.Ckmt = unitsValue(val, key); break;
-			case 'jitter': result.ShdN = unitsPercent(val); break;
-			case 'distance': result.Dstn = unitsValue(val, key); break;
-			case 'scale': result['Scl '] = unitsPercent(val); break;
-			case 'pattern': result.Ptrn = { 'Nm  ': val.name, Idnt: val.id }; break;
-			case 'phase': result.phase = { Hrzn: val.x, Vrtc: val.y }; break;
-			case 'offset': result.Ofst = { Hrzn: unitsPercent(val.x), Vrtc: unitsPercent(val.y) }; break;
-			case 'contour': {
-				result[objName === 'satin' ? 'MpgS' : 'TrnS'] = {
-					'Nm  ': (val as EffectContour).name,
-					'Crv ': (val as EffectContour).curve.map(p => ({ Hrzn: p.x, Vrtc: p.y })),
-				};
-				break;
-			}
-			case 'gradient': result.Grad = serializeGradient(val); break;
-			case 'useTexture':
-			case 'useShape':
-			case 'layerConceals':
-			case 'present':
-			case 'showInDialog':
-			case 'antialiasGloss':
-				result[key] = val;
-				break;
-			default:
-				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
-		}
-	}
-
-	return result;
-}

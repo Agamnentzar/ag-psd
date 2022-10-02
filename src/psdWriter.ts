@@ -176,7 +176,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	let imageResources = psd.imageResources || {};
 
-	const opt: ExtendedWriteOptions = { ...options, layerIds: [] };
+	const opt: ExtendedWriteOptions = { ...options, layerIds: new Set(), layerToId: new Map() };
 
 	if (opt.generateThumbnail) {
 		imageResources = { ...imageResources, thumbnail: createThumbnail(psd) };

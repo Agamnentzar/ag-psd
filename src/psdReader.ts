@@ -533,7 +533,7 @@ function readLayerChannelImageData(
 			readData(reader, channel.length, targetData, compression, layerWidth, layerHeight, offset, options.large, cmyk ? 5 : 4);
 
 			if (RAW_IMAGE_DATA) {
-				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start + 2, channel.length - 2);
 			}
 
 			reader.offset = start + channel.length;

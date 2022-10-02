@@ -395,6 +395,17 @@
         "id": "ae510cb7-a61b-11e9-94bb-fc5c6d69ac5c",
         "placed": "ae510cb6-a61b-11e9-94bb-fc5c6d69ac5c",
         "type": "raster",
+        "pageNumber": 1,
+        "totalPages": 1,
+        "frameStep": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "frameCount": 1,
         "transform": [
           275,
           452,

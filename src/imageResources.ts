@@ -1,5 +1,5 @@
 import { toByteArray } from 'base64-js';
-import { ImageResources, ReadOptions, RenderingIntent } from './psd';
+import { BlendMode, ImageResources, ReadOptions, RenderingIntent } from './psd';
 import {
 	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
 	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature,
@@ -7,11 +7,12 @@ import {
 } from './psdReader';
 import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
-	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor,
+	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature,
+	writeSection,
 } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
-import { readVersionAndDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface ResourceHandler {
 	key: number;
@@ -512,6 +513,244 @@ addHandler(
 	},
 );
 
+interface OnionSkinsDescriptor {
+	Vrsn: 1;
+	enab: boolean;
+	numBefore: number;
+	numAfter: number;
+	Spcn: number;
+	minOpacity: number;
+	maxOpacity: number;
+	BlnM: number;
+}
+
+// 0 - normal, 7 - multiply, 8 - screen, 23 - difference
+const onionSkinsBlendModes: (BlendMode | undefined)[] = [
+	'normal', undefined, undefined, undefined, undefined, undefined, undefined, 'multiply',
+	'screen', undefined, undefined, undefined, undefined, undefined, undefined, undefined,
+	undefined, undefined, undefined, undefined, undefined, undefined, undefined, 'difference',
+];
+
+addHandler(
+	1078, // Onion Skins
+	target => target.onionSkins !== undefined,
+	(reader, target) => {
+		const desc = readVersionAndDescriptor(reader) as OnionSkinsDescriptor;
+		// console.log('1078', require('util').inspect(desc, false, 99, true));
+
+		target.onionSkins = {
+			enabled: desc.enab,
+			framesBefore: desc.numBefore,
+			framesAfter: desc.numAfter,
+			frameSpacing: desc.Spcn,
+			minOpacity: desc.minOpacity / 100,
+			maxOpacity: desc.maxOpacity / 100,
+			blendMode: onionSkinsBlendModes[desc.BlnM] || 'normal',
+		};
+	},
+	(writer, target) => {
+		const onionSkins = target.onionSkins!;
+		const desc: OnionSkinsDescriptor = {
+			Vrsn: 1,
+			enab: onionSkins.enabled,
+			numBefore: onionSkins.framesBefore,
+			numAfter: onionSkins.framesAfter,
+			Spcn: onionSkins.frameSpacing,
+			minOpacity: (onionSkins.minOpacity * 100) | 0,
+			maxOpacity: (onionSkins.maxOpacity * 100) | 0,
+			BlnM: Math.max(0, onionSkinsBlendModes.indexOf(onionSkins.blendMode)),
+		};
+
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
+interface TimelineAudioClipDescriptor {
+	clipID: string;
+	timeScope: TimeScopeDescriptor;
+	frameReader: {
+		frameReaderType: number;
+		descVersion: 1;
+		'Lnk ': {
+			descVersion: 1;
+			'Nm  ': string;
+			fullPath: string;
+			relPath: string;
+		},
+		mediaDescriptor: string;
+	},
+	muted: boolean;
+	audioLevel: number;
+}
+
+interface TimelineAudioClipGroupDescriptor {
+	groupID: string;
+	muted: boolean;
+	audioClipList: TimelineAudioClipDescriptor[];
+}
+
+interface TimelineInformationDescriptor {
+	Vrsn: 1;
+	enab: boolean;
+	frameStep: FractionDescriptor;
+	frameRate: number;
+	time: FractionDescriptor;
+	duration: FractionDescriptor;
+	workInTime: FractionDescriptor;
+	workOutTime: FractionDescriptor;
+	LCnt: number;
+	globalTrackList: TimelineTrackDescriptor[];
+	audioClipGroupList?: {
+		audioClipGroupList?: TimelineAudioClipGroupDescriptor[];
+	},
+	hasMotion: boolean;
+}
+
+addHandler(
+	1075, // Timeline Information
+	target => target.timelineInformation !== undefined,
+	(reader, target, _, options) => {
+		const desc = readVersionAndDescriptor(reader) as TimelineInformationDescriptor;
+		// console.log('1075', require('util').inspect(desc, false, 99, true));
+
+		target.timelineInformation = {
+			enabled: desc.enab,
+			frameStep: desc.frameStep,
+			frameRate: desc.frameRate,
+			time: desc.time,
+			duration: desc.duration,
+			workInTime: desc.workInTime,
+			workOutTime: desc.workOutTime,
+			repeats: desc.LCnt,
+			hasMotion: desc.hasMotion,
+			globalTracks: parseTrackList(desc.globalTrackList, !!options.logMissingFeatures),
+		};
+
+		if (desc.audioClipGroupList?.audioClipGroupList?.length) {
+			target.timelineInformation.audioClipGroups = desc.audioClipGroupList.audioClipGroupList.map(g => ({
+				id: g.groupID,
+				muted: g.muted,
+				audioClips: g.audioClipList.map(({ clipID, timeScope, muted, audioLevel, frameReader }) => ({
+					id: clipID,
+					start: timeScope.Strt,
+					duration: timeScope.duration,
+					inTime: timeScope.inTime,
+					outTime: timeScope.outTime,
+					muted: muted,
+					audioLevel: audioLevel,
+					frameReader: {
+						type: frameReader.frameReaderType,
+						mediaDescriptor: frameReader.mediaDescriptor,
+						link: {
+							name: frameReader['Lnk ']['Nm  '],
+							fullPath: frameReader['Lnk '].fullPath,
+							relativePath: frameReader['Lnk '].relPath,
+						},
+					},
+				})),
+			}));
+		}
+	},
+	(writer, target) => {
+		const timeline = target.timelineInformation!;
+		const desc: TimelineInformationDescriptor = {
+			Vrsn: 1,
+			enab: timeline.enabled,
+			frameStep: timeline.frameStep,
+			frameRate: timeline.frameRate,
+			time: timeline.time,
+			duration: timeline.duration,
+			workInTime: timeline.workInTime,
+			workOutTime: timeline.workOutTime,
+			LCnt: timeline.repeats,
+			globalTrackList: serializeTrackList(timeline.globalTracks),
+			audioClipGroupList: {
+				audioClipGroupList: timeline.audioClipGroups?.map(a => ({
+					groupID: a.id,
+					muted: a.muted,
+					audioClipList: a.audioClips.map<TimelineAudioClipDescriptor>(c => ({
+						clipID: c.id,
+						timeScope: {
+							Vrsn: 1,
+							Strt: c.start,
+							duration: c.duration,
+							inTime: c.inTime,
+							outTime: c.outTime,
+						},
+						frameReader: {
+							frameReaderType: c.frameReader.type,
+							descVersion: 1,
+							'Lnk ': {
+								descVersion: 1,
+								'Nm  ': c.frameReader.link.name,
+								fullPath: c.frameReader.link.fullPath,
+								relPath: c.frameReader.link.relativePath,
+							},
+							mediaDescriptor: c.frameReader.mediaDescriptor,
+						},
+						muted: c.muted,
+						audioLevel: c.audioLevel,
+					})),
+				})),
+			},
+			hasMotion: timeline.hasMotion,
+		};
+
+		// console.log('WRITE:1075', require('util').inspect(desc, false, 99, true));
+		writeVersionAndDescriptor(writer, '', 'null', desc, 'anim');
+	},
+);
+
+interface SheetDisclosureDescriptor {
+	Vrsn: 1;
+	sheetTimelineOptions?: {
+		Vrsn: 2;
+		sheetID: number;
+		sheetDisclosed: boolean;
+		lightsDisclosed: boolean;
+		meshesDisclosed: boolean;
+		materialsDisclosed: boolean;
+	}[];
+}
+
+addHandler(
+	1076, // Sheet Disclosure
+	target => target.sheetDisclosure !== undefined,
+	(reader, target) => {
+		const desc = readVersionAndDescriptor(reader) as SheetDisclosureDescriptor;
+		// console.log('1076', require('util').inspect(desc, false, 99, true));
+
+		target.sheetDisclosure = {};
+
+		if (desc.sheetTimelineOptions) {
+			target.sheetDisclosure.sheetTimelineOptions = desc.sheetTimelineOptions.map(o => ({
+				sheetID: o.sheetID,
+				sheetDisclosed: o.sheetDisclosed,
+				lightsDisclosed: o.lightsDisclosed,
+				meshesDisclosed: o.meshesDisclosed,
+				materialsDisclosed: o.materialsDisclosed,
+			}));
+		}
+	},
+	(writer, target) => {
+		const disclosure = target.sheetDisclosure!;
+		const desc: SheetDisclosureDescriptor = { Vrsn: 1 };
+
+		if (disclosure.sheetTimelineOptions) {
+			desc.sheetTimelineOptions = disclosure.sheetTimelineOptions.map(d => ({
+				Vrsn: 2,
+				sheetID: d.sheetID,
+				sheetDisclosed: d.sheetDisclosed,
+				lightsDisclosed: d.lightsDisclosed,
+				meshesDisclosed: d.meshesDisclosed,
+				materialsDisclosed: d.materialsDisclosed,
+			}));
+		}
+
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
 addHandler(
 	1054,
 	target => target.urlsList !== undefined,
@@ -754,46 +993,30 @@ const FrmD = createEnum<'auto' | 'none' | 'dispose'>('FrmD', '', {
 	dispose: 'Disp',
 });
 
+interface AnimationFrameDescriptor {
+	FrID: number;
+	FrDl?: number;
+	FrDs: string;
+	FrGA?: number;
+}
+
 interface AnimationDescriptor {
-	AFSt: number;
-	FrIn: {
-		FrID: number;
-		FrDl: number;
-		FrDs: string;
-		FrGA?: number;
-	}[];
-	FSts: {
-		FsID: number;
-		AFrm: number;
-		FsFr: number[];
-		LCnt: number;
-	}[];
+	FsID: number;
+	AFrm?: number;
+	FsFr: number[];
+	LCnt: number;
 }
 
-interface Animations {
-	frames: {
-		id: number;
-		delay: number;
-		dispose?: 'auto' | 'none' | 'dispose';
-	}[];
-	animations: {
-		id: number;
-		frames: number[];
-		repeats?: number;
-	}[];
+interface AnimationsDescriptor {
+	AFSt?: number;
+	FrIn: AnimationFrameDescriptor[];
+	FSts: AnimationDescriptor[];
 }
 
-// TODO: Unfinished
-MOCK_HANDLERS && addHandler(
+addHandler(
 	4000, // Plug-In resource(s)
-	target => (target as any)._ir4000 !== undefined,
+	target => target.animations !== undefined,
 	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
-		if (MOCK_HANDLERS) {
-			LOG_MOCK_HANDLERS && console.log('image resource 4000', left());
-			(target as any)._ir4000 = readBytes(reader, left());
-			return;
-		}
-
 		const key = readSignature(reader);
 
 		if (key === 'mani') {
@@ -805,16 +1028,12 @@ MOCK_HANDLERS && addHandler(
 
 					readSection(reader, 1, left => {
 						if (key === 'AnDs') {
-							const desc = readVersionAndDescriptor(reader) as AnimationDescriptor;
-							// console.log('AnDs', desc);
-							logDevFeatures && console.log('#4000 AnDs', desc);
-							// logDevFeatures && console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
-
-							const result: Animations = {
+							const desc = readVersionAndDescriptor(reader) as AnimationsDescriptor;
+							target.animations = {
 								// desc.AFSt ???
 								frames: desc.FrIn.map(x => ({
 									id: x.FrID,
-									delay: x.FrDl / 100,
+									delay: (x.FrDl || 0) / 100,
 									dispose: x.FrDs ? FrmD.decode(x.FrDs) : 'auto', // missing == auto
 									// x.FrGA ???
 								})),
@@ -822,12 +1041,12 @@ MOCK_HANDLERS && addHandler(
 									id: x.FsID,
 									frames: x.FsFr,
 									repeats: x.LCnt,
-									// x.AFrm ???
+									activeFrame: x.AFrm || 0,
 								})),
 							};
 
-							logDevFeatures && console.log('#4000 AnDs:result', result);
-							// logDevFeatures && console.log('#4000 AnDs:result', require('util').inspect(result, false, 99, true));
+							// console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
+							// console.log('#4000 AnDs:result', require('util').inspect(target.animations, false, 99, true));
 						} else if (key === 'Roll') {
 							const bytes = readBytes(reader, left());
 							logDevFeatures && console.log('#4000 Roll', bytes);
@@ -842,11 +1061,54 @@ MOCK_HANDLERS && addHandler(
 			logDevFeatures && console.log('#4000 mopt', bytes);
 		} else {
 			logMissingFeatures && console.log('Unhandled key in #4000:', key);
-			return;
 		}
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir4000);
+		if (target.animations) {
+			writeSignature(writer, 'mani');
+			writeSignature(writer, 'IRFR');
+			writeSection(writer, 1, () => {
+				writeSignature(writer, '8BIM');
+				writeSignature(writer, 'AnDs');
+				writeSection(writer, 1, () => {
+					const desc: AnimationsDescriptor = {
+						// AFSt: 0, // ???
+						FrIn: [],
+						FSts: [],
+					};
+
+					for (let i = 0; i < target.animations!.frames.length; i++) {
+						const f = target.animations!.frames[i];
+						const frame: AnimationFrameDescriptor = {
+							FrID: f.id,
+						} as any;
+						if (f.delay) frame.FrDl = (f.delay * 100) | 0;
+						frame.FrDs = FrmD.encode(f.dispose);
+						// if (i === 0) frame.FrGA = 30; // ???
+						desc.FrIn.push(frame);
+					}
+
+					for (let i = 0; i < target.animations!.animations.length; i++) {
+						const a = target.animations!.animations[i];
+						const anim: AnimationDescriptor = {
+							FsID: a.id,
+							AFrm: a.activeFrame! | 0,
+							FsFr: a.frames,
+							LCnt: a.repeats! | 0,
+						};
+						desc.FSts.push(anim);
+					}
+
+					writeVersionAndDescriptor(writer, '', 'null', desc);
+				});
+
+				// writeSignature(writer, '8BIM');
+				// writeSignature(writer, 'Roll');
+				// writeSection(writer, 1, () => {
+				// 	writeZeros(writer, 8);
+				// });
+			});
+		}
 	},
 );
 

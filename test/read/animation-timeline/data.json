@@ -1,0 +1,800 @@
+{
+  "width": 500,
+  "height": 336,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "d3c99f4b3d8dea288548356a84159c2b",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1
+    ],
+    "layerSelectionIds": [],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "onionSkins": {
+      "enabled": true,
+      "framesBefore": 1,
+      "framesAfter": 1,
+      "frameSpacing": 1,
+      "minOpacity": 0.25,
+      "maxOpacity": 0.5,
+      "blendMode": "difference"
+    },
+    "timelineInformation": {
+      "enabled": true,
+      "frameStep": {
+        "numerator": 20,
+        "denominator": 600
+      },
+      "frameRate": 30,
+      "time": {
+        "numerator": 280,
+        "denominator": 600
+      },
+      "duration": {
+        "numerator": 360,
+        "denominator": 600
+      },
+      "workInTime": {
+        "numerator": 0,
+        "denominator": 600
+      },
+      "workOutTime": {
+        "numerator": 360,
+        "denominator": 600
+      },
+      "repeats": 1,
+      "hasMotion": true,
+      "globalTracks": [
+        {
+          "type": "globalLighting",
+          "enabled": true,
+          "keys": [
+            {
+              "interpolation": "hold",
+              "time": {
+                "numerator": 0,
+                "denominator": 600
+              },
+              "selected": false,
+              "type": "globalLighting",
+              "globalAngle": 30,
+              "globalAltitude": 30
+            },
+            {
+              "interpolation": "hold",
+              "time": {
+                "numerator": 180,
+                "denominator": 600
+              },
+              "selected": false,
+              "type": "globalLighting",
+              "globalAngle": 120,
+              "globalAltitude": 30
+            }
+          ]
+        }
+      ],
+      "audioClipGroups": [
+        {
+          "id": "660d22a3-4119-11ed-83cb-ae3740ae7734",
+          "muted": false,
+          "audioClips": [
+            {
+              "id": "6e8a1c6a-4183-11ed-9339-dcc6670c6176",
+              "start": {
+                "numerator": 20,
+                "denominator": 600
+              },
+              "duration": {
+                "numerator": 219,
+                "denominator": 600
+              },
+              "inTime": {
+                "numerator": 0,
+                "denominator": 600
+              },
+              "outTime": {
+                "numerator": 219,
+                "denominator": 600
+              },
+              "muted": false,
+              "audioLevel": 1,
+              "frameReader": {
+                "type": 1364477522,
+                "mediaDescriptor": "ImporterMP3",
+                "link": {
+                  "name": "output.mp3",
+                  "fullPath": "file:///D:/Downloads/output.mp3",
+                  "relativePath": "file:///D:/Downloads/output.mp3"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "sheetDisclosure": {
+      "sheetTimelineOptions": [
+        {
+          "sheetID": 3,
+          "sheetDisclosed": true,
+          "lightsDisclosed": false,
+          "meshesDisclosed": false,
+          "materialsDisclosed": false
+        },
+        {
+          "sheetID": 4,
+          "sheetDisclosed": true,
+          "lightsDisclosed": false,
+          "meshesDisclosed": false,
+          "materialsDisclosed": false
+        }
+      ]
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "idsSeedNumber": 10,
+    "versionInfo": {
+      "hasRealMergedData": false,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    }
+  },
+  "children": [
+    {
+      "top": -2,
+      "left": -4,
+      "bottom": 340,
+      "right": 506,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 1",
+      "nameSource": "layr",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timeline": {
+        "start": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 360,
+          "denominator": 600
+        },
+        "inTime": {
+          "numerator": 160,
+          "denominator": 600
+        },
+        "outTime": {
+          "numerator": 360,
+          "denominator": 600
+        },
+        "autoScope": false,
+        "audioLevel": 1,
+        "tracks": [
+          {
+            "type": "sheetTransform",
+            "enabled": true,
+            "keys": [
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 160,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "transform",
+                "scale": {
+                  "x": 1.02,
+                  "y": 1.02
+                },
+                "skew": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "translation": {
+                  "x": 248.28799448969872,
+                  "y": 164.64
+                }
+              },
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 340,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "transform",
+                "scale": {
+                  "x": 1.02,
+                  "y": 1.02
+                },
+                "skew": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "translation": {
+                  "x": 251.71200551030128,
+                  "y": 171.36
+                }
+              }
+            ],
+            "effectParams": {
+              "fillCanvas": true,
+              "zoomOrigin": 0,
+              "keys": [
+                {
+                  "interpolation": "linear",
+                  "time": {
+                    "numerator": 160,
+                    "denominator": 600
+                  },
+                  "selected": false,
+                  "type": "transform",
+                  "scale": {
+                    "x": 1.02,
+                    "y": 1.02
+                  },
+                  "skew": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "rotation": 0,
+                  "translation": {
+                    "x": 248.28799448969872,
+                    "y": 164.64
+                  }
+                },
+                {
+                  "interpolation": "linear",
+                  "time": {
+                    "numerator": 340,
+                    "denominator": 600
+                  },
+                  "selected": false,
+                  "type": "transform",
+                  "scale": {
+                    "x": 1.02,
+                    "y": 1.02
+                  },
+                  "skew": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "rotation": 0,
+                  "translation": {
+                    "x": 251.71200551030128,
+                    "y": 171.36
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "sheetPosition",
+            "enabled": true,
+            "keys": [
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 160,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "position",
+                "x": -2,
+                "y": -4
+              },
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 340,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "position",
+                "x": 1,
+                "y": 2
+              }
+            ]
+          }
+        ]
+      },
+      "timestamp": 1664644789.670439,
+      "placedLayer": {
+        "id": "407a9e8e-41ad-11ed-9339-dcc6670c6176",
+        "placed": "40514b98-41ad-11ed-9339-dcc6670c6176",
+        "type": "raster",
+        "pageNumber": 1,
+        "totalPages": 1,
+        "frameStep": {
+          "numerator": 20,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 360,
+          "denominator": 600
+        },
+        "frameCount": 2,
+        "transform": [
+          -4.429331496566249,
+          -2.240000000000009,
+          505.57066850343375,
+          -2.240000000000009,
+          505.57066850343375,
+          340.48,
+          -4.429331496566249,
+          340.48
+        ],
+        "width": 500,
+        "height": 336,
+        "resolution": {
+          "value": 72,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "none",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 336,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 500,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4
+        }
+      },
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": -17,
+      "left": 3,
+      "bottom": 257,
+      "right": 520,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 2",
+      "effects": {
+        "scale": 1,
+        "stroke": [
+          {
+            "enabled": true,
+            "position": "outside",
+            "fillType": "color",
+            "blendMode": "normal",
+            "opacity": 1,
+            "size": {
+              "value": 3,
+              "units": "Pixels"
+            },
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            }
+          }
+        ]
+      },
+      "nameSource": "layr",
+      "id": 4,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timeline": {
+        "start": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 360,
+          "denominator": 600
+        },
+        "inTime": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "outTime": {
+          "numerator": 360,
+          "denominator": 600
+        },
+        "autoScope": false,
+        "audioLevel": 1,
+        "tracks": [
+          {
+            "type": "sheetTransform",
+            "enabled": true,
+            "keys": [
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 0,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "transform",
+                "scale": {
+                  "x": 1.0563876323146686,
+                  "y": 1.0563876323146686
+                },
+                "skew": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 0,
+                "translation": {
+                  "x": 250,
+                  "y": 168
+                }
+              },
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 340,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "transform",
+                "scale": {
+                  "x": 1.0563876323146686,
+                  "y": 1.0563876323146686
+                },
+                "skew": {
+                  "x": 0,
+                  "y": 0
+                },
+                "rotation": 2.2,
+                "translation": {
+                  "x": 250,
+                  "y": 168
+                }
+              }
+            ],
+            "effectParams": {
+              "fillCanvas": true,
+              "zoomOrigin": 0,
+              "keys": [
+                {
+                  "interpolation": "linear",
+                  "time": {
+                    "numerator": 0,
+                    "denominator": 600
+                  },
+                  "selected": false,
+                  "type": "transform",
+                  "scale": {
+                    "x": 1.0563876323146686,
+                    "y": 1.0563876323146686
+                  },
+                  "skew": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "rotation": 0,
+                  "translation": {
+                    "x": 250,
+                    "y": 168
+                  }
+                },
+                {
+                  "interpolation": "linear",
+                  "time": {
+                    "numerator": 340,
+                    "denominator": 600
+                  },
+                  "selected": false,
+                  "type": "transform",
+                  "scale": {
+                    "x": 1.0563876323146686,
+                    "y": 1.0563876323146686
+                  },
+                  "skew": {
+                    "x": 0,
+                    "y": 0
+                  },
+                  "rotation": 2.2,
+                  "translation": {
+                    "x": 250,
+                    "y": 168
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "type": "sheetPosition",
+            "enabled": true,
+            "keys": [
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 0,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "position",
+                "x": 0,
+                "y": 0
+              },
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 340,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "position",
+                "x": 0,
+                "y": 0
+              }
+            ]
+          },
+          {
+            "type": "opacity",
+            "enabled": true,
+            "keys": [
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 0,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "opacity",
+                "value": 1
+              },
+              {
+                "interpolation": "hold",
+                "time": {
+                  "numerator": 160,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "opacity",
+                "value": 1
+              },
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 320,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "opacity",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "type": "style",
+            "enabled": true,
+            "keys": [
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 0,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "style"
+              },
+              {
+                "interpolation": "linear",
+                "time": {
+                  "numerator": 100,
+                  "denominator": 600
+                },
+                "selected": false,
+                "type": "style",
+                "style": {
+                  "scale": 1,
+                  "stroke": [
+                    {
+                      "enabled": true,
+                      "position": "outside",
+                      "fillType": "color",
+                      "blendMode": "normal",
+                      "opacity": 1,
+                      "size": {
+                        "value": 3,
+                        "units": "Pixels"
+                      },
+                      "color": {
+                        "r": 0,
+                        "g": 0,
+                        "b": 0
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "timestamp": 1664644789.6704466,
+      "placedLayer": {
+        "id": "407a9e8f-41ad-11ed-9339-dcc6670c6176",
+        "placed": "407a9e8d-41ad-11ed-9339-dcc6670c6176",
+        "type": "raster",
+        "pageNumber": 1,
+        "totalPages": 1,
+        "frameStep": {
+          "numerator": 20,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 360,
+          "denominator": 600
+        },
+        "frameCount": 2,
+        "transform": [
+          -8.353894848363723,
+          -17.734086766683674,
+          519.5758717453368,
+          -1.034716384283115,
+          508.3538948483637,
+          353.7340867666837,
+          -19.575871745336883,
+          337.0347163842831
+        ],
+        "width": 500,
+        "height": 336,
+        "resolution": {
+          "value": 72,
+          "units": "Density"
+        },
+        "warp": {
+          "style": "none",
+          "value": 0,
+          "perspective": 0,
+          "perspectiveOther": 0,
+          "rotate": "horizontal",
+          "bounds": {
+            "top": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "left": {
+              "value": 0,
+              "units": "Pixels"
+            },
+            "bottom": {
+              "value": 336,
+              "units": "Pixels"
+            },
+            "right": {
+              "value": 500,
+              "units": "Pixels"
+            }
+          },
+          "uOrder": 4,
+          "vOrder": 4
+        }
+      },
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "linkedFiles": [
+    {
+      "id": "407a9e8f-41ad-11ed-9339-dcc6670c6176",
+      "name": "Layer 2.psb",
+      "type": "8BPB",
+      "creator": "8BIM"
+    },
+    {
+      "id": "407a9e8e-41ad-11ed-9339-dcc6670c6176",
+      "name": "Layer 1.psb",
+      "type": "8BPB",
+      "creator": "8BIM"
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  }
+}

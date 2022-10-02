@@ -99,6 +99,17 @@
         "id": "20953ddb-9391-11ec-b4f1-c15674f50bc4",
         "placed": "20953dda-9391-11ec-b4f1-c15674f50bc4",
         "type": "raster",
+        "pageNumber": 1,
+        "totalPages": 1,
+        "frameStep": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "frameCount": 1,
         "transform": [
           29,
           28,

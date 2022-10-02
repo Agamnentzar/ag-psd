@@ -1,0 +1,248 @@
+{
+  "width": 200,
+  "height": 200,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Centimeters",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Centimeters"
+    },
+    "printScale": {
+      "style": "centered",
+      "x": 0,
+      "y": 0,
+      "scale": 1
+    },
+    "globalAngle": 120,
+    "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
+    "layerState": 1,
+    "layersGroup": [
+      0,
+      0
+    ],
+    "layerGroupsEnabledId": [
+      1,
+      1
+    ],
+    "layerSelectionIds": [
+      2
+    ],
+    "gridAndGuidesInformation": {
+      "grid": {
+        "horizontal": 576,
+        "vertical": 576
+      },
+      "guides": []
+    },
+    "urlsList": [],
+    "pixelAspectRatio": {
+      "aspect": 1
+    },
+    "idsSeedNumber": 2,
+    "versionInfo": {
+      "hasRealMergedData": false,
+      "writerName": "Adobe Photoshop",
+      "readerName": "Adobe Photoshop CS6",
+      "fileVersion": 1
+    },
+    "animations": {
+      "frames": [
+        {
+          "id": 464638229,
+          "delay": 0,
+          "dispose": "auto"
+        },
+        {
+          "id": 469327382,
+          "delay": 0,
+          "dispose": "auto"
+        }
+      ],
+      "animations": [
+        {
+          "id": 0,
+          "frames": [
+            464638229,
+            469327382
+          ],
+          "repeats": 1,
+          "activeFrame": 1
+        }
+      ]
+    }
+  },
+  "children": [
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 200,
+      "right": 200,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": true,
+      "hidden": false,
+      "name": "Background",
+      "nameSource": "bgnd",
+      "id": 1,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": true,
+        "composite": false,
+        "position": true
+      },
+      "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            464638229
+          ]
+        },
+        {
+          "frames": [
+            469327382
+          ]
+        }
+      ],
+      "timestamp": 1664382061.7110112,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "top": 41,
+      "left": 93,
+      "bottom": 107,
+      "right": 158,
+      "blendMode": "normal",
+      "opacity": 0.5294117647058824,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Layer 1",
+      "effects": {
+        "scale": 1,
+        "stroke": [
+          {
+            "enabled": true,
+            "position": "outside",
+            "fillType": "color",
+            "blendMode": "normal",
+            "opacity": 1,
+            "size": {
+              "value": 3,
+              "units": "Pixels"
+            },
+            "color": {
+              "r": 0,
+              "g": 0,
+              "b": 0
+            }
+          }
+        ]
+      },
+      "nameSource": "layr",
+      "id": 2,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            464638229
+          ],
+          "enable": true,
+          "offset": {
+            "x": -36,
+            "y": 43
+          },
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            469327382
+          ],
+          "enable": true,
+          "offset": {
+            "x": 0,
+            "y": 0
+          },
+          "effects": {
+            "scale": 1,
+            "stroke": [
+              {
+                "enabled": true,
+                "position": "outside",
+                "fillType": "color",
+                "blendMode": "normal",
+                "opacity": 1,
+                "size": {
+                  "value": 3,
+                  "units": "Pixels"
+                },
+                "color": {
+                  "r": 0,
+                  "g": 0,
+                  "b": 0
+                }
+              }
+            ]
+          },
+          "opacity": 0.5294117647058824
+        }
+      ],
+      "timestamp": 1664382061.7110164,
+      "referencePoint": {
+        "x": 36,
+        "y": -43
+      }
+    }
+  ],
+  "filterMask": {
+    "colorSpace": {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "opacity": 0.19607843137254902
+  }
+}

@@ -1,8 +1,13 @@
 import { createEnum } from './helpers';
 import {
-	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, GlowSource, GlowTechnique, GradientStyle,
-	InterpolationMethod, LineAlignment, LineCapType, LineJoinType, Orientation, TextGridding, Units, UnitsValue,
-	WarpStyle
+	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, Color, EffectContour,
+	EffectNoiseGradient, EffectPattern, EffectSolidGradient, ExtraGradientInfo, ExtraPatternInfo,
+	GlowSource, GlowTechnique, GradientStyle, InterpolationMethod, LayerEffectBevel,
+	LayerEffectGradientOverlay, LayerEffectInnerGlow, LayerEffectPatternOverlay,
+	LayerEffectSatin, LayerEffectShadow, LayerEffectsInfo, LayerEffectSolidFill,
+	LayerEffectsOuterGlow, LayerEffectStroke, LineAlignment, LineCapType, LineJoinType,
+	Orientation, TextGridding, TimelineKey, TimelineKeyInterpolation, TimelineTrack, TimelineTrackType,
+	Units, UnitsValue, VectorContent, WarpStyle
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
@@ -48,6 +53,8 @@ function makeType(name: string, classID: string) {
 	return { name, classID };
 }
 
+const nullType = makeType('', 'null');
+
 const fieldToExtType: ExtTypeDict = {
 	strokeStyleContent: makeType('', 'solidColorLayer'),
 	// printProofSetup: makeType('校样设置', 'proofSetup'), // TESTING
@@ -72,8 +79,11 @@ const fieldToExtType: ExtTypeDict = {
 	Ptrn: makeType('', 'Ptrn'),
 	FrFX: makeType('', 'FrFX'),
 	phase: makeType('', 'Pnt '),
-	frameStep: makeType('', 'null'),
-	duration: makeType('', 'null'),
+	frameStep: nullType,
+	duration: nullType,
+	workInTime: nullType,
+	workOutTime: nullType,
+	audioClipGroupList: nullType,
 	bounds: makeType('', 'Rctn'),
 	customEnvelopeWarp: makeType('', 'customEnvelopeWarp'),
 	warp: makeType('', 'warp'),
@@ -81,40 +91,64 @@ const fieldToExtType: ExtTypeDict = {
 	origin: makeType('', 'Pnt '),
 	autoExpandOffset: makeType('', 'Pnt '),
 	keyOriginShapeBBox: makeType('', 'unitRect'),
-	Vrsn: makeType('', 'null'),
-	psVersion: makeType('', 'null'),
+	Vrsn: nullType,
+	psVersion: nullType,
 	docDefaultNewArtboardBackgroundColor: makeType('', 'RGBC'),
 	artboardRect: makeType('', 'classFloatRect'),
 	keyOriginRRectRadii: makeType('', 'radii'),
-	keyOriginBoxCorners: makeType('', 'null'),
+	keyOriginBoxCorners: nullType,
 	rectangleCornerA: makeType('', 'Pnt '),
 	rectangleCornerB: makeType('', 'Pnt '),
 	rectangleCornerC: makeType('', 'Pnt '),
 	rectangleCornerD: makeType('', 'Pnt '),
-	compInfo: makeType('', 'null'),
+	compInfo: nullType,
 	Trnf: makeType('Transform', 'Trnf'),
 	quiltWarp: makeType('', 'quiltWarp'),
-	generatorSettings: makeType('', 'null'),
-	crema: makeType('', 'null'),
+	generatorSettings: nullType,
+	crema: nullType,
+	FrIn: nullType,
+	blendOptions: nullType,
+	FXRf: nullType,
+	Lefx: nullType,
+	time: nullType,
+	animKey: nullType,
+	timeScope: nullType,
+	inTime: nullType,
+	outTime: nullType,
+	sheetStyle: nullType,
+	translation: nullType,
+	Skew: nullType,
+	'Lnk ': makeType('', 'ExternalFileLink'),
+	frameReader: makeType('', 'FrameReader'),
+	effectParams: makeType('', 'motionTrackEffectParams'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
 	'Crv ': makeType('', 'CrPt'),
 	Clrs: makeType('', 'Clrt'),
 	Trns: makeType('', 'TrnS'),
-	keyDescriptorList: makeType('', 'null'),
+	keyDescriptorList: nullType,
 	solidFillMulti: makeType('', 'SoFi'),
 	gradientFillMulti: makeType('', 'GrFl'),
 	dropShadowMulti: makeType('', 'DrSh'),
 	innerShadowMulti: makeType('', 'IrSh'),
 	frameFXMulti: makeType('', 'FrFX'),
+	FrIn: nullType,
+	FSts: nullType,
+	LaSt: nullType,
+	sheetTimelineOptions: nullType,
+	trackList: makeType('', 'animationTrack'),
+	globalTrackList: makeType('', 'animationTrack'),
+	keyList: nullType,
+	audioClipGroupList: nullType,
+	audioClipList: nullType,
 };
 
 const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
-		'artboardPresetName', 'json',
+		'artboardPresetName', 'json', 'groupID', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
@@ -123,7 +157,9 @@ const typeToField: { [key: string]: string[]; } = {
 		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages', 'Crop',
 		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
 		'keyOriginIndex', 'major', 'minor', 'fix', 'docDefaultNewArtboardBackgroundType', 'artboardBackgroundType',
-		'numModifyingFX', 'deformNumRows', 'deformNumCols',
+		'numModifyingFX', 'deformNumRows', 'deformNumCols', 'FrID', 'FrDl', 'FsID', 'LCnt', 'AFrm', 'AFSt',
+		'numBefore', 'numAfter', 'Spcn', 'minOpacity', 'maxOpacity', 'BlnM', 'sheetID', 'gblA', 'globalAltitude',
+		'descVersion', 'frameReaderType', 'LyrI', 'zoomOrigin',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
@@ -131,21 +167,22 @@ const typeToField: { [key: string]: string[]; } = {
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
-		'enableCompCoreThreads', 'gs99',
+		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
-		'useShape', 'useTexture', 'masterFXSwitch', 'uglg', 'antialiasGloss', 'useShape',
+		'useShape', 'useTexture', 'uglg', 'antialiasGloss', 'useShape',
 		'useTexture', 'Algn', 'Rvrs', 'Dthr', 'Invr', 'VctC', 'ShTr', 'layerConceals',
 		'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock', 'strokeStyleStrokeAdjust',
 		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint', 'keyShapeInvalidated',
 		'autoExpandEnabled', 'autoNestEnabled', 'autoPositionEnabled', 'shrinkwrapOnSaveEnabled',
-		'present', 'showInDialog', 'overprint',
+		'present', 'showInDialog', 'overprint', 'sheetDisclosed', 'lightsDisclosed', 'meshesDisclosed',
+		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
-		'xx', 'xy', 'yx', 'yy', 'tx', 'ty',
+		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -156,7 +193,8 @@ const typeToField: { [key: string]: string[]; } = {
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
 		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
-		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti',
+		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti', 'FrIn', 'FSts', 'FsFr',
+		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null'],
@@ -179,6 +217,13 @@ const fieldToArrayType: Dict = {
 	'frameFXMulti': 'Objc',
 	'innerShadowMulti': 'Objc',
 	'dropShadowMulti': 'Objc',
+	'LaSt': 'Objc',
+	'FrIn': 'Objc',
+	'FSts': 'Objc',
+	'FsFr': 'long',
+	'blendOptions': 'Objc',
+	'sheetTimelineOptions': 'Objc',
+	'keyList': 'Objc',
 };
 
 const fieldToType: Dict = {};
@@ -197,13 +242,15 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 	fieldToArrayType[field] = 'Objc';
 }
 
-function getTypeByKey(key: string, value: any, root: string) {
+function getTypeByKey(key: string, value: any, root: string, parent: any) {
 	if (key === 'Sz  ') {
 		return ('Wdth' in value) ? 'Objc' : (('units' in value) ? 'UntF' : 'doub');
 	} else if (key === 'Type') {
 		return typeof value === 'string' ? 'enum' : 'long';
 	} else if (key === 'AntA') {
 		return typeof value === 'string' ? 'enum' : 'bool';
+	} else if ((key === 'Hrzn' || key === 'Vrtc') && parent.Type === 'keyType.Pstn') {
+		return 'long';
 	} else if (key === 'Hrzn' || key === 'Vrtc' || key === 'Top ' || key === 'Left' || key === 'Btom' || key === 'Rght') {
 		return typeof value === 'number' ? 'doub' : 'UntF';
 	} else if (key === 'Vrsn') {
@@ -223,7 +270,7 @@ export function readAsciiStringOrClassId(reader: PsdReader) {
 }
 
 function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
-	if (value.length === 4 && value !== 'warp') {
+	if (value.length === 4 && value !== 'warp' && value !== 'time' && value !== 'hold') {
 		// write classId
 		writeInt32(writer, 0);
 		writeSignature(writer, value);
@@ -242,7 +289,7 @@ export function readDescriptorStructure(reader: PsdReader) {
 	// object.__struct =
 	readClassStructure(reader);
 	const itemsCount = readUint32(reader);
-
+	// console.log('//', object.__struct);
 	for (let i = 0; i < itemsCount; i++) {
 		const key = readAsciiStringOrClassId(reader);
 		const type = readSignature(reader);
@@ -251,7 +298,7 @@ export function readDescriptorStructure(reader: PsdReader) {
 		// if (!getTypeByKey(key, data)) console.log(`> '${key}' '${type}'`, data);
 		object[key] = data;
 	}
-	// console.log('//', struct);
+
 	return object;
 }
 
@@ -266,11 +313,19 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	writeUint32(writer, keys.length);
 
 	for (const key of keys) {
-		let type = getTypeByKey(key, value[key], root);
+		let type = getTypeByKey(key, value[key], root, value);
 		let extType = fieldToExtType[key];
 
-		if ((key === 'Strt' || key === 'Brgh') && 'H   ' in value) {
+		if (key === 'Scl ' && 'Hrzn' in value[key]) {
+			type = 'Objc';
+			extType = nullType;
+		} else if (key === 'audioClipGroupList' && keys.length === 1) {
+			type = 'VlLs';
+		} else if ((key === 'Strt' || key === 'Brgh') && 'H   ' in value) {
 			type = 'doub';
+		} else if (key === 'Strt') {
+			type = 'Objc';
+			extType = nullType;
 		} else if (channels.indexOf(key) !== -1) {
 			type = (classId === 'RGBC' && root !== 'artd') ? 'doub' : 'long';
 		} else if (key === 'profile') {
@@ -759,6 +814,714 @@ export interface QuiltWarpDescriptor extends WarpDescriptor {
 	};
 }
 
+export interface FractionDescriptor {
+	numerator: number;
+	denominator: number;
+}
+
+export interface HrznVrtcDescriptor {
+	Hrzn: number;
+	Vrtc: number;
+}
+
+export interface FrameDescriptor {
+	FrLs: number[];
+	enab?: boolean;
+	IMsk?: { Ofst: HrznVrtcDescriptor };
+	VMsk?: { Ofst: HrznVrtcDescriptor };
+	Ofst?: HrznVrtcDescriptor;
+	FXRf?: HrznVrtcDescriptor;
+	Lefx?: Lfx2Descriptor;
+	blendOptions?: { Opct: DescriptorUnitsValue; };
+}
+
+export interface FrameListDescriptor {
+	LaID: number; // layer ID
+	LaSt: FrameDescriptor[];
+}
+
+export function horzVrtcToXY(hv: HrznVrtcDescriptor): { x: number; y: number; } {
+	return { x: hv.Hrzn, y: hv.Vrtc };
+}
+
+export function xyToHorzVrtc(xy: { x: number; y: number; }): HrznVrtcDescriptor {
+	return { Hrzn: xy.x, Vrtc: xy.y };
+}
+
+export type TimelineAnimKeyDescriptor = {
+	Type: 'keyType.Opct';
+	Opct: DescriptorUnitsValue;
+} | {
+	Type: 'keyType.Trnf';
+	'Scl ': HrznVrtcDescriptor;
+	Skew: HrznVrtcDescriptor;
+	rotation: number;
+	translation: HrznVrtcDescriptor;
+} | {
+	Type: 'keyType.Pstn';
+	Hrzn: number;
+	Vrtc: number;
+} | {
+	Type: 'keyType.sheetStyle';
+	sheetStyle: {
+		Vrsn: number;
+		Lefx?: Lfx2Descriptor;
+		blendOptions: {};
+	};
+} | {
+	Type: 'keyType.globalLighting';
+	gblA: number;
+	globalAltitude: number;
+};
+
+export interface TimelineKeyDescriptor {
+	Vrsn: 1;
+	animInterpStyle: 'animInterpStyle.Lnr ' | 'animInterpStyle.hold';
+	time: FractionDescriptor;
+	animKey: TimelineAnimKeyDescriptor;
+	selected: boolean;
+}
+
+export interface TimelineTrackDescriptor {
+	trackID: 'stdTrackID.globalLightingTrack' | 'stdTrackID.opacityTrack' | 'stdTrackID.styleTrack' | 'stdTrackID.sheetTransformTrack' | 'stdTrackID.sheetPositionTrack';
+	Vrsn: 1;
+	enab: boolean;
+	Effc: boolean;
+	effectParams?: {
+		keyList: TimelineKeyDescriptor[];
+		fillCanvas: boolean;
+		zoomOrigin: number;
+	};
+	keyList: TimelineKeyDescriptor[];
+}
+
+export interface TimeScopeDescriptor {
+	Vrsn: 1;
+	Strt: FractionDescriptor;
+	duration: FractionDescriptor;
+	inTime: FractionDescriptor;
+	outTime: FractionDescriptor;
+}
+
+export interface TimelineDescriptor {
+	Vrsn: 1;
+	timeScope: TimeScopeDescriptor;
+	autoScope: boolean;
+	audioLevel: number;
+	LyrI: number;
+	trackList?: TimelineTrackDescriptor[];
+}
+
+export interface EffectDescriptor extends Partial<DescriptorGradientContent>, Partial<DescriptorPatternContent> {
+	enab?: boolean;
+	Styl: string;
+	PntT?: string;
+	'Md  '?: string;
+	Opct?: DescriptorUnitsValue;
+	'Sz  '?: DescriptorUnitsValue;
+	'Clr '?: DescriptorColor;
+	present?: boolean;
+	showInDialog?: boolean;
+	overprint?: boolean;
+}
+
+export interface Lfx2Descriptor {
+	'Scl '?: DescriptorUnitsValue;
+	masterFXSwitch?: boolean;
+	DrSh?: EffectDescriptor;
+	IrSh?: EffectDescriptor;
+	OrGl?: EffectDescriptor;
+	IrGl?: EffectDescriptor;
+	ebbl?: EffectDescriptor;
+	SoFi?: EffectDescriptor;
+	patternFill?: EffectDescriptor;
+	GrFl?: EffectDescriptor;
+	ChFX?: EffectDescriptor;
+	FrFX?: EffectDescriptor;
+}
+
+export interface LmfxDescriptor {
+	'Scl '?: DescriptorUnitsValue;
+	masterFXSwitch?: boolean;
+	numModifyingFX?: number;
+	OrGl?: EffectDescriptor;
+	IrGl?: EffectDescriptor;
+	ebbl?: EffectDescriptor;
+	ChFX?: EffectDescriptor;
+	dropShadowMulti?: EffectDescriptor[];
+	innerShadowMulti?: EffectDescriptor[];
+	solidFillMulti?: EffectDescriptor[];
+	gradientFillMulti?: EffectDescriptor[];
+	frameFXMulti?: EffectDescriptor[];
+	patternFill?: EffectDescriptor; // ???
+}
+
+function parseFxObject(fx: EffectDescriptor) {
+	const stroke: LayerEffectStroke = {
+		enabled: !!fx.enab,
+		position: FStl.decode(fx.Styl),
+		fillType: FrFl.decode(fx.PntT!),
+		blendMode: BlnM.decode(fx['Md  ']!),
+		opacity: parsePercent(fx.Opct),
+		size: parseUnits(fx['Sz  ']!),
+	};
+
+	if (fx.present !== undefined) stroke.present = fx.present;
+	if (fx.showInDialog !== undefined) stroke.showInDialog = fx.showInDialog;
+	if (fx.overprint !== undefined) stroke.overprint = fx.overprint;
+	if (fx['Clr ']) stroke.color = parseColor(fx['Clr ']);
+	if (fx.Grad) stroke.gradient = parseGradientContent(fx as any);
+	if (fx.Ptrn) stroke.pattern = parsePatternContent(fx as any);
+
+	return stroke;
+}
+
+function serializeFxObject(stroke: LayerEffectStroke) {
+	let FrFX: EffectDescriptor = {} as any;
+	FrFX.enab = !!stroke.enabled;
+	if (stroke.present !== undefined) FrFX.present = !!stroke.present;
+	if (stroke.showInDialog !== undefined) FrFX.showInDialog = !!stroke.showInDialog;
+	FrFX.Styl = FStl.encode(stroke.position);
+	FrFX.PntT = FrFl.encode(stroke.fillType);
+	FrFX['Md  '] = BlnM.encode(stroke.blendMode);
+	FrFX.Opct = unitsPercent(stroke.opacity);
+	FrFX['Sz  '] = unitsValue(stroke.size, 'size');
+	if (stroke.color) FrFX['Clr '] = serializeColor(stroke.color);
+	if (stroke.gradient) FrFX = { ...FrFX, ...serializeGradientContent(stroke.gradient) };
+	if (stroke.pattern) FrFX = { ...FrFX, ...serializePatternContent(stroke.pattern) };
+	if (stroke.overprint !== undefined) FrFX.overprint = !!stroke.overprint;
+	return FrFX;
+}
+
+export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boolean) {
+	const info: Lfx2Descriptor & LmfxDescriptor = multi ? {
+		'Scl ': unitsPercent(e.scale ?? 1),
+		masterFXSwitch: !e.disabled,
+	} : {
+		masterFXSwitch: !e.disabled,
+		'Scl ': unitsPercent(e.scale ?? 1),
+	};
+
+	const arrayKeys: (keyof LayerEffectsInfo)[] = ['dropShadow', 'innerShadow', 'solidFill', 'gradientOverlay', 'stroke'];
+	for (const key of arrayKeys) {
+		if (e[key] && !Array.isArray(e[key])) throw new Error(`${key} should be an array`);
+	}
+
+	if (e.dropShadow?.[0] && !multi) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', log);
+	if (e.dropShadow?.[0] && multi) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', log));
+	if (e.innerShadow?.[0] && !multi) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', log);
+	if (e.innerShadow?.[0] && multi) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', log));
+	if (e.outerGlow) info.OrGl = serializeEffectObject(e.outerGlow, 'outerGlow', log);
+	if (e.solidFill?.[0] && multi) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', log));
+	if (e.gradientOverlay?.[0] && multi) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', log));
+	if (e.stroke?.[0] && multi) info.frameFXMulti = e.stroke.map(i => serializeFxObject(i));
+	if (e.innerGlow) info.IrGl = serializeEffectObject(e.innerGlow, 'innerGlow', log);
+	if (e.bevel) info.ebbl = serializeEffectObject(e.bevel, 'bevel', log);
+	if (e.solidFill?.[0] && !multi) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', log);
+	if (e.patternOverlay) info.patternFill = serializeEffectObject(e.patternOverlay, 'patternOverlay', log);
+	if (e.gradientOverlay?.[0] && !multi) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', log);
+	if (e.satin) info.ChFX = serializeEffectObject(e.satin, 'satin', log);
+	if (e.stroke?.[0] && !multi) info.FrFX = serializeFxObject(e.stroke?.[0]);
+
+	if (multi) {
+		info.numModifyingFX = 0;
+
+		for (const key of Object.keys(e)) {
+			const value = (e as any)[key];
+			if (Array.isArray(value)) {
+				for (const effect of value) {
+					if (effect.enabled) info.numModifyingFX++;
+				}
+			}
+		}
+	}
+
+	return info;
+}
+
+export function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean) {
+	const effects: LayerEffectsInfo = {};
+	if (!info.masterFXSwitch) effects.disabled = true;
+	if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
+	if (info.DrSh) effects.dropShadow = [parseEffectObject(info.DrSh, log)];
+	if (info.dropShadowMulti) effects.dropShadow = info.dropShadowMulti.map(i => parseEffectObject(i, log));
+	if (info.IrSh) effects.innerShadow = [parseEffectObject(info.IrSh, log)];
+	if (info.innerShadowMulti) effects.innerShadow = info.innerShadowMulti.map(i => parseEffectObject(i, log));
+	if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl, log);
+	if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl, log);
+	if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl, log);
+	if (info.SoFi) effects.solidFill = [parseEffectObject(info.SoFi, log)];
+	if (info.solidFillMulti) effects.solidFill = info.solidFillMulti.map(i => parseEffectObject(i, log));
+	if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill, log);
+	if (info.GrFl) effects.gradientOverlay = [parseEffectObject(info.GrFl, log)];
+	if (info.gradientFillMulti) effects.gradientOverlay = info.gradientFillMulti.map(i => parseEffectObject(i, log));
+	if (info.ChFX) effects.satin = parseEffectObject(info.ChFX, log);
+	if (info.FrFX) effects.stroke = [parseFxObject(info.FrFX)];
+	if (info.frameFXMulti) effects.stroke = info.frameFXMulti.map(i => parseFxObject(i));
+	return effects;
+}
+
+function parseKeyList(keyList: TimelineKeyDescriptor[], logMissingFeatures: boolean) {
+	const keys: TimelineKey[] = [];
+
+	for (let j = 0; j < keyList.length; j++) {
+		const key = keyList[j];
+		const { time, selected, animKey } = key;
+		const interpolation = animInterpStyleEnum.decode(key.animInterpStyle);
+
+		switch (animKey.Type) {
+			case 'keyType.Opct':
+				keys.push({ interpolation, time, selected, type: 'opacity', value: parsePercent(animKey.Opct) });
+				break;
+			case 'keyType.Pstn':
+				keys.push({ interpolation, time, selected, type: 'position', x: animKey.Hrzn, y: animKey.Vrtc });
+				break;
+			case 'keyType.Trnf':
+				keys.push({
+					interpolation, time, selected, type: 'transform',
+					scale: horzVrtcToXY(animKey['Scl ']), skew: horzVrtcToXY(animKey.Skew), rotation: animKey.rotation, translation: horzVrtcToXY(animKey.translation)
+				});
+				break;
+			case 'keyType.sheetStyle': {
+				const key: TimelineKey = { interpolation, time, selected, type: 'style' };
+				if (animKey.sheetStyle.Lefx) key.style = parseEffects(animKey.sheetStyle.Lefx, logMissingFeatures);
+				keys.push(key);
+				break;
+			}
+			case 'keyType.globalLighting': {
+				keys.push({
+					interpolation, time, selected, type: 'globalLighting',
+					globalAngle: animKey.gblA, globalAltitude: animKey.globalAltitude
+				});
+				break;
+			}
+			default: throw new Error(`Unsupported keyType value`);
+		}
+	}
+
+	return keys;
+}
+
+function serializeKeyList(keys: TimelineKey[]): TimelineKeyDescriptor[] {
+	const keyList: TimelineKeyDescriptor[] = [];
+
+	for (let j = 0; j < keys.length; j++) {
+		const key = keys[j];
+		const { time, selected = false, interpolation } = key;
+		const animInterpStyle = animInterpStyleEnum.encode(interpolation) as 'animInterpStyle.Lnr ' | 'animInterpStyle.hold';
+		let animKey: TimelineAnimKeyDescriptor;
+
+		switch (key.type) {
+			case 'opacity':
+				animKey = { Type: 'keyType.Opct', Opct: unitsPercent(key.value) };
+				break;
+			case 'position':
+				animKey = { Type: 'keyType.Pstn', Hrzn: key.x, Vrtc: key.y };
+				break;
+			case 'transform':
+				animKey = { Type: 'keyType.Trnf', 'Scl ': xyToHorzVrtc(key.scale), Skew: xyToHorzVrtc(key.skew), rotation: key.rotation, translation: xyToHorzVrtc(key.translation) };
+				break;
+			case 'style':
+				animKey = { Type: 'keyType.sheetStyle', sheetStyle: { Vrsn: 1, blendOptions: {} } };
+				if (key.style) animKey.sheetStyle = { Vrsn: 1, Lefx: serializeEffects(key.style, false, false), blendOptions: {} };
+				break;
+			case 'globalLighting': {
+				animKey = { Type: 'keyType.globalLighting', gblA: key.globalAngle, globalAltitude: key.globalAltitude };
+				break;
+			}
+			default: throw new Error(`Unsupported keyType value`);
+		}
+
+		keyList.push({ Vrsn: 1, animInterpStyle, time, animKey, selected });
+	}
+
+	return keyList;
+}
+
+export function parseTrackList(trackList: TimelineTrackDescriptor[], logMissingFeatures: boolean) {
+	const tracks: TimelineTrack[] = [];
+
+	for (let i = 0; i < trackList.length; i++) {
+		const tr = trackList[i];
+		const track: TimelineTrack = {
+			type: stdTrackID.decode(tr.trackID),
+			enabled: tr.enab,
+			keys: parseKeyList(tr.keyList, logMissingFeatures),
+		};
+
+		if (tr.effectParams) {
+			track.effectParams = {
+				fillCanvas: tr.effectParams.fillCanvas,
+				zoomOrigin: tr.effectParams.zoomOrigin,
+				keys: parseKeyList(tr.effectParams.keyList, logMissingFeatures),
+			};
+		}
+
+		tracks.push(track);
+	}
+
+	return tracks;
+}
+
+export function serializeTrackList(tracks: TimelineTrack[]): TimelineTrackDescriptor[] {
+	const trackList: TimelineTrackDescriptor[] = [];
+
+	for (let i = 0; i < tracks.length; i++) {
+		const t = tracks[i];
+		trackList.push({
+			trackID: stdTrackID.encode(t.type) as any,
+			Vrsn: 1,
+			enab: !!t.enabled,
+			Effc: !!t.effectParams,
+			...(t.effectParams ? {
+				effectParams: {
+					keyList: serializeKeyList(t.keys),
+					fillCanvas: t.effectParams.fillCanvas,
+					zoomOrigin: t.effectParams.zoomOrigin,
+				}
+			} : {}),
+			keyList: serializeKeyList(t.keys),
+		});
+	}
+
+	return trackList;
+}
+
+type AllEffects = LayerEffectShadow & LayerEffectsOuterGlow & LayerEffectStroke &
+	LayerEffectInnerGlow & LayerEffectBevel & LayerEffectSolidFill &
+	LayerEffectPatternOverlay & LayerEffectSatin & LayerEffectGradientOverlay;
+
+function parseEffectObject(obj: any, reportErrors: boolean) {
+	const result: AllEffects = {} as any;
+
+	for (const key of Object.keys(obj)) {
+		const val = obj[key];
+
+		switch (key) {
+			case 'enab': result.enabled = !!val; break;
+			case 'uglg': result.useGlobalLight = !!val; break;
+			case 'AntA': result.antialiased = !!val; break;
+			case 'Algn': result.align = !!val; break;
+			case 'Dthr': result.dither = !!val; break;
+			case 'Invr': result.invert = !!val; break;
+			case 'Rvrs': result.reverse = !!val; break;
+			case 'Clr ': result.color = parseColor(val); break;
+			case 'hglC': result.highlightColor = parseColor(val); break;
+			case 'sdwC': result.shadowColor = parseColor(val); break;
+			case 'Styl': result.position = FStl.decode(val); break;
+			case 'Md  ': result.blendMode = BlnM.decode(val); break;
+			case 'hglM': result.highlightBlendMode = BlnM.decode(val); break;
+			case 'sdwM': result.shadowBlendMode = BlnM.decode(val); break;
+			case 'bvlS': result.style = BESl.decode(val); break;
+			case 'bvlD': result.direction = BESs.decode(val); break;
+			case 'bvlT': result.technique = bvlT.decode(val) as any; break;
+			case 'GlwT': result.technique = BETE.decode(val) as any; break;
+			case 'glwS': result.source = IGSr.decode(val); break;
+			case 'Type': result.type = GrdT.decode(val); break;
+			case 'gs99': result.interpolationMethod = gradientInterpolationMethodType.decode(val); break;
+			case 'Opct': result.opacity = parsePercent(val); break;
+			case 'hglO': result.highlightOpacity = parsePercent(val); break;
+			case 'sdwO': result.shadowOpacity = parsePercent(val); break;
+			case 'lagl': result.angle = parseAngle(val); break;
+			case 'Angl': result.angle = parseAngle(val); break;
+			case 'Lald': result.altitude = parseAngle(val); break;
+			case 'Sftn': result.soften = parseUnits(val); break;
+			case 'srgR': result.strength = parsePercent(val); break;
+			case 'blur': result.size = parseUnits(val); break;
+			case 'Nose': result.noise = parsePercent(val); break;
+			case 'Inpr': result.range = parsePercent(val); break;
+			case 'Ckmt': result.choke = parseUnits(val); break;
+			case 'ShdN': result.jitter = parsePercent(val); break;
+			case 'Dstn': result.distance = parseUnits(val); break;
+			case 'Scl ': result.scale = parsePercent(val); break;
+			case 'Ptrn': result.pattern = { name: val['Nm  '], id: val.Idnt }; break;
+			case 'phase': result.phase = { x: val.Hrzn, y: val.Vrtc }; break;
+			case 'Ofst': result.offset = { x: parsePercent(val.Hrzn), y: parsePercent(val.Vrtc) }; break;
+			case 'MpgS':
+			case 'TrnS':
+				result.contour = {
+					name: val['Nm  '],
+					curve: (val['Crv '] as any[]).map(p => ({ x: p.Hrzn, y: p.Vrtc })),
+				};
+				break;
+			case 'Grad': result.gradient = parseGradient(val); break;
+			case 'useTexture':
+			case 'useShape':
+			case 'layerConceals':
+			case 'present':
+			case 'showInDialog':
+			case 'antialiasGloss': result[key] = val; break;
+			default:
+				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
+		}
+	}
+
+	return result;
+}
+
+function serializeEffectObject(obj: any, objName: string, reportErrors: boolean) {
+	const result: any = {};
+
+	for (const objKey of Object.keys(obj)) {
+		const key: keyof AllEffects = objKey as any;
+		const val = obj[key];
+
+		switch (key) {
+			case 'enabled': result.enab = !!val; break;
+			case 'useGlobalLight': result.uglg = !!val; break;
+			case 'antialiased': result.AntA = !!val; break;
+			case 'align': result.Algn = !!val; break;
+			case 'dither': result.Dthr = !!val; break;
+			case 'invert': result.Invr = !!val; break;
+			case 'reverse': result.Rvrs = !!val; break;
+			case 'color': result['Clr '] = serializeColor(val); break;
+			case 'highlightColor': result.hglC = serializeColor(val); break;
+			case 'shadowColor': result.sdwC = serializeColor(val); break;
+			case 'position': result.Styl = FStl.encode(val); break;
+			case 'blendMode': result['Md  '] = BlnM.encode(val); break;
+			case 'highlightBlendMode': result.hglM = BlnM.encode(val); break;
+			case 'shadowBlendMode': result.sdwM = BlnM.encode(val); break;
+			case 'style': result.bvlS = BESl.encode(val); break;
+			case 'direction': result.bvlD = BESs.encode(val); break;
+			case 'technique':
+				if (objName === 'bevel') {
+					result.bvlT = bvlT.encode(val);
+				} else {
+					result.GlwT = BETE.encode(val);
+				}
+				break;
+			case 'source': result.glwS = IGSr.encode(val); break;
+			case 'type': result.Type = GrdT.encode(val); break;
+			case 'interpolationMethod': result.gs99 = gradientInterpolationMethodType.encode(val); break;
+			case 'opacity': result.Opct = unitsPercent(val); break;
+			case 'highlightOpacity': result.hglO = unitsPercent(val); break;
+			case 'shadowOpacity': result.sdwO = unitsPercent(val); break;
+			case 'angle':
+				if (objName === 'gradientOverlay') {
+					result.Angl = unitsAngle(val);
+				} else {
+					result.lagl = unitsAngle(val);
+				}
+				break;
+			case 'altitude': result.Lald = unitsAngle(val); break;
+			case 'soften': result.Sftn = unitsValue(val, key); break;
+			case 'strength': result.srgR = unitsPercent(val); break;
+			case 'size': result.blur = unitsValue(val, key); break;
+			case 'noise': result.Nose = unitsPercent(val); break;
+			case 'range': result.Inpr = unitsPercent(val); break;
+			case 'choke': result.Ckmt = unitsValue(val, key); break;
+			case 'jitter': result.ShdN = unitsPercent(val); break;
+			case 'distance': result.Dstn = unitsValue(val, key); break;
+			case 'scale': result['Scl '] = unitsPercent(val); break;
+			case 'pattern': result.Ptrn = { 'Nm  ': val.name, Idnt: val.id }; break;
+			case 'phase': result.phase = { Hrzn: val.x, Vrtc: val.y }; break;
+			case 'offset': result.Ofst = { Hrzn: unitsPercent(val.x), Vrtc: unitsPercent(val.y) }; break;
+			case 'contour': {
+				result[objName === 'satin' ? 'MpgS' : 'TrnS'] = {
+					'Nm  ': (val as EffectContour).name,
+					'Crv ': (val as EffectContour).curve.map(p => ({ Hrzn: p.x, Vrtc: p.y })),
+				};
+				break;
+			}
+			case 'gradient': result.Grad = serializeGradient(val); break;
+			case 'useTexture':
+			case 'useShape':
+			case 'layerConceals':
+			case 'present':
+			case 'showInDialog':
+			case 'antialiasGloss':
+				result[key] = val;
+				break;
+			default:
+				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
+		}
+	}
+
+	return result;
+}
+
+function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoiseGradient {
+	if (grad.GrdF === 'GrdF.CstS') {
+		const samples: number = grad.Intr || 4096;
+
+		return {
+			type: 'solid',
+			name: grad['Nm  '],
+			smoothness: grad.Intr / 4096,
+			colorStops: grad.Clrs.map(s => ({
+				color: parseColor(s['Clr ']),
+				location: s.Lctn / samples,
+				midpoint: s.Mdpn / 100,
+			})),
+			opacityStops: grad.Trns.map(s => ({
+				opacity: parsePercent(s.Opct),
+				location: s.Lctn / samples,
+				midpoint: s.Mdpn / 100,
+			})),
+		};
+	} else {
+		return {
+			type: 'noise',
+			name: grad['Nm  '],
+			roughness: grad.Smth / 4096,
+			colorModel: ClrS.decode(grad.ClrS),
+			randomSeed: grad.RndS,
+			restrictColors: !!grad.VctC,
+			addTransparency: !!grad.ShTr,
+			min: grad['Mnm '].map(x => x / 100),
+			max: grad['Mxm '].map(x => x / 100),
+		};
+	}
+}
+
+function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): DesciptorGradient {
+	if (grad.type === 'solid') {
+		const samples = Math.round((grad.smoothness ?? 1) * 4096);
+		return {
+			'Nm  ': grad.name || '',
+			GrdF: 'GrdF.CstS',
+			Intr: samples,
+			Clrs: grad.colorStops.map(s => ({
+				'Clr ': serializeColor(s.color),
+				Type: 'Clry.UsrS',
+				Lctn: Math.round(s.location * samples),
+				Mdpn: Math.round((s.midpoint ?? 0.5) * 100),
+			})),
+			Trns: grad.opacityStops.map(s => ({
+				Opct: unitsPercent(s.opacity),
+				Lctn: Math.round(s.location * samples),
+				Mdpn: Math.round((s.midpoint ?? 0.5) * 100),
+			})),
+		};
+	} else {
+		return {
+			GrdF: 'GrdF.ClNs',
+			'Nm  ': grad.name || '',
+			ShTr: !!grad.addTransparency,
+			VctC: !!grad.restrictColors,
+			ClrS: ClrS.encode(grad.colorModel),
+			RndS: grad.randomSeed || 0,
+			Smth: Math.round((grad.roughness ?? 1) * 4096),
+			'Mnm ': (grad.min || [0, 0, 0, 0]).map(x => x * 100),
+			'Mxm ': (grad.max || [1, 1, 1, 1]).map(x => x * 100),
+		};
+	}
+}
+
+function parseGradientContent(descriptor: DescriptorGradientContent) {
+	const result = parseGradient(descriptor.Grad) as (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
+	result.style = GrdT.decode(descriptor.Type);
+	if (descriptor.Dthr !== undefined) result.dither = descriptor.Dthr;
+	if (descriptor.Rvrs !== undefined) result.reverse = descriptor.Rvrs;
+	if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
+	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
+	if (descriptor.Algn !== undefined) result.align = descriptor.Algn;
+	if (descriptor.Ofst !== undefined) {
+		result.offset = {
+			x: parsePercent(descriptor.Ofst.Hrzn),
+			y: parsePercent(descriptor.Ofst.Vrtc)
+		};
+	}
+	return result;
+}
+
+function parsePatternContent(descriptor: DescriptorPatternContent) {
+	const result: EffectPattern & ExtraPatternInfo = {
+		name: descriptor.Ptrn['Nm  '],
+		id: descriptor.Ptrn.Idnt,
+	};
+	if (descriptor.Lnkd !== undefined) result.linked = descriptor.Lnkd;
+	if (descriptor.phase !== undefined) result.phase = { x: descriptor.phase.Hrzn, y: descriptor.phase.Vrtc };
+	return result;
+}
+
+
+export function parseVectorContent(descriptor: DescriptorVectorContent): VectorContent {
+	if ('Grad' in descriptor) {
+		return parseGradientContent(descriptor);
+	} else if ('Ptrn' in descriptor) {
+		return { type: 'pattern', ...parsePatternContent(descriptor) };
+	} else if ('Clr ' in descriptor) {
+		return { type: 'color', color: parseColor(descriptor['Clr ']) };
+	} else {
+		throw new Error('Invalid vector content');
+	}
+}
+
+function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo) {
+	const result: DescriptorGradientContent = {} as any;
+	if (content.dither !== undefined) result.Dthr = content.dither;
+	if (content.reverse !== undefined) result.Rvrs = content.reverse;
+	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
+	result.Type = GrdT.encode(content.style);
+	if (content.align !== undefined) result.Algn = content.align;
+	if (content.scale !== undefined) result['Scl '] = unitsPercent(content.scale);
+	if (content.offset) {
+		result.Ofst = {
+			Hrzn: unitsPercent(content.offset.x),
+			Vrtc: unitsPercent(content.offset.y),
+		};
+	}
+	result.Grad = serializeGradient(content);
+	return result;
+}
+
+function serializePatternContent(content: EffectPattern & ExtraPatternInfo) {
+	const result: DescriptorPatternContent = {
+		Ptrn: {
+			'Nm  ': content.name || '',
+			Idnt: content.id || '',
+		}
+	};
+	if (content.linked !== undefined) result.Lnkd = !!content.linked;
+	if (content.phase !== undefined) result.phase = { Hrzn: content.phase.x, Vrtc: content.phase.y };
+	return result;
+}
+
+export function serializeVectorContent(content: VectorContent): { descriptor: DescriptorVectorContent; key: string; } {
+	if (content.type === 'color') {
+		return { key: 'SoCo', descriptor: { 'Clr ': serializeColor(content.color) } };
+	} else if (content.type === 'pattern') {
+		return { key: 'PtFl', descriptor: serializePatternContent(content) };
+	} else {
+		return { key: 'GdFl', descriptor: serializeGradientContent(content) };
+	}
+}
+
+export function parseColor(color: DescriptorColor): Color {
+	if ('H   ' in color) {
+		return { h: parsePercentOrAngle(color['H   ']), s: color.Strt, b: color.Brgh };
+	} else if ('Rd  ' in color) {
+		return { r: color['Rd  '], g: color['Grn '], b: color['Bl  '] };
+	} else if ('Cyn ' in color) {
+		return { c: color['Cyn '], m: color.Mgnt, y: color['Ylw '], k: color.Blck };
+	} else if ('Gry ' in color) {
+		return { k: color['Gry '] };
+	} else if ('Lmnc' in color) {
+		return { l: color.Lmnc, a: color['A   '], b: color['B   '] };
+	} else {
+		throw new Error('Unsupported color descriptor');
+	}
+}
+
+export function serializeColor(color: Color | undefined): DescriptorColor {
+	if (!color) {
+		return { 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
+	} else if ('r' in color) {
+		return { 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
+	} else if ('h' in color) {
+		return { 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
+	} else if ('c' in color) {
+		return { 'Cyn ': color.c || 0, Mgnt: color.m || 0, 'Ylw ': color.y || 0, Blck: color.k || 0 };
+	} else if ('l' in color) {
+		return { Lmnc: color.l || 0, 'A   ': color.a || 0, 'B   ': color.b || 0 };
+	} else if ('k' in color) {
+		return { 'Gry ': color.k };
+	} else {
+		throw new Error('Invalid color value');
+	}
+}
+
 export function parseAngle(x: DescriptorUnitsValue) {
 	if (x === undefined) return 0;
 	if (x.units !== 'Angle') throw new Error(`Invalid units: ${x.units}`);
@@ -936,6 +1699,19 @@ export const GrdT = createEnum<GradientStyle>('GrdT', 'linear', {
 	angle: 'Angl',
 	reflected: 'Rflc',
 	diamond: 'Dmnd',
+});
+
+export const animInterpStyleEnum = createEnum<TimelineKeyInterpolation>('animInterpStyle', 'linear', {
+	linear: 'Lnr ',
+	hold: 'hold',
+});
+
+export const stdTrackID = createEnum<TimelineTrackType>('stdTrackID', 'opacity', {
+	opacity: 'opacityTrack',
+	style: 'styleTrack',
+	sheetTransform: 'sheetTransformTrack',
+	sheetPosition: 'sheetPositionTrack',
+	globalLighting: 'globalLightingTrack',
 });
 
 export const gradientInterpolationMethodType = createEnum<InterpolationMethod>('gradientInterpolationMethodType', 'perceptual', {

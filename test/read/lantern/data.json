@@ -6,6 +6,15 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "00000000000000000000000000000000",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -13,15 +22,6 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
-    },
-    "printInformation": {
-      "printSixteenBit": false,
-      "printerManagesColors": true,
-      "printerName": "",
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      },
-      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -31,6 +31,17 @@
     },
     "globalAngle": 30,
     "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
     "layerState": 7,
     "layersGroup": [
       0,
@@ -64,23 +75,73 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
+    "idsSeedNumber": 11,
     "versionInfo": {
       "hasRealMergedData": false,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
     },
-    "idsSeedNumber": 11,
-    "printFlags": {
-      "caption": false,
-      "colorBars": false,
-      "cropMarks": false,
-      "flip": false,
-      "interpolate": false,
-      "labels": false,
-      "negative": false,
-      "printFlags": true,
-      "registrationMarks": false
+    "animations": {
+      "frames": [
+        {
+          "id": 545123074,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545139881,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545156688,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545173495,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545190302,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545207109,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545223916,
+          "delay": 0.1,
+          "dispose": "dispose"
+        },
+        {
+          "id": 545240723,
+          "delay": 0.1,
+          "dispose": "dispose"
+        }
+      ],
+      "animations": [
+        {
+          "id": 0,
+          "frames": [
+            545123074,
+            545139881,
+            545156688,
+            545173495,
+            545190302,
+            545207109,
+            545223916,
+            545240723
+          ],
+          "repeats": 0,
+          "activeFrame": 0
+        }
+      ]
     }
   },
   "children": [
@@ -92,7 +153,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.6016078,
       "transparencyProtected": false,
       "hidden": false,
       "name": "frame 1",
@@ -106,6 +166,55 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": true,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": true
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.6016078,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -119,7 +228,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.6016212,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 2",
@@ -133,6 +241,59 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.6016212,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -146,7 +307,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.601628,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 3",
@@ -160,6 +320,59 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.601628,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -173,7 +386,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.601635,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 4",
@@ -187,6 +399,59 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.601635,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -200,7 +465,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.601642,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 5",
@@ -214,6 +478,59 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.601642,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -227,7 +544,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.6016486,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 6",
@@ -241,6 +557,59 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.6016486,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -254,7 +623,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.6016548,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 7",
@@ -268,6 +636,55 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.6016548,
       "referencePoint": {
         "x": -27,
         "y": -41
@@ -281,7 +698,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1510113580.6016612,
       "transparencyProtected": false,
       "hidden": true,
       "name": "frame 8",
@@ -295,6 +711,55 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            545123074
+          ],
+          "enable": false,
+          "referencePoint": {
+            "x": -27,
+            "y": -41
+          }
+        },
+        {
+          "frames": [
+            545139881
+          ],
+          "enable": false
+        },
+        {
+          "frames": [
+            545156688
+          ]
+        },
+        {
+          "frames": [
+            545173495
+          ]
+        },
+        {
+          "frames": [
+            545190302
+          ]
+        },
+        {
+          "frames": [
+            545207109
+          ]
+        },
+        {
+          "frames": [
+            545223916
+          ]
+        },
+        {
+          "frames": [
+            545240723
+          ]
+        }
+      ],
+      "timestamp": 1510113580.6016612,
       "referencePoint": {
         "x": -27,
         "y": -41

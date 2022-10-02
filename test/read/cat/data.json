@@ -6,6 +6,15 @@
   "colorMode": 3,
   "imageResources": {
     "captionDigest": "d3c99f4b3d8dea288548356a84159c2b",
+    "printInformation": {
+      "printerName": "",
+      "renderingIntent": "relative colorimetric",
+      "printerManagesColors": true,
+      "printSixteenBit": false,
+      "proofSetup": {
+        "builtin": "proofCMYK"
+      }
+    },
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
@@ -13,15 +22,6 @@
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
-    },
-    "printInformation": {
-      "printSixteenBit": false,
-      "printerManagesColors": true,
-      "printerName": "",
-      "proofSetup": {
-        "builtin": "proofCMYK"
-      },
-      "renderingIntent": "relative colorimetric"
     },
     "printScale": {
       "style": "centered",
@@ -39,6 +39,17 @@
     ],
     "globalAngle": 30,
     "globalAltitude": 30,
+    "printFlags": {
+      "labels": false,
+      "cropMarks": false,
+      "colorBars": false,
+      "registrationMarks": false,
+      "negative": false,
+      "flip": false,
+      "interpolate": false,
+      "caption": false,
+      "printFlags": true
+    },
     "layerState": 0,
     "layersGroup": [
       0
@@ -63,24 +74,13 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
+    "iccUntaggedProfile": true,
+    "idsSeedNumber": 199,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
-    },
-    "iccUntaggedProfile": true,
-    "idsSeedNumber": 199,
-    "printFlags": {
-      "caption": false,
-      "colorBars": false,
-      "cropMarks": false,
-      "flip": false,
-      "interpolate": false,
-      "labels": false,
-      "negative": false,
-      "printFlags": true,
-      "registrationMarks": false
     }
   },
   "children": [
@@ -92,7 +92,6 @@
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
-      "timestamp": 1508717915.1286108,
       "transparencyProtected": false,
       "hidden": false,
       "name": "frame 17",
@@ -106,6 +105,125 @@
         "position": false
       },
       "layerColor": "none",
+      "animationFrames": [
+        {
+          "frames": [
+            200408874
+          ],
+          "enable": true,
+          "referencePoint": {
+            "x": -30,
+            "y": -62
+          }
+        },
+        {
+          "frames": [
+            213484720
+          ]
+        },
+        {
+          "frames": [
+            220089871
+          ]
+        },
+        {
+          "frames": [
+            222325202
+          ]
+        },
+        {
+          "frames": [
+            229451370
+          ]
+        },
+        {
+          "frames": [
+            275010311
+          ]
+        },
+        {
+          "frames": [
+            276808660
+          ]
+        },
+        {
+          "frames": [
+            318809353
+          ]
+        },
+        {
+          "frames": [
+            326809485
+          ]
+        },
+        {
+          "frames": [
+            363644130
+          ]
+        },
+        {
+          "frames": [
+            365946480
+          ]
+        },
+        {
+          "frames": [
+            372053929
+          ]
+        },
+        {
+          "frames": [
+            390585542
+          ]
+        },
+        {
+          "frames": [
+            541317226
+          ]
+        },
+        {
+          "frames": [
+            582158236
+          ]
+        },
+        {
+          "frames": [
+            754277887
+          ]
+        },
+        {
+          "frames": [
+            828095067
+          ]
+        },
+        {
+          "frames": [
+            904919864
+          ]
+        },
+        {
+          "frames": [
+            914550275
+          ]
+        },
+        {
+          "frames": [
+            951391219
+          ]
+        },
+        {
+          "frames": [
+            961677103
+          ]
+        }
+      ],
+      "animationFrameFlags": {
+        "propagateFrameOne": true,
+        "unifyLayerPosition": true,
+        "unifyLayerStyle": false,
+        "unifyLayerVisibility": false
+      },
+      "timestamp": 1508717915.1286108,
       "referencePoint": {
         "x": -30,
         "y": -62

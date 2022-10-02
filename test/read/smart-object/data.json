@@ -107,6 +107,17 @@
         "id": "ab4b9a2a-350c-11eb-b49a-c3eb555928d0",
         "placed": "aa5448f7-350c-11eb-b49a-c3eb555928d0",
         "type": "raster",
+        "pageNumber": 1,
+        "totalPages": 1,
+        "frameStep": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "frameCount": 1,
         "transform": [
           44,
           37,
@@ -251,6 +262,17 @@
         "id": "ab4b9a2b-350c-11eb-b49a-c3eb555928d0",
         "placed": "aa5448f8-350c-11eb-b49a-c3eb555928d0",
         "type": "raster",
+        "pageNumber": 1,
+        "totalPages": 1,
+        "frameStep": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "duration": {
+          "numerator": 0,
+          "denominator": 600
+        },
+        "frameCount": 1,
         "transform": [
           178,
           171,

@@ -1,5 +1,8 @@
 # Changelog
 
+## v15.0.0
+- Added support for frame and timeline animations
+
 ## v14.5.0
 - Added support for zip compression without prediction of image data
 - Added support for `compress` option when writing

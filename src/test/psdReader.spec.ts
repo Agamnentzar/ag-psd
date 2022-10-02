@@ -70,11 +70,14 @@ describe('PsdReader', () => {
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
 	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|adjustment-layers/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /ignore-test2/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /animation-timeline/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
-			const psd = readPsdFromFile(path.join(basePath, fileName), { ...opts });
+			const psd = readPsdFromFile(path.join(basePath, fileName), {
+				...opts,
+				// logDevFeatures: true, logMissingFeatures: true,
+			});
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);
 			const compare: { name: string; canvas: HTMLCanvasElement | undefined; skip?: boolean; }[] = [];
@@ -106,6 +109,23 @@ describe('PsdReader', () => {
 						delete l.mask.canvas;
 						delete l.mask.imageData;
 					}
+
+					// if (l.vectorMask) {
+					// 	const canvas = createCanvas(l.right! - l.left!, l.bottom! - l.top!);
+					// 	const context = canvas.getContext('2d')!;
+					// 	context.translate(-l.left!, -l.top!);
+					// 	const knots = l.vectorMask.paths[0].knots;
+					// 	context.beginPath();
+					// 	context.moveTo(knots[knots.length - 1].points[2], knots[knots.length - 1].points[3]);
+					// 	for (let i = 0; i < knots.length; i++) {
+					// 		const prev = i ? knots[i - 1].points : knots[knots.length - 1].points;
+					// 		const points = knots[i].points;
+					// 		context.bezierCurveTo(prev[4], prev[5], points[0], points[1], points[2], points[3]);
+					// 	}
+					// 	context.closePath();
+					// 	context.fill();
+					// 	fs.writeFileSync('test.png', canvas.toBuffer());
+					// }
 				}
 			}
 
@@ -143,14 +163,14 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => f === 'gradient-mode').forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => f === 'animation-timeline').forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {
-				...opts, useImageData: true, useRawThumbnail: true, throwForMissingFeatures: true
+				...opts, useImageData: true, useRawThumbnail: true, throwForMissingFeatures: true,
+				// logDevFeatures: true, logMissingFeatures: true,
 			});
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb' });
-			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.${ext}`), actual);
 			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.bin`), actual);
 			// console.log(require('util').inspect(psd, false, 99, true));
@@ -159,7 +179,8 @@ describe('PsdReader', () => {
 			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, false), 'utf8');
 			// fs.writeFileSync('temp2.txt', require('util').inspect(psd2, false, 99, false), 'utf8');
 
-			compareBuffers(actual, expected, `read-write-${f}`, 0x0);
+			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
+			compareBuffers(actual, expected, `read-write-${f}`, 0x7d20);
 		});
 	});
 
