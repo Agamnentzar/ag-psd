@@ -35,11 +35,17 @@ export interface PsdReader {
 	offset: number;
 	view: DataView;
 	strict: boolean;
+	debug: boolean;
 }
 
 export function createReader(buffer: ArrayBuffer, offset?: number, length?: number): PsdReader {
 	const view = new DataView(buffer, offset, length);
-	return { view, offset: 0, strict: false };
+	return { view, offset: 0, strict: false, debug: false };
+}
+
+export function warnOrThrow(reader: PsdReader, message: string) {
+	if (reader.strict) throw new Error(message);
+	if (reader.debug) console.warn(message);
 }
 
 export function readUint8(reader: PsdReader) {
@@ -97,8 +103,20 @@ export function readFixedPointPath32(reader: PsdReader): number {
 }
 
 export function readBytes(reader: PsdReader, length: number) {
+	const start = reader.view.byteOffset + reader.offset;
 	reader.offset += length;
-	return new Uint8Array(reader.view.buffer, reader.view.byteOffset + reader.offset - length, length);
+
+	if ((start + length) > reader.view.buffer.byteLength) {
+		// fix for broken PSD files that are missing part of file at the end
+		warnOrThrow(reader, 'Reading bytes exceeding buffer length');
+		if (length > (100 * 1024 * 1024)) throw new Error('Reading past end of file'); // limit to 100MB
+		const result = new Uint8Array(length);
+		const len = Math.min(length, reader.view.byteLength - start);
+		if (len > 0) result.set(new Uint8Array(reader.view.buffer, start, len));
+		return result;
+	} else {
+		return new Uint8Array(reader.view.buffer, start, length);
+	}
 }
 
 export function readSignature(reader: PsdReader) {
@@ -835,9 +853,8 @@ export function readDataRLE(
 						// ignore 128
 					}
 
-					if (i >= length) {
-						throw new Error(`Invalid RLE data: exceeded buffer size ${i}/${length}`);
-					}
+					// This showed up on some images from non-photoshop programs, ignoring it seems to work just fine.
+					// if (i >= length) throw new Error(`Invalid RLE data: exceeded buffer size ${i}/${length}`);
 				}
 			}
 		}
@@ -861,13 +878,11 @@ export function readSection<T>(
 
 	const result = func(() => end - reader.offset);
 
-	if (reader.offset !== end && reader.strict) {
+	if (reader.offset !== end) {
 		if (reader.offset > end) {
-			// throw new Error('Exceeded section limits');
-			console.warn('Exceeded section limits');
+			warnOrThrow(reader, 'Exceeded section limits');
 		} else {
-			// throw new Error(`Unread section data: ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
-			console.warn('Unread section data');
+			warnOrThrow(reader, `Unread section data`); // : ${end - reader.offset} bytes at 0x${reader.offset.toString(16)}`);
 		}
 	}
 

@@ -75,7 +75,8 @@ export function loadImagesFromDirectory(dirName: string) {
 
 export function createReaderFromBuffer(buffer: Buffer) {
 	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
-	reader.strict = true; // for testing
+	// reader.strict = true;
+	reader.debug = true; // for testing
 	return reader;
 }
 
