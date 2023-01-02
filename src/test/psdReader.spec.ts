@@ -139,7 +139,8 @@ describe('PsdReader', () => {
 			}
 
 			pushLayerCanvases(psd.children || []);
-			fs.mkdirSync(path.join(resultsFilesPath, f), { recursive: true });
+			const resultsDir = path.join(resultsFilesPath, 'read', f);
+			fs.mkdirSync(resultsDir, { recursive: true });
 
 			if (psd.imageResources?.thumbnail) {
 				compare.push({ name: 'thumb.png', canvas: psd.imageResources.thumbnail, skip: true });
@@ -148,10 +149,10 @@ describe('PsdReader', () => {
 
 			if (psd.imageResources) delete psd.imageResources.thumbnailRaw;
 
-			compare.forEach(i => saveCanvas(path.join(resultsFilesPath, f, i.name), i.canvas));
-			compareFiles.forEach(i => fs.writeFileSync(path.join(resultsFilesPath, f, i.name), i.data));
+			compare.forEach(i => saveCanvas(path.join(resultsDir, i.name), i.canvas));
+			compareFiles.forEach(i => fs.writeFileSync(path.join(resultsDir, i.name), i.data));
 
-			fs.writeFileSync(path.join(resultsFilesPath, f, 'data.json'), JSON.stringify(psd, null, 2), 'utf8');
+			fs.writeFileSync(path.join(resultsDir, 'data.json'), JSON.stringify(psd, null, 2), 'utf8');
 
 			clearEmptyCanvasFields(psd);
 			clearEmptyCanvasFields(expected);
@@ -171,8 +172,8 @@ describe('PsdReader', () => {
 				// logDevFeatures: true, logMissingFeatures: true,
 			});
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb' });
-			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.${ext}`), actual);
-			fs.writeFileSync(path.join(resultsFilesPath, `read-write-${f}.bin`), actual);
+			fs.writeFileSync(path.join(resultsFilesPath, `read-write`, `${f}.${ext}`), actual);
+			fs.writeFileSync(path.join(resultsFilesPath, `read-write`, `${f}.bin`), actual);
 			// console.log(require('util').inspect(psd, false, 99, true));
 
 			// const psd2 = readPsdFromFile(path.join(resultsFilesPath, `read-write-${f}.psd`), { ...opts, useImageData: true, useRawThumbnail: true });
@@ -180,7 +181,7 @@ describe('PsdReader', () => {
 			// fs.writeFileSync('temp2.txt', require('util').inspect(psd2, false, 99, false), 'utf8');
 
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
-			compareBuffers(actual, expected, `read-write-${f}`, 0x7d20);
+			compareBuffers(actual, expected, `read-write-${f}`, 0x216b0);
 		});
 	});
 

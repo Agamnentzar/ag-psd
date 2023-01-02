@@ -142,13 +142,17 @@ const fieldToArrayExtType: ExtTypeDict = {
 	keyList: nullType,
 	audioClipGroupList: nullType,
 	audioClipList: nullType,
+	countObjectList: makeType('', 'countObject'),
+	countGroupList: makeType('', 'countGroup'),
+	slices: makeType('', 'slice'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
-		'artboardPresetName', 'json', 'groupID', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor',
+		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
+		'altTag', 'url', 'cellText',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData'],
 	'long': [
@@ -159,7 +163,8 @@ const typeToField: { [key: string]: string[]; } = {
 		'keyOriginIndex', 'major', 'minor', 'fix', 'docDefaultNewArtboardBackgroundType', 'artboardBackgroundType',
 		'numModifyingFX', 'deformNumRows', 'deformNumCols', 'FrID', 'FrDl', 'FsID', 'LCnt', 'AFrm', 'AFSt',
 		'numBefore', 'numAfter', 'Spcn', 'minOpacity', 'maxOpacity', 'BlnM', 'sheetID', 'gblA', 'globalAltitude',
-		'descVersion', 'frameReaderType', 'LyrI', 'zoomOrigin',
+		'descVersion', 'frameReaderType', 'LyrI', 'zoomOrigin', 'fontSize', 'Rds ', 'sliceID',
+		'topOutset', 'leftOutset', 'bottomOutset', 'rightOutset',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
@@ -167,22 +172,25 @@ const typeToField: { [key: string]: string[]; } = {
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
-		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle',
+		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
+		'vertAlign', 'bgColorType',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
-		'useShape', 'useTexture', 'uglg', 'antialiasGloss', 'useShape',
+		'useShape', 'useTexture', 'uglg', 'antialiasGloss', 'useShape', 'Vsbl',
 		'useTexture', 'Algn', 'Rvrs', 'Dthr', 'Invr', 'VctC', 'ShTr', 'layerConceals',
 		'strokeEnabled', 'fillEnabled', 'strokeStyleScaleLock', 'strokeStyleStrokeAdjust',
 		'hardProof', 'MpBl', 'paperWhite', 'useLegacy', 'Auto', 'Lab ', 'useTint', 'keyShapeInvalidated',
 		'autoExpandEnabled', 'autoNestEnabled', 'autoPositionEnabled', 'shrinkwrapOnSaveEnabled',
 		'present', 'showInDialog', 'overprint', 'sheetDisclosed', 'lightsDisclosed', 'meshesDisclosed',
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
+		'cellTextIsHTML',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
 		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
+		'X   ', 'Y   ',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -191,7 +199,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'topRight', 'topLeft', 'bottomLeft', 'bottomRight',
 	],
 	'VlLs': [
-		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs',
+		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs', 'slices',
 		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti', 'FrIn', 'FSts', 'FsFr',
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
@@ -243,7 +251,11 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 }
 
 function getTypeByKey(key: string, value: any, root: string, parent: any) {
-	if (key === 'Sz  ') {
+	if (key === 'null' && root === 'slices') {
+		return 'TEXT';
+	} else if (key === 'groupID') {
+		return root === 'slices' ? 'long' : 'TEXT';
+	} else if (key === 'Sz  ') {
 		return ('Wdth' in value) ? 'Objc' : (('units' in value) ? 'UntF' : 'doub');
 	} else if (key === 'Type') {
 		return typeof value === 'string' ? 'enum' : 'long';
@@ -252,6 +264,7 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 	} else if ((key === 'Hrzn' || key === 'Vrtc') && parent.Type === 'keyType.Pstn') {
 		return 'long';
 	} else if (key === 'Hrzn' || key === 'Vrtc' || key === 'Top ' || key === 'Left' || key === 'Btom' || key === 'Rght') {
+		if (root === 'slices') return 'long';
 		return typeof value === 'number' ? 'doub' : 'UntF';
 	} else if (key === 'Vrsn') {
 		return typeof value === 'number' ? 'long' : 'Objc';
@@ -316,7 +329,12 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		let type = getTypeByKey(key, value[key], root, value);
 		let extType = fieldToExtType[key];
 
-		if (key === 'Scl ' && 'Hrzn' in value[key]) {
+		if (key === 'origin') {
+			type = root === 'slices' ? 'enum' : 'Objc';
+		} else if (key === 'bounds' && root === 'slices') {
+			type = 'Objc';
+			extType = makeType('', 'Rct1');
+		} else if (key === 'Scl ' && 'Hrzn' in value[key]) {
 			type = 'Objc';
 			extType = nullType;
 		} else if (key === 'audioClipGroupList' && keys.length === 1) {
@@ -1736,6 +1754,31 @@ export const FrFl = createEnum<'color' | 'gradient' | 'pattern'>('FrFl', 'color'
 	color: 'SClr',
 	gradient: 'GrFl',
 	pattern: 'Ptrn',
+});
+
+export const ESliceType = createEnum<'image' | 'noImage'>('ESliceType', 'image', {
+	image: 'Img ',
+	noImage: 'noImage',
+});
+
+export const ESliceHorzAlign = createEnum<'default'>('ESliceHorzAlign', 'default', {
+	default: 'default',
+});
+
+export const ESliceVertAlign = createEnum<'default'>('ESliceVertAlign', 'default', {
+	default: 'default',
+});
+
+export const ESliceOrigin = createEnum<'userGenerated' | 'autoGenerated' | 'layer'>('ESliceOrigin', 'userGenerated', {
+	userGenerated: 'userGenerated',
+	autoGenerated: 'autoGenerated',
+	layer: 'layer',
+});
+
+export const ESliceBGColorType = createEnum<'none' | 'matte' | 'color'>('ESliceBGColorType', 'none', {
+	none: 'None',
+	matte: 'matte',
+	color: 'Clr ',
 });
 
 export const strokeStyleLineCapType = createEnum<LineCapType>('strokeStyleLineCapType', 'butt', {

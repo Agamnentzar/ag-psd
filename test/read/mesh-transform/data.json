@@ -24,6 +24,18 @@
     "alphaChannelNames": [
       "Transparency"
     ],
+    "slices": [
+      {
+        "groupName": "User",
+        "bounds": {
+          "top": 0,
+          "left": 0,
+          "bottom": 0,
+          "right": 0
+        },
+        "slices": []
+      }
+    ],
     "layerSelectionIds": [
       3
     ]

@@ -408,7 +408,7 @@ function deduplicateValues<T>(base: T, runs: { style: T; }[], keys: (keyof T)[])
 		}
 	}
 
-	if (runs.every(x => Object.keys(x.style).length === 0)) {
+	if (runs.every(x => Object.keys(x.style as any).length === 0)) {
 		runs.length = 0;
 	}
 }

@@ -8,8 +8,12 @@
 		"preserveConstEnums": true,
 		"declaration": true,
 		"useUnknownInCatchVariables": false,
-		"strict": true
+		"strict": true,
+		"outDir": "dist"
 	},
+	"include": [
+		"src/**/*"
+	],
 	"exclude": [
 		"node_modules",
 		"dist"

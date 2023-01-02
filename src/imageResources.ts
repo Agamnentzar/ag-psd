@@ -3,22 +3,22 @@ import { BlendMode, ImageResources, ReadOptions, RenderingIntent } from './psd';
 import {
 	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
 	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature,
-	readSection, readColor
+	readSection, readColor, readInt32
 } from './psdReader';
 import {
 	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
 	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature,
-	writeSection,
+	writeSection, writeInt32,
 } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
-import { FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface ResourceHandler {
 	key: number;
-	has: (target: ImageResources) => boolean;
+	has: (target: ImageResources) => boolean | number;
 	read: (reader: PsdReader, target: ImageResources, left: () => number, options: ReadOptions) => void;
-	write: (writer: PsdWriter, target: ImageResources) => void;
+	write: (writer: PsdWriter, target: ImageResources, index: number) => void;
 }
 
 export const resourceHandlers: ResourceHandler[] = [];
@@ -26,9 +26,9 @@ export const resourceHandlersMap: { [key: number]: ResourceHandler } = {};
 
 function addHandler(
 	key: number,
-	has: (target: ImageResources) => boolean,
+	has: (target: ImageResources) => boolean | number,
 	read: (reader: PsdReader, target: ImageResources, left: () => number, options: ReadOptions) => void,
-	write: (writer: PsdWriter, target: ImageResources) => void,
+	write: (writer: PsdWriter, target: ImageResources, index: number) => void,
 ) {
 	const handler: ResourceHandler = { key, has, read, write };
 	resourceHandlers.push(handler);
@@ -412,6 +412,55 @@ MOCK_HANDLERS && addHandler(
 	},
 );
 
+interface CountInformationDesc {
+	Vrsn: 1;
+	countGroupList: {
+		'Rd  ': number; // 0-255
+		'Grn ': number;
+		'Bl  ': number;
+		'Nm  ': string;
+		'Rds ': number; // Marker size
+		fontSize: number;
+		Vsbl: boolean;
+		countObjectList: {
+			'X   ': number;
+			'Y   ': number;
+		}[];
+	}[];
+}
+
+addHandler(
+	1080, // Count Information
+	target => target.countInformation !== undefined,
+	(reader, target) => {
+		const desc = readVersionAndDescriptor(reader) as CountInformationDesc;
+		target.countInformation = desc.countGroupList.map(g => ({
+			color: { r: g['Rd  '], g: g['Grn '], b: g['Bl  '] },
+			name: g['Nm  '],
+			size: g['Rds '],
+			fontSize: g.fontSize,
+			visible: g.Vsbl,
+			points: g.countObjectList.map(p => ({ x: p['X   '], y: p['Y   '] })),
+		}));
+	},
+	(writer, target) => {
+		const desc: CountInformationDesc = {
+			Vrsn: 1,
+			countGroupList: target.countInformation!.map(g => ({
+				'Rd  ': g.color.r,
+				'Grn ': g.color.g,
+				'Bl  ': g.color.b,
+				'Nm  ': g.name,
+				'Rds ': g.size,
+				fontSize: g.fontSize,
+				Vsbl: g.visible,
+				countObjectList: g.points.map(p => ({ 'X   ': p.x, 'Y   ': p.y })),
+			})),
+		};
+		writeVersionAndDescriptor(writer, '', 'Cnt ', desc);
+	},
+);
+
 addHandler(
 	1024,
 	target => target.layerState !== undefined,
@@ -752,38 +801,269 @@ addHandler(
 );
 
 addHandler(
-	1054,
+	1054, // URL List
 	target => target.urlsList !== undefined,
 	(reader, target, _, options) => {
 		const count = readUint32(reader);
-
-		if (count) {
-			if (!options.throwForMissingFeatures) return;
-			throw new Error('Not implemented: URL List');
-		}
-
-		// TODO: read actual URL list
 		target.urlsList = [];
+
+		for (let i = 0; i < count; i++) {
+			const long = readSignature(reader);
+			if (long !== 'slic' && options.throwForMissingFeatures) throw new Error('Unknown long');
+			const id = readUint32(reader);
+			const url = readUnicodeString(reader);
+			target.urlsList.push({ id, url, ref: 'slice' });
+		}
 	},
 	(writer, target) => {
-		writeUint32(writer, target.urlsList!.length);
+		const list = target.urlsList!;
+		writeUint32(writer, list.length);
 
-		// TODO: write actual URL list
-		if (target.urlsList!.length) {
-			throw new Error('Not implemented: URL List');
+		for (let i = 0; i < list.length; i++) {
+			writeSignature(writer, 'slic');
+			writeUint32(writer, list[i].id);
+			writeUnicodeString(writer, list[i].url);
 		}
 	},
 );
 
-MOCK_HANDLERS && addHandler(
+interface BoundsDesc {
+	'Top ': number;
+	Left: number;
+	Btom: number;
+	Rght: number;
+}
+
+interface SlicesSliceDesc {
+	sliceID: number;
+	groupID: number;
+	origin: string;
+	'Nm  '?: string;
+	Type: string;
+	bounds: BoundsDesc;
+	url: string;
+	null: string;
+	Msge: string;
+	altTag: string;
+	cellTextIsHTML: boolean;
+	cellText: string;
+	horzAlign: string;
+	vertAlign: string;
+	bgColorType: string;
+	bgColor?: { 'Rd  ': number; 'Grn ': number; 'Bl  ': number; alpha: number; };
+	topOutset?: number;
+	leftOutset?: number;
+	bottomOutset?: number;
+	rightOutset?: number;
+}
+
+interface SlicesDesc {
+	bounds: BoundsDesc;
+	slices: SlicesSliceDesc[];
+}
+
+interface SlicesDesc7 extends SlicesDesc {
+	baseName: string;
+}
+
+function boundsToBounds(bounds: { left: number; top: number; right: number; bottom: number }): BoundsDesc {
+	return { 'Top ': bounds.top, Left: bounds.left, Btom: bounds.bottom, Rght: bounds.right };
+}
+
+function boundsFromBounds(bounds: BoundsDesc): { left: number; top: number; right: number; bottom: number } {
+	return { top: bounds['Top '], left: bounds.Left, bottom: bounds.Btom, right: bounds.Rght };
+}
+
+function clamped<T>(array: T[], index: number) {
+	return array[Math.max(0, Math.min(array.length - 1, index))];
+}
+
+const sliceOrigins: ('userGenerated' | 'autoGenerated' | 'layer')[] = ['autoGenerated', 'layer', 'userGenerated'];
+const sliceTypes: ('image' | 'noImage')[] = ['noImage', 'image'];
+const sliceAlignments: ('default')[] = ['default'];
+
+addHandler(
 	1050, // Slices
-	target => (target as any)._ir1050 !== undefined,
-	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1050', left());
-		(target as any)._ir1050 = readBytes(reader, left());
+	target => target.slices ? target.slices.length : 0,
+	(reader, target) => {
+		const version = readUint32(reader);
+
+		if (version == 6) {
+			if (!target.slices) target.slices = [];
+
+			const top = readInt32(reader);
+			const left = readInt32(reader);
+			const bottom = readInt32(reader);
+			const right = readInt32(reader);
+			const groupName = readUnicodeString(reader);
+			const count = readUint32(reader);
+			target.slices.push({ bounds: { top, left, bottom, right }, groupName, slices: [] });
+			const slices = target.slices[target.slices.length - 1].slices;
+
+			for (let i = 0; i < count; i++) {
+				const id = readUint32(reader);
+				const groupId = readUint32(reader);
+				const origin = clamped(sliceOrigins, readUint32(reader));
+				const associatedLayerId = origin == 'layer' ? readUint32(reader) : 0;
+				const name = readUnicodeString(reader);
+				const type = clamped(sliceTypes, readUint32(reader));
+				const top = readInt32(reader);
+				const left = readInt32(reader);
+				const bottom = readInt32(reader);
+				const right = readInt32(reader);
+				const url = readUnicodeString(reader);
+				const target = readUnicodeString(reader);
+				const message = readUnicodeString(reader);
+				const altTag = readUnicodeString(reader);
+				const cellTextIsHTML = !!readUint8(reader);
+				const cellText = readUnicodeString(reader);
+				const horizontalAlignment = clamped(sliceAlignments, readUint32(reader));
+				const verticalAlignment = clamped(sliceAlignments, readUint32(reader));
+				const a = readUint8(reader);
+				const r = readUint8(reader);
+				const g = readUint8(reader);
+				const b = readUint8(reader);
+				const backgroundColorType = ((a + r + g + b) === 0) ? 'none' : (a === 0 ? 'matte' : 'color');
+				slices.push({
+					id, groupId, origin, associatedLayerId, name, target, message, altTag, cellTextIsHTML, cellText,
+					horizontalAlignment, verticalAlignment, type, url,
+					bounds: { top, left, bottom, right },
+					backgroundColorType, backgroundColor: { r, g, b, a },
+				});
+				// console.log(require('util').inspect(slices[slices.length - 1], false, 99, true));
+			}
+			const desc = readVersionAndDescriptor(reader) as SlicesDesc;
+			desc.slices.forEach(d => {
+				const slice = slices.find(s => d.sliceID == s.id);
+				if (slice) {
+					slice.topOutset = d.topOutset;
+					slice.leftOutset = d.leftOutset;
+					slice.bottomOutset = d.bottomOutset;
+					slice.rightOutset = d.rightOutset;
+				}
+			});
+
+			// console.log(require('util').inspect(desc, false, 99, true));
+			// console.log(require('util').inspect(target.slices, false, 99, true));
+		} else if (version == 7 || version == 8) {
+			const desc = readVersionAndDescriptor(reader) as SlicesDesc7;
+			// console.log(require('util').inspect(desc, false, 99, true));
+
+			if (!target.slices) target.slices = [];
+			target.slices.push({
+				groupName: desc.baseName,
+				bounds: boundsFromBounds(desc.bounds),
+				slices: desc.slices.map(s => ({
+					name: '',
+					id: s.sliceID,
+					groupId: s.groupID,
+					associatedLayerId: 0,
+					origin: ESliceOrigin.decode(s.origin),
+					type: ESliceType.decode(s.Type),
+					bounds: boundsFromBounds(s.bounds),
+					url: s.url,
+					target: s.null,
+					message: s.Msge,
+					altTag: s.altTag,
+					cellTextIsHTML: s.cellTextIsHTML,
+					cellText: s.cellText,
+					horizontalAlignment: ESliceHorzAlign.decode(s.horzAlign),
+					verticalAlignment: ESliceVertAlign.decode(s.vertAlign),
+					backgroundColorType: ESliceBGColorType.decode(s.bgColorType),
+					backgroundColor: s.bgColor ? { r: s.bgColor['Rd  '], g: s.bgColor['Grn '], b: s.bgColor['Bl  '], a: s.bgColor.alpha } : { r: 0, g: 0, b: 0, a: 0 },
+					topOutset: s.topOutset || 0,
+					leftOutset: s.leftOutset || 0,
+					bottomOutset: s.bottomOutset || 0,
+					rightOutset: s.rightOutset || 0,
+				})),
+			});
+		} else {
+			throw new Error(`Invalid slices version (${version})`);
+		}
 	},
-	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1050);
+	(writer, target, index) => {
+		const { bounds, groupName, slices } = target.slices![index];
+
+		writeUint32(writer, 6); // version
+		writeInt32(writer, bounds.top);
+		writeInt32(writer, bounds.left);
+		writeInt32(writer, bounds.bottom);
+		writeInt32(writer, bounds.right);
+		writeUnicodeString(writer, groupName);
+		writeUint32(writer, slices.length);
+
+		for (let i = 0; i < slices.length; i++) {
+			const slice = slices[i];
+			let { a, r, g, b } = slice.backgroundColor;
+
+			if (slice.backgroundColorType === 'none') {
+				a = r = g = b = 0;
+			} else if (slice.backgroundColorType === 'matte') {
+				a = 0;
+				r = g = b = 255;
+			}
+
+			writeUint32(writer, slice.id);
+			writeUint32(writer, slice.groupId);
+			writeUint32(writer, sliceOrigins.indexOf(slice.origin));
+			if (slice.origin === 'layer') writeUint32(writer, slice.associatedLayerId);
+			writeUnicodeString(writer, slice.name);
+			writeUint32(writer, sliceTypes.indexOf(slice.type));
+			writeInt32(writer, slice.bounds.top);
+			writeInt32(writer, slice.bounds.left);
+			writeInt32(writer, slice.bounds.bottom);
+			writeInt32(writer, slice.bounds.right);
+			writeUnicodeString(writer, slice.url);
+			writeUnicodeString(writer, slice.target);
+			writeUnicodeString(writer, slice.message);
+			writeUnicodeString(writer, slice.altTag);
+			writeUint8(writer, slice.cellTextIsHTML ? 1 : 0);
+			writeUnicodeString(writer, slice.cellText);
+			writeUint32(writer, sliceAlignments.indexOf(slice.horizontalAlignment));
+			writeUint32(writer, sliceAlignments.indexOf(slice.verticalAlignment));
+			writeUint8(writer, a);
+			writeUint8(writer, r);
+			writeUint8(writer, g);
+			writeUint8(writer, b);
+		}
+
+		const desc: SlicesDesc = {
+			bounds: boundsToBounds(bounds),
+			slices: [],
+		};
+
+		slices.forEach(s => {
+			const slice: SlicesSliceDesc = {
+				sliceID: s.id,
+				groupID: s.groupId,
+				origin: ESliceOrigin.encode(s.origin),
+				Type: ESliceType.encode(s.type),
+				bounds: boundsToBounds(s.bounds),
+				...(s.name ? { 'Nm  ': s.name } : {}),
+				url: s.url,
+				null: s.target,
+				Msge: s.message,
+				altTag: s.altTag,
+				cellTextIsHTML: s.cellTextIsHTML,
+				cellText: s.cellText,
+				horzAlign: ESliceHorzAlign.encode(s.horizontalAlignment),
+				vertAlign: ESliceVertAlign.encode(s.verticalAlignment),
+				bgColorType: ESliceBGColorType.encode(s.backgroundColorType),
+			};
+
+			if (s.backgroundColorType === 'color') {
+				const { r, g, b, a } = s.backgroundColor;
+				slice.bgColor = { 'Rd  ': r, 'Grn ': g, 'Bl  ': b, alpha: a };
+			}
+
+			slice.topOutset = s.topOutset || 0;
+			slice.leftOutset = s.leftOutset || 0;
+			slice.bottomOutset = s.bottomOutset || 0;
+			slice.rightOutset = s.rightOutset || 0;
+			desc.slices.push(slice);
+		});
+
+		writeVersionAndDescriptor(writer, '', 'null', desc, 'slices');
 	},
 );
 
@@ -815,6 +1095,7 @@ MOCK_HANDLERS && addHandler(
 	1039, // ICC Profile
 	target => (target as any)._ir1039 !== undefined,
 	(reader, target, left) => {
+		// TODO: this is raw bytes, just return as a byte array
 		LOG_MOCK_HANDLERS && console.log('image resource 1039', left());
 		(target as any)._ir1039 = readBytes(reader, left());
 	},

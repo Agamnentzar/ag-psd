@@ -1,6 +1,6 @@
 {
-  "width": 300,
-  "height": 200,
+  "width": 100,
+  "height": 100,
   "channels": 3,
   "bitsPerChannel": 8,
   "colorMode": 3,
@@ -42,18 +42,6 @@
       "caption": false,
       "printFlags": true
     },
-    "layerState": 1,
-    "layersGroup": [
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1
-    ],
-    "layerSelectionIds": [
-      2
-    ],
     "gridAndGuidesInformation": {
       "grid": {
         "horizontal": 576,
@@ -61,14 +49,70 @@
       },
       "guides": []
     },
+    "countInformation": [
+      {
+        "color": {
+          "r": 151,
+          "g": 251,
+          "b": 253
+        },
+        "name": "Count Group 1",
+        "size": 2,
+        "fontSize": 12,
+        "visible": false,
+        "points": [
+          {
+            "x": 17.5,
+            "y": 21.5
+          },
+          {
+            "x": 78.5,
+            "y": 20.5
+          },
+          {
+            "x": 49.5,
+            "y": 63.5
+          }
+        ]
+      },
+      {
+        "color": {
+          "r": 253,
+          "g": 151,
+          "b": 151
+        },
+        "name": "Count Group 2",
+        "size": 2,
+        "fontSize": 12,
+        "visible": true,
+        "points": [
+          {
+            "x": 55.5,
+            "y": 32.5
+          },
+          {
+            "x": 78.5,
+            "y": 56.5
+          },
+          {
+            "x": 38.5,
+            "y": 78.5
+          },
+          {
+            "x": 24.5,
+            "y": 57.5
+          }
+        ]
+      }
+    ],
     "urlsList": [],
     "slices": [
       {
         "bounds": {
           "top": 0,
           "left": 0,
-          "bottom": 200,
-          "right": 300
+          "bottom": 100,
+          "right": 100
         },
         "groupName": "",
         "slices": [
@@ -90,8 +134,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 300,
-              "right": 200
+              "bottom": 100,
+              "right": 100
             },
             "backgroundColorType": "none",
             "backgroundColor": {
@@ -111,7 +155,7 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 2,
+    "idsSeedNumber": 1,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
@@ -119,64 +163,6 @@
       "fileVersion": 1
     }
   },
-  "children": [
-    {
-      "top": 0,
-      "left": 0,
-      "bottom": 200,
-      "right": 300,
-      "blendMode": "normal",
-      "opacity": 1,
-      "clipping": false,
-      "transparencyProtected": true,
-      "hidden": false,
-      "name": "Background",
-      "nameSource": "bgnd",
-      "id": 1,
-      "blendClippendElements": true,
-      "blendInteriorElements": false,
-      "knockout": false,
-      "protected": {
-        "transparency": true,
-        "composite": false,
-        "position": true
-      },
-      "layerColor": "none",
-      "timestamp": 1448235572.7235785,
-      "referencePoint": {
-        "x": 0,
-        "y": 0
-      }
-    },
-    {
-      "top": 0,
-      "left": 0,
-      "bottom": 200,
-      "right": 300,
-      "blendMode": "normal",
-      "opacity": 1,
-      "clipping": false,
-      "transparencyProtected": false,
-      "hidden": false,
-      "name": "Layer 1",
-      "nameSource": "layr",
-      "id": 2,
-      "blendClippendElements": true,
-      "blendInteriorElements": false,
-      "knockout": false,
-      "protected": {
-        "transparency": false,
-        "composite": false,
-        "position": false
-      },
-      "layerColor": "none",
-      "timestamp": 1448235572.7235887,
-      "referencePoint": {
-        "x": 0,
-        "y": 0
-      }
-    }
-  ],
   "filterMask": {
     "colorSpace": {
       "r": 255,

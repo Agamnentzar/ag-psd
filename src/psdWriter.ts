@@ -213,11 +213,13 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	// image resources
 	writeSection(writer, 1, () => {
 		for (const handler of resourceHandlers) {
-			if (handler.has(imageResources)) {
+			const has = handler.has(imageResources);
+			const count = has === false ? 0 : (has === true ? 1 : has);
+			for (let i = 0; i < count; i++) {
 				writeSignature(writer, '8BIM');
 				writeUint16(writer, handler.key);
 				writePascalString(writer, '', 2);
-				writeSection(writer, 2, () => handler.write(writer, imageResources));
+				writeSection(writer, 2, () => handler.write(writer, imageResources, i));
 			}
 		}
 	});
