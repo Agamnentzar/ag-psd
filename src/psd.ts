@@ -243,7 +243,7 @@ export type Orientation = 'horizontal' | 'vertical';
 export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth' | 'platform' | 'platformLCD';
 export type WarpStyle =
 	'none' | 'arc' | 'arcLower' | 'arcUpper' | 'arch' | 'bulge' | 'shellLower' | 'shellUpper' | 'flag' |
-	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist' | 'custom';
+	'wave' | 'fish' | 'rise' | 'fisheye' | 'inflate' | 'squeeze' | 'twist' | 'custom' | 'cylinder';
 export type BevelStyle = 'outer bevel' | 'inner bevel' | 'emboss' | 'pillow emboss' | 'stroke emboss';
 export type BevelTechnique = 'smooth' | 'chisel hard' | 'chisel soft';
 export type BevelDirection = 'up' | 'down';
@@ -259,6 +259,7 @@ export type InterpolationMethod = 'classic' | 'perceptual' | 'linear';
 export interface Warp {
 	style?: WarpStyle;
 	value?: number;
+	cylinderValues?: number[];
 	perspective?: number;
 	perspectiveOther?: number;
 	rotate?: Orientation;
