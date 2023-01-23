@@ -793,7 +793,8 @@ export interface TextDescriptor {
 
 export interface WarpDescriptor {
 	warpStyle: string;
-	warpValue: number;
+	warpValue?: number;
+	warpValues?: number[]
 	warpPerspective: number;
 	warpPerspectiveOther: number;
 	warpRotate: string;
@@ -1645,6 +1646,7 @@ export const warpStyle = createEnum<WarpStyle>('warpStyle', 'none', {
 	inflate: 'warpInflate',
 	squeeze: 'warpSqueeze',
 	twist: 'warpTwist',
+	cylinder: 'warpCylinder',
 	custom: 'warpCustom',
 });
 
