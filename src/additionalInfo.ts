@@ -1008,6 +1008,10 @@ function parseWarp(warp: WarpDescriptor & QuiltWarpDescriptor): Warp {
 		vOrder: warp.vOrder,
 	};
 
+	if (warp.warpValues) {
+		result.cylinderValues = warp.warpValues;
+	}
+
 	if (warp.deformNumRows != null || warp.deformNumCols != null) {
 		result.deformNumRows = warp.deformNumRows;
 		result.deformNumCols = warp.deformNumCols;
@@ -1044,7 +1048,8 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 	const bounds = warp.bounds;
 	const desc: WarpDescriptor = {
 		warpStyle: warpStyle.encode(warp.style),
-		warpValue: warp.value || 0,
+		warpValue: warp.value || undefined,
+		warpValues: warp.cylinderValues || undefined,
 		warpPerspective: warp.perspective || 0,
 		warpPerspectiveOther: warp.perspectiveOther || 0,
 		warpRotate: Ornt.encode(warp.rotate),

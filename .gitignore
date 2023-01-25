@@ -12,3 +12,4 @@
 /test/read-write/ignore-*
 .vscode
 TODO
+.idea
