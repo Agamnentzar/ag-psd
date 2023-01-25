@@ -259,7 +259,7 @@ export type InterpolationMethod = 'classic' | 'perceptual' | 'linear';
 export interface Warp {
 	style?: WarpStyle;
 	value?: number;
-	cylinderValues?: number[];
+	values?: number[];
 	perspective?: number;
 	perspectiveOther?: number;
 	rotate?: Orientation;

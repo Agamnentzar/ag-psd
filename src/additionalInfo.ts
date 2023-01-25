@@ -994,7 +994,7 @@ const placedLayerTypes: PlacedLayerType[] = ['unknown', 'vector', 'raster', 'ima
 function parseWarp(warp: WarpDescriptor & QuiltWarpDescriptor): Warp {
 	const result: Warp = {
 		style: warpStyle.decode(warp.warpStyle),
-		value: warp.warpValue || 0,
+		...(warp.warpValues ? { values: warp.warpValues } : { value: warp.warpValue || 0 }),
 		perspective: warp.warpPerspective || 0,
 		perspectiveOther: warp.warpPerspectiveOther || 0,
 		rotate: Ornt.decode(warp.warpRotate),
@@ -1007,10 +1007,6 @@ function parseWarp(warp: WarpDescriptor & QuiltWarpDescriptor): Warp {
 		uOrder: warp.uOrder,
 		vOrder: warp.vOrder,
 	};
-
-	if (warp.warpValues) {
-		result.cylinderValues = warp.warpValues;
-	}
 
 	if (warp.deformNumRows != null || warp.deformNumCols != null) {
 		result.deformNumRows = warp.deformNumRows;
@@ -1048,8 +1044,7 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 	const bounds = warp.bounds;
 	const desc: WarpDescriptor = {
 		warpStyle: warpStyle.encode(warp.style),
-		warpValue: warp.value || undefined,
-		warpValues: warp.cylinderValues || undefined,
+		...(warp.values ? { warpValues: warp.values } : { warpValue: warp.value }),
 		warpPerspective: warp.perspective || 0,
 		warpPerspectiveOther: warp.perspectiveOther || 0,
 		warpRotate: Ornt.encode(warp.rotate),

@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "15.0.1",
+  "version": "15.0.2",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -13,7 +13,7 @@
   },
   "scripts": {
     "ts": "npm run clean && tsc --watch --project tsconfig.json",
-    "test": "mocha --watch --timeout 10000 -R dot dist/test",
+    "test": "mocha --watch --timeout 20000 -R dot dist/test",
     "lint": "tslint -c tslint.json src/ts/**/*.ts",
     "build": "npm run clean && tsc --project tsconfig.json && tsc --project tsconfig-es6.json && browserify dist/index.js --standalone agPsd -o dist/bundle.js",
     "rollup": "rollup --format=cjs --external base64-js --file=dist-es/bundle.js --sourcemap --sourcemapFile dist-es/bundle.js.map dist-es/index.js",

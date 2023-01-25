@@ -203,6 +203,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti', 'FrIn', 'FSts', 'FsFr',
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
+		'warpValues',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null'],
@@ -232,6 +233,7 @@ const fieldToArrayType: Dict = {
 	'blendOptions': 'Objc',
 	'sheetTimelineOptions': 'Objc',
 	'keyList': 'Objc',
+	'warpValues': 'doub',
 };
 
 const fieldToType: Dict = {};
