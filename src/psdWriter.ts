@@ -233,11 +233,9 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// image data
 	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
-	const data: PixelData = imageData || {
-		data: new Uint8Array(4 * psd.width * psd.height),
-		width: psd.width,
-		height: psd.height,
-	};
+	const width = imageData ? imageData.width : psd.width;
+	const height = imageData ? imageData.height : psd.height;
+	const data: PixelData = { data: new Uint8Array(width * height * 4), width, height };
 
 	writeUint16(writer, Compression.RleCompressed); // Photoshop doesn't support zip compression of composite image data
 
@@ -245,6 +243,24 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		console.log('writing raw image data');
 		writeBytes(writer, (psd as any).imageDataRaw);
 	} else {
+		if (imageData) data.data.set(new Uint8Array(imageData.data.buffer, imageData.data.byteOffset, imageData.data.byteLength));
+
+		// add weird white matte
+		if (globalAlpha) {
+			const size = data.width * data.height * 4;
+			const p = data.data;
+			for (let i = 0; i < size; i += 4) {
+				const pa = p[i + 3];
+				if (pa != 0 && pa != 255) {
+					const a = pa / 255;
+					const ra = 255 * (1 - a);
+					p[i + 0] = p[i + 0] * a + ra;
+					p[i + 1] = p[i + 1] * a + ra;
+					p[i + 2] = p[i + 2] * a + ra;
+				}
+			}
+		}
+
 		writeBytes(writer, writeDataRLE(tempBuffer, data, channels, !!options.psb));
 	}
 }

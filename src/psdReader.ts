@@ -727,6 +727,23 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 		default: throw new Error(`Color mode not supported: ${psd.colorMode}`);
 	}
 
+	// remove weird white matte
+	if (globalAlpha) {
+		const p = imageData.data;
+		const size = imageData.width * imageData.height * 4;
+		for (let i = 0; i < size; i += 4) {
+			const pa = p[i + 3];
+			if (pa != 0 && pa != 255) {
+				const a = pa / 255;
+				const ra = 1 / a;
+				const invA = 255 * (1 - ra);
+				p[i + 0] = p[i + 0] * ra + invA;
+				p[i + 1] = p[i + 1] * ra + invA;
+				p[i + 2] = p[i + 2] * ra + invA;
+			}
+		}
+	}
+
 	if (options.useImageData) {
 		psd.imageData = imageData;
 	} else {

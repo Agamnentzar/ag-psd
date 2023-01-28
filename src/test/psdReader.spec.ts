@@ -70,7 +70,7 @@ describe('PsdReader', () => {
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
 	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|adjustment-layers/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /fill-opacity/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /alpha-composite/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';

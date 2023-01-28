@@ -145,12 +145,9 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 		fs.writeFileSync(path.join(failuresDir, `${name.replace(/[\\/]/, '-')}`), actual!.toBuffer());
 	};
 
-	if (expected === actual)
-		return;
-	if (!expected)
-		throw new Error(`Expected canvas is null (${name})`);
-	if (!actual)
-		throw new Error(`Actual canvas is null (${name})`);
+	if (expected === actual) return;
+	if (!expected) throw new Error(`Expected canvas is null (${name})`);
+	if (!actual) throw new Error(`Actual canvas is null (${name})`);
 
 	if (expected.width !== actual.width || expected.height !== actual.height) {
 		saveFailure();
@@ -167,8 +164,8 @@ export function compareCanvases(expected: HTMLCanvasElement | undefined, actual:
 			const expectedNumBytes = expectedData.data.length;
 			const actualNumBytes = actualData.data.length;
 			throw new Error(
-				`Actual canvas (${actualNumBytes} bytes) different ` +
-				`than expected (${name}: ${expectedNumBytes} bytes) ` +
+				`Actual canvas (${actualNumBytes} bytes) different than ` +
+				`expected (${name}) (${expectedNumBytes} bytes) ` +
 				`at index ${i}: actual ${actualData.data[i]} vs. expected ${expectedData.data[i]}`
 			);
 		}
