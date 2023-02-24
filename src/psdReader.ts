@@ -506,7 +506,22 @@ function readLayerChannelImageData(
 		if (channel.length < 2) throw new Error('Invalid channel length');
 
 		const start = reader.offset;
-		const compression = readUint16(reader) as Compression;
+
+		let compression = readUint16(reader) as Compression;
+
+		// try to fix broken files where there's 1 byte shift of channel
+		if (compression > 3) {
+			reader.offset -= 1;
+			compression = readUint16(reader) as Compression;
+		}
+
+		// try to fix broken files where there's 1 byte shift of channel
+		if (compression > 3) {
+			reader.offset -= 3;
+			compression = readUint16(reader) as Compression;
+		}
+
+		if (compression > 3) throw new Error(`Invalid compression: ${compression}`);
 
 		if (channel.id === ChannelID.UserMask) {
 			const mask = layer.mask;
