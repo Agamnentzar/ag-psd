@@ -24,11 +24,12 @@ export const enum SectionDividerType {
 
 export type RGBA = { r: number; g: number; b: number; a: number; }; // values from 0 to 255
 export type RGB = { r: number; g: number; b: number; }; // values from 0 to 255
+export type FRGB = { fr: number; fg: number; fb: number; }; // values from 0 to 1 (can be above 1)
 export type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
 export type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
 export type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
 export type Grayscale = { k: number }; // values from 0 to 255
-export type Color = RGBA | RGB | HSB | CMYK | LAB | Grayscale;
+export type Color = RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale;
 
 export interface EffectContour {
 	name: string;
@@ -664,7 +665,7 @@ export interface LinkedFile {
 	type?: string;
 	creator?: string;
 	data?: Uint8Array;
-	time?: Date; // for external files
+	time?: string; // for external files
 	descriptor?: {
 		compInfo: { compID: number; originalCompID: number; };
 	};

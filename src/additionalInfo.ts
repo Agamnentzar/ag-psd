@@ -1175,7 +1175,8 @@ addHandler(
 	hasKey('placedLayer'),
 	(reader, target, left) => {
 		if (readSignature(reader) !== 'soLD') throw new Error(`Invalid SoLd type`);
-		if (readInt32(reader) !== 4) throw new Error(`Invalid SoLd version`);
+		const version = readInt32(reader);
+		if (version !== 4 && version !== 5) throw new Error(`Invalid SoLd version`);
 		const desc: SoLdDescriptor = readVersionAndDescriptor(reader);
 		// console.log('SoLd', require('util').inspect(desc, false, 99, true));
 		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
@@ -1257,6 +1258,8 @@ addHandler(
 		writeVersionAndDescriptor(writer, '', 'null', desc, desc.quiltWarp ? 'quiltWarp' : 'warp');
 	},
 );
+
+addHandlerAlias('SoLE', 'SoLd');
 
 addHandler(
 	'fxrp',
@@ -1422,7 +1425,7 @@ addHandler(
 	(target: any) => !!(target as Psd).linkedFiles && (target as Psd).linkedFiles!.length > 0,
 	(reader, target, left, _, options) => {
 		const psd = target as Psd;
-		psd.linkedFiles = [];
+		psd.linkedFiles = psd.linkedFiles || [];
 
 		while (left() > 8) {
 			let size = readLength64(reader); // size
@@ -1452,7 +1455,7 @@ addHandler(
 				const seconds = readFloat64(reader);
 				const wholeSeconds = Math.floor(seconds);
 				const ms = (seconds - wholeSeconds) * 1000;
-				file.time = new Date(year, month, day, hour, minute, wholeSeconds, ms);
+				file.time = (new Date(year, month, day, hour, minute, wholeSeconds, ms)).toISOString();
 			}
 
 			const fileSize = type === 'liFE' ? readLength64(reader) : 0;
@@ -1523,24 +1526,10 @@ addHandler(
 		}
 	},
 );
+
 addHandlerAlias('lnkD', 'lnk2');
 addHandlerAlias('lnk3', 'lnk2');
-
-// this seems to just be zero size block, ignore it
-addHandler(
-	'lnkE',
-	target => (target as any)._lnkE !== undefined,
-	(reader, target, left, _psds, options) => {
-		if (options.logMissingFeatures && left()) {
-			console.log(`Non-empty lnkE layer info (${left()} bytes)`);
-		}
-
-		if (MOCK_HANDLERS) {
-			(target as any)._lnkE = readBytes(reader, left());
-		}
-	},
-	(writer, target) => MOCK_HANDLERS && writeBytes(writer, (target as any)._lnkE),
-);
+addHandlerAlias('lnkE', 'lnk2');
 
 interface ExtensionDesc {
 	generatorSettings: {
@@ -2508,7 +2497,7 @@ interface ArtdDescriptor {
 	autoExpandEnabled: boolean;
 	autoNestEnabled: boolean;
 	autoPositionEnabled: boolean;
-	shrinkwrapOnSaveEnabled: boolean;
+	shrinkwrapOnSaveEnabled?: boolean;
 	docDefaultNewArtboardBackgroundColor: DescriptorColor;
 	docDefaultNewArtboardBackgroundType: number;
 }
@@ -2525,7 +2514,7 @@ addHandler(
 			autoExpandEnabled: desc.autoExpandEnabled,
 			autoNestEnabled: desc.autoNestEnabled,
 			autoPositionEnabled: desc.autoPositionEnabled,
-			shrinkwrapOnSaveEnabled: desc.shrinkwrapOnSaveEnabled,
+			shrinkwrapOnSaveEnabled: !!desc.shrinkwrapOnSaveEnabled,
 			docDefaultNewArtboardBackgroundColor: parseColor(desc.docDefaultNewArtboardBackgroundColor),
 			docDefaultNewArtboardBackgroundType: desc.docDefaultNewArtboardBackgroundType,
 		};

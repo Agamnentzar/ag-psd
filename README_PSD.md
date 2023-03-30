@@ -686,11 +686,12 @@ Many fields in PSD file support passing color in different color formats (RGBA, 
 ```ts
 type RGBA = { r: number; g: number; b: number; a: number; }; // values from 0 to 255
 type RGB = { r: number; g: number; b: number; }; // values from 0 to 255
+type FRGB = { fr: number; fg: number; fb: number; }; // values from 0 to 1 (can be above 1)
 type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
 type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
 type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
 type Grayscale = { k: number }; // values from 0 to 255
-type Color = RGBA | RGB | HSB | CMYK | LAB | Grayscale;
+type Color = RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale;
 ```
 
 When you want to set field with a `Color` type, it's pretty straightforward, you can just choose any of the formats you like and set it on the field:
@@ -712,6 +713,8 @@ if ('l' in color) {
   // color is Grayscale
 } else if ('a' in color) {
   // color is RGBA
+} else if ('rf' in color) {
+  // color is FRGB
 } else {
   // color is RGB
 }

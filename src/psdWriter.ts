@@ -728,6 +728,12 @@ export function writeColor(writer: PsdWriter, color: Color | undefined) {
 		writeUint16(writer, Math.round(color.g * 257));
 		writeUint16(writer, Math.round(color.b * 257));
 		writeUint16(writer, 0);
+	} else if ('fr' in color) {
+		writeUint16(writer, ColorSpace.RGB);
+		writeUint16(writer, Math.round(color.fr * 255 * 257));
+		writeUint16(writer, Math.round(color.fg * 255 * 257));
+		writeUint16(writer, Math.round(color.fb * 255 * 257));
+		writeUint16(writer, 0);
 	} else if ('l' in color) {
 		writeUint16(writer, ColorSpace.Lab);
 		writeInt16(writer, Math.round(color.l * 10000));

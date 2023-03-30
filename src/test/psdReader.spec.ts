@@ -6,7 +6,7 @@ import {
 	createReaderFromBuffer, compareBuffers, compareTwoFiles
 } from './common';
 import { Layer, ReadOptions, Psd } from '../psd';
-import { readPsd, writePsdBuffer } from '../index';
+import { byteArrayToBase64, readPsd, writePsdBuffer } from '../index';
 import { readPsd as readPsdInternal } from '../psdReader';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
@@ -69,7 +69,7 @@ describe('PsdReader', () => {
 
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
-	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|adjustment-layers/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk/.test(f)).forEach(f => {
 		// fs.readdirSync(readFilesPath).filter(f => /alpha-composite/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
@@ -129,6 +129,24 @@ describe('PsdReader', () => {
 				}
 			}
 
+			function convertUint8ArraysToBase64(layers: Layer[]) {
+				for (const layer of layers) {
+					if (layer.adjustment?.type == 'color lookup') {
+						if (layer.adjustment.lut3DFileData) {
+							layer.adjustment.lut3DFileData = byteArrayToBase64(layer.adjustment.lut3DFileData) as any;
+						}
+
+						if (layer.adjustment.profile) {
+							layer.adjustment.profile = byteArrayToBase64(layer.adjustment.profile) as any;
+						}
+					}
+
+					if (layer.children) {
+						convertUint8ArraysToBase64(layer.children);
+					}
+				}
+			}
+
 			if (psd.linkedFiles) {
 				for (const file of psd.linkedFiles) {
 					if (file.data) {
@@ -139,6 +157,8 @@ describe('PsdReader', () => {
 			}
 
 			pushLayerCanvases(psd.children || []);
+			convertUint8ArraysToBase64(psd.children || []);
+
 			const resultsDir = path.join(resultsFilesPath, 'read', f);
 			fs.mkdirSync(resultsDir, { recursive: true });
 

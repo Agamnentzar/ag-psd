@@ -190,7 +190,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
 		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
-		'X   ', 'Y   ',
+		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat',
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -708,6 +708,10 @@ export type DescriptorColor = {
 	Lmnc: number;
 	'A   ': number;
 	'B   ': number;
+} | {
+	redFloat: number;
+	greenFloat: number;
+	blueFloat: number;
 };
 
 export interface DesciptorPattern {
@@ -1520,6 +1524,8 @@ export function parseColor(color: DescriptorColor): Color {
 		return { k: color['Gry '] };
 	} else if ('Lmnc' in color) {
 		return { l: color.Lmnc, a: color['A   '], b: color['B   '] };
+	} else if ('redFloat' in color) {
+		return { fr: color.redFloat, fg: color.greenFloat, fb: color.blueFloat };
 	} else {
 		throw new Error('Unsupported color descriptor');
 	}
@@ -1530,6 +1536,8 @@ export function serializeColor(color: Color | undefined): DescriptorColor {
 		return { 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
 	} else if ('r' in color) {
 		return { 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
+	} else if ('fr' in color) {
+		return { redFloat: color.fr, greenFloat: color.fg, blueFloat: color.fb };
 	} else if ('h' in color) {
 		return { 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
 	} else if ('c' in color) {

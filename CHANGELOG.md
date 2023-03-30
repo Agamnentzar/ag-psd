@@ -1,5 +1,12 @@
 # Changelog
 
+## v15.1.0
+- Added support for float color in effects, new color type was added
+  ```ts
+  export type FRGB = { fr: number; fg: number; fb: number; }; // values from 0 to 1 (can be above 1)
+  ```
+- Changed `time` field on `LinkedFile` from `Date` to `string` type
+
 ## v15.0.0
 - Added support for frame and timeline animations
 
