@@ -110,15 +110,17 @@ addHandler(
 		};
 
 		if (text.EngineData) {
-			const engineData = decodeEngineData(parseEngineData(text.EngineData));
+			const engineData = parseEngineData(text.EngineData);
+			const textData = decodeEngineData(engineData);
 
+			// require('fs').writeFileSync(`layer-${target.name}.txt`, require('util').inspect(engineData, false, 99, false), 'utf8');
 			// const before = parseEngineData(text.EngineData);
 			// const after = encodeEngineData(engineData);
 			// require('fs').writeFileSync('before.txt', require('util').inspect(before, false, 99, false), 'utf8');
 			// require('fs').writeFileSync('after.txt', require('util').inspect(after, false, 99, false), 'utf8');
 
 			// console.log(require('util').inspect(parseEngineData(text.EngineData), false, 99, true));
-			target.text = { ...target.text, ...engineData };
+			target.text = { ...target.text, ...textData };
 			// console.log(require('util').inspect(target.text, false, 99, true));
 		}
 

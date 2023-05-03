@@ -208,6 +208,12 @@
           "everyLineComposer": false
         },
         "style": {
+          "font": {
+            "name": "AdobeInvisFont",
+            "script": 0,
+            "type": 0,
+            "synthetic": 0
+          },
           "fontSize": 60,
           "autoKerning": true,
           "kerning": 0,

@@ -498,6 +498,7 @@ export function decodeEngineData(engineData: EngineData) {
 	for (let i = 0; i < styleRun.RunArray.length; i++) {
 		const length = styleRun.RunLengthArray[i];
 		const style = decodeStyle(styleRun.RunArray[i].StyleSheet.StyleSheetData, fonts);
+		if (!style.font) style.font = fonts[0];
 		result.styleRuns.push({ length, style });
 	}
 

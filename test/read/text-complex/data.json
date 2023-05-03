@@ -322,6 +322,12 @@
                 "g": 0,
                 "b": 0,
                 "a": 1
+              },
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
               }
             }
           },
@@ -334,6 +340,12 @@
                 "g": 255,
                 "b": 0,
                 "a": 1
+              },
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
               }
             }
           },
@@ -364,6 +376,12 @@
                 "g": 0,
                 "b": 0,
                 "a": 1
+              },
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
               }
             }
           },
@@ -378,7 +396,13 @@
                 "b": 0,
                 "a": 1
               },
-              "yUnderline": 0
+              "yUnderline": 0,
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
+              }
             }
           },
           {
@@ -393,7 +417,13 @@
                 "b": 156.75869999999998,
                 "a": 1
               },
-              "yUnderline": 1
+              "yUnderline": 1,
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
+              }
             }
           },
           {
@@ -407,7 +437,13 @@
                 "b": 156.75869999999998,
                 "a": 1
               },
-              "yUnderline": 1
+              "yUnderline": 1,
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
+              }
             }
           },
           {
@@ -441,7 +477,13 @@
                 "b": 156.75869999999998,
                 "a": 1
               },
-              "yUnderline": 1
+              "yUnderline": 1,
+              "font": {
+                "name": "ArialMT",
+                "script": 0,
+                "type": 1,
+                "synthetic": 0
+              }
             }
           }
         ]

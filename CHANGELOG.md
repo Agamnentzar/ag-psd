@@ -1,5 +1,8 @@
 # Changelog
 
+## v15.2.0
+- Added handling missing `font` in text layer style by assuming first font on the list
+
 ## v15.1.0
 - Added support for float color in effects, new color type was added
   ```ts

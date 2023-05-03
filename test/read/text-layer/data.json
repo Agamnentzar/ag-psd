@@ -231,6 +231,12 @@
           "everyLineComposer": false
         },
         "style": {
+          "font": {
+            "name": "AdobeInvisFont",
+            "script": 0,
+            "type": 0,
+            "synthetic": 0
+          },
           "kerning": 0,
           "fillColor": {
             "r": 255,
