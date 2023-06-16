@@ -1,5 +1,8 @@
 # Changelog
 
+## v15.3.0
+- Added support for smart layer puppet filter (`placedLayer.filter`)
+
 ## v15.2.0
 - Added handling missing `font` in text layer style by assuming first font on the list
 

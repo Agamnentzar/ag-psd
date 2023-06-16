@@ -674,6 +674,62 @@ export interface LinkedFile {
 	assetLockedState?: number;
 }
 
+export interface PlacedLayerFilter {
+	enabled: boolean;
+	validAtPosition: boolean;
+	maskEnabled: boolean;
+	maskLinked: boolean;
+	maskExtendWithWhite: boolean;
+	list: {
+		id: number;
+		name: string;
+		opacity: number;
+		blendMode: BlendMode;
+		enabled: boolean;
+		hasOptions: boolean;
+		foregroundColor: Color;
+		backgroundColor: Color;
+		filter: {
+			rigidType: boolean;
+			bounds: { x: number; y: number; }[];
+			puppetShapeList: {
+				rigidType: boolean;
+				// VrsM: number;
+				// VrsN: number;
+				originalVertexArray: { x: number; y: number; }[];
+				deformedVertexArray: { x: number; y: number; }[];
+				indexArray: number[];
+				pinOffsets: { x: number; y: number; }[];
+				posFinalPins: { x: number; y: number; }[];
+				pinVertexIndices: number[];
+				selectedPin: number[];
+				pinPosition: { x: number; y: number; }[];
+				pinRotation: number[]; // in degrees
+				pinOverlay: boolean[];
+				pinDepth: number[];
+				meshQuality: number;
+				meshExpansion: number;
+				meshRigidity: number;
+				imageResolution: number;
+				meshBoundaryPath: {
+					pathComponents: {
+						shapeOperation: string;
+						paths: {
+							closed: boolean;
+							points: {
+								anchor: { x: UnitsValue; y: UnitsValue; };
+								forward: { x: UnitsValue; y: UnitsValue; };
+								backward: { x: UnitsValue; y: UnitsValue; };
+								smooth: boolean;
+							}[];
+						}[];
+					}[];
+				};
+			}[];
+		};
+	}[];
+}
+
 export type PlacedLayerType = 'unknown' | 'vector' | 'raster' | 'image stack';
 
 export interface PlacedLayer {
@@ -695,6 +751,7 @@ export interface PlacedLayer {
 	crop?: number;
 	comp?: number;
 	compInfo?: { compID: number; originalCompID: number; };
+	filter?: PlacedLayerFilter;
 }
 
 export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAdjustment |
@@ -894,6 +951,7 @@ export interface LayerAdditionalInfo {
 		unifyLayerVisibility?: boolean;
 	};
 	timeline?: Timeline;
+	filterEffects?: any;
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.

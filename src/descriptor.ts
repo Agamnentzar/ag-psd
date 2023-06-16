@@ -121,6 +121,15 @@ const fieldToExtType: ExtTypeDict = {
 	'Lnk ': makeType('', 'ExternalFileLink'),
 	frameReader: makeType('', 'FrameReader'),
 	effectParams: makeType('', 'motionTrackEffectParams'),
+	Impr: makeType('None', 'none'),
+	Anch: makeType('', 'Pnt '),
+	'Fwd ': makeType('', 'Pnt '),
+	'Bwd ': makeType('', 'Pnt '),
+	meshBoundaryPath: makeType('', 'pathClass'),
+	filterFX: makeType('', 'filterFXStyle'),
+	Fltr: makeType('', 'rigidTransform'),
+	FrgC: makeType('', 'RGBC'),
+	BckC: makeType('', 'RGBC'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -145,6 +154,11 @@ const fieldToArrayExtType: ExtTypeDict = {
 	countObjectList: makeType('', 'countObject'),
 	countGroupList: makeType('', 'countGroup'),
 	slices: makeType('', 'slice'),
+	'Pts ': makeType('', 'Pthp'),
+	SbpL: makeType('', 'SbpL'),
+	pathComponents: makeType('', 'PaCm'),
+	filterFXList: makeType('', 'filterFX'),
+	puppetShapeList: makeType('', 'puppetShape'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -154,7 +168,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
 		'altTag', 'url', 'cellText',
 	],
-	'tdta': ['EngineData', 'LUT3DFileData'],
+	'tdta': ['EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray'],
 	'long': [
 		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn', 'Cnt ',
 		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind', 'comp', 'compID', 'originalCompID',
@@ -164,7 +178,8 @@ const typeToField: { [key: string]: string[]; } = {
 		'numModifyingFX', 'deformNumRows', 'deformNumCols', 'FrID', 'FrDl', 'FsID', 'LCnt', 'AFrm', 'AFSt',
 		'numBefore', 'numAfter', 'Spcn', 'minOpacity', 'maxOpacity', 'BlnM', 'sheetID', 'gblA', 'globalAltitude',
 		'descVersion', 'frameReaderType', 'LyrI', 'zoomOrigin', 'fontSize', 'Rds ', 'sliceID',
-		'topOutset', 'leftOutset', 'bottomOutset', 'rightOutset',
+		'topOutset', 'leftOutset', 'bottomOutset', 'rightOutset', 'filterID', 'meshQuality',
+		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
@@ -173,7 +188,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
-		'vertAlign', 'bgColorType',
+		'vertAlign', 'bgColorType', 'shapeOperation',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -184,13 +199,15 @@ const typeToField: { [key: string]: string[]; } = {
 		'autoExpandEnabled', 'autoNestEnabled', 'autoPositionEnabled', 'shrinkwrapOnSaveEnabled',
 		'present', 'showInDialog', 'overprint', 'sheetDisclosed', 'lightsDisclosed', 'meshesDisclosed',
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
-		'cellTextIsHTML',
+		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
+		'filterMaskLinked', 'filterMaskExtendWithWhite',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
 		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
-		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat',
+		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat', 'imageResolution',
+		'PuX0', 'PuX1', 'PuX2', 'PuX3', 'PuY0', 'PuY1', 'PuY2', 'PuY3'
 	],
 	'UntF': [
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -203,7 +220,8 @@ const typeToField: { [key: string]: string[]; } = {
 		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti', 'FrIn', 'FSts', 'FsFr',
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
-		'warpValues',
+		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
+		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null'],
@@ -216,24 +234,37 @@ const channels = [
 const fieldToArrayType: Dict = {
 	'Mnm ': 'long',
 	'Mxm ': 'long',
-	'FrLs': 'long',
-	'strokeStyleLineDashSet': 'UntF',
-	'Trnf': 'doub',
-	'nonAffineTransform': 'doub',
-	'keyDescriptorList': 'Objc',
-	'gradientFillMulti': 'Objc',
-	'solidFillMulti': 'Objc',
-	'frameFXMulti': 'Objc',
-	'innerShadowMulti': 'Objc',
-	'dropShadowMulti': 'Objc',
-	'LaSt': 'Objc',
-	'FrIn': 'Objc',
-	'FSts': 'Objc',
-	'FsFr': 'long',
-	'blendOptions': 'Objc',
-	'sheetTimelineOptions': 'Objc',
-	'keyList': 'Objc',
-	'warpValues': 'doub',
+	FrLs: 'long',
+	strokeStyleLineDashSet: 'UntF',
+	Trnf: 'doub',
+	nonAffineTransform: 'doub',
+	keyDescriptorList: 'Objc',
+	gradientFillMulti: 'Objc',
+	solidFillMulti: 'Objc',
+	frameFXMulti: 'Objc',
+	innerShadowMulti: 'Objc',
+	dropShadowMulti: 'Objc',
+	LaSt: 'Objc',
+	FrIn: 'Objc',
+	FSts: 'Objc',
+	FsFr: 'long',
+	blendOptions: 'Objc',
+	sheetTimelineOptions: 'Objc',
+	keyList: 'Objc',
+	warpValues: 'doub',
+	selectedPin: 'long',
+	'Pts ': 'Objc',
+	SbpL: 'Objc',
+	pathComponents: 'Objc',
+	pinOffsets: 'doub',
+	posFinalPins: 'doub',
+	pinVertexIndices: 'long',
+	PinP: 'doub',
+	PnRt: 'long',
+	PnOv: 'bool',
+	PnDp: 'doub',
+	filterFXList: 'Objc',
+	puppetShapeList: 'Objc',
 };
 
 const fieldToType: Dict = {};
@@ -494,7 +525,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			for (let i = 0; i < value.length; i++) {
 				const type = fieldToArrayType[key];
 				writeSignature(writer, type || 'long');
-				writeOSType(writer, type || 'long', value[i], '', fieldToArrayExtType[key], root);
+				writeOSType(writer, type || 'long', value[i], `${key}[]`, fieldToArrayExtType[key], root);
 				if (logErrors && !type) console.log(`Missing descriptor array type for: '${key}' in`, value);
 			}
 			break;
