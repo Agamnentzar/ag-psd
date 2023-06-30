@@ -1341,7 +1341,7 @@ function serializeFilterFX(filter: PlacedLayerFilter): SoLdDescriptorFilter {
 		filterMaskEnable: filter.maskEnabled,
 		filterMaskLinked: filter.maskLinked,
 		filterMaskExtendWithWhite: filter.maskExtendWithWhite,
-		filterFXList: filter.list.map(f => ({
+		filterFXList: (filter.list || []).map(f => ({
 			'Nm  ': f.name,
 			blendOptions: {
 				Opct: unitsPercent(f.opacity),
@@ -1354,7 +1354,7 @@ function serializeFilterFX(filter: PlacedLayerFilter): SoLdDescriptorFilter {
 			Fltr: {
 				'null': ['Ordn.Trgt'], // ???
 				rigidType: f.filter.rigidType,
-				puppetShapeList: f.filter.puppetShapeList.map(p => ({
+				puppetShapeList: (f.filter.puppetShapeList || []).map(p => ({
 					rigidType: p.rigidType,
 					VrsM: 1, // TODO: ...
 					VrsN: 0, // TODO: ...
@@ -1374,11 +1374,11 @@ function serializeFilterFX(filter: PlacedLayerFilter): SoLdDescriptorFilter {
 					meshRigidity: p.meshRigidity,
 					imageResolution: p.imageResolution,
 					meshBoundaryPath: {
-						pathComponents: p.meshBoundaryPath.pathComponents.map(c => ({
+						pathComponents: (p.meshBoundaryPath.pathComponents || []).map(c => ({
 							shapeOperation: `shapeOperation.${c.shapeOperation}`,
-							SbpL: c.paths.map(path => ({
+							SbpL: (c.paths || []).map(path => ({
 								Clsp: path.closed,
-								'Pts ': path.points.map(pt => ({
+								'Pts ': (path.points || []).map(pt => ({
 									Anch: pointToHrznVrtc(pt.anchor),
 									'Fwd ': pointToHrznVrtc(pt.forward),
 									'Bwd ': pointToHrznVrtc(pt.backward),
