@@ -1,5 +1,9 @@
 # Changelog
 
+## v16.0.0
+- Added support for different color modes in text layer colors
+- Added option for other smart layer filter types
+
 ## v15.3.0
 - Added support for smart layer puppet filter (`placedLayer.filter`)
 

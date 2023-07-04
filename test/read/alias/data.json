@@ -267,14 +267,12 @@
           "fillColor": {
             "r": 0,
             "g": 0,
-            "b": 0,
-            "a": 1
+            "b": 0
           },
           "strokeColor": {
             "r": 0,
             "g": 0,
-            "b": 0,
-            "a": 1
+            "b": 0
           },
           "yUnderline": 1,
           "hindiNumbers": false,
@@ -414,14 +412,12 @@
           "fillColor": {
             "r": 0,
             "g": 0,
-            "b": 0,
-            "a": 1
+            "b": 0
           },
           "strokeColor": {
             "r": 0,
             "g": 0,
-            "b": 0,
-            "a": 1
+            "b": 0
           },
           "yUnderline": 1,
           "hindiNumbers": false,

@@ -263,24 +263,32 @@ const antialias: AntiAlias[] = ['none', 'crisp', 'strong', 'smooth', 'sharp'];
 const justification: Justification[] = ['left', 'right', 'center'];
 
 function upperFirst(value: string) {
-	return value.substr(0, 1).toUpperCase() + value.substr(1);
+	return value.substring(0, 1).toUpperCase() + value.substring(1);
 }
 
-function decodeColor(color: { Type: number; Values: number[]; }): Color {
+function decodeColor(color: TypeValues): Color {
 	const c = color.Values;
-
-	if (color.Type === 0) { // grayscale
-		return { r: c[1] * 255, g: c[1] * 255, b: c[1] * 255 }; // , c[0] * 255];
-	} else { // rgb
-		return { r: c[1] * 255, g: c[2] * 255, b: c[3] * 255, a: c[0] }; // , c[0] * 255];
+	switch (color.Type) {
+		case 0: return { k: c[1] * 255 }; // grayscale (alpha?)
+		case 1: return c[0] === 1 ?
+			{ r: c[1] * 255, g: c[2] * 255, b: c[3] * 255 } : // rgb
+			{ r: c[1] * 255, g: c[2] * 255, b: c[3] * 255, a: c[0] * 255 }; // rgba
+		case 2: return { c: c[1] * 255, m: c[2] * 255, y: c[3] * 255, k: c[4] * 255 }; // cmyk (alpha?)
+		default: throw new Error('Unknown color type in text layer');
 	}
 }
 
-function encodeColor(color: Color | undefined) {
-	if (color && 'r' in color) {
-		return ['a' in color ? color.a : 1, color.r / 255, color.g / 255, color.b / 255];
+function encodeColor(color: Color | undefined): TypeValues {
+	if (!color) {
+		return { Type: 1, Values: [0, 0, 0, 0] };
+	} else if ('r' in color) {
+		return { Type: 1, Values: ['a' in color ? color.a / 255 : 1, color.r / 255, color.g / 255, color.b / 255] };
+	} else if ('c' in color) {
+		return { Type: 2, Values: [1, color.c / 255, color.m / 255, color.y / 255, color.k / 255] };
+	} else if ('k' in color) {
+		return { Type: 0, Values: [1, color.k / 255] };
 	} else {
-		return [0, 0, 0, 0];
+		throw new Error('Invalid color type in text layer');
 	}
 }
 
@@ -342,7 +350,7 @@ function encodeObject(obj: any, keys: string[], fonts: Font[]) {
 		} else if (key === 'font') {
 			result[Key] = findOrAddFont(fonts, obj[key]);
 		} else if (key === 'fillColor' || key === 'strokeColor') {
-			result[Key] = { Type: 1, Values: encodeColor(obj[key]) } as TypeValues;
+			result[Key] = encodeColor(obj[key]);
 		} else {
 			result[Key] = obj[key];
 		}
@@ -722,8 +730,8 @@ export function encodeEngineData(data: LayerTextData) {
 				ShowGrid: !!gridInfo.show,
 				GridSize: gridInfo.size ?? 18,
 				GridLeading: gridInfo.leading ?? 22,
-				GridColor: { Type: 1, Values: encodeColor(gridInfo.color) },
-				GridLeadingFillColor: { Type: 1, Values: encodeColor(gridInfo.color) },
+				GridColor: encodeColor(gridInfo.color),
+				GridLeadingFillColor: encodeColor(gridInfo.color),
 				AlignLineHeightToGridFlags: !!gridInfo.alignLineHeightToGridFlags,
 			},
 			AntiAlias: antialias.indexOf(data.antiAlias ?? 'sharp'),

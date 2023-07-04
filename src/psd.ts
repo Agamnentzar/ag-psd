@@ -674,6 +674,45 @@ export interface LinkedFile {
 	assetLockedState?: number;
 }
 
+export interface PlacedLayerPuppetFilter {
+	rigidType: boolean;
+	bounds: { x: number; y: number; }[];
+	puppetShapeList: {
+		rigidType: boolean;
+		// VrsM: number;
+		// VrsN: number;
+		originalVertexArray: { x: number; y: number; }[];
+		deformedVertexArray: { x: number; y: number; }[];
+		indexArray: number[];
+		pinOffsets: { x: number; y: number; }[];
+		posFinalPins: { x: number; y: number; }[];
+		pinVertexIndices: number[];
+		selectedPin: number[];
+		pinPosition: { x: number; y: number; }[];
+		pinRotation: number[]; // in degrees
+		pinOverlay: boolean[];
+		pinDepth: number[];
+		meshQuality: number;
+		meshExpansion: number;
+		meshRigidity: number;
+		imageResolution: number;
+		meshBoundaryPath: {
+			pathComponents: {
+				shapeOperation: string;
+				paths: {
+					closed: boolean;
+					points: {
+						anchor: { x: UnitsValue; y: UnitsValue; };
+						forward: { x: UnitsValue; y: UnitsValue; };
+						backward: { x: UnitsValue; y: UnitsValue; };
+						smooth: boolean;
+					}[];
+				}[];
+			}[];
+		};
+	}[];
+}
+
 export interface PlacedLayerFilter {
 	enabled: boolean;
 	validAtPosition: boolean;
@@ -689,44 +728,7 @@ export interface PlacedLayerFilter {
 		hasOptions: boolean;
 		foregroundColor: Color;
 		backgroundColor: Color;
-		filter: {
-			rigidType: boolean;
-			bounds: { x: number; y: number; }[];
-			puppetShapeList: {
-				rigidType: boolean;
-				// VrsM: number;
-				// VrsN: number;
-				originalVertexArray: { x: number; y: number; }[];
-				deformedVertexArray: { x: number; y: number; }[];
-				indexArray: number[];
-				pinOffsets: { x: number; y: number; }[];
-				posFinalPins: { x: number; y: number; }[];
-				pinVertexIndices: number[];
-				selectedPin: number[];
-				pinPosition: { x: number; y: number; }[];
-				pinRotation: number[]; // in degrees
-				pinOverlay: boolean[];
-				pinDepth: number[];
-				meshQuality: number;
-				meshExpansion: number;
-				meshRigidity: number;
-				imageResolution: number;
-				meshBoundaryPath: {
-					pathComponents: {
-						shapeOperation: string;
-						paths: {
-							closed: boolean;
-							points: {
-								anchor: { x: UnitsValue; y: UnitsValue; };
-								forward: { x: UnitsValue; y: UnitsValue; };
-								backward: { x: UnitsValue; y: UnitsValue; };
-								smooth: boolean;
-							}[];
-						}[];
-					}[];
-				};
-			}[];
-		};
+		filter: PlacedLayerPuppetFilter | {};
 	}[];
 }
 

@@ -8,7 +8,8 @@ import {
 	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
 	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem,
-	BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue,
+	BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter,
+	UnitsValue, PlacedLayerPuppetFilter,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -1157,6 +1158,55 @@ interface HrznVrtcDescriptor {
 	Vrtc: DescriptorUnitsValue;
 }
 
+type FltrDescriptor = {
+	'null': string[]; // [Ordn.Trgt]
+	rigidType: boolean;
+	puppetShapeList?: {
+		rigidType: boolean;
+		VrsM: number;
+		VrsN: number;
+		originalVertexArray: Uint8Array;
+		deformedVertexArray: Uint8Array;
+		indexArray: Uint8Array;
+		pinOffsets: number[];
+		posFinalPins: number[];
+		pinVertexIndices: number[];
+		PinP: number[];
+		PnRt: number[];
+		PnOv: boolean[];
+		PnDp: number[];
+		meshQuality: number;
+		meshExpansion: number;
+		meshRigidity: number;
+		imageResolution: number;
+		meshBoundaryPath: {
+			pathComponents: {
+				shapeOperation: string; // shapeOperation.xor
+				SbpL: {
+					Clsp: boolean;
+					'Pts ': {
+						Anch: HrznVrtcDescriptor;
+						'Fwd ': HrznVrtcDescriptor;
+						'Bwd ': HrznVrtcDescriptor;
+						Smoo: boolean;
+					}[];
+				}[];
+			}[];
+		};
+		selectedPin: number[];
+	}[];
+	PuX0: number;
+	PuX1: number;
+	PuX2: number;
+	PuX3: number;
+	PuY0: number;
+	PuY1: number;
+	PuY2: number;
+	PuY3: number;
+} | {
+	LqMe: Uint8Array;
+};
+
 interface SoLdDescriptorFilter {
 	enab: boolean,
 	validAtPosition: boolean,
@@ -1173,52 +1223,7 @@ interface SoLdDescriptorFilter {
 		hasoptions: boolean;
 		FrgC: DescriptorColor;
 		BckC: DescriptorColor;
-		Fltr: {
-			'null': string[]; // [Ordn.Trgt]
-			rigidType: boolean;
-			puppetShapeList: {
-				rigidType: boolean;
-				VrsM: number;
-				VrsN: number;
-				originalVertexArray: Uint8Array;
-				deformedVertexArray: Uint8Array;
-				indexArray: Uint8Array;
-				pinOffsets: number[];
-				posFinalPins: number[];
-				pinVertexIndices: number[];
-				PinP: number[];
-				PnRt: number[];
-				PnOv: boolean[];
-				PnDp: number[];
-				meshQuality: number;
-				meshExpansion: number;
-				meshRigidity: number;
-				imageResolution: number;
-				meshBoundaryPath: {
-					pathComponents: {
-						shapeOperation: string; // shapeOperation.xor
-						SbpL: {
-							Clsp: boolean;
-							'Pts ': {
-								Anch: HrznVrtcDescriptor;
-								'Fwd ': HrznVrtcDescriptor;
-								'Bwd ': HrznVrtcDescriptor;
-								Smoo: boolean;
-							}[];
-						}[];
-					}[];
-				};
-				selectedPin: number[];
-			}[];
-			PuX0: number;
-			PuX1: number;
-			PuX2: number;
-			PuX3: number;
-			PuY0: number;
-			PuY1: number;
-			PuY2: number;
-			PuY3: number;
-		};
+		Fltr: FltrDescriptor;
 		filterID: number;
 	}[];
 }
@@ -1253,7 +1258,7 @@ function pointsToArray(points: { x: number; y: number }[]) {
 	return array;
 }
 
-function uin8ToPoints(array: Uint8Array) {
+function uint8ToPoints(array: Uint8Array) {
 	return arrayToPoints(uint8ToFloat32(array));
 }
 
@@ -1269,6 +1274,57 @@ function pointToHrznVrtc(point: { x: UnitsValue; y: UnitsValue; }): HrznVrtcDesc
 		Hrzn: unitsValue(point.x, 'x'),
 		Vrtc: unitsValue(point.y, 'y'),
 	};
+}
+
+function parseFilterFXFilter(Fltr: FltrDescriptor): PlacedLayerPuppetFilter | {} {
+	if ('puppetShapeList' in Fltr) {
+		return {
+			rigidType: Fltr.rigidType,
+			bounds: [
+				{ x: Fltr.PuX0, y: Fltr.PuY0, },
+				{ x: Fltr.PuX1, y: Fltr.PuY1, },
+				{ x: Fltr.PuX2, y: Fltr.PuY2, },
+				{ x: Fltr.PuX3, y: Fltr.PuY3, },
+			],
+			puppetShapeList: Fltr.puppetShapeList!.map(p => ({
+				rigidType: p.rigidType,
+				// TODO: VrsM
+				// TODO: VrsN
+				originalVertexArray: uint8ToPoints(p.originalVertexArray),
+				deformedVertexArray: uint8ToPoints(p.deformedVertexArray),
+				indexArray: Array.from(uint8ToUint32(p.indexArray)),
+				pinOffsets: arrayToPoints(p.pinOffsets),
+				posFinalPins: arrayToPoints(p.posFinalPins),
+				pinVertexIndices: p.pinVertexIndices,
+				selectedPin: p.selectedPin,
+				pinPosition: arrayToPoints(p.PinP),
+				pinRotation: p.PnRt,
+				pinOverlay: p.PnOv,
+				pinDepth: p.PnDp,
+				meshQuality: p.meshQuality,
+				meshExpansion: p.meshExpansion,
+				meshRigidity: p.meshRigidity,
+				imageResolution: p.imageResolution,
+				meshBoundaryPath: {
+					pathComponents: p.meshBoundaryPath.pathComponents.map(c => ({
+						shapeOperation: c.shapeOperation.split('.')[1],
+						paths: c.SbpL.map(t => ({
+							closed: t.Clsp,
+							points: t['Pts '].map(pt => ({
+								anchor: hrznVrtcToPoint(pt.Anch),
+								forward: hrznVrtcToPoint(pt['Fwd ']),
+								backward: hrznVrtcToPoint(pt['Bwd ']),
+								smooth: pt.Smoo,
+							})),
+						})),
+					})),
+				},
+			})),
+		};
+	} else {
+		return {
+		};
+	}
 }
 
 function parseFilterFX(desc: SoLdDescriptorFilter): PlacedLayerFilter {
@@ -1287,51 +1343,64 @@ function parseFilterFX(desc: SoLdDescriptorFilter): PlacedLayerFilter {
 			hasOptions: f.hasoptions,
 			foregroundColor: parseColor(f.FrgC),
 			backgroundColor: parseColor(f.BckC),
-			filter: {
-				rigidType: f.Fltr.rigidType,
-				bounds: [
-					{ x: f.Fltr.PuX0, y: f.Fltr.PuY0, },
-					{ x: f.Fltr.PuX1, y: f.Fltr.PuY1, },
-					{ x: f.Fltr.PuX2, y: f.Fltr.PuY2, },
-					{ x: f.Fltr.PuX3, y: f.Fltr.PuY3, },
-				],
-				puppetShapeList: f.Fltr.puppetShapeList.map(p => ({
-					rigidType: p.rigidType,
-					// TODO: VrsM
-					// TODO: VrsN
-					originalVertexArray: uin8ToPoints(p.originalVertexArray),
-					deformedVertexArray: uin8ToPoints(p.deformedVertexArray),
-					indexArray: Array.from(uint8ToUint32(p.indexArray)),
-					pinOffsets: arrayToPoints(p.pinOffsets),
-					posFinalPins: arrayToPoints(p.posFinalPins),
-					pinVertexIndices: p.pinVertexIndices,
-					selectedPin: p.selectedPin,
-					pinPosition: arrayToPoints(p.PinP),
-					pinRotation: p.PnRt,
-					pinOverlay: p.PnOv,
-					pinDepth: p.PnDp,
-					meshQuality: p.meshQuality,
-					meshExpansion: p.meshExpansion,
-					meshRigidity: p.meshRigidity,
-					imageResolution: p.imageResolution,
-					meshBoundaryPath: {
-						pathComponents: p.meshBoundaryPath.pathComponents.map(c => ({
-							shapeOperation: c.shapeOperation.split('.')[1],
-							paths: c.SbpL.map(t => ({
-								closed: t.Clsp,
-								points: t['Pts '].map(pt => ({
-									anchor: hrznVrtcToPoint(pt.Anch),
-									forward: hrznVrtcToPoint(pt['Fwd ']),
-									backward: hrznVrtcToPoint(pt['Bwd ']),
-									smooth: pt.Smoo,
-								})),
-							})),
-						})),
-					},
-				})),
-			},
+			filter: parseFilterFXFilter(f.Fltr),
 		})),
 	};
+}
+
+function serializeFltr(filter: PlacedLayerPuppetFilter | {}): FltrDescriptor {
+	if ('puppetShapeList' in filter) {
+		return {
+			'null': ['Ordn.Trgt'], // ???
+			rigidType: filter.rigidType,
+			puppetShapeList: filter.puppetShapeList.map(p => ({
+				rigidType: p.rigidType,
+				VrsM: 1, // TODO: ...
+				VrsN: 0, // TODO: ...
+				originalVertexArray: toUint8(new Float32Array(pointsToArray(p.originalVertexArray))),
+				deformedVertexArray: toUint8(new Float32Array(pointsToArray(p.deformedVertexArray))),
+				indexArray: toUint8(new Uint32Array(p.indexArray)),
+				pinOffsets: pointsToArray(p.pinOffsets),
+				posFinalPins: pointsToArray(p.posFinalPins),
+				selectedPin: p.selectedPin,
+				pinVertexIndices: p.pinVertexIndices,
+				PinP: pointsToArray(p.pinPosition),
+				PnRt: p.pinRotation,
+				PnOv: p.pinOverlay,
+				PnDp: p.pinDepth,
+				meshQuality: p.meshQuality,
+				meshExpansion: p.meshExpansion,
+				meshRigidity: p.meshRigidity,
+				imageResolution: p.imageResolution,
+				meshBoundaryPath: {
+					pathComponents: (p.meshBoundaryPath.pathComponents || []).map(c => ({
+						shapeOperation: `shapeOperation.${c.shapeOperation}`,
+						SbpL: (c.paths || []).map(path => ({
+							Clsp: path.closed,
+							'Pts ': (path.points || []).map(pt => ({
+								Anch: pointToHrznVrtc(pt.anchor),
+								'Fwd ': pointToHrznVrtc(pt.forward),
+								'Bwd ': pointToHrznVrtc(pt.backward),
+								Smoo: pt.smooth,
+							})),
+						})),
+					})),
+				},
+			})),
+			PuX0: filter.bounds[0].x,
+			PuX1: filter.bounds[1].x,
+			PuX2: filter.bounds[2].x,
+			PuX3: filter.bounds[3].x,
+			PuY0: filter.bounds[0].y,
+			PuY1: filter.bounds[1].y,
+			PuY2: filter.bounds[2].y,
+			PuY3: filter.bounds[3].y,
+		};
+	} else {
+		return {
+			LqMe: new Uint8Array(),
+		};
+	}
 }
 
 function serializeFilterFX(filter: PlacedLayerFilter): SoLdDescriptorFilter {
@@ -1351,52 +1420,7 @@ function serializeFilterFX(filter: PlacedLayerFilter): SoLdDescriptorFilter {
 			hasoptions: f.hasOptions,
 			FrgC: serializeColor(f.foregroundColor),
 			BckC: serializeColor(f.backgroundColor),
-			Fltr: {
-				'null': ['Ordn.Trgt'], // ???
-				rigidType: f.filter.rigidType,
-				puppetShapeList: (f.filter.puppetShapeList || []).map(p => ({
-					rigidType: p.rigidType,
-					VrsM: 1, // TODO: ...
-					VrsN: 0, // TODO: ...
-					originalVertexArray: toUint8(new Float32Array(pointsToArray(p.originalVertexArray))),
-					deformedVertexArray: toUint8(new Float32Array(pointsToArray(p.deformedVertexArray))),
-					indexArray: toUint8(new Uint32Array(p.indexArray)),
-					pinOffsets: pointsToArray(p.pinOffsets),
-					posFinalPins: pointsToArray(p.posFinalPins),
-					selectedPin: p.selectedPin,
-					pinVertexIndices: p.pinVertexIndices,
-					PinP: pointsToArray(p.pinPosition),
-					PnRt: p.pinRotation,
-					PnOv: p.pinOverlay,
-					PnDp: p.pinDepth,
-					meshQuality: p.meshQuality,
-					meshExpansion: p.meshExpansion,
-					meshRigidity: p.meshRigidity,
-					imageResolution: p.imageResolution,
-					meshBoundaryPath: {
-						pathComponents: (p.meshBoundaryPath.pathComponents || []).map(c => ({
-							shapeOperation: `shapeOperation.${c.shapeOperation}`,
-							SbpL: (c.paths || []).map(path => ({
-								Clsp: path.closed,
-								'Pts ': (path.points || []).map(pt => ({
-									Anch: pointToHrznVrtc(pt.anchor),
-									'Fwd ': pointToHrznVrtc(pt.forward),
-									'Bwd ': pointToHrznVrtc(pt.backward),
-									Smoo: pt.smooth,
-								})),
-							})),
-						})),
-					},
-				})),
-				PuX0: f.filter.bounds[0].x,
-				PuX1: f.filter.bounds[1].x,
-				PuX2: f.filter.bounds[2].x,
-				PuX3: f.filter.bounds[3].x,
-				PuY0: f.filter.bounds[0].y,
-				PuY1: f.filter.bounds[1].y,
-				PuY2: f.filter.bounds[2].y,
-				PuY3: f.filter.bounds[3].y,
-			},
+			Fltr: serializeFltr(f.filter),
 			filterID: f.id,
 		})),
 	};
