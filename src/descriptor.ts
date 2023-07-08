@@ -130,6 +130,8 @@ const fieldToExtType: ExtTypeDict = {
 	Fltr: makeType('', 'rigidTransform'),
 	FrgC: makeType('', 'RGBC'),
 	BckC: makeType('', 'RGBC'),
+	sdwM: nullType,
+	hglM: nullType,
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -159,6 +161,8 @@ const fieldToArrayExtType: ExtTypeDict = {
 	pathComponents: makeType('', 'PaCm'),
 	filterFXList: makeType('', 'filterFX'),
 	puppetShapeList: makeType('', 'puppetShape'),
+	channelDenoise: makeType('', 'channelDenoiseParams'),
+	ShrP: makeType('', 'Pnt '),
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -166,7 +170,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
-		'altTag', 'url', 'cellText',
+		'altTag', 'url', 'cellText', 'preset',
 	],
 	'tdta': ['EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray'],
 	'long': [
@@ -179,16 +183,18 @@ const typeToField: { [key: string]: string[]; } = {
 		'numBefore', 'numAfter', 'Spcn', 'minOpacity', 'maxOpacity', 'BlnM', 'sheetID', 'gblA', 'globalAltitude',
 		'descVersion', 'frameReaderType', 'LyrI', 'zoomOrigin', 'fontSize', 'Rds ', 'sliceID',
 		'topOutset', 'leftOutset', 'bottomOutset', 'rightOutset', 'filterID', 'meshQuality',
-		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN',
+		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN', 'NmbG', 'WLMn', 'WLMx', 'AmMn', 'AmMx', 'SclH', 'SclV',
+		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'ClSz', 'FlRs',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
-		'sdwM', 'hglM', 'bvlT', 'bvlS', 'bvlD', 'Md  ', 'glwS', 'GrdF', 'GlwT',
+		'bvlT', 'bvlS', 'bvlD', 'Md  ', 'glwS', 'GrdF', 'GlwT',
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
-		'vertAlign', 'bgColorType', 'shapeOperation',
+		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
+		'IntC', 'Cnvr', 'FlMd', 'Dstr', 'FlMd',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -200,7 +206,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'present', 'showInDialog', 'overprint', 'sheetDisclosed', 'lightsDisclosed', 'meshesDisclosed',
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
-		'filterMaskLinked', 'filterMaskExtendWithWhite',
+		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
@@ -213,7 +219,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
 		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
 		'strokeStyleOpacity', 'H   ', 'Top ', 'Left', 'Btom', 'Rght', 'Rslt',
-		'topRight', 'topLeft', 'bottomLeft', 'bottomRight',
+		'topRight', 'topLeft', 'bottomLeft', 'bottomRight', 'ClNs', 'Shrp',
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs', 'slices',
@@ -221,10 +227,11 @@ const typeToField: { [key: string]: string[]; } = {
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti', 'FrIn', 'FSts', 'FsFr',
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
 		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
-		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList',
+		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList', 'ShrP',
+		'channelDenoise',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
-	'obj ': ['null'],
+	'obj ': ['null', 'Chnl'],
 };
 
 const channels = [
@@ -265,6 +272,8 @@ const fieldToArrayType: Dict = {
 	PnDp: 'doub',
 	filterFXList: 'Objc',
 	puppetShapeList: 'Objc',
+	ShrP: 'Objc',
+	channelDenoise: 'Objc',
 };
 
 const fieldToType: Dict = {};
@@ -331,11 +340,10 @@ function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 }
 
 export function readDescriptorStructure(reader: PsdReader) {
-	const object: any = {};
-	// object.__struct =
-	readClassStructure(reader);
+	const struct = readClassStructure(reader);
+	const object: any = { _name: struct.name, _classID: struct.classID };
 	const itemsCount = readUint32(reader);
-	// console.log('//', object.__struct);
+
 	for (let i = 0; i < itemsCount; i++) {
 		const key = readAsciiStringOrClassId(reader);
 		const type = readSignature(reader);
@@ -364,6 +372,16 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 
 		if (key === 'origin') {
 			type = root === 'slices' ? 'enum' : 'Objc';
+		} else if (key === 'Rds ') {
+			return typeof value[key] === 'number' ? 'long' : 'UntF';
+		} else if (key === 'Amnt') {
+			return typeof value[key] === 'number' ? 'long' : 'UntF';
+		} else if ((key === 'sdwM' || key === 'hglM') && typeof value[key] === 'string') {
+			return 'enum';
+		} else if (key === 'blur' && typeof value[key] === 'string') {
+			type = 'enum';
+		} else if (key === 'Angl' && typeof value[key] === 'number') {
+			type = 'doub'; // ???
 		} else if (key === 'bounds' && root === 'slices') {
 			type = 'Objc';
 			extType = makeType('', 'Rct1');
@@ -421,7 +439,7 @@ function readOSType(reader: PsdReader, type: string) {
 			for (let i = 0; i < length; i++) {
 				const type = readSignature(reader);
 				// console.log('  >', type);
-				items.push(readOSType(reader, type));
+				items.push({ type, value: readOSType(reader, type) });
 			}
 
 			return items;
@@ -510,6 +528,7 @@ const ObArTypes: { [key: string]: string | undefined; } = {
 };
 
 function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType: NameClassID | undefined, root: string) {
+	if (key === '__struct') return;
 	switch (type) {
 		case 'obj ': // Reference
 			writeReferenceStructure(writer, key, value);
@@ -530,6 +549,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			}
 			break;
 		case 'doub': // Double
+			if (typeof value !== 'number') throw new Error(`Invalid number value: ${JSON.stringify(value)}, key: ${key}`);
 			writeFloat64(writer, value);
 			break;
 		case 'UntF': // Unit double
@@ -546,17 +566,20 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeUnicodeStringWithPadding(writer, value);
 			break;
 		case 'enum': { // Enumerated
+			if (typeof value !== 'string') throw new Error(`Invalid enum value: ${JSON.stringify(value)}, key: ${key}`);
 			const [_type, val] = value.split('.');
 			writeAsciiStringOrClassId(writer, _type);
 			writeAsciiStringOrClassId(writer, val);
 			break;
 		}
 		case 'long': // Integer
+			if (typeof value !== 'number') throw new Error(`Invalid integer value: ${JSON.stringify(value)}, key: ${key}`);
 			writeInt32(writer, value);
 			break;
 		// case 'comp': // Large Integer
 		// 	writeLargeInteger(reader);
 		case 'bool': // Boolean
+			if (typeof value !== 'boolean') throw new Error(`Invalid boolean value: ${JSON.stringify(value)}, key: ${key}`);
 			writeUint8(writer, value ? 1 : 0);
 			break;
 		// case 'type': // Class
@@ -703,7 +726,7 @@ export function readVersionAndDescriptor(reader: PsdReader) {
 	const version = readUint32(reader);
 	if (version !== 16) throw new Error(`Invalid descriptor version: ${version}`);
 	const desc = readDescriptorStructure(reader);
-	// console.log(require('util').inspect(desc, false, 99, true));
+	console.log(require('util').inspect(desc, false, 99, true));
 	return desc;
 }
 
@@ -1629,6 +1652,10 @@ export function unitsPercent(value: number | undefined): DescriptorUnitsValue {
 	return { units: 'Percent', value: Math.round((value || 0) * 100) };
 }
 
+export function unitsPercentF(value: number | undefined): DescriptorUnitsValue {
+	return { units: 'Percent', value: (value || 0) * 100 };
+}
+
 export function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUnitsValue {
 	if (x == null) return { units: 'Pixels', value: 0 };
 
@@ -1840,4 +1867,160 @@ export const strokeStyleLineAlignment = createEnum<LineAlignment>('strokeStyleLi
 	inside: 'strokeStyleAlignInside',
 	center: 'strokeStyleAlignCenter',
 	outside: 'strokeStyleAlignOutside',
+});
+
+export const BlrM = createEnum<'spin' | 'zoom'>('BlrM', 'ispinmage', {
+	spin: 'Spn ',
+	zoom: 'Zm  ',
+});
+
+export const BlrQ = createEnum<'draft' | 'good' | 'best'>('BlrQ', 'good', {
+	draft: 'Drft',
+	good: 'Gd  ',
+	best: 'Bst ',
+});
+
+export const SmBM = createEnum<'normal' | 'edge only' | 'overlay edge'>('SmBM', 'normal', {
+	normal: 'SBMN',
+	'edge only': 'SBME',
+	'overlay edge': 'SBMO',
+});
+
+export const SmBQ = createEnum<'low' | 'medium' | 'high'>('SmBQ', 'medium', {
+	low: 'SBQL',
+	medium: 'SBQM',
+	high: 'SBQH',
+});
+
+export const DspM = createEnum<'stretch to fit' | 'tile'>('DspM', 'stretch to fit', {
+	'stretch to fit': 'StrF',
+	'tile': 'Tile',
+});
+
+export const UndA = createEnum<'wrap around' | 'repeat edge pixels'>('UndA', 'repeat edge pixels', {
+	'wrap around': 'WrpA',
+	'repeat edge pixels': 'RptE',
+});
+
+export const Cnvr = createEnum<'rectangular to polar' | 'polar to rectangular'>('Cnvr', 'rectangular to polar', {
+	'rectangular to polar': 'RctP',
+	'polar to rectangular': 'PlrR',
+});
+
+export const RplS = createEnum<'small' | 'medium' | 'large'>('RplS', 'medium', {
+	small: 'Sml ',
+	medium: 'Mdm ',
+	large: 'Lrg ',
+});
+
+export const SphM = createEnum<'normal' | 'horizontal only' | 'vertical only'>('SphM', 'normal', {
+	'normal': 'Nrml',
+	'horizontal only': 'HrzO',
+	'vertical only': 'VrtO',
+});
+
+export const Wvtp = createEnum<'sine' | 'triangle' | 'square'>('Wvtp', 'sine', {
+	sine: 'WvSn',
+	triangle: 'WvTr',
+	square: 'WvSq',
+});
+
+export const ZZTy = createEnum<'around center' | 'out from center' | 'pond ripples'>('ZZTy', 'pond ripples', {
+	'around center': 'ArnC',
+	'out from center': 'OtFr',
+	'pond ripples': 'PndR',
+});
+
+export const Dstr = createEnum<'uniform' | 'gaussian'>('Dstr', 'uniform', {
+	uniform: 'Unfr',
+	gaussian: 'Gsn ',
+});
+
+export const Chnl = createEnum<'red' | 'green' | 'blue' | 'composite'>('Chnl', 'composite', {
+	red: 'Rd  ',
+	green: 'Grn ',
+	blue: 'Bl  ',
+	composite: 'Cmps',
+});
+
+export const MztT = createEnum<'fine dots' | 'medium dots' | 'grainy dots' | 'coarse dots' | 'short lines' | 'medium lines' | 'long lines' | 'short strokes' | 'medium strokes' | 'long strokes'>('MztT', 'fine dots', {
+	'fine dots': 'FnDt',
+	'medium dots': 'MdmD',
+	'grainy dots': 'GrnD',
+	'coarse dots': 'CrsD',
+	'short lines': 'ShrL',
+	'medium lines': 'MdmL',
+	'long lines': 'LngL',
+	'short strokes': 'ShSt',
+	'medium strokes': 'MdmS',
+	'long strokes': 'LngS',
+});
+
+export const Lns = createEnum<'50-300mm zoom' | '32mm prime' | '105mm prime' | 'movie prime'>('Lns ', '50-300mm zoom', {
+	'50-300mm zoom': 'Zm  ',
+	'32mm prime': 'Nkn ',
+	'105mm prime': 'Nkn1',
+	'movie prime': 'PnVs',
+});
+
+export const blurType = createEnum<'gaussian blur' | 'lens blur' | 'motion blur'>('blurType', 'gaussian blur', {
+	'gaussian blur': 'GsnB',
+	'lens blur': 'lensBlur',
+	'motion blur': 'MtnB',
+});
+
+export const DfsM = createEnum<'normal' | 'darken only' | 'lighten only' | 'anisotropic'>('DfsM', 'normal', {
+	'normal': 'Nrml',
+	'darken only': 'DrkO',
+	'lighten only': 'LghO',
+	'anisotropic': 'anisotropic',
+});
+
+export const ExtT = createEnum<'blocks' | 'pyramids'>('ExtT', 'blocks', {
+	blocks: 'Blks',
+	pyramids: 'Pyrm',
+});
+
+export const ExtR = createEnum<'random' | 'level-based'>('ExtR', 'random', {
+	random: 'Rndm',
+	'level-based': 'LvlB',
+});
+
+export const FlCl = createEnum<'background color' | 'foreground color' | 'inverse image' | 'unaltered image'>('FlCl', 'background color', {
+	'background color': 'FlBc',
+	'foreground color': 'FlFr',
+	'inverse image': 'FlIn',
+	'unaltered image': 'FlSm',
+});
+
+export const CntE = createEnum<'lower' | 'upper'>('CntE', 'upper', {
+	lower: 'Lwr ',
+	upper: 'Upr ',
+});
+
+export const WndM = createEnum<'wind' | 'blast' | 'stagger'>('WndM', 'wind', {
+	wind: 'Wnd ',
+	blast: 'Blst',
+	stagger: 'Stgr',
+});
+
+export const Drct = createEnum<'left' | 'right'>('Drct', 'from the right', {
+	left: 'Left',
+	right: 'Rght',
+});
+
+export const IntE = createEnum<'odd lines' | 'even lines'>('IntE', 'odd lines', {
+	'odd lines': 'ElmO',
+	'even lines': 'ElmE',
+});
+
+export const IntC = createEnum<'duplication' | 'interpolation'>('IntC', 'interpolation', {
+	duplication: 'CrtD',
+	interpolation: 'CrtI',
+});
+
+export const FlMd = createEnum<'set to transparent' | 'repeat edge pixels' | 'wrap around'>('FlMd', 'wrap around', {
+	'set to transparent': 'Bckg',
+	'repeat edge pixels': 'Rpt ',
+	'wrap around': 'Wrp ',
 });

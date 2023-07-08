@@ -674,43 +674,400 @@ export interface LinkedFile {
 	assetLockedState?: number;
 }
 
-export interface PlacedLayerPuppetFilter {
-	rigidType: boolean;
-	bounds: { x: number; y: number; }[];
-	puppetShapeList: {
+type FilterVariant = {
+	type: 'average' | 'blur' | 'blur more';
+} | {
+	type: 'box blur';
+	params: {
+		radius: UnitsValue;
+	};
+} | {
+	type: 'gaussian blur';
+	params: {
+		radius: UnitsValue;
+	};
+} | {
+	type: 'motion blur';
+	params: {
+		angle: number; // in degrees
+		distance: UnitsValue;
+	};
+} | {
+	type: 'radial blur';
+	params: {
+		amount: number;
+		method: 'spin' | 'zoom';
+		quality: 'draft' | 'good' | 'best';
+	};
+} | {
+	type: 'shape blur';
+	params: {
+		radius: UnitsValue;
+		customShape: { name: string; id: string };
+	};
+} | {
+	type: 'smart blur';
+	params: {
+		radius: number;
+		threshold: number;
+		quality: 'low' | 'medium' | 'high';
+		mode: 'normal' | 'edge only' | 'overlay edge';
+	};
+} | {
+	type: 'surface blur';
+	params: {
+		radius: UnitsValue;
+		threshold: number;
+	};
+} | {
+	type: 'displace';
+	params: {
+		horizontalScale: number;
+		verticalScale: number;
+		displacementMap: 'stretch to fit' | 'tile';
+		undefinedAreas: 'wrap around' | 'repeat edge pixels';
+		displacementFile: {
+			signature: string;
+			path: string;
+		};
+	};
+} | {
+	type: 'pinch';
+	params: {
+		amount: number;
+	};
+} | {
+	type: 'polar coordinates';
+	params: {
+		conversion: 'rectangular to polar' | 'polar to rectangular';
+	};
+} | {
+	type: 'ripple';
+	params: {
+		amount: number;
+		size: 'small' | 'medium' | 'large';
+	};
+} | {
+	type: 'shear';
+	params: {
+		shearPoints: { x: number; y: number }[];
+		shearStart: number;
+		shearEnd: number;
+		undefinedAreas: 'wrap around' | 'repeat edge pixels';
+	};
+} | {
+	type: 'spherize';
+	params: {
+		amount: number;
+		mode: 'normal' | 'horizontal only' | 'vertical only';
+	};
+} | {
+	type: 'twirl';
+	params: {
+		angle: number; // degrees
+	};
+} | {
+	type: 'wave';
+	params: {
+		numberOfGenerators: number;
+		type: 'sine' | 'triangle' | 'square';
+		wavelength: { min: number; max: number };
+		amplitude: { min: number; max: number };
+		scale: { x: number; y: number };
+		randomSeed: number;
+		undefinedAreas: 'wrap around' | 'repeat edge pixels';
+	};
+} | {
+	type: 'zigzag';
+	params: {
+		amount: number;
+		ridges: number;
+		style: 'around center' | 'out from center' | 'pond ripples';
+	};
+} | {
+	type: 'add noise';
+	params: {
+		amount: number; // 0..1
+		distribution: 'uniform' | 'gaussian';
+		monochromatic: boolean;
+		randomSeed: number;
+	};
+} | {
+	type: 'despeckle';
+} | {
+	type: 'dust and scratches';
+	params: {
+		radius: number; // pixels
+		threshold: number; // levels
+	};
+} | {
+	type: 'median';
+	params: {
+		radius: UnitsValue;
+	};
+} | {
+	type: 'reduce noise';
+	params: {
+		preset: string;
+		removeJpegArtifact: boolean;
+		reduceColorNoise: number; // 0..1
+		sharpenDetails: number; // 0..1
+		channelDenoise: {
+			channels: ('red' | 'green' | 'blue' | 'composite')[];
+			amount: number;
+			preserveDetails?: number; // percent
+		}[];
+	};
+} | {
+	type: 'color halftone';
+	params: {
+		radius: number; // pixels
+		angle1: number; // degrees
+		angle2: number; // degrees
+		angle3: number; // degrees
+		angle4: number; // degrees
+	};
+} | {
+	type: 'crystallize';
+	params: {
+		cellSize: number;
+		randomSeed: number;
+	};
+} | {
+	type: 'facet' | 'fragment';
+} | {
+	type: 'mezzotint';
+	params: {
+		type: 'fine dots' | 'medium dots' | 'grainy dots' | 'coarse dots' | 'short lines' | 'medium lines' | 'long lines' | 'short strokes' | 'medium strokes' | 'long strokes';
+		randomSeed: number;
+	};
+} | {
+	type: 'mosaic';
+	params: {
+		cellSize: UnitsValue;
+	};
+} | {
+	type: 'pointillize';
+	params: {
+		cellSize: number;
+		randomSeed: number;
+	};
+} | {
+	type: 'clouds';
+	params: {
+		randomSeed: number;
+	};
+} | {
+	type: 'difference clouds';
+	params: {
+		randomSeed: number;
+	};
+} | {
+	type: 'fibers';
+	params: {
+		variance: number;
+		strength: number;
+		randomSeed: number;
+	};
+} | {
+	type: 'lens flare';
+	params: {
+		brightness: number; // percent
+		position: { x: number; y: number; };
+		lensType: '50-300mm zoom' | '32mm prime' | '105mm prime' | 'movie prime';
+	};
+} /*| {
+	type: 'lighting effects';
+	params: {
+		lights: Light3D;
+		cameraPosition: Position3D;
+		gloss: number;
+		metallic: number;
+		exposure: number;
+		ambience: number;
+		ambientColor: Color;
+		// TODO: BmpA, BmpC / Hotspot / color ?
+		width: number;
+		height: number;
+	};
+}*/ | {
+	type: 'sharpen' | 'sharpen edges' | 'sharpen more';
+} | {
+	type: 'smart sharpen';
+	params: {
+		amount: number; // 0..1
+		radius: UnitsValue;
+		threshold: number;
+		angle: number; // degrees
+		moreAccurate: boolean;
+		blur: 'gaussian blur' | 'lens blur' | 'motion blur';
+		preset: string;
+		shadow: {
+			fadeAmount: number; // 0..1
+			tonalWidth: number; // 0..1
+			radius: number; // px
+		};
+		highlight: {
+			fadeAmount: number; // 0..1
+			tonalWidth: number; // 0..1
+			radius: number; // px
+		};
+	};
+} | {
+	type: 'unsharp mask';
+	params: {
+		amount: number; // 0..1
+		radius: UnitsValue;
+		threshold: number; // levels
+	};
+} | {
+	type: 'diffuse';
+	params: {
+		mode: 'normal' | 'darken only' | 'lighten only' | 'anisotropic';
+		randomSeed: number;
+	};
+} | {
+	type: 'emboss';
+	params: {
+		angle: number; // degrees
+		height: number; // pixels
+		amount: number; // percent
+	};
+} | {
+	type: 'extrude';
+	params: {
+		type: 'blocks' | 'pyramids';
+		size: number; // pixels
+		depth: number;
+		depthMode: 'random' | 'level-based';
+		randomSeed: number;
+		solidFrontFaces: boolean;
+		maskIncompleteBlocks: boolean;
+	};
+} | {
+	type: 'find edges' | 'solarize';
+} | {
+	type: 'tiles';
+	params: {
+		numberOfTiles: number;
+		maximumOffset: number; // percent
+		fillEmptyAreaWith: 'background color' | 'foreground color' | 'inverse image' | 'unaltered image';
+		randomSeed: number;
+	};
+} | {
+	type: 'trace contour';
+	params: {
+		level: number;
+		edge: 'lower' | 'upper';
+	};
+} | {
+	type: 'wind';
+	params: {
+		method: 'wind' | 'blast' | 'stagger';
+		direction: 'left' | 'right';
+	};
+} | {
+	type: 'de-interlace';
+	params: {
+		eliminate: 'odd lines' | 'even lines';
+		newFieldsBy: 'duplication' | 'interpolation';
+	};
+} | {
+	type: 'ntsc colors';
+} | {
+	type: 'custom';
+	params: {
+		scale: number;
+		offset: number;
+		matrix: number[];
+	};
+} | {
+	type: 'high pass' | 'maximum' | 'minimum';
+	params: {
+		radius: UnitsValue;
+	};
+} | {
+	type: 'offset';
+	params: {
+		horizontal: number; // pixels
+		vertical: number; // pixels
+		undefinedAreas: 'set to transparent' | 'repeat edge pixels' | 'wrap around';
+	};
+} | {
+	type: 'puppet';
+	params: {
 		rigidType: boolean;
-		// VrsM: number;
-		// VrsN: number;
-		originalVertexArray: { x: number; y: number; }[];
-		deformedVertexArray: { x: number; y: number; }[];
-		indexArray: number[];
-		pinOffsets: { x: number; y: number; }[];
-		posFinalPins: { x: number; y: number; }[];
-		pinVertexIndices: number[];
-		selectedPin: number[];
-		pinPosition: { x: number; y: number; }[];
-		pinRotation: number[]; // in degrees
-		pinOverlay: boolean[];
-		pinDepth: number[];
-		meshQuality: number;
-		meshExpansion: number;
-		meshRigidity: number;
-		imageResolution: number;
-		meshBoundaryPath: {
-			pathComponents: {
-				shapeOperation: string;
-				paths: {
-					closed: boolean;
-					points: {
-						anchor: { x: UnitsValue; y: UnitsValue; };
-						forward: { x: UnitsValue; y: UnitsValue; };
-						backward: { x: UnitsValue; y: UnitsValue; };
-						smooth: boolean;
+		bounds: { x: number; y: number; }[];
+		puppetShapeList: {
+			rigidType: boolean;
+			// VrsM: number;
+			// VrsN: number;
+			originalVertexArray: { x: number; y: number; }[];
+			deformedVertexArray: { x: number; y: number; }[];
+			indexArray: number[];
+			pinOffsets: { x: number; y: number; }[];
+			posFinalPins: { x: number; y: number; }[];
+			pinVertexIndices: number[];
+			selectedPin: number[];
+			pinPosition: { x: number; y: number; }[];
+			pinRotation: number[]; // in degrees
+			pinOverlay: boolean[];
+			pinDepth: number[];
+			meshQuality: number;
+			meshExpansion: number;
+			meshRigidity: number;
+			imageResolution: number;
+			meshBoundaryPath: {
+				pathComponents: {
+					shapeOperation: string;
+					paths: {
+						closed: boolean;
+						points: {
+							anchor: { x: UnitsValue; y: UnitsValue; };
+							forward: { x: UnitsValue; y: UnitsValue; };
+							backward: { x: UnitsValue; y: UnitsValue; };
+							smooth: boolean;
+						}[];
 					}[];
 				}[];
-			}[];
-		};
-	}[];
+			};
+		}[];
+	};
+};
+
+/*
+export interface Position3D {
+	x: number;
+	y: number;
+	z: number;
+	angleX: number;
+	angleY: number;
+	angleZ: number;
+}
+
+export interface Light3D {
+	name: string;
+	type: 'point' | 'spot' | 'infinite';
+	red: number; // 0..1
+	green: number; // 0..1
+	blue: number; // 0..1
+	// TODO: hots
+	falloff: number;
+	shadow: number;
+	// TODO: attn
+	// TODO: attt atta, attb, attc, orad, irad, mult, Type
+	// ...
+}
+*/
+
+export type Filter = FilterVariant & {
+	name: string;
+	opacity: number;
+	blendMode: BlendMode;
+	enabled: boolean;
+	hasOptions: boolean;
+	foregroundColor: Color;
+	backgroundColor: Color;
 }
 
 export interface PlacedLayerFilter {
@@ -719,17 +1076,7 @@ export interface PlacedLayerFilter {
 	maskEnabled: boolean;
 	maskLinked: boolean;
 	maskExtendWithWhite: boolean;
-	list: {
-		id: number;
-		name: string;
-		opacity: number;
-		blendMode: BlendMode;
-		enabled: boolean;
-		hasOptions: boolean;
-		foregroundColor: Color;
-		backgroundColor: Color;
-		filter: PlacedLayerPuppetFilter | {};
-	}[];
+	list: Filter[];
 }
 
 export type PlacedLayerType = 'unknown' | 'vector' | 'raster' | 'image stack';
