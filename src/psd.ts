@@ -1300,7 +1300,22 @@ export interface LayerAdditionalInfo {
 		unifyLayerVisibility?: boolean;
 	};
 	timeline?: Timeline;
-	filterEffects?: any;
+	filterEffectsMasks?: {
+		id: string;
+		top: number;
+		left: number;
+		bottom: number;
+		right: number;
+		depth: number;
+		channels: ({
+			compressionMode: number;
+			data: Uint8Array;
+		} | undefined)[];
+		extra?: {
+			compressionMode: number;
+			data: Uint8Array;
+		};
+	}[];
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
@@ -1512,6 +1527,7 @@ export interface Layer extends LayerAdditionalInfo {
 	blendMode?: BlendMode;
 	opacity?: number;
 	transparencyProtected?: boolean;
+	effectsOpen?: boolean; // effects/filters panel is expanded
 	hidden?: boolean;
 	clipping?: boolean;
 	canvas?: HTMLCanvasElement;

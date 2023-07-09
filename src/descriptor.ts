@@ -11,11 +11,12 @@ import {
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
-	readBytes, readAsciiString, readInt32, readFloat32, readInt32LE, readUnicodeStringWithLength
+	readBytes, readAsciiString, readInt32, readFloat32, readInt32LE, readUnicodeStringWithLengthLE
 } from './psdReader';
 import {
 	PsdWriter, writeSignature, writeBytes, writeUint32, writeFloat64, writeUint8,
-	writeUnicodeStringWithPadding, writeInt32, writeFloat32, writeUnicodeString
+	writeUnicodeStringWithPadding, writeInt32, writeFloat32, writeUnicodeString, writeInt32LE,
+	writeUnicodeStringWithoutLengthLE
 } from './psdWriter';
 
 interface Dict { [key: string]: string; }
@@ -125,13 +126,15 @@ const fieldToExtType: ExtTypeDict = {
 	Anch: makeType('', 'Pnt '),
 	'Fwd ': makeType('', 'Pnt '),
 	'Bwd ': makeType('', 'Pnt '),
+	FlrC: makeType('', 'Pnt '),
 	meshBoundaryPath: makeType('', 'pathClass'),
 	filterFX: makeType('', 'filterFXStyle'),
 	Fltr: makeType('', 'rigidTransform'),
 	FrgC: makeType('', 'RGBC'),
 	BckC: makeType('', 'RGBC'),
-	sdwM: nullType,
-	hglM: nullType,
+	sdwM: makeType('Parameters', 'adaptCorrectTones'),
+	hglM: makeType('Parameters', 'adaptCorrectTones'),
+	customShape: makeType('', 'customShape'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -184,17 +187,18 @@ const typeToField: { [key: string]: string[]; } = {
 		'descVersion', 'frameReaderType', 'LyrI', 'zoomOrigin', 'fontSize', 'Rds ', 'sliceID',
 		'topOutset', 'leftOutset', 'bottomOutset', 'rightOutset', 'filterID', 'meshQuality',
 		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN', 'NmbG', 'WLMn', 'WLMx', 'AmMn', 'AmMx', 'SclH', 'SclV',
-		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'ClSz', 'FlRs',
+		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'FlRs', 'Vrnc', 'Strg', 'ExtS', 'ExtD',
+		'HrzS', 'VrtS', 'NmbR', 'EdgF', 'Ang1', 'Ang2', 'Ang3', 'Ang4',
 	],
 	'enum': [
-		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS',
-		'bvlT', 'bvlS', 'bvlD', 'Md  ', 'glwS', 'GrdF', 'GlwT',
+		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS', 'BlrQ',
+		'bvlT', 'bvlS', 'bvlD', 'Md  ', 'glwS', 'GrdF', 'GlwT', 'RplS', 'BlrM', 'SmBM',
 		'strokeStyleLineCapType', 'strokeStyleLineJoinType', 'strokeStyleLineAlignment',
 		'strokeStyleBlendMode', 'PntT', 'Styl', 'lookupType', 'LUTFormat', 'dataOrder',
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
 		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
-		'IntC', 'Cnvr', 'FlMd', 'Dstr', 'FlMd',
+		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -206,7 +210,8 @@ const typeToField: { [key: string]: string[]; } = {
 		'present', 'showInDialog', 'overprint', 'sheetDisclosed', 'lightsDisclosed', 'meshesDisclosed',
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
-		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch',
+		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch', 'ExtF', 'ExtM',
+		'moreAccurate',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
@@ -216,7 +221,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'PuX0', 'PuX1', 'PuX2', 'PuX3', 'PuY0', 'PuY1', 'PuY2', 'PuY3'
 	],
 	'UntF': [
-		'Scl ', 'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
+		'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
 		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
 		'strokeStyleOpacity', 'H   ', 'Top ', 'Left', 'Btom', 'Rght', 'Rslt',
 		'topRight', 'topLeft', 'bottomLeft', 'bottomRight', 'ClNs', 'Shrp',
@@ -228,10 +233,11 @@ const typeToField: { [key: string]: string[]; } = {
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
 		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
 		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList', 'ShrP',
-		'channelDenoise',
+		'channelDenoise', 'Mtrx',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null', 'Chnl'],
+	'Pth ': ['DspF'],
 };
 
 const channels = [
@@ -274,6 +280,7 @@ const fieldToArrayType: Dict = {
 	puppetShapeList: 'Objc',
 	ShrP: 'Objc',
 	channelDenoise: 'Objc',
+	Mtrx: 'long',
 };
 
 const fieldToType: Dict = {};
@@ -340,8 +347,10 @@ function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 }
 
 export function readDescriptorStructure(reader: PsdReader) {
-	const struct = readClassStructure(reader);
-	const object: any = { _name: struct.name, _classID: struct.classID };
+	// const _struct = 
+	readClassStructure(reader);
+	const object: any = {};
+	// console.log('>> ', struct);
 	const itemsCount = readUint32(reader);
 
 	for (let i = 0; i < itemsCount; i++) {
@@ -364,20 +373,26 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	writeAsciiStringOrClassId(writer, classId);
 
 	const keys = Object.keys(value);
-	writeUint32(writer, keys.length);
+	let keyCount = keys.length;
+	if ('_name' in value) keyCount--;
+	if ('_classID' in value) keyCount--;
+
+	writeUint32(writer, keyCount);
 
 	for (const key of keys) {
+		if (key === '_name' || key === '_classID') continue;
+
 		let type = getTypeByKey(key, value[key], root, value);
 		let extType = fieldToExtType[key];
 
 		if (key === 'origin') {
 			type = root === 'slices' ? 'enum' : 'Objc';
-		} else if (key === 'Rds ') {
-			return typeof value[key] === 'number' ? 'long' : 'UntF';
-		} else if (key === 'Amnt') {
-			return typeof value[key] === 'number' ? 'long' : 'UntF';
+		} else if ((key === 'Cyn ' || key === 'Mgnt' || key === 'Ylw ' || key === 'Blck') && value._classID === 'CMYC') {
+			type = 'doub';
+		} else if (key === 'ClSz' || key === 'Rds ' || key === 'Amnt') {
+			type = typeof value[key] === 'number' ? 'long' : 'UntF';
 		} else if ((key === 'sdwM' || key === 'hglM') && typeof value[key] === 'string') {
-			return 'enum';
+			type = 'enum';
 		} else if (key === 'blur' && typeof value[key] === 'string') {
 			type = 'enum';
 		} else if (key === 'Angl' && typeof value[key] === 'number') {
@@ -385,14 +400,24 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		} else if (key === 'bounds' && root === 'slices') {
 			type = 'Objc';
 			extType = makeType('', 'Rct1');
-		} else if (key === 'Scl ' && 'Hrzn' in value[key]) {
-			type = 'Objc';
-			extType = nullType;
+		} else if (key === 'Scl ') {
+			if (typeof value[key] === 'object' && 'Hrzn' in value[key]) {
+				type = 'Objc';
+				extType = nullType;
+			} else if (typeof value[key] === 'number') {
+				type = 'long';
+			} else {
+				type = 'UntF';
+			}
 		} else if (key === 'audioClipGroupList' && keys.length === 1) {
 			type = 'VlLs';
 		} else if ((key === 'Strt' || key === 'Brgh') && 'H   ' in value) {
 			type = 'doub';
-		} else if (key === 'Strt') {
+		} else if (key === 'Wdth' && typeof value[key] === 'object') {
+			type = 'UntF';
+		} else if (key === 'Ofst' && typeof value[key] === 'number') {
+			type = 'long';
+		} else if (key === 'Strt' && typeof value[key] === 'object') {
 			type = 'Objc';
 			extType = nullType;
 		} else if (channels.indexOf(key) !== -1) {
@@ -439,7 +464,7 @@ function readOSType(reader: PsdReader, type: string) {
 			for (let i = 0; i < length; i++) {
 				const type = readSignature(reader);
 				// console.log('  >', type);
-				items.push({ type, value: readOSType(reader, type) });
+				items.push(readOSType(reader, type));
 			}
 
 			return items;
@@ -509,11 +534,11 @@ function readOSType(reader: PsdReader, type: string) {
 			return items;
 		}
 		case 'Pth ': { // File path
-			/*const length =*/ readInt32(reader);
+			/*const length =*/ readInt32(reader); // total size of all fields below
 			const sig = readSignature(reader);
-			/*const pathSize =*/ readInt32LE(reader);
+			/*const pathSize =*/ readInt32LE(reader); // the same as length
 			const charsCount = readInt32LE(reader);
-			const path = readUnicodeStringWithLength(reader, charsCount);
+			const path = readUnicodeStringWithLengthLE(reader, charsCount);
 			return { sig, path };
 		}
 		default:
@@ -528,17 +553,21 @@ const ObArTypes: { [key: string]: string | undefined; } = {
 };
 
 function writeOSType(writer: PsdWriter, type: string, value: any, key: string, extType: NameClassID | undefined, root: string) {
-	if (key === '__struct') return;
 	switch (type) {
 		case 'obj ': // Reference
 			writeReferenceStructure(writer, key, value);
 			break;
 		case 'Objc': // Descriptor
-		case 'GlbO': // GlobalObject same as Descriptor
+		case 'GlbO': { // GlobalObject same as Descriptor
+			if (typeof value !== 'object') throw new Error(`Invalid struct value: ${JSON.stringify(value)}, key: ${key}`);
 			if (!extType) throw new Error(`Missing ext type for: '${key}' (${JSON.stringify(value)})`);
-			writeDescriptorStructure(writer, extType.name, extType.classID, value, root);
+			const name = value._name || extType.name;
+			const classID = value._classID || extType.classID;
+			writeDescriptorStructure(writer, name, classID, value, root);
 			break;
+		}
 		case 'VlLs': // List
+			if (!Array.isArray(value)) throw new Error(`Invalid list value: ${JSON.stringify(value)}, key: ${key}`);
 			writeInt32(writer, value.length);
 
 			for (let i = 0; i < value.length; i++) {
@@ -611,8 +640,15 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			}
 			break;
 		}
-		// case 'Pth ': // File path
-		// 	writeFilePath(reader);
+		case 'Pth ': { // File path
+			const length = 4 + 4 + 4 + value.path.length * 2;
+			writeInt32(writer, length);
+			writeSignature(writer, value.sig);
+			writeInt32LE(writer, length);
+			writeInt32LE(writer, value.path.length);
+			writeUnicodeStringWithoutLengthLE(writer, value.path);
+			break;
+		}
 		default:
 			throw new Error(`Not implemented descriptor OSType: ${type}`);
 	}
@@ -713,7 +749,6 @@ function writeReferenceStructure(writer: PsdWriter, _key: string, items: any[]) 
 function readClassStructure(reader: PsdReader) {
 	const name = readUnicodeString(reader);
 	const classID = readAsciiStringOrClassId(reader);
-	// console.log({ name, classID });
 	return { name, classID };
 }
 
@@ -726,7 +761,7 @@ export function readVersionAndDescriptor(reader: PsdReader) {
 	const version = readUint32(reader);
 	if (version !== 16) throw new Error(`Invalid descriptor version: ${version}`);
 	const desc = readDescriptorStructure(reader);
-	console.log(require('util').inspect(desc, false, 99, true));
+	// console.log(require('util').inspect(desc, false, 99, true));
 	return desc;
 }
 
@@ -744,25 +779,37 @@ export interface DescriptorUnitsValue {
 }
 
 export type DescriptorColor = {
+	_name: '';
+	_classID: 'RGBC';
 	'Rd  ': number;
 	'Grn ': number;
 	'Bl  ': number;
 } | {
+	_name: '';
+	_classID: 'HSBC'; // ???
 	'H   ': DescriptorUnitsValue;
 	Strt: number;
 	Brgh: number;
 } | {
+	_name: '';
+	_classID: 'CMYC';
 	'Cyn ': number;
 	Mgnt: number;
 	'Ylw ': number;
 	Blck: number;
 } | {
+	_name: '';
+	_classID: 'GRYC'; // ???
 	'Gry ': number;
 } | {
+	_name: '';
+	_classID: 'LABC'; // ???
 	Lmnc: number;
 	'A   ': number;
 	'B   ': number;
 } | {
+	_name: '';
+	_classID: 'XXXX'; // ???
 	redFloat: number;
 	greenFloat: number;
 	blueFloat: number;
@@ -867,6 +914,8 @@ export interface WarpDescriptor {
 	uOrder: number;
 	vOrder: number;
 	customEnvelopeWarp?: {
+		_name: '';
+		_classID: 'customEnvelopeWarp';
 		meshPoints: {
 			type: 'Hrzn' | 'Vrtc';
 			values: number[];
@@ -878,6 +927,8 @@ export interface QuiltWarpDescriptor extends WarpDescriptor {
 	deformNumRows: number;
 	deformNumCols: number;
 	customEnvelopeWarp: {
+		_name: '';
+		_classID: 'customEnvelopeWarp';
 		quiltSliceX: {
 			type: 'quiltSliceX';
 			values: number[];
@@ -1145,7 +1196,8 @@ function parseKeyList(keyList: TimelineKeyDescriptor[], logMissingFeatures: bool
 
 	for (let j = 0; j < keyList.length; j++) {
 		const key = keyList[j];
-		const { time, selected, animKey } = key;
+		const { time: { denominator, numerator }, selected, animKey } = key;
+		const time = { numerator, denominator };
 		const interpolation = animInterpStyleEnum.decode(key.animInterpStyle);
 
 		switch (animKey.Type) {
@@ -1330,6 +1382,9 @@ function parseEffectObject(obj: any, reportErrors: boolean) {
 			case 'present':
 			case 'showInDialog':
 			case 'antialiasGloss': result[key] = val; break;
+			case '_name':
+			case '_classID':
+				break;
 			default:
 				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
 		}
@@ -1587,19 +1642,19 @@ export function parseColor(color: DescriptorColor): Color {
 
 export function serializeColor(color: Color | undefined): DescriptorColor {
 	if (!color) {
-		return { 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
+		return { _name: '', _classID: 'RGBC', 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
 	} else if ('r' in color) {
-		return { 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
+		return { _name: '', _classID: 'RGBC', 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
 	} else if ('fr' in color) {
-		return { redFloat: color.fr, greenFloat: color.fg, blueFloat: color.fb };
+		return { _name: '', _classID: 'XXXX', redFloat: color.fr, greenFloat: color.fg, blueFloat: color.fb };
 	} else if ('h' in color) {
-		return { 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
+		return { _name: '', _classID: 'HSBC', 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
 	} else if ('c' in color) {
-		return { 'Cyn ': color.c || 0, Mgnt: color.m || 0, 'Ylw ': color.y || 0, Blck: color.k || 0 };
+		return { _name: '', _classID: 'CMYC', 'Cyn ': color.c || 0, Mgnt: color.m || 0, 'Ylw ': color.y || 0, Blck: color.k || 0 };
 	} else if ('l' in color) {
-		return { Lmnc: color.l || 0, 'A   ': color.a || 0, 'B   ': color.b || 0 };
+		return { _name: '', _classID: 'LABC', Lmnc: color.l || 0, 'A   ': color.a || 0, 'B   ': color.b || 0 };
 	} else if ('k' in color) {
-		return { 'Gry ': color.k };
+		return { _name: '', _classID: 'GRYC', 'Gry ': color.k };
 	} else {
 		throw new Error('Invalid color value');
 	}
@@ -2024,3 +2079,7 @@ export const FlMd = createEnum<'set to transparent' | 'repeat edge pixels' | 'wr
 	'repeat edge pixels': 'Rpt ',
 	'wrap around': 'Wrp ',
 });
+
+export function frac({ numerator, denominator }: FractionDescriptor) {
+	return { numerator, denominator };
+}

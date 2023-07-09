@@ -204,6 +204,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "Background",
       "effects": {
         "scale": 8.333333333333334,

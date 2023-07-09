@@ -69,8 +69,8 @@ describe('PsdReader', () => {
 
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
-	// fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk/.test(f)).forEach(f => {
-	fs.readdirSync(readFilesPath).filter(f => /ignore-smart-filter/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /ignore-smart-filter/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
@@ -156,6 +156,22 @@ describe('PsdReader', () => {
 				}
 			}
 
+			if (psd.filterEffectsMasks) {
+				for (const mask of psd.filterEffectsMasks) {
+					for (let i = 0; i < mask.channels.length; i++) {
+						if (mask.channels[i]) {
+							mask.channels[i]!.data = byteArrayToBase64(mask.channels[i]!.data) as any;
+						} else {
+							mask.channels[i] = null as any;
+						}
+					}
+
+					if (mask.extra?.data) {
+						mask.extra!.data = byteArrayToBase64(mask.extra!.data) as any;
+					}
+				}
+			}
+
 			pushLayerCanvases(psd.children || []);
 			convertUint8ArraysToBase64(psd.children || []);
 
@@ -178,30 +194,33 @@ describe('PsdReader', () => {
 			clearEmptyCanvasFields(expected);
 
 			expect(psd).eql(expected, f);
+
 			compare.forEach(i => i.skip || compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
 			compareFiles.forEach(i => compareTwoFiles(path.join(basePath, i.name), i.data, `${f}/${i.name}`));
 		});
 	});
 
-	// fs.readdirSync(readWriteFilesPath).forEach(f => {
-	fs.readdirSync(readWriteFilesPath).filter(f => /round/.test(f)).forEach(f => {
-		it.only(`reads-writes PSD file (${f})`, () => {
+	fs.readdirSync(readWriteFilesPath).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /ignore-filter/.test(f)).forEach(f => {
+		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {
 				...opts, useImageData: true, useRawThumbnail: true, throwForMissingFeatures: true,
 				// logDevFeatures: true, logMissingFeatures: true,
 			});
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb' });
-			fs.writeFileSync(path.join(resultsFilesPath, `read-write`, `${f}.${ext}`), actual);
-			fs.writeFileSync(path.join(resultsFilesPath, `read-write`, `${f}.bin`), actual);
+			const resultsDir = path.join(resultsFilesPath, 'read-write', f);
+			fs.mkdirSync(resultsDir, { recursive: true });
+			fs.writeFileSync(path.join(resultsDir, `expected.${ext}`), actual);
+			fs.writeFileSync(path.join(resultsDir, `expected.bin`), actual);
 			// console.log(require('util').inspect(psd, false, 99, true));
 
-			// const psd2 = readPsdFromFile(path.join(resultsFilesPath, `read-write-${f}.psd`), { ...opts, useImageData: true, useRawThumbnail: true });
+			// const psd2 = readPsdFromFile(path.join(resultsDir, `raw.psd`), { ...opts, useImageData: true, useRawThumbnail: true });
 			// fs.writeFileSync('temp.txt', require('util').inspect(psd, false, 99, false), 'utf8');
 			// fs.writeFileSync('temp2.txt', require('util').inspect(psd2, false, 99, false), 'utf8');
 
-			//const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
-			//compareBuffers(actual, expected, `read-write-${f}`, 0x216b0);
+			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
+			compareBuffers(actual, expected, `read-write-${f}`, 0x25584);
 		});
 	});
 

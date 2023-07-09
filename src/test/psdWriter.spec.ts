@@ -354,13 +354,14 @@ describe('PsdWriter', () => {
 
 			expect(before).equal(after, 'psd object mutated');
 
-			fs.mkdirSync(resultsFilesPath, { recursive: true });
-			fs.writeFileSync(path.join(resultsFilesPath, `${f}.psd`), buffer);
-			// fs.writeFileSync(path.join(resultsFilesPath, `${f}.bin`), buffer); // TEMP
+			const resultsDir = path.join(resultsFilesPath, 'write', f);
+			fs.mkdirSync(resultsDir, { recursive: true });
+			fs.writeFileSync(path.join(resultsDir, `expected.psd`), buffer);
+			// fs.writeFileSync(path.join(resultsDir, `expected.bin`), buffer); // TEMP
 
 			const reader = createReader(buffer.buffer);
 			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
-			fs.writeFileSync(path.join(resultsFilesPath, `${f}-composite.png`), result.canvas!.toBuffer());
+			fs.writeFileSync(path.join(resultsDir, `composite.png`), result.canvas!.toBuffer());
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
 
 			const expected = fs.readFileSync(path.join(basePath, 'expected.psd'));

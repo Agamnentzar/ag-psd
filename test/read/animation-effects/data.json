@@ -195,6 +195,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "Layer 1",
       "effects": {
         "scale": 1,

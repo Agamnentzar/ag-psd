@@ -146,6 +146,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "other2",
       "effects": {
         "scale": 1,
@@ -239,6 +240,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "other",
       "effects": {
         "scale": 1,
@@ -369,6 +371,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "drop shadow",
       "effects": {
         "scale": 1,
@@ -441,6 +444,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "inner shadow",
       "effects": {
         "scale": 1,
@@ -512,6 +516,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "inner outer glow",
       "effects": {
         "scale": 1,
@@ -615,6 +620,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "bevel",
       "effects": {
         "scale": 1,
@@ -693,6 +699,7 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "effectsOpen": true,
       "name": "solid fill",
       "effects": {
         "disabled": true,

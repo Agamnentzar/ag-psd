@@ -12,7 +12,11 @@ import {
 } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
-import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
+import {
+	ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac,
+	FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor,
+	TimeScopeDescriptor, writeVersionAndDescriptor
+} from './descriptor';
 
 export interface ResourceHandler {
 	key: number;
@@ -664,12 +668,12 @@ addHandler(
 
 		target.timelineInformation = {
 			enabled: desc.enab,
-			frameStep: desc.frameStep,
+			frameStep: frac(desc.frameStep),
 			frameRate: desc.frameRate,
-			time: desc.time,
-			duration: desc.duration,
-			workInTime: desc.workInTime,
-			workOutTime: desc.workOutTime,
+			time: frac(desc.time),
+			duration: frac(desc.duration),
+			workInTime: frac(desc.workInTime),
+			workOutTime: frac(desc.workOutTime),
 			repeats: desc.LCnt,
 			hasMotion: desc.hasMotion,
 			globalTracks: parseTrackList(desc.globalTrackList, !!options.logMissingFeatures),

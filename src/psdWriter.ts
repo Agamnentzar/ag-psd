@@ -4,7 +4,7 @@ import {
 	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
 	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction
 } from './helpers';
-import { ExtendedWriteOptions, hasMultiEffects, infoHandlers } from './additionalInfo';
+import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
 
 export interface PsdWriter {
@@ -43,9 +43,19 @@ export function writeUint16(writer: PsdWriter, value: number) {
 	writer.view.setUint16(offset, value, false);
 }
 
+export function writeUint16LE(writer: PsdWriter, value: number) {
+	const offset = addSize(writer, 2);
+	writer.view.setUint16(offset, value, true);
+}
+
 export function writeInt32(writer: PsdWriter, value: number) {
 	const offset = addSize(writer, 4);
 	writer.view.setInt32(offset, value, false);
+}
+
+export function writeInt32LE(writer: PsdWriter, value: number) {
+	const offset = addSize(writer, 4);
+	writer.view.setInt32(offset, value, true);
 }
 
 export function writeUint32(writer: PsdWriter, value: number) {
@@ -110,12 +120,21 @@ export function writePascalString(writer: PsdWriter, text: string, padTo: number
 	}
 }
 
-export function writeUnicodeString(writer: PsdWriter, text: string) {
-	writeUint32(writer, text.length);
-
+export function writeUnicodeStringWithoutLength(writer: PsdWriter, text: string) {
 	for (let i = 0; i < text.length; i++) {
 		writeUint16(writer, text.charCodeAt(i));
 	}
+}
+
+export function writeUnicodeStringWithoutLengthLE(writer: PsdWriter, text: string) {
+	for (let i = 0; i < text.length; i++) {
+		writeUint16LE(writer, text.charCodeAt(i));
+	}
+}
+
+export function writeUnicodeString(writer: PsdWriter, text: string) {
+	writeUint32(writer, text.length);
+	writeUnicodeStringWithoutLength(writer, text);
 }
 
 export function writeUnicodeStringWithPadding(writer: PsdWriter, text: string) {
@@ -304,10 +323,7 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other)) {
 				flags |= 0x10; // pixel data irrelevant to appearance of document
 			}
-			if (layer.effects && hasMultiEffects(layer.effects)) { // TODO: this is not correct
-				flags |= 0x20; // just guessing this one, might be completely incorrect
-			}
-			// if ('_2' in layer) flags |= 0x20; // TEMP!!!
+			if (layer.effectsOpen) flags |= 0x20;
 
 			writeUint8(writer, flags);
 			writeUint8(writer, 0); // filler

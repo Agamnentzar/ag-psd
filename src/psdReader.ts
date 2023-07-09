@@ -67,6 +67,11 @@ export function readUint16(reader: PsdReader) {
 	return reader.view.getUint16(reader.offset - 2, false);
 }
 
+export function readUint16LE(reader: PsdReader) {
+	reader.offset += 2;
+	return reader.view.getUint16(reader.offset - 2, true);
+}
+
 export function readInt32(reader: PsdReader) {
 	reader.offset += 4;
 	return reader.view.getInt32(reader.offset - 4, false);
@@ -144,6 +149,20 @@ export function readUnicodeStringWithLength(reader: PsdReader, length: number) {
 
 	while (length--) {
 		const value = readUint16(reader);
+
+		if (value || length > 0) { // remove trailing \0
+			text += String.fromCharCode(value);
+		}
+	}
+
+	return text;
+}
+
+export function readUnicodeStringWithLengthLE(reader: PsdReader, length: number) {
+	let text = '';
+
+	while (length--) {
+		const value = readUint16LE(reader);
 
 		if (value || length > 0) { // remove trailing \0
 			text += String.fromCharCode(value);
@@ -379,15 +398,15 @@ function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 	const channels: ChannelInfo[] = [];
 
 	for (let i = 0; i < channelCount; i++) {
-		let channelID = readInt16(reader) as ChannelID;
-		let channelLength = readUint32(reader);
+		let id = readInt16(reader) as ChannelID;
+		let length = readUint32(reader);
 
 		if (options.large) {
-			if (channelLength !== 0) throw new Error('Sizes larger than 4GB are not supported');
-			channelLength = readUint32(reader);
+			if (length !== 0) throw new Error('Sizes larger than 4GB are not supported');
+			length = readUint32(reader);
 		}
 
-		channels.push({ id: channelID, length: channelLength });
+		channels.push({ id, length });
 	}
 
 	checkSignature(reader, '8BIM');
@@ -401,11 +420,11 @@ function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 	const flags = readUint8(reader);
 	layer.transparencyProtected = (flags & 0x01) !== 0;
 	layer.hidden = (flags & 0x02) !== 0;
+	if (flags & 0x20) layer.effectsOpen = true;
 	// 0x04 - obsolete
 	// 0x08 - 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
 	// 0x10 - pixel data irrelevant to appearance of document
-	// 0x20 - ???
-	// if (flags & 0x20) (layer as any)._2 = true; // TEMP !!!!
+	// 0x20 - effects/filters panel is expanded
 
 	skipBytes(reader, 1);
 
