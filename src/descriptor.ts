@@ -173,9 +173,12 @@ const typeToField: { [key: string]: string[]; } = {
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
-		'altTag', 'url', 'cellText', 'preset',
+		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth',
 	],
-	'tdta': ['EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray'],
+	'tdta': [
+		'EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray',
+		'LqMe',
+	],
 	'long': [
 		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn', 'Cnt ',
 		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind', 'comp', 'compID', 'originalCompID',
@@ -211,7 +214,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
 		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch', 'ExtF', 'ExtM',
-		'moreAccurate',
+		'moreAccurate', 'GpuY', 'LIWy',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
@@ -347,8 +350,9 @@ function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 }
 
 export function readDescriptorStructure(reader: PsdReader) {
-	// const _struct = 
+	// const struct =
 	readClassStructure(reader);
+	// const object: any = { _name: struct.name, _classID: struct.classID };
 	const object: any = {};
 	// console.log('>> ', struct);
 	const itemsCount = readUint32(reader);
@@ -388,6 +392,12 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		if (key === 'origin') {
 			type = root === 'slices' ? 'enum' : 'Objc';
 		} else if ((key === 'Cyn ' || key === 'Mgnt' || key === 'Ylw ' || key === 'Blck') && value._classID === 'CMYC') {
+			type = 'doub';
+		} else if (/^PN[a-z][a-z]$/.test(key)) {
+			type = 'TEXT';
+		} else if (/^PT[a-z][a-z]$/.test(key)) {
+			type = 'long';
+		} else if (/^PF[a-z][a-z]$/.test(key)) {
 			type = 'doub';
 		} else if (key === 'ClSz' || key === 'Rds ' || key === 'Amnt') {
 			type = typeof value[key] === 'number' ? 'long' : 'UntF';
@@ -1732,6 +1742,10 @@ export function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUn
 	return { units, value };
 }
 
+export function frac({ numerator, denominator }: FractionDescriptor) {
+	return { numerator, denominator };
+}
+
 export const textGridding = createEnum<TextGridding>('textGridding', 'none', {
 	none: 'None',
 	round: 'Rnd ',
@@ -1867,6 +1881,7 @@ export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {
 	rgb: 'RGBC',
 	hsb: 'HSBl',
 	lab: 'LbCl',
+	hsl: 'HSLC',
 });
 
 export const FStl = createEnum<'inside' | 'center' | 'outside'>('FStl', 'outside', {
@@ -2080,6 +2095,9 @@ export const FlMd = createEnum<'set to transparent' | 'repeat edge pixels' | 'wr
 	'wrap around': 'Wrp ',
 });
 
-export function frac({ numerator, denominator }: FractionDescriptor) {
-	return { numerator, denominator };
-}
+export const prjM = createEnum<'fisheye' | 'perspective' | 'auto' | 'full spherical'>('prjM', 'fisheye', {
+	'fisheye': 'fisP',
+	'perspective': 'perP',
+	'auto': 'auto',
+	'full spherical': 'fusP',
+});

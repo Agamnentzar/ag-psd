@@ -30,7 +30,7 @@ import {
 	parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList,
 	serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy,
 	Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd,
-	unitsPercentF, frac,
+	unitsPercentF, frac, ClrS,
 } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
@@ -51,6 +51,7 @@ export interface InfoHandler {
 	write: WriteMethod;
 }
 
+const fromAtoZ = 'abcdefghijklmnopqrstuvwxyz';
 export const infoHandlers: InfoHandler[] = [];
 export const infoHandlersMap: { [key: string]: InfoHandler; } = {};
 
@@ -1724,6 +1725,112 @@ type SoLdDescriptorFilterItem = {
 		PuY2: number;
 		PuY3: number;
 	}
+} | {
+	filterID: 1348620396;
+	Fltr: {
+		_name: 'Oil Paint Plugin';
+		_classID: 'PbPl';
+		KnNm: string;
+		GpuY: boolean;
+		LIWy: boolean;
+		FPth: string;
+		// PNaa: string;
+		// PTaa: number;
+		// PFaa: number;
+		// PNab: string;
+		// PTab: number;
+		// PFab: number;
+		// ...
+	};
+} /*| {
+	filterID: 1282294642;
+	Fltr: {
+		_name: 'Lens Correction',
+		_classID: 'LnCr',
+		LnAg: boolean;
+		LnAc: boolean;
+		LnAv: boolean;
+		LnAs: boolean;
+		LnIp: boolean;
+		LnFo: number;
+		LnPr: string;
+		LnIa: number;
+		LnI0: number;
+		LnI1: number;
+		LnI2: number;
+		LnI3: number;
+		LnRa: number;
+		LnVp: number;
+		LnHp: number;
+		LnSi: number;
+		LnFt: number;
+		LnSb: number;
+		LnSt: number;
+		LnRc: number;
+		LnGm: number;
+		LnBy: number;
+		LnNa: number;
+		LnIh: number;
+		LnIv: number;
+		LnIs: DescriptorColor;
+		LnNm: boolean;
+	};
+}*//* | {
+	filterID: 2089;
+	Fltr: {
+		_name: 'Adaptive Wide Angle';
+		_classID: '22C3EEBF-A978-4ca9-91DF-E4F0CCEE5ACE';
+		actV: number;
+		cnsD?: Uint8Array;
+		prjM: string;
+		regM: string;
+		focL: number;
+		PhyF: number;
+		CrpF: number;
+		imgS: number;
+		imgX: number;
+		imgY: number;
+	};
+}*//* | {
+	filterID: 1195730531;
+	Fltr: {
+			_name: 'Filter Gallery';
+			_classID: 'GEfc';
+		} & ({
+			GEfk: string;
+			Pncl: number;
+			StrP: number;
+			PprB: number;
+		} | ...);
+	};
+}*/ | {
+	filterID: 1215521360;
+	Fltr: {
+		_name: 'HSB/HSL',
+		_classID: 'HsbP',
+		Inpt: string;
+		Otpt: string;
+	};
+} | {
+	filterID: 1122;
+	Fltr: {
+		_name: 'Oil Paint',
+		_classID: 'oilPaint',
+		lightingOn: boolean;
+		stylization: number;
+		cleanliness: number;
+		brushScale: number;
+		microBrush: number;
+		LghD: number;
+		specularity: number;
+	};
+} | {
+	filterID: 1282492025;
+	Fltr: {
+		_name: 'Liquify',
+		_classID: 'LqFy',
+		LqMe: Uint8Array;
+	};
 });
 
 interface SoLdDescriptorFilter {
@@ -1805,21 +1912,21 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 697: return {
 			...base,
 			type: 'box blur',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 			},
 		};
 		case 1198747202: return {
 			...base,
 			type: 'gaussian blur',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 			},
 		};
 		case 1299476034: return {
 			...base,
 			type: 'motion blur',
-			params: {
+			filter: {
 				angle: f.Fltr.Angl,
 				distance: parseUnits(f.Fltr.Dstn),
 			},
@@ -1827,7 +1934,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1382313026: return {
 			...base,
 			type: 'radial blur',
-			params: {
+			filter: {
 				amount: f.Fltr.Amnt,
 				method: BlrM.decode(f.Fltr.BlrM),
 				quality: BlrQ.decode(f.Fltr.BlrQ),
@@ -1836,7 +1943,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 702: return {
 			...base,
 			type: 'shape blur',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 				customShape: { name: f.Fltr.customShape['Nm  '], id: f.Fltr.customShape.Idnt },
 			},
@@ -1844,7 +1951,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1399681602: return {
 			...base,
 			type: 'smart blur',
-			params: {
+			filter: {
 				radius: f.Fltr['Rds '],
 				threshold: f.Fltr.Thsh,
 				quality: SmBQ.decode(f.Fltr.SmBQ),
@@ -1854,7 +1961,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 701: return {
 			...base,
 			type: 'surface blur',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 				threshold: f.Fltr.Thsh,
 			},
@@ -1862,7 +1969,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1148416108: return {
 			...base,
 			type: 'displace',
-			params: {
+			filter: {
 				horizontalScale: f.Fltr.HrzS,
 				verticalScale: f.Fltr.VrtS,
 				displacementMap: DspM.decode(f.Fltr.DspM),
@@ -1876,21 +1983,21 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1349411688: return {
 			...base,
 			type: 'pinch',
-			params: {
+			filter: {
 				amount: f.Fltr.Amnt,
 			},
 		};
 		case 1349284384: return {
 			...base,
 			type: 'polar coordinates',
-			params: {
+			filter: {
 				conversion: Cnvr.decode(f.Fltr.Cnvr),
 			},
 		};
 		case 1383099493: return {
 			...base,
 			type: 'ripple',
-			params: {
+			filter: {
 				amount: f.Fltr.Amnt,
 				size: RplS.decode(f.Fltr.RplS),
 			},
@@ -1898,7 +2005,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1399353888: return {
 			...base,
 			type: 'shear',
-			params: {
+			filter: {
 				shearPoints: f.Fltr.ShrP.map(p => ({ x: p.Hrzn, y: p.Vrtc })),
 				shearStart: f.Fltr.ShrS,
 				shearEnd: f.Fltr.ShrE,
@@ -1908,7 +2015,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1399875698: return {
 			...base,
 			type: 'spherize',
-			params: {
+			filter: {
 				amount: f.Fltr.Amnt,
 				mode: SphM.decode(f.Fltr.SphM),
 			},
@@ -1916,14 +2023,14 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1417114220: return {
 			...base,
 			type: 'twirl',
-			params: {
+			filter: {
 				angle: f.Fltr.Angl,
 			},
 		};
 		case 1466005093: return {
 			...base,
 			type: 'wave',
-			params: {
+			filter: {
 				numberOfGenerators: f.Fltr.NmbG,
 				type: Wvtp.decode(f.Fltr.Wvtp),
 				wavelength: { min: f.Fltr.WLMn, max: f.Fltr.WLMx },
@@ -1936,7 +2043,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1516722791: return {
 			...base,
 			type: 'zigzag',
-			params: {
+			filter: {
 				amount: f.Fltr.Amnt,
 				ridges: f.Fltr.NmbR,
 				style: ZZTy.decode(f.Fltr.ZZTy),
@@ -1945,7 +2052,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1097092723: return {
 			...base,
 			type: 'add noise',
-			params: {
+			filter: {
 				amount: parsePercent(f.Fltr.Nose),
 				distribution: Dstr.decode(f.Fltr.Dstr),
 				monochromatic: f.Fltr.Mnch,
@@ -1956,7 +2063,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1148417107: return {
 			...base,
 			type: 'dust and scratches',
-			params: {
+			filter: {
 				radius: f.Fltr['Rds '],
 				threshold: f.Fltr.Thsh,
 			},
@@ -1964,14 +2071,14 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1298427424: return {
 			...base,
 			type: 'median',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 			},
 		};
 		case 633: return {
 			...base,
 			type: 'reduce noise',
-			params: {
+			filter: {
 				preset: f.Fltr.preset,
 				removeJpegArtifact: f.Fltr.removeJPEGArtifact,
 				reduceColorNoise: parsePercent(f.Fltr.ClNs),
@@ -1986,7 +2093,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1131180616: return {
 			...base,
 			type: 'color halftone',
-			params: {
+			filter: {
 				radius: f.Fltr['Rds '],
 				angle1: f.Fltr.Ang1,
 				angle2: f.Fltr.Ang2,
@@ -1997,7 +2104,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1131574132: return {
 			...base,
 			type: 'crystallize',
-			params: {
+			filter: {
 				cellSize: f.Fltr.ClSz,
 				randomSeed: f.Fltr.FlRs,
 			},
@@ -2007,7 +2114,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1299870830: return {
 			...base,
 			type: 'mezzotint',
-			params: {
+			filter: {
 				type: MztT.decode(f.Fltr.MztT),
 				randomSeed: f.Fltr.FlRs,
 			},
@@ -2015,14 +2122,14 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1299407648: return {
 			...base,
 			type: 'mosaic',
-			params: {
+			filter: {
 				cellSize: parseUnits(f.Fltr.ClSz),
 			},
 		};
 		case 1349416044: return {
 			...base,
 			type: 'pointillize',
-			params: {
+			filter: {
 				cellSize: f.Fltr.ClSz,
 				randomSeed: f.Fltr.FlRs,
 			},
@@ -2030,21 +2137,21 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1131177075: return {
 			...base,
 			type: 'clouds',
-			params: {
+			filter: {
 				randomSeed: f.Fltr.FlRs,
 			},
 		};
 		case 1147564611: return {
 			...base,
 			type: 'difference clouds',
-			params: {
+			filter: {
 				randomSeed: f.Fltr.FlRs,
 			},
 		};
 		case 1180856947: return {
 			...base,
 			type: 'fibers',
-			params: {
+			filter: {
 				variance: f.Fltr.Vrnc,
 				strength: f.Fltr.Strg,
 				randomSeed: f.Fltr.RndS,
@@ -2053,7 +2160,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1282306886: return {
 			...base,
 			type: 'lens flare',
-			params: {
+			filter: {
 				brightness: f.Fltr.Brgh,
 				position: { x: f.Fltr.FlrC.Hrzn, y: f.Fltr.FlrC.Vrtc },
 				lensType: Lns.decode(f.Fltr['Lns ']),
@@ -2065,7 +2172,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 698: return {
 			...base,
 			type: 'smart sharpen',
-			params: {
+			filter: {
 				amount: parsePercent(f.Fltr.Amnt),
 				radius: parseUnits(f.Fltr['Rds ']),
 				threshold: f.Fltr.Thsh,
@@ -2088,7 +2195,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1433301837: return {
 			...base,
 			type: 'unsharp mask',
-			params: {
+			filter: {
 				amount: parsePercent(f.Fltr.Amnt),
 				radius: parseUnits(f.Fltr['Rds ']),
 				threshold: f.Fltr.Thsh,
@@ -2097,7 +2204,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1147564832: return {
 			...base,
 			type: 'diffuse',
-			params: {
+			filter: {
 				mode: DfsM.decode(f.Fltr['Md  ']),
 				randomSeed: f.Fltr.FlRs,
 			},
@@ -2105,7 +2212,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1164796531: return {
 			...base,
 			type: 'emboss',
-			params: {
+			filter: {
 				angle: f.Fltr.Angl,
 				height: f.Fltr.Hght,
 				amount: f.Fltr.Amnt,
@@ -2114,7 +2221,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1165522034: return {
 			...base,
 			type: 'extrude',
-			params: {
+			filter: {
 				type: ExtT.decode(f.Fltr.ExtT),
 				size: f.Fltr.ExtS,
 				depth: f.Fltr.ExtD,
@@ -2129,7 +2236,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1416393504: return {
 			...base,
 			type: 'tiles',
-			params: {
+			filter: {
 				numberOfTiles: f.Fltr.TlNm,
 				maximumOffset: f.Fltr.TlOf,
 				fillEmptyAreaWith: FlCl.decode(f.Fltr.FlCl),
@@ -2139,7 +2246,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1416782659: return {
 			...base,
 			type: 'trace contour',
-			params: {
+			filter: {
 				level: f.Fltr['Lvl '],
 				edge: CntE.decode(f.Fltr['Edg ']),
 			},
@@ -2147,7 +2254,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1466852384: return {
 			...base,
 			type: 'wind',
-			params: {
+			filter: {
 				method: WndM.decode(f.Fltr.WndM),
 				direction: Drct.decode(f.Fltr.Drct),
 			},
@@ -2155,7 +2262,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1148089458: return {
 			...base,
 			type: 'de-interlace',
-			params: {
+			filter: {
 				eliminate: IntE.decode(f.Fltr.IntE),
 				newFieldsBy: IntC.decode(f.Fltr.IntC),
 			},
@@ -2164,7 +2271,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1131639917: return {
 			...base,
 			type: 'custom',
-			params: {
+			filter: {
 				scale: f.Fltr['Scl '],
 				offset: f.Fltr.Ofst,
 				matrix: f.Fltr.Mtrx,
@@ -2173,28 +2280,28 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 1214736464: return {
 			...base,
 			type: 'high pass',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 			},
 		};
 		case 1299737888: return {
 			...base,
 			type: 'maximum',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 			},
 		};
 		case 1299082528: return {
 			...base,
 			type: 'minimum',
-			params: {
+			filter: {
 				radius: parseUnits(f.Fltr['Rds ']),
 			},
 		};
 		case 1332114292: return {
 			...base,
 			type: 'offset',
-			params: {
+			filter: {
 				horizontal: f.Fltr.Hrzn,
 				vertical: f.Fltr.Vrtc,
 				undefinedAreas: FlMd.decode(f.Fltr['Fl  ']),
@@ -2203,7 +2310,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		case 991: return {
 			...base,
 			type: 'puppet',
-			params: {
+			filter: {
 				rigidType: f.Fltr.rigidType,
 				bounds: [
 					{ x: f.Fltr.PuX0, y: f.Fltr.PuY0, },
@@ -2247,6 +2354,76 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 				})),
 			},
 		};
+		case 1348620396: {
+			const parameters: { name: string; value: number; }[] = [];
+			const Flrt = f.Fltr as any;
+
+			for (let i = 0; i < fromAtoZ.length; i++) {
+				if (!Flrt[`PN${fromAtoZ[i]}a`]) break;
+
+				for (let j = 0; j < fromAtoZ.length; j++) {
+					if (!Flrt[`PN${fromAtoZ[i]}${fromAtoZ[j]}`]) break;
+
+					parameters.push({
+						name: Flrt[`PN${fromAtoZ[i]}${fromAtoZ[j]}`],
+						value: Flrt[`PF${fromAtoZ[i]}${fromAtoZ[j]}`]
+					});
+				}
+			}
+
+			return {
+				...base,
+				type: 'oil paint plugin',
+				filter: {
+					name: f.Fltr.KnNm,
+					gpu: f.Fltr.GpuY,
+					lighting: f.Fltr.LIWy,
+					parameters,
+				},
+			}
+		}
+		// case 2089: return {
+		// 	...base,
+		// 	type: 'adaptive wide angle',
+		// 	params: {
+		// 		correction: prjM.decode(f.Fltr.prjM),
+		// 		focalLength: f.Fltr.focL,
+		// 		cropFactor: f.Fltr.CrpF,
+		// 		imageScale: f.Fltr.imgS,
+		// 		imageX: f.Fltr.imgX,
+		// 		imageY: f.Fltr.imgY,
+		// 	},
+		// };
+		case 1215521360: return {
+			...base,
+			type: 'hsb/hsl',
+			filter: {
+				inputMode: ClrS.decode(f.Fltr.Inpt) as any,
+				rowOrder: ClrS.decode(f.Fltr.Otpt) as any,
+			},
+		};
+		case 1122: return {
+			...base,
+			type: 'oil paint',
+			filter: {
+				lightingOn: f.Fltr.lightingOn,
+				stylization: f.Fltr.stylization,
+				cleanliness: f.Fltr.cleanliness,
+				brushScale: f.Fltr.brushScale,
+				microBrush: f.Fltr.microBrush,
+				lightDirection: f.Fltr.LghD,
+				specularity: f.Fltr.specularity,
+			},
+		};
+		case 1282492025: {
+			return {
+				...base,
+				type: 'liquify',
+				filter: {
+					liquifyMesh: f.Fltr.LqMe,
+				},
+			};
+		}
 		default:
 			throw new Error(`Unknown filterID: ${(f as any).filterID}`);
 	}
@@ -2293,7 +2470,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Box Blur',
 				_classID: 'boxblur',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 			},
 			filterID: 697,
 		};
@@ -2302,7 +2479,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Gaussian Blur',
 				_classID: 'GsnB',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 			},
 			filterID: 1198747202,
 		};
@@ -2311,8 +2488,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Motion Blur',
 				_classID: 'MtnB',
-				Angl: f.params.angle,
-				Dstn: unitsValue(f.params.distance, 'distance'),
+				Angl: f.filter.angle,
+				Dstn: unitsValue(f.filter.distance, 'distance'),
 			},
 			filterID: 1299476034,
 		};
@@ -2321,9 +2498,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Radial Blur',
 				_classID: 'RdlB',
-				Amnt: f.params.amount,
-				BlrM: BlrM.encode(f.params.method),
-				BlrQ: BlrQ.encode(f.params.quality),
+				Amnt: f.filter.amount,
+				BlrM: BlrM.encode(f.filter.method),
+				BlrQ: BlrQ.encode(f.filter.quality),
 			},
 			filterID: 1382313026,
 		};
@@ -2332,12 +2509,12 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Shape Blur',
 				_classID: 'shapeBlur',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 				customShape: {
 					_name: '',
 					_classID: 'customShape',
-					'Nm  ': f.params.customShape.name,
-					Idnt: f.params.customShape.id,
+					'Nm  ': f.filter.customShape.name,
+					Idnt: f.filter.customShape.id,
 				}
 			},
 			filterID: 702,
@@ -2347,10 +2524,10 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Smart Blur',
 				_classID: 'SmrB',
-				'Rds ': f.params.radius,
-				Thsh: f.params.threshold,
-				SmBQ: SmBQ.encode(f.params.quality),
-				SmBM: SmBM.encode(f.params.mode),
+				'Rds ': f.filter.radius,
+				Thsh: f.filter.threshold,
+				SmBQ: SmBQ.encode(f.filter.quality),
+				SmBM: SmBM.encode(f.filter.mode),
 			},
 			filterID: 1399681602,
 		};
@@ -2359,8 +2536,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Surface Blur',
 				_classID: 'surfaceBlur',
-				'Rds ': uvRadius(f.params),
-				Thsh: f.params.threshold,
+				'Rds ': uvRadius(f.filter),
+				Thsh: f.filter.threshold,
 			},
 			filterID: 701,
 		};
@@ -2369,13 +2546,13 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Displace',
 				_classID: 'Dspl',
-				HrzS: f.params.horizontalScale,
-				VrtS: f.params.verticalScale,
-				DspM: DspM.encode(f.params.displacementMap),
-				UndA: UndA.encode(f.params.undefinedAreas),
+				HrzS: f.filter.horizontalScale,
+				VrtS: f.filter.verticalScale,
+				DspM: DspM.encode(f.filter.displacementMap),
+				UndA: UndA.encode(f.filter.undefinedAreas),
 				DspF: {
-					sig: f.params.displacementFile.signature,
-					path: f.params.displacementFile.path,
+					sig: f.filter.displacementFile.signature,
+					path: f.filter.displacementFile.path,
 				},
 			},
 			filterID: 1148416108,
@@ -2385,7 +2562,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Pinch',
 				_classID: 'Pnch',
-				Amnt: f.params.amount,
+				Amnt: f.filter.amount,
 			},
 			filterID: 1349411688,
 		};
@@ -2394,7 +2571,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Polar Coordinates',
 				_classID: 'Plr ',
-				Cnvr: Cnvr.encode(f.params.conversion),
+				Cnvr: Cnvr.encode(f.filter.conversion),
 			},
 			filterID: 1349284384,
 		};
@@ -2403,8 +2580,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Ripple',
 				_classID: 'Rple',
-				Amnt: f.params.amount,
-				RplS: RplS.encode(f.params.size),
+				Amnt: f.filter.amount,
+				RplS: RplS.encode(f.filter.size),
 			},
 			filterID: 1383099493,
 		};
@@ -2413,10 +2590,10 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Shear',
 				_classID: 'Shr ',
-				ShrP: f.params.shearPoints.map(p => ({ _name: '', _classID: 'Pnt ', Hrzn: p.x, Vrtc: p.y })),
-				UndA: UndA.encode(f.params.undefinedAreas),
-				ShrS: f.params.shearStart,
-				ShrE: f.params.shearEnd,
+				ShrP: f.filter.shearPoints.map(p => ({ _name: '', _classID: 'Pnt ', Hrzn: p.x, Vrtc: p.y })),
+				UndA: UndA.encode(f.filter.undefinedAreas),
+				ShrS: f.filter.shearStart,
+				ShrE: f.filter.shearEnd,
 			},
 			filterID: 1399353888,
 		};
@@ -2425,8 +2602,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Spherize',
 				_classID: 'Sphr',
-				Amnt: f.params.amount,
-				SphM: SphM.encode(f.params.mode),
+				Amnt: f.filter.amount,
+				SphM: SphM.encode(f.filter.mode),
 			},
 			filterID: 1399875698,
 		};
@@ -2435,7 +2612,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Twirl',
 				_classID: 'Twrl',
-				Angl: f.params.angle,
+				Angl: f.filter.angle,
 			},
 			filterID: 1417114220,
 		};
@@ -2444,16 +2621,16 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Wave',
 				_classID: 'Wave',
-				Wvtp: Wvtp.encode(f.params.type),
-				NmbG: f.params.numberOfGenerators,
-				WLMn: f.params.wavelength.min,
-				WLMx: f.params.wavelength.max,
-				AmMn: f.params.amplitude.min,
-				AmMx: f.params.amplitude.max,
-				SclH: f.params.scale.x,
-				SclV: f.params.scale.y,
-				UndA: UndA.encode(f.params.undefinedAreas),
-				RndS: f.params.randomSeed,
+				Wvtp: Wvtp.encode(f.filter.type),
+				NmbG: f.filter.numberOfGenerators,
+				WLMn: f.filter.wavelength.min,
+				WLMx: f.filter.wavelength.max,
+				AmMn: f.filter.amplitude.min,
+				AmMx: f.filter.amplitude.max,
+				SclH: f.filter.scale.x,
+				SclV: f.filter.scale.y,
+				UndA: UndA.encode(f.filter.undefinedAreas),
+				RndS: f.filter.randomSeed,
 			},
 			filterID: 1466005093,
 		};
@@ -2462,9 +2639,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'ZigZag',
 				_classID: 'ZgZg',
-				Amnt: f.params.amount,
-				NmbR: f.params.ridges,
-				ZZTy: ZZTy.encode(f.params.style),
+				Amnt: f.filter.amount,
+				NmbR: f.filter.ridges,
+				ZZTy: ZZTy.encode(f.filter.style),
 			},
 			filterID: 1516722791,
 		};
@@ -2473,10 +2650,10 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Add Noise',
 				_classID: 'AdNs',
-				Dstr: Dstr.encode(f.params.distribution),
-				Nose: unitsPercentF(f.params.amount),
-				Mnch: f.params.monochromatic,
-				FlRs: f.params.randomSeed,
+				Dstr: Dstr.encode(f.filter.distribution),
+				Nose: unitsPercentF(f.filter.amount),
+				Mnch: f.filter.monochromatic,
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1097092723,
 		};
@@ -2486,8 +2663,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Dust & Scratches',
 				_classID: 'DstS',
-				'Rds ': f.params.radius,
-				Thsh: f.params.threshold,
+				'Rds ': f.filter.radius,
+				Thsh: f.filter.threshold,
 			},
 			filterID: 1148417107,
 		};
@@ -2496,7 +2673,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Median',
 				_classID: 'Mdn ',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 			},
 			filterID: 1298427424,
 		};
@@ -2505,17 +2682,17 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Reduce Noise',
 				_classID: 'denoise',
-				ClNs: unitsPercentF(f.params.reduceColorNoise),
-				Shrp: unitsPercentF(f.params.sharpenDetails),
-				removeJPEGArtifact: f.params.removeJpegArtifact,
-				channelDenoise: f.params.channelDenoise.map(c => ({
+				ClNs: unitsPercentF(f.filter.reduceColorNoise),
+				Shrp: unitsPercentF(f.filter.sharpenDetails),
+				removeJPEGArtifact: f.filter.removeJpegArtifact,
+				channelDenoise: f.filter.channelDenoise.map(c => ({
 					_name: '',
 					_classID: 'channelDenoiseParams',
 					Chnl: c.channels.map(i => Chnl.encode(i)),
 					Amnt: c.amount,
 					...(c.preserveDetails ? { EdgF: c.preserveDetails } : {}),
 				})),
-				preset: f.params.preset,
+				preset: f.filter.preset,
 			},
 			filterID: 633,
 		};
@@ -2524,11 +2701,11 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Color Halftone',
 				_classID: 'ClrH',
-				'Rds ': f.params.radius,
-				Ang1: f.params.angle1,
-				Ang2: f.params.angle2,
-				Ang3: f.params.angle3,
-				Ang4: f.params.angle4,
+				'Rds ': f.filter.radius,
+				Ang1: f.filter.angle1,
+				Ang2: f.filter.angle2,
+				Ang3: f.filter.angle3,
+				Ang4: f.filter.angle4,
 			},
 			filterID: 1131180616,
 		};
@@ -2537,8 +2714,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Crystallize',
 				_classID: 'Crst',
-				ClSz: f.params.cellSize,
-				FlRs: f.params.randomSeed,
+				ClSz: f.filter.cellSize,
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1131574132,
 		};
@@ -2549,8 +2726,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Mezzotint',
 				_classID: 'Mztn',
-				MztT: MztT.encode(f.params.type),
-				FlRs: f.params.randomSeed,
+				MztT: MztT.encode(f.filter.type),
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1299870830,
 		};
@@ -2559,7 +2736,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Mosaic',
 				_classID: 'Msc ',
-				ClSz: unitsValue(f.params.cellSize, 'cellSize'),
+				ClSz: unitsValue(f.filter.cellSize, 'cellSize'),
 			},
 			filterID: 1299407648,
 		};
@@ -2568,8 +2745,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Pointillize',
 				_classID: 'Pntl',
-				ClSz: f.params.cellSize,
-				FlRs: f.params.randomSeed,
+				ClSz: f.filter.cellSize,
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1349416044,
 		};
@@ -2578,7 +2755,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Clouds',
 				_classID: 'Clds',
-				FlRs: f.params.randomSeed,
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1131177075,
 		};
@@ -2587,7 +2764,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Difference Clouds',
 				_classID: 'DfrC',
-				FlRs: f.params.randomSeed,
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1147564611,
 		};
@@ -2596,9 +2773,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Fibers',
 				_classID: 'Fbrs',
-				Vrnc: f.params.variance,
-				Strg: f.params.strength,
-				RndS: f.params.randomSeed,
+				Vrnc: f.filter.variance,
+				Strg: f.filter.strength,
+				RndS: f.filter.randomSeed,
 			},
 			filterID: 1180856947,
 		};
@@ -2607,14 +2784,14 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Lens Flare',
 				_classID: 'LnsF',
-				Brgh: f.params.brightness,
+				Brgh: f.filter.brightness,
 				FlrC: {
 					_name: '',
 					_classID: 'Pnt ',
-					Hrzn: f.params.position.x,
-					Vrtc: f.params.position.y,
+					Hrzn: f.filter.position.x,
+					Vrtc: f.filter.position.y,
 				},
-				'Lns ': Lns.encode(f.params.lensType),
+				'Lns ': Lns.encode(f.filter.lensType),
 			},
 			filterID: 1282306886,
 		};
@@ -2626,26 +2803,26 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Smart Sharpen',
 				_classID: 'smartSharpen',
-				Amnt: unitsPercentF(f.params.amount),
-				'Rds ': uvRadius(f.params),
-				Thsh: f.params.threshold,
-				Angl: f.params.angle,
-				moreAccurate: f.params.moreAccurate,
-				blur: blurType.encode(f.params.blur),
-				preset: f.params.preset,
+				Amnt: unitsPercentF(f.filter.amount),
+				'Rds ': uvRadius(f.filter),
+				Thsh: f.filter.threshold,
+				Angl: f.filter.angle,
+				moreAccurate: f.filter.moreAccurate,
+				blur: blurType.encode(f.filter.blur),
+				preset: f.filter.preset,
 				sdwM: {
 					_name: 'Parameters',
 					_classID: 'adaptCorrectTones',
-					Amnt: unitsPercentF(f.params.shadow.fadeAmount),
-					Wdth: unitsPercentF(f.params.shadow.tonalWidth),
-					'Rds ': f.params.shadow.radius,
+					Amnt: unitsPercentF(f.filter.shadow.fadeAmount),
+					Wdth: unitsPercentF(f.filter.shadow.tonalWidth),
+					'Rds ': f.filter.shadow.radius,
 				},
 				hglM: {
 					_name: 'Parameters',
 					_classID: 'adaptCorrectTones',
-					Amnt: unitsPercentF(f.params.highlight.fadeAmount),
-					Wdth: unitsPercentF(f.params.highlight.tonalWidth),
-					'Rds ': f.params.highlight.radius,
+					Amnt: unitsPercentF(f.filter.highlight.fadeAmount),
+					Wdth: unitsPercentF(f.filter.highlight.tonalWidth),
+					'Rds ': f.filter.highlight.radius,
 				},
 			},
 			filterID: 698,
@@ -2655,9 +2832,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Unsharp Mask',
 				_classID: 'UnsM',
-				Amnt: unitsPercentF(f.params.amount),
-				'Rds ': uvRadius(f.params),
-				Thsh: f.params.threshold,
+				Amnt: unitsPercentF(f.filter.amount),
+				'Rds ': uvRadius(f.filter),
+				Thsh: f.filter.threshold,
 			},
 			filterID: 1433301837,
 		};
@@ -2666,8 +2843,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Diffuse',
 				_classID: 'Dfs ',
-				'Md  ': DfsM.encode(f.params.mode),
-				FlRs: f.params.randomSeed,
+				'Md  ': DfsM.encode(f.filter.mode),
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1147564832,
 		};
@@ -2676,9 +2853,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Emboss',
 				_classID: 'Embs',
-				Angl: f.params.angle,
-				Hght: f.params.height,
-				Amnt: f.params.amount,
+				Angl: f.filter.angle,
+				Hght: f.filter.height,
+				Amnt: f.filter.amount,
 			},
 			filterID: 1164796531,
 		};
@@ -2687,13 +2864,13 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Extrude',
 				_classID: 'Extr',
-				ExtS: f.params.size,
-				ExtD: f.params.depth,
-				ExtF: f.params.solidFrontFaces,
-				ExtM: f.params.maskIncompleteBlocks,
-				ExtT: ExtT.encode(f.params.type),
-				ExtR: ExtR.encode(f.params.depthMode),
-				FlRs: f.params.randomSeed,
+				ExtS: f.filter.size,
+				ExtD: f.filter.depth,
+				ExtF: f.filter.solidFrontFaces,
+				ExtM: f.filter.maskIncompleteBlocks,
+				ExtT: ExtT.encode(f.filter.type),
+				ExtR: ExtR.encode(f.filter.depthMode),
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1165522034,
 		};
@@ -2704,10 +2881,10 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Tiles',
 				_classID: 'Tls ',
-				TlNm: f.params.numberOfTiles,
-				TlOf: f.params.maximumOffset,
-				FlCl: FlCl.encode(f.params.fillEmptyAreaWith),
-				FlRs: f.params.randomSeed,
+				TlNm: f.filter.numberOfTiles,
+				TlOf: f.filter.maximumOffset,
+				FlCl: FlCl.encode(f.filter.fillEmptyAreaWith),
+				FlRs: f.filter.randomSeed,
 			},
 			filterID: 1416393504,
 		};
@@ -2716,8 +2893,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Trace Contour',
 				_classID: 'TrcC',
-				'Lvl ': f.params.level,
-				'Edg ': CntE.encode(f.params.edge),
+				'Lvl ': f.filter.level,
+				'Edg ': CntE.encode(f.filter.edge),
 			},
 			filterID: 1416782659,
 		};
@@ -2726,8 +2903,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Wind',
 				_classID: 'Wnd ',
-				WndM: WndM.encode(f.params.method),
-				Drct: Drct.encode(f.params.direction),
+				WndM: WndM.encode(f.filter.method),
+				Drct: Drct.encode(f.filter.direction),
 			},
 			filterID: 1466852384,
 		};
@@ -2736,8 +2913,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'De-Interlace',
 				_classID: 'Dntr',
-				IntE: IntE.encode(f.params.eliminate),
-				IntC: IntC.encode(f.params.newFieldsBy),
+				IntE: IntE.encode(f.filter.eliminate),
+				IntC: IntC.encode(f.filter.newFieldsBy),
 			},
 			filterID: 1148089458,
 		};
@@ -2747,9 +2924,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Custom',
 				_classID: 'Cstm',
-				'Scl ': f.params.scale,
-				Ofst: f.params.offset,
-				Mtrx: f.params.matrix,
+				'Scl ': f.filter.scale,
+				Ofst: f.filter.offset,
+				Mtrx: f.filter.matrix,
 			},
 			filterID: 1131639917,
 		};
@@ -2758,7 +2935,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'High Pass',
 				_classID: 'HghP',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 			},
 			filterID: 1214736464,
 		};
@@ -2767,7 +2944,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Maximum',
 				_classID: 'Mxm ',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 			},
 			filterID: 1299737888,
 		};
@@ -2776,7 +2953,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Minimum',
 				_classID: 'Mnm ',
-				'Rds ': uvRadius(f.params),
+				'Rds ': uvRadius(f.filter),
 			},
 			filterID: 1299082528,
 		};
@@ -2785,9 +2962,9 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Offset',
 				_classID: 'Ofst',
-				Hrzn: f.params.horizontal,
-				Vrtc: f.params.vertical,
-				'Fl  ': FlMd.encode(f.params.undefinedAreas),
+				Hrzn: f.filter.horizontal,
+				Vrtc: f.filter.vertical,
+				'Fl  ': FlMd.encode(f.filter.undefinedAreas),
 			},
 			filterID: 1332114292,
 		};
@@ -2797,8 +2974,8 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 				_name: 'Rigid Transform',
 				_classID: 'rigidTransform',
 				'null': ['Ordn.Trgt'], // TODO: ???
-				rigidType: f.params.rigidType,
-				puppetShapeList: f.params.puppetShapeList.map(p => ({
+				rigidType: f.filter.rigidType,
+				puppetShapeList: f.filter.puppetShapeList.map(p => ({
 					_name: '',
 					_classID: 'puppetShape',
 					rigidType: p.rigidType,
@@ -2842,16 +3019,65 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 					},
 					selectedPin: p.selectedPin,
 				})),
-				PuX0: f.params.bounds[0].x,
-				PuX1: f.params.bounds[1].x,
-				PuX2: f.params.bounds[2].x,
-				PuX3: f.params.bounds[3].x,
-				PuY0: f.params.bounds[0].y,
-				PuY1: f.params.bounds[1].y,
-				PuY2: f.params.bounds[2].y,
-				PuY3: f.params.bounds[3].y,
+				PuX0: f.filter.bounds[0].x,
+				PuX1: f.filter.bounds[1].x,
+				PuX2: f.filter.bounds[2].x,
+				PuX3: f.filter.bounds[3].x,
+				PuY0: f.filter.bounds[0].y,
+				PuY1: f.filter.bounds[1].y,
+				PuY2: f.filter.bounds[2].y,
+				PuY3: f.filter.bounds[3].y,
 			},
 			filterID: 991,
+		};
+		case 'oil paint plugin': {
+			const params: any = {};
+
+			for (let i = 0; i < f.filter.parameters.length; i++) {
+				const { name, value } = f.filter.parameters[i];
+				const suffix = `${fromAtoZ[Math.floor(i / fromAtoZ.length)]}${fromAtoZ[i % fromAtoZ.length]}`;
+				params[`PN${suffix}`] = name;
+				params[`PT${suffix}`] = 0;
+				params[`PF${suffix}`] = value;
+			}
+
+			return {
+				...base,
+				Fltr: {
+					_name: 'Oil Paint Plugin',
+					_classID: 'PbPl',
+					KnNm: f.filter.name,
+					GpuY: f.filter.gpu,
+					LIWy: f.filter.lighting,
+					FPth: '1',
+					...params,
+				},
+				filterID: 1348620396,
+			};
+		}
+		case 'oil paint': return {
+			...base,
+			Fltr: {
+				_name: 'Oil Paint',
+				_classID: 'oilPaint',
+				lightingOn: f.filter.lightingOn,
+				stylization: f.filter.stylization,
+				cleanliness: f.filter.cleanliness,
+				brushScale: f.filter.brushScale,
+				microBrush: f.filter.microBrush,
+				LghD: f.filter.lightDirection,
+				specularity: f.filter.specularity,
+			},
+			filterID: 1122,
+		};
+		case 'liquify': return {
+			...base,
+			Fltr: {
+				_name: 'Liquify',
+				_classID: 'LqFy',
+				LqMe: f.filter.liquifyMesh,
+			},
+			filterID: 1282492025,
 		};
 		default: throw new Error(`Unknow filter type: ${(f as any).type}`);
 	}
@@ -2894,7 +3120,8 @@ addHandler(
 		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
 		// console.log('SoLd.quiltWarp', require('util').inspect(desc.quiltWarp, false, 99, true));
 		// desc.filterFX!.filterFXList[0].Fltr.puppetShapeList[0].meshBoundaryPath.pathComponents[0].SbpL[0]['Pts '] = [];
-		// console.log('read', require('util').inspect(t = desc.filterFX, false, 99, true));
+		// console.log('read', require('util').inspect(desc.filterFX, false, 99, true));
+		// console.log('filterFXList[0]', require('util').inspect((desc as any).filterFX.filterFXList[0], false, 99, true));
 		// t = desc;
 
 		target.placedLayer = {
@@ -2927,8 +3154,8 @@ addHandler(
 		}
 		if (desc.filterFX) target.placedLayer.filter = parseFilterFX(desc.filterFX);
 
-		// console.log('filter', require('util').inspect(target.placedLayer.filter, false, 99, true)); // TEMP
-		//
+		// console.log('filter', require('util').inspect(target.placedLayer.filter, false, 99, true));
+
 		skipBytes(reader, left()); // HACK
 	},
 	(writer, target) => {

@@ -1,5 +1,10 @@
 # Changelog
 
+## v17.0.0
+- Added `effectsOpen` field to layers
+- Added support for basic set of smart layer filters
+- Changed the way smart layer filters are typed (`placedLayer.filter`)
+
 ## v16.0.0
 - Added support for different color modes in text layer colors
 - Added option for other smart layer filter types

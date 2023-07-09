@@ -20,6 +20,7 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 * Does not support some metadata fields
 * Does not support 3d effects
 * Does not support some new features from latest versions of Photoshop
+* Does not support all filters on smart layers (please report if you need a filter support added)
 * Text layers implementation is incomplete
   * Writing text layer with "vertical" orientation may result in broken PSD file
   * Does not support writing or reading predefined "Paragraph Styles" or "Character Styles"

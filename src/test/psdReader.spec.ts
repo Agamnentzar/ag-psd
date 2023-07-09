@@ -144,6 +144,11 @@ describe('PsdReader', () => {
 					if (layer.children) {
 						convertUint8ArraysToBase64(layer.children);
 					}
+
+					const item = layer.placedLayer?.filter?.list[0];
+					if (item && item.type === 'liquify') {
+						item.filter.liquifyMesh = byteArrayToBase64(item.filter.liquifyMesh) as any;
+					}
 				}
 			}
 
@@ -201,7 +206,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /ignore-filter/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /smart-filters-2/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {

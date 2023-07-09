@@ -664,7 +664,6 @@ addHandler(
 	target => target.timelineInformation !== undefined,
 	(reader, target, _, options) => {
 		const desc = readVersionAndDescriptor(reader) as TimelineInformationDescriptor;
-		// console.log('1075', require('util').inspect(desc, false, 99, true));
 
 		target.timelineInformation = {
 			enabled: desc.enab,
@@ -685,10 +684,10 @@ addHandler(
 				muted: g.muted,
 				audioClips: g.audioClipList.map(({ clipID, timeScope, muted, audioLevel, frameReader }) => ({
 					id: clipID,
-					start: timeScope.Strt,
-					duration: timeScope.duration,
-					inTime: timeScope.inTime,
-					outTime: timeScope.outTime,
+					start: frac(timeScope.Strt),
+					duration: frac(timeScope.duration),
+					inTime: frac(timeScope.inTime),
+					outTime: frac(timeScope.outTime),
 					muted: muted,
 					audioLevel: audioLevel,
 					frameReader: {
@@ -749,7 +748,6 @@ addHandler(
 			hasMotion: timeline.hasMotion,
 		};
 
-		// console.log('WRITE:1075', require('util').inspect(desc, false, 99, true));
 		writeVersionAndDescriptor(writer, '', 'null', desc, 'anim');
 	},
 );
@@ -771,7 +769,6 @@ addHandler(
 	target => target.sheetDisclosure !== undefined,
 	(reader, target) => {
 		const desc = readVersionAndDescriptor(reader) as SheetDisclosureDescriptor;
-		// console.log('1076', require('util').inspect(desc, false, 99, true));
 
 		target.sheetDisclosure = {};
 
@@ -934,7 +931,6 @@ addHandler(
 					bounds: { top, left, bottom, right },
 					backgroundColorType, backgroundColor: { r, g, b, a },
 				});
-				// console.log(require('util').inspect(slices[slices.length - 1], false, 99, true));
 			}
 			const desc = readVersionAndDescriptor(reader) as SlicesDesc;
 			desc.slices.forEach(d => {
@@ -946,12 +942,8 @@ addHandler(
 					slice.rightOutset = d.rightOutset;
 				}
 			});
-
-			// console.log(require('util').inspect(desc, false, 99, true));
-			// console.log(require('util').inspect(target.slices, false, 99, true));
 		} else if (version == 7 || version == 8) {
 			const desc = readVersionAndDescriptor(reader) as SlicesDesc7;
-			// console.log(require('util').inspect(desc, false, 99, true));
 
 			if (!target.slices) target.slices = [];
 			target.slices.push({
@@ -1251,7 +1243,6 @@ addHandler(
 	target => target.pathSelectionState !== undefined,
 	(reader, target, _left) => {
 		const desc: Descriptor1088 = readVersionAndDescriptor(reader);
-		// console.log(require('util').inspect(desc, false, 99, true));
 		target.pathSelectionState = desc['null'];
 	},
 	(writer, target) => {

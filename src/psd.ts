@@ -678,36 +678,36 @@ type FilterVariant = {
 	type: 'average' | 'blur' | 'blur more';
 } | {
 	type: 'box blur';
-	params: {
+	filter: {
 		radius: UnitsValue;
 	};
 } | {
 	type: 'gaussian blur';
-	params: {
+	filter: {
 		radius: UnitsValue;
 	};
 } | {
 	type: 'motion blur';
-	params: {
+	filter: {
 		angle: number; // in degrees
 		distance: UnitsValue;
 	};
 } | {
 	type: 'radial blur';
-	params: {
+	filter: {
 		amount: number;
 		method: 'spin' | 'zoom';
 		quality: 'draft' | 'good' | 'best';
 	};
 } | {
 	type: 'shape blur';
-	params: {
+	filter: {
 		radius: UnitsValue;
 		customShape: { name: string; id: string };
 	};
 } | {
 	type: 'smart blur';
-	params: {
+	filter: {
 		radius: number;
 		threshold: number;
 		quality: 'low' | 'medium' | 'high';
@@ -715,13 +715,13 @@ type FilterVariant = {
 	};
 } | {
 	type: 'surface blur';
-	params: {
+	filter: {
 		radius: UnitsValue;
 		threshold: number;
 	};
 } | {
 	type: 'displace';
-	params: {
+	filter: {
 		horizontalScale: number;
 		verticalScale: number;
 		displacementMap: 'stretch to fit' | 'tile';
@@ -733,23 +733,23 @@ type FilterVariant = {
 	};
 } | {
 	type: 'pinch';
-	params: {
+	filter: {
 		amount: number;
 	};
 } | {
 	type: 'polar coordinates';
-	params: {
+	filter: {
 		conversion: 'rectangular to polar' | 'polar to rectangular';
 	};
 } | {
 	type: 'ripple';
-	params: {
+	filter: {
 		amount: number;
 		size: 'small' | 'medium' | 'large';
 	};
 } | {
 	type: 'shear';
-	params: {
+	filter: {
 		shearPoints: { x: number; y: number }[];
 		shearStart: number;
 		shearEnd: number;
@@ -757,18 +757,18 @@ type FilterVariant = {
 	};
 } | {
 	type: 'spherize';
-	params: {
+	filter: {
 		amount: number;
 		mode: 'normal' | 'horizontal only' | 'vertical only';
 	};
 } | {
 	type: 'twirl';
-	params: {
+	filter: {
 		angle: number; // degrees
 	};
 } | {
 	type: 'wave';
-	params: {
+	filter: {
 		numberOfGenerators: number;
 		type: 'sine' | 'triangle' | 'square';
 		wavelength: { min: number; max: number };
@@ -779,14 +779,14 @@ type FilterVariant = {
 	};
 } | {
 	type: 'zigzag';
-	params: {
+	filter: {
 		amount: number;
 		ridges: number;
 		style: 'around center' | 'out from center' | 'pond ripples';
 	};
 } | {
 	type: 'add noise';
-	params: {
+	filter: {
 		amount: number; // 0..1
 		distribution: 'uniform' | 'gaussian';
 		monochromatic: boolean;
@@ -796,18 +796,18 @@ type FilterVariant = {
 	type: 'despeckle';
 } | {
 	type: 'dust and scratches';
-	params: {
+	filter: {
 		radius: number; // pixels
 		threshold: number; // levels
 	};
 } | {
 	type: 'median';
-	params: {
+	filter: {
 		radius: UnitsValue;
 	};
 } | {
 	type: 'reduce noise';
-	params: {
+	filter: {
 		preset: string;
 		removeJpegArtifact: boolean;
 		reduceColorNoise: number; // 0..1
@@ -820,7 +820,7 @@ type FilterVariant = {
 	};
 } | {
 	type: 'color halftone';
-	params: {
+	filter: {
 		radius: number; // pixels
 		angle1: number; // degrees
 		angle2: number; // degrees
@@ -829,7 +829,7 @@ type FilterVariant = {
 	};
 } | {
 	type: 'crystallize';
-	params: {
+	filter: {
 		cellSize: number;
 		randomSeed: number;
 	};
@@ -837,48 +837,48 @@ type FilterVariant = {
 	type: 'facet' | 'fragment';
 } | {
 	type: 'mezzotint';
-	params: {
+	filter: {
 		type: 'fine dots' | 'medium dots' | 'grainy dots' | 'coarse dots' | 'short lines' | 'medium lines' | 'long lines' | 'short strokes' | 'medium strokes' | 'long strokes';
 		randomSeed: number;
 	};
 } | {
 	type: 'mosaic';
-	params: {
+	filter: {
 		cellSize: UnitsValue;
 	};
 } | {
 	type: 'pointillize';
-	params: {
+	filter: {
 		cellSize: number;
 		randomSeed: number;
 	};
 } | {
 	type: 'clouds';
-	params: {
+	filter: {
 		randomSeed: number;
 	};
 } | {
 	type: 'difference clouds';
-	params: {
+	filter: {
 		randomSeed: number;
 	};
 } | {
 	type: 'fibers';
-	params: {
+	filter: {
 		variance: number;
 		strength: number;
 		randomSeed: number;
 	};
 } | {
 	type: 'lens flare';
-	params: {
+	filter: {
 		brightness: number; // percent
 		position: { x: number; y: number; };
 		lensType: '50-300mm zoom' | '32mm prime' | '105mm prime' | 'movie prime';
 	};
 } /*| {
 	type: 'lighting effects';
-	params: {
+	filter: {
 		lights: Light3D;
 		cameraPosition: Position3D;
 		gloss: number;
@@ -894,7 +894,7 @@ type FilterVariant = {
 	type: 'sharpen' | 'sharpen edges' | 'sharpen more';
 } | {
 	type: 'smart sharpen';
-	params: {
+	filter: {
 		amount: number; // 0..1
 		radius: UnitsValue;
 		threshold: number;
@@ -915,27 +915,27 @@ type FilterVariant = {
 	};
 } | {
 	type: 'unsharp mask';
-	params: {
+	filter: {
 		amount: number; // 0..1
 		radius: UnitsValue;
 		threshold: number; // levels
 	};
 } | {
 	type: 'diffuse';
-	params: {
+	filter: {
 		mode: 'normal' | 'darken only' | 'lighten only' | 'anisotropic';
 		randomSeed: number;
 	};
 } | {
 	type: 'emboss';
-	params: {
+	filter: {
 		angle: number; // degrees
 		height: number; // pixels
 		amount: number; // percent
 	};
 } | {
 	type: 'extrude';
-	params: {
+	filter: {
 		type: 'blocks' | 'pyramids';
 		size: number; // pixels
 		depth: number;
@@ -948,7 +948,7 @@ type FilterVariant = {
 	type: 'find edges' | 'solarize';
 } | {
 	type: 'tiles';
-	params: {
+	filter: {
 		numberOfTiles: number;
 		maximumOffset: number; // percent
 		fillEmptyAreaWith: 'background color' | 'foreground color' | 'inverse image' | 'unaltered image';
@@ -956,19 +956,19 @@ type FilterVariant = {
 	};
 } | {
 	type: 'trace contour';
-	params: {
+	filter: {
 		level: number;
 		edge: 'lower' | 'upper';
 	};
 } | {
 	type: 'wind';
-	params: {
+	filter: {
 		method: 'wind' | 'blast' | 'stagger';
 		direction: 'left' | 'right';
 	};
 } | {
 	type: 'de-interlace';
-	params: {
+	filter: {
 		eliminate: 'odd lines' | 'even lines';
 		newFieldsBy: 'duplication' | 'interpolation';
 	};
@@ -976,26 +976,26 @@ type FilterVariant = {
 	type: 'ntsc colors';
 } | {
 	type: 'custom';
-	params: {
+	filter: {
 		scale: number;
 		offset: number;
 		matrix: number[];
 	};
 } | {
 	type: 'high pass' | 'maximum' | 'minimum';
-	params: {
+	filter: {
 		radius: UnitsValue;
 	};
 } | {
 	type: 'offset';
-	params: {
+	filter: {
 		horizontal: number; // pixels
 		vertical: number; // pixels
 		undefinedAreas: 'set to transparent' | 'repeat edge pixels' | 'wrap around';
 	};
 } | {
 	type: 'puppet';
-	params: {
+	filter: {
 		rigidType: boolean;
 		bounds: { x: number; y: number; }[];
 		puppetShapeList: {
@@ -1032,6 +1032,64 @@ type FilterVariant = {
 				}[];
 			};
 		}[];
+	};
+} | {
+	type: 'oil paint plugin';
+	filter: {
+		name: string;
+		gpu: boolean;
+		lighting: boolean;
+		// FPth ???
+		parameters: {
+			name: string;
+			value: number;
+		}[];
+	};
+} /*| {
+	type: 'lens correction';
+	filter: {
+		profile: string;
+		
+	};
+}*//* | {
+	type: 'adaptive wide angle';
+	filter: {
+		correction: 'fisheye' | 'perspective' | 'auto' | 'full spherical';
+		focalLength: number;
+		cropFactor: number;
+		imageScale: number;
+		imageX: number;
+		imageY: number;
+	};
+}*//* | {
+	type: 'filter gallery';
+	filter: {
+		filter: 'colored pencil';
+		pencilWidth: number;
+		strokePressure: number;
+		paperBrightness: number;
+	} | ...;
+}*/ | {
+	type: 'hsb/hsl';
+	filter: {
+		inputMode: 'rgb' | 'hsb' | 'hsl';
+		rowOrder: 'rgb' | 'hsb' | 'hsl';
+	};
+} | {
+	type: 'oil paint';
+	filter: {
+		lightingOn: boolean;
+		stylization: number;
+		cleanliness: number;
+		brushScale: number;
+		microBrush: number;
+		lightDirection: number; // degrees
+		specularity: number;
+	};
+} | {
+	type: 'liquify';
+	filter: {
+		liquifyMesh: Uint8Array;
 	};
 };
 
