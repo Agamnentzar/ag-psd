@@ -206,7 +206,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /ignore-corrupt/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /float-color/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {
@@ -225,7 +225,7 @@ describe('PsdReader', () => {
 			// fs.writeFileSync('temp2.txt', require('util').inspect(psd2, false, 99, false), 'utf8');
 
 			const expected = fs.readFileSync(path.join(readWriteFilesPath, f, `expected.${ext}`));
-			compareBuffers(actual, expected, `read-write-${f}`, 0x6770);
+			compareBuffers(actual, expected, `read-write-${f}`, 0x0);
 		});
 	});
 
