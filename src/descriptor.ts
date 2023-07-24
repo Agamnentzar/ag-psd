@@ -822,7 +822,7 @@ export type DescriptorColor = {
 	'B   ': number;
 } | {
 	_name: '';
-	_classID: 'XXXX'; // ???
+	_classID: 'RGBC';
 	redFloat: number;
 	greenFloat: number;
 	blueFloat: number;
@@ -1113,17 +1113,17 @@ export interface Lfx2Descriptor {
 export interface LmfxDescriptor {
 	'Scl '?: DescriptorUnitsValue;
 	masterFXSwitch?: boolean;
-	numModifyingFX?: number;
+	dropShadowMulti?: EffectDescriptor[];
+	innerShadowMulti?: EffectDescriptor[];
 	OrGl?: EffectDescriptor;
+	solidFillMulti?: EffectDescriptor[];
+	gradientFillMulti?: EffectDescriptor[];
+	patternFill?: EffectDescriptor; // ???
+	frameFXMulti?: EffectDescriptor[];
 	IrGl?: EffectDescriptor;
 	ebbl?: EffectDescriptor;
 	ChFX?: EffectDescriptor;
-	dropShadowMulti?: EffectDescriptor[];
-	innerShadowMulti?: EffectDescriptor[];
-	solidFillMulti?: EffectDescriptor[];
-	gradientFillMulti?: EffectDescriptor[];
-	frameFXMulti?: EffectDescriptor[];
-	patternFill?: EffectDescriptor; // ???
+	numModifyingFX?: number;
 }
 
 function parseFxObject(fx: EffectDescriptor) {
@@ -1165,11 +1165,11 @@ function serializeFxObject(stroke: LayerEffectStroke) {
 
 export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boolean) {
 	const info: Lfx2Descriptor & LmfxDescriptor = multi ? {
-		'Scl ': unitsPercent(e.scale ?? 1),
+		'Scl ': unitsPercentF(e.scale ?? 1),
 		masterFXSwitch: !e.disabled,
 	} : {
 		masterFXSwitch: !e.disabled,
-		'Scl ': unitsPercent(e.scale ?? 1),
+		'Scl ': unitsPercentF(e.scale ?? 1),
 	};
 
 	const arrayKeys: (keyof LayerEffectsInfo)[] = ['dropShadow', 'innerShadow', 'solidFill', 'gradientOverlay', 'stroke'];
@@ -1202,6 +1202,8 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 				for (const effect of value) {
 					if (effect.enabled) info.numModifyingFX++;
 				}
+			} else if (value.enabled) {
+				info.numModifyingFX++;
 			}
 		}
 	}
@@ -1471,7 +1473,7 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 			case 'highlightOpacity': result.hglO = unitsPercent(val); break;
 			case 'shadowOpacity': result.sdwO = unitsPercent(val); break;
 			case 'angle':
-				if (objName === 'gradientOverlay') {
+				if (objName === 'gradientOverlay' || objName === 'patternFill') {
 					result.Angl = unitsAngle(val);
 				} else {
 					result.lagl = unitsAngle(val);
@@ -1686,7 +1688,7 @@ export function serializeColor(color: Color | undefined): DescriptorColor {
 	} else if ('r' in color) {
 		return { _name: '', _classID: 'RGBC', 'Rd  ': color.r || 0, 'Grn ': color.g || 0, 'Bl  ': color.b || 0 };
 	} else if ('fr' in color) {
-		return { _name: '', _classID: 'XXXX', redFloat: color.fr, greenFloat: color.fg, blueFloat: color.fb };
+		return { _name: '', _classID: 'RGBC', redFloat: color.fr, greenFloat: color.fg, blueFloat: color.fb };
 	} else if ('h' in color) {
 		return { _name: '', _classID: 'HSBC', 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
 	} else if ('c' in color) {

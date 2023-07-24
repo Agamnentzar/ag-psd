@@ -1,5 +1,8 @@
 # Changelog
 
+## v17.0.2
+- Fixed issues with writing some layer effects
+
 ## v17.0.1
 - Fixed incorrect reading and writing of slice bounds
 - Fixed missing bounds and boundingBox fields on `layer.text`

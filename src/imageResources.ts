@@ -566,6 +566,19 @@ addHandler(
 	},
 );
 
+MOCK_HANDLERS && addHandler(
+	1092, // ???
+	target => (target as any)._ir1092 !== undefined,
+	(reader, target, left) => {
+		LOG_MOCK_HANDLERS && console.log('image resource 1092', left());
+		// 16 bytes, seems to be 4 integers
+		(target as any)._ir1092 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1092);
+	},
+);
+
 interface OnionSkinsDescriptor {
 	Vrsn: 1;
 	enab: boolean;

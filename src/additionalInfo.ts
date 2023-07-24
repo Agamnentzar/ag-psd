@@ -4636,8 +4636,8 @@ addHandler(
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error(`Invalid lfx2 version`);
 
-		const desc: Lfx2Descriptor = readVersionAndDescriptor(reader);
-		// console.log(require('util').inspect(desc, false, 99, true));
+		const desc: Lfx2Descriptor & LmfxDescriptor = readVersionAndDescriptor(reader);
+		// console.log('READ', require('util').inspect(desc, false, 99, true));
 
 		// TODO: don't discard if we got it from lmfx
 		// discard if read in 'lrFX' section
@@ -4646,8 +4646,8 @@ addHandler(
 		skipBytes(reader, left());
 	},
 	(writer, target, _, options) => {
-		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, false);
-		// console.log(require('util').inspect(desc, false, 99, true));
+		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+		// console.log('WRITE', require('util').inspect(desc, false, 99, true));
 
 		writeUint32(writer, 0); // version
 		writeVersionAndDescriptor(writer, '', 'null', desc);
