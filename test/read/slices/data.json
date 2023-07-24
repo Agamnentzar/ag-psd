@@ -87,10 +87,10 @@
             "type": "image",
             "url": "example.com",
             "bounds": {
-              "top": 23,
-              "left": 34,
-              "bottom": 83,
-              "right": 92
+              "top": 34,
+              "left": 23,
+              "bottom": 92,
+              "right": 83
             },
             "backgroundColorType": "matte",
             "backgroundColor": {
@@ -120,8 +120,8 @@
             "type": "noImage",
             "url": "",
             "bounds": {
-              "top": 83,
-              "left": 34,
+              "top": 34,
+              "left": 83,
               "bottom": 100,
               "right": 100
             },
@@ -155,8 +155,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 100,
-              "right": 34
+              "bottom": 34,
+              "right": 100
             },
             "backgroundColorType": "color",
             "backgroundColor": {
@@ -186,10 +186,10 @@
             "type": "image",
             "url": "",
             "bounds": {
-              "top": 0,
-              "left": 34,
-              "bottom": 23,
-              "right": 100
+              "top": 34,
+              "left": 0,
+              "bottom": 100,
+              "right": 23
             },
             "backgroundColorType": "none",
             "backgroundColor": {
@@ -219,10 +219,10 @@
             "type": "image",
             "url": "",
             "bounds": {
-              "top": 23,
-              "left": 92,
-              "bottom": 83,
-              "right": 100
+              "top": 92,
+              "left": 23,
+              "bottom": 100,
+              "right": 83
             },
             "backgroundColorType": "none",
             "backgroundColor": {

@@ -90,8 +90,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 100,
-              "right": 50
+              "bottom": 50,
+              "right": 100
             },
             "backgroundColorType": "none",
             "backgroundColor": {

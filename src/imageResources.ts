@@ -908,10 +908,10 @@ addHandler(
 				const associatedLayerId = origin == 'layer' ? readUint32(reader) : 0;
 				const name = readUnicodeString(reader);
 				const type = clamped(sliceTypes, readUint32(reader));
-				const top = readInt32(reader);
 				const left = readInt32(reader);
-				const bottom = readInt32(reader);
+				const top = readInt32(reader);
 				const right = readInt32(reader);
+				const bottom = readInt32(reader);
 				const url = readUnicodeString(reader);
 				const target = readUnicodeString(reader);
 				const message = readUnicodeString(reader);
@@ -1005,10 +1005,10 @@ addHandler(
 			if (slice.origin === 'layer') writeUint32(writer, slice.associatedLayerId);
 			writeUnicodeString(writer, slice.name);
 			writeUint32(writer, sliceTypes.indexOf(slice.type));
-			writeInt32(writer, slice.bounds.top);
 			writeInt32(writer, slice.bounds.left);
-			writeInt32(writer, slice.bounds.bottom);
+			writeInt32(writer, slice.bounds.top);
 			writeInt32(writer, slice.bounds.right);
+			writeInt32(writer, slice.bounds.bottom);
 			writeUnicodeString(writer, slice.url);
 			writeUnicodeString(writer, slice.target);
 			writeUnicodeString(writer, slice.message);

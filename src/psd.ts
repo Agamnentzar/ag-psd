@@ -380,6 +380,13 @@ export interface TextGridInfo {
 	alignLineHeightToGridFlags?: boolean;
 }
 
+export interface UnitsBounds {
+	top: UnitsValue;
+	left: UnitsValue;
+	right: UnitsValue;
+	bottom: UnitsValue;
+}
+
 export interface LayerTextData {
 	text: string;
 	transform?: number[]; // 2d transform matrix [xx, xy, yx, yy, tx, ty]
@@ -409,6 +416,9 @@ export interface LayerTextData {
 	shapeType?: 'point' | 'box';
 	pointBase?: number[];
 	boxBounds?: number[];
+	
+	bounds?: UnitsBounds;
+	boundingBox?: UnitsBounds;
 }
 
 export interface PatternInfo {

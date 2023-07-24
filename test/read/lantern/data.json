@@ -100,8 +100,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 9,
-              "right": 14
+              "bottom": 14,
+              "right": 9
             },
             "backgroundColorType": "none",
             "backgroundColor": {

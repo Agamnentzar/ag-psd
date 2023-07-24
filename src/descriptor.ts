@@ -7,7 +7,7 @@ import {
 	LayerEffectSatin, LayerEffectShadow, LayerEffectsInfo, LayerEffectSolidFill,
 	LayerEffectsOuterGlow, LayerEffectStroke, LineAlignment, LineCapType, LineJoinType,
 	Orientation, TextGridding, TimelineKey, TimelineKeyInterpolation, TimelineTrack, TimelineTrackType,
-	Units, UnitsValue, VectorContent, WarpStyle
+	Units, UnitsBounds, UnitsValue, VectorContent, WarpStyle
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, readUint32, readUint8, readFloat64,
@@ -119,6 +119,7 @@ const fieldToExtType: ExtTypeDict = {
 	sheetStyle: nullType,
 	translation: nullType,
 	Skew: nullType,
+	boundingBox: makeType('', 'boundingBox'),
 	'Lnk ': makeType('', 'ExternalFileLink'),
 	frameReader: makeType('', 'FrameReader'),
 	effectParams: makeType('', 'motionTrackEffectParams'),
@@ -389,7 +390,9 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		let type = getTypeByKey(key, value[key], root, value);
 		let extType = fieldToExtType[key];
 
-		if (key === 'origin') {
+		if (key === 'bounds' && root === 'text') {
+			extType = makeType('', 'bounds');
+		} else if (key === 'origin') {
 			type = root === 'slices' ? 'enum' : 'Objc';
 		} else if ((key === 'Cyn ' || key === 'Mgnt' || key === 'Ylw ' || key === 'Blck') && value._classID === 'CMYC') {
 			type = 'doub';
@@ -899,11 +902,20 @@ export interface StrokeDescriptor {
 	strokeStyleResolution: number;
 }
 
+export interface BoundsDescriptor {
+	Left: DescriptorUnitsValue;
+	'Top ': DescriptorUnitsValue;
+	Rght: DescriptorUnitsValue;
+	Btom: DescriptorUnitsValue;
+}
+
 export interface TextDescriptor {
 	'Txt ': string;
 	textGridding: string;
 	Ornt: string;
 	AntA: string;
+	bounds?: BoundsDescriptor;
+	boundingBox?: BoundsDescriptor;
 	TextIndex: number;
 	EngineData?: Uint8Array;
 }
@@ -986,6 +998,24 @@ export function horzVrtcToXY(hv: HrznVrtcDescriptor): { x: number; y: number; } 
 
 export function xyToHorzVrtc(xy: { x: number; y: number; }): HrznVrtcDescriptor {
 	return { Hrzn: xy.x, Vrtc: xy.y };
+}
+
+export function descBoundsToBounds(desc: BoundsDescriptor): UnitsBounds {
+	return {
+		top: parseUnits(desc['Top ']),
+		left: parseUnits(desc.Left),
+		right: parseUnits(desc.Rght),
+		bottom: parseUnits(desc.Btom),
+	};
+}
+
+export function boundsToDescBounds(bounds: UnitsBounds): BoundsDescriptor {
+	return {
+		Left: unitsValue(bounds.left, 'bounds.left'),
+		['Top ']: unitsValue(bounds.top, 'bounds.top'),
+		Rght: unitsValue(bounds.right, 'bounds.right'),
+		Btom: unitsValue(bounds.bottom, 'bounds.bottom'),
+	};
 }
 
 export type TimelineAnimKeyDescriptor = {

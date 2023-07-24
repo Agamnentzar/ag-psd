@@ -414,6 +414,42 @@
               "perspectiveOther": 0,
               "rotate": "horizontal"
             },
+            "bounds": {
+              "top": {
+                "value": -10.2890625,
+                "units": "Points"
+              },
+              "left": {
+                "value": 0,
+                "units": "Points"
+              },
+              "right": {
+                "value": 20.440000534057617,
+                "units": "Points"
+              },
+              "bottom": {
+                "value": 3.064453125,
+                "units": "Points"
+              }
+            },
+            "boundingBox": {
+              "top": {
+                "value": -10,
+                "units": "Points"
+              },
+              "left": {
+                "value": 1,
+                "units": "Points"
+              },
+              "right": {
+                "value": 17.720001220703125,
+                "units": "Points"
+              },
+              "bottom": {
+                "value": 1,
+                "units": "Points"
+              }
+            },
             "useFractionalGlyphWidths": false,
             "superscriptSize": 0.583,
             "superscriptPosition": 0.333,
@@ -550,6 +586,42 @@
               "perspectiveOther": 0,
               "rotate": "horizontal"
             },
+            "bounds": {
+              "top": {
+                "value": -10.2890625,
+                "units": "Points"
+              },
+              "left": {
+                "value": 0,
+                "units": "Points"
+              },
+              "right": {
+                "value": 69.04000091552734,
+                "units": "Points"
+              },
+              "bottom": {
+                "value": 3.064453125,
+                "units": "Points"
+              }
+            },
+            "boundingBox": {
+              "top": {
+                "value": -11,
+                "units": "Points"
+              },
+              "left": {
+                "value": 0,
+                "units": "Points"
+              },
+              "right": {
+                "value": 67.32000732421875,
+                "units": "Points"
+              },
+              "bottom": {
+                "value": 1,
+                "units": "Points"
+              }
+            },
             "useFractionalGlyphWidths": false,
             "superscriptSize": 0.583,
             "superscriptPosition": 0.333,
@@ -685,6 +757,42 @@
               "perspective": 0,
               "perspectiveOther": 0,
               "rotate": "horizontal"
+            },
+            "bounds": {
+              "top": {
+                "value": -10.2890625,
+                "units": "Points"
+              },
+              "left": {
+                "value": 0,
+                "units": "Points"
+              },
+              "right": {
+                "value": 69.04000091552734,
+                "units": "Points"
+              },
+              "bottom": {
+                "value": 3.064453125,
+                "units": "Points"
+              }
+            },
+            "boundingBox": {
+              "top": {
+                "value": -10,
+                "units": "Points"
+              },
+              "left": {
+                "value": 1,
+                "units": "Points"
+              },
+              "right": {
+                "value": 67.32000732421875,
+                "units": "Points"
+              },
+              "bottom": {
+                "value": 1,
+                "units": "Points"
+              }
             },
             "useFractionalGlyphWidths": false,
             "superscriptSize": 0.583,

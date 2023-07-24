@@ -92,8 +92,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 817,
-              "right": 533
+              "bottom": 533,
+              "right": 817
             },
             "backgroundColorType": "none",
             "backgroundColor": {
@@ -186,6 +186,42 @@
           "perspective": 0,
           "perspectiveOther": 0,
           "rotate": "horizontal"
+        },
+        "bounds": {
+          "top": {
+            "value": -6.049072265625,
+            "units": "Points"
+          },
+          "left": {
+            "value": 0,
+            "units": "Points"
+          },
+          "right": {
+            "value": 714,
+            "units": "Points"
+          },
+          "bottom": {
+            "value": 132.767578125,
+            "units": "Points"
+          }
+        },
+        "boundingBox": {
+          "top": {
+            "value": 0.1017608642578125,
+            "units": "Points"
+          },
+          "left": {
+            "value": 205.848876953125,
+            "units": "Points"
+          },
+          "right": {
+            "value": 507.4562072753906,
+            "units": "Points"
+          },
+          "bottom": {
+            "value": 58.31129455566406,
+            "units": "Points"
+          }
         },
         "useFractionalGlyphWidths": true,
         "superscriptSize": 0.583,
@@ -331,6 +367,42 @@
           "perspective": 0,
           "perspectiveOther": 0,
           "rotate": "horizontal"
+        },
+        "bounds": {
+          "top": {
+            "value": -6.049072265625,
+            "units": "Points"
+          },
+          "left": {
+            "value": 0,
+            "units": "Points"
+          },
+          "right": {
+            "value": 714,
+            "units": "Points"
+          },
+          "bottom": {
+            "value": 132.767578125,
+            "units": "Points"
+          }
+        },
+        "boundingBox": {
+          "top": {
+            "value": 0.1017608642578125,
+            "units": "Points"
+          },
+          "left": {
+            "value": 131.581298828125,
+            "units": "Points"
+          },
+          "right": {
+            "value": 579.9378662109375,
+            "units": "Points"
+          },
+          "bottom": {
+            "value": 58.38328552246094,
+            "units": "Points"
+          }
         },
         "useFractionalGlyphWidths": true,
         "superscriptSize": 0.583,

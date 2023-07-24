@@ -112,6 +112,7 @@ export function writePascalString(writer: PsdWriter, text: string, padTo: number
 
 	for (let i = 0; i < length; i++) {
 		const code = text.charCodeAt(i);
+		// writeUint8(writer, code); // for testing
 		writeUint8(writer, code < 128 ? code : '?'.charCodeAt(0));
 	}
 

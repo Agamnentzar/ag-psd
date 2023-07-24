@@ -30,7 +30,7 @@ import {
 	parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList,
 	serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy,
 	Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd,
-	unitsPercentF, frac, ClrS,
+	unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds,
 } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
@@ -114,6 +114,9 @@ addHandler(
 			},
 		};
 
+		if (text.bounds) target.text.bounds = descBoundsToBounds(text.bounds);
+		if (text.boundingBox) target.text.boundingBox = descBoundsToBounds(text.boundingBox);
+
 		if (text.EngineData) {
 			const engineData = parseEngineData(text.EngineData);
 			const textData = decodeEngineData(engineData);
@@ -141,6 +144,8 @@ addHandler(
 			textGridding: textGridding.encode(text.gridding),
 			Ornt: Ornt.encode(text.orientation),
 			AntA: Annt.encode(text.antiAlias),
+			...(text.bounds ? { bounds: boundsToDescBounds(text.bounds) } : {}),
+			...(text.boundingBox ? { boundingBox: boundsToDescBounds(text.boundingBox) } : {}),
 			TextIndex: text.index || 0,
 			EngineData: serializeEngineData(encodeEngineData(text)),
 		};
@@ -152,7 +157,7 @@ addHandler(
 		}
 
 		writeInt16(writer, 50); // text version
-		writeVersionAndDescriptor(writer, '', 'TxLr', textDescriptor);
+		writeVersionAndDescriptor(writer, '', 'TxLr', textDescriptor, 'text');
 
 		writeInt16(writer, 1); // warp version
 		writeVersionAndDescriptor(writer, '', 'warp', encodeWarp(warp));

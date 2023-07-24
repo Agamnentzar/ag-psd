@@ -1,5 +1,9 @@
 # Changelog
 
+## v17.0.1
+- Fixed incorrect reading and writing of slice bounds
+- Fixed missing bounds and boundingBox fields on `layer.text`
+
 ## v17.0.0
 - Added `effectsOpen` field to layers
 - Added support for basic set of smart layer filters
