@@ -1,5 +1,8 @@
 # Changelog
 
+## v17.0.3
+- Added extra error checks and fixed writing PSD without placedLayer.warp field present
+
 ## v17.0.2
 - Fixed issues with writing some layer effects
 

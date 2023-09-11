@@ -206,13 +206,20 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /float-color/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /text$/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {
 				...opts, useImageData: true, useRawThumbnail: true, throwForMissingFeatures: true,
+				// skipCompositeImageData: true, skipLayerImageData: true, skipThumbnail: true,
 				// logDevFeatures: true, logMissingFeatures: true,
 			});
+
+			// console.log(psd.children![0].text);
+			// psd.children![0].text!.text = 'f';
+			// psd.children![0].text!.style!.font!.name = 'ArialMT';
+			// const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb', invalidateTextLayers: true });
+
 			const actual = writePsdBuffer(psd, { logMissingFeatures: true, psb: ext === 'psb' });
 			const resultsDir = path.join(resultsFilesPath, 'read-write', f);
 			fs.mkdirSync(resultsDir, { recursive: true });

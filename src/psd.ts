@@ -670,7 +670,7 @@ export interface SelectiveColorAdjustment {
 }
 
 export interface LinkedFile {
-	id: string;
+	id: string; // must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)
 	name: string;
 	type?: string;
 	creator?: string;
@@ -1150,7 +1150,7 @@ export interface PlacedLayerFilter {
 export type PlacedLayerType = 'unknown' | 'vector' | 'raster' | 'image stack';
 
 export interface PlacedLayer {
-	id: string; // id of linked image file (psd.linkedFiles)
+	id: string; // id of linked image file (psd.linkedFiles), must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)
 	placed?: string; // unique id
 	type: PlacedLayerType;
 	pageNumber?: number;
@@ -1160,11 +1160,11 @@ export interface PlacedLayer {
 	frameCount?: number;
 	transform: number[]; // x, y of 4 corners of the transform
 	nonAffineTransform?: number[]; // x, y of 4 corners of the transform
-	width?: number;
-	height?: number;
+	width?: number; // width of the linked image
+	height?: number; // height of the linked image
 	resolution?: UnitsValue;
 	// antialias ?
-	warp?: Warp;
+	warp?: Warp; // warp coordinates are relative to the linked image size
 	crop?: number;
 	comp?: number;
 	compInfo?: { compID: number; originalCompID: number; };

@@ -2,10 +2,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from 'chai';
 import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
-import { Psd, WriteOptions, ReadOptions } from '../psd';
+import { Psd, WriteOptions, ReadOptions, } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
 import { readPsd, createReader } from '../psdReader';
-import { writePsdBuffer } from '../index';
+import { writePsdBuffer, readPsd as readPsdBuffer } from '../index';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
 const writeFilesPath = path.join(__dirname, '..', '..', 'test', 'write');
@@ -337,6 +337,51 @@ describe('PsdWriter', () => {
 			expect(layer.top).equal(50);
 			expect(layer.right).equal(350);
 			expect(layer.bottom).equal(250);
+		});
+
+		it.skip('placedLayer with transform', () => {
+			const w = 300;
+			const h = 200;
+			const psd: Psd = {
+				width: 1000,
+				height: 1000,
+				canvas: createCanvas(1000, 1000),
+				children: [
+					{
+						name: 'canvas.png',
+						left: 200,
+						top: 200,
+						canvas: createCanvas(600, 600),
+						placedLayer: {
+							id: '20953ddb-9391-11ec-b4f1-c15674f50bc4',
+							placed: 'aaa',
+							type: 'raster',
+							transform: [200, 200, 800, 200, 800, 800, 200, 800],
+							width: w,
+							height: h,
+						},
+						referencePoint: {
+							x: 200,
+							y: 200,
+						},
+					},
+				],
+				linkedFiles: [
+					{
+						id: '20953ddb-9391-11ec-b4f1-c15674f50bc4',
+						name: 'canvas.png',
+						data: fs.readFileSync(path.join('test', 'write', 'simple', 'canvas.png')),
+					},
+				],
+			};
+
+			const buffer = writePsdBuffer(psd);
+			fs.writeFileSync(path.join(resultsFilesPath, `placedLayer-with-transform.psd`), buffer);
+
+			// TODO: need to test the file here
+
+			const psd2 = readPsdBuffer(buffer, { throwForMissingFeatures: true, logMissingFeatures: true });
+			console.log(require('util').inspect(psd2, false, 99, false), 'utf8');
 		});
 	});
 

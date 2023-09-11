@@ -1151,6 +1151,9 @@ addHandler(
 		const placed = target.placedLayer!;
 		writeSignature(writer, 'plcL');
 		writeInt32(writer, 3); // version
+		if (!placed.id || typeof placed.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(placed.id)) {
+			throw new Error('Placed layer ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
+		}
 		writePascalString(writer, placed.id, 1);
 		writeInt32(writer, 1); // pageNumber
 		writeInt32(writer, 1); // totalPages
@@ -3168,6 +3171,43 @@ addHandler(
 		writeInt32(writer, 4); // version
 
 		const placed = target.placedLayer!;
+		let warp = placed.warp;
+
+		if (!warp) {
+			if (!placed.width || !placed.height) throw new Error('You must provide width and height of the linked image in placedLayer');
+			const w = placed.width;
+			const h = placed.height;
+			const x0 = 0, x1 = w / 3, x2 = w * 2 / 3, x3 = w;
+			const y0 = 0, y1 = h / 3, y2 = h * 2 / 3, y3 = h;
+			warp = {
+				style: 'custom',
+				value: 0,
+				perspective: 0,
+				perspectiveOther: 0,
+				rotate: 'horizontal',
+				bounds: {
+					top: { value: 0, units: 'Pixels' },
+					left: { value: 0, units: 'Pixels' },
+					bottom: { value: h, units: 'Pixels' },
+					right: { value: w, units: 'Pixels' },
+				},
+				uOrder: 4,
+				vOrder: 4,
+				customEnvelopeWarp: {
+					meshPoints: [
+						{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x2, y: y0 }, { x: x3, y: y0 },
+						{ x: x0, y: y1 }, { x: x1, y: y1 }, { x: x2, y: y1 }, { x: x3, y: y1 },
+						{ x: x0, y: y2 }, { x: x1, y: y2 }, { x: x2, y: y2 }, { x: x3, y: y2 },
+						{ x: x0, y: y3 }, { x: x1, y: y3 }, { x: x2, y: y3 }, { x: x3, y: y3 },
+					],
+				},
+			};
+		}
+
+		if (!placed.id || typeof placed.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(placed.id)) {
+			throw new Error('Placed layer ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
+		}
+
 		const desc: SoLdDescriptor = {
 			Idnt: placed.id,
 			placed: placed.placed ?? placed.id,
@@ -3182,7 +3222,7 @@ addHandler(
 			Trnf: placed.transform,
 			nonAffineTransform: placed.nonAffineTransform ?? placed.transform,
 			// quiltWarp: {} as any,
-			warp: encodeWarp(placed.warp || {}),
+			warp: encodeWarp(warp || {}),
 			'Sz  ': {
 				_name: '',
 				_classID: 'Pnt ',
@@ -3480,7 +3520,10 @@ addHandler(
 			const sizeOffset = writer.offset;
 			writeSignature(writer, file.data ? 'liFD' : 'liFA');
 			writeInt32(writer, version);
-			writePascalString(writer, file.id || '', 1);
+			if (!file.id || typeof file.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(file.id)) {
+				throw new Error('Linked file ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
+			}
+			writePascalString(writer, file.id, 1);
 			writeUnicodeStringWithPadding(writer, file.name || '');
 			writeSignature(writer, file.type ? `${file.type}    `.substring(0, 4) : '    ');
 			writeSignature(writer, file.creator ? `${file.creator}    `.substring(0, 4) : '\0\0\0\0');
