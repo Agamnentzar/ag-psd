@@ -9,7 +9,7 @@ import {
 	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
 	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem,
 	BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter,
-	UnitsValue, Filter,
+	UnitsValue, Filter, PlacedLayer,
 } from './psd';
 import {
 	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
@@ -1162,9 +1162,10 @@ addHandler(
 		writeInt32(writer, placedLayerTypes.indexOf(placed.type));
 		for (let i = 0; i < 8; i++) writeFloat64(writer, placed.transform[i]);
 		writeInt32(writer, 0); // warp version
-		const isQuilt = placed.warp && isQuiltWarp(placed.warp);
+		const warp = getWarpFromPlacedLayer(placed);
+		const isQuilt = isQuiltWarp(warp);
 		const type = isQuilt ? 'quiltWarp' : 'warp';
-		writeVersionAndDescriptor(writer, '', type, encodeWarp(placed.warp || {}), type);
+		writeVersionAndDescriptor(writer, '', type, encodeWarp(warp), type);
 	},
 );
 
@@ -3116,6 +3117,41 @@ interface SoLdDescriptor {
 
 // let t: any;
 
+function getWarpFromPlacedLayer(placed: PlacedLayer): Warp {
+	if (placed.warp) return placed.warp;
+
+	if (!placed.width || !placed.height) throw new Error('You must provide width and height of the linked image in placedLayer');
+
+	const w = placed.width;
+	const h = placed.height;
+	const x0 = 0, x1 = w / 3, x2 = w * 2 / 3, x3 = w;
+	const y0 = 0, y1 = h / 3, y2 = h * 2 / 3, y3 = h;
+
+	return {
+		style: 'custom',
+		value: 0,
+		perspective: 0,
+		perspectiveOther: 0,
+		rotate: 'horizontal',
+		bounds: {
+			top: { value: 0, units: 'Pixels' },
+			left: { value: 0, units: 'Pixels' },
+			bottom: { value: h, units: 'Pixels' },
+			right: { value: w, units: 'Pixels' },
+		},
+		uOrder: 4,
+		vOrder: 4,
+		customEnvelopeWarp: {
+			meshPoints: [
+				{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x2, y: y0 }, { x: x3, y: y0 },
+				{ x: x0, y: y1 }, { x: x1, y: y1 }, { x: x2, y: y1 }, { x: x3, y: y1 },
+				{ x: x0, y: y2 }, { x: x1, y: y2 }, { x: x2, y: y2 }, { x: x3, y: y2 },
+				{ x: x0, y: y3 }, { x: x1, y: y3 }, { x: x2, y: y3 }, { x: x3, y: y3 },
+			],
+		},
+	};
+}
+
 addHandler(
 	'SoLd',
 	hasKey('placedLayer'),
@@ -3171,38 +3207,6 @@ addHandler(
 		writeInt32(writer, 4); // version
 
 		const placed = target.placedLayer!;
-		let warp = placed.warp;
-
-		if (!warp) {
-			if (!placed.width || !placed.height) throw new Error('You must provide width and height of the linked image in placedLayer');
-			const w = placed.width;
-			const h = placed.height;
-			const x0 = 0, x1 = w / 3, x2 = w * 2 / 3, x3 = w;
-			const y0 = 0, y1 = h / 3, y2 = h * 2 / 3, y3 = h;
-			warp = {
-				style: 'custom',
-				value: 0,
-				perspective: 0,
-				perspectiveOther: 0,
-				rotate: 'horizontal',
-				bounds: {
-					top: { value: 0, units: 'Pixels' },
-					left: { value: 0, units: 'Pixels' },
-					bottom: { value: h, units: 'Pixels' },
-					right: { value: w, units: 'Pixels' },
-				},
-				uOrder: 4,
-				vOrder: 4,
-				customEnvelopeWarp: {
-					meshPoints: [
-						{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x2, y: y0 }, { x: x3, y: y0 },
-						{ x: x0, y: y1 }, { x: x1, y: y1 }, { x: x2, y: y1 }, { x: x3, y: y1 },
-						{ x: x0, y: y2 }, { x: x1, y: y2 }, { x: x2, y: y2 }, { x: x3, y: y2 },
-						{ x: x0, y: y3 }, { x: x1, y: y3 }, { x: x2, y: y3 }, { x: x3, y: y3 },
-					],
-				},
-			};
-		}
 
 		if (!placed.id || typeof placed.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(placed.id)) {
 			throw new Error('Placed layer ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
@@ -3222,7 +3226,7 @@ addHandler(
 			Trnf: placed.transform,
 			nonAffineTransform: placed.nonAffineTransform ?? placed.transform,
 			// quiltWarp: {} as any,
-			warp: encodeWarp(warp || {}),
+			warp: encodeWarp(getWarpFromPlacedLayer(placed)),
 			'Sz  ': {
 				_name: '',
 				_classID: 'Pnt ',

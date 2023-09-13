@@ -1,5 +1,8 @@
 # Changelog
 
+## v17.0.4
+- Fixed saving smart layers without placedLayer.warp field present for newer versions of photoshop
+
 ## v17.0.3
 - Added extra error checks and fixed writing PSD without placedLayer.warp field present
 

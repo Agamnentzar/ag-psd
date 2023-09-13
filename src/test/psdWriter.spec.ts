@@ -360,10 +360,6 @@ describe('PsdWriter', () => {
 							width: w,
 							height: h,
 						},
-						referencePoint: {
-							x: 200,
-							y: 200,
-						},
 					},
 				],
 				linkedFiles: [
