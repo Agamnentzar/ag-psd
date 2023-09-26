@@ -1345,10 +1345,10 @@ export interface LayerAdditionalInfo {
 		description: string;
 		reason: string;
 		engine: string;
-		enableCompCore: string;
-		enableCompCoreGPU: string;
-		compCoreSupport: string;
-		compCoreGPUSupport: string;
+		enableCompCore?: string;
+		enableCompCoreGPU?: string;
+		compCoreSupport?: string;
+		compCoreGPUSupport?: string;
 	};
 	artboard?: {
 		rect: { top: number; left: number; bottom: number; right: number; };

@@ -3328,6 +3328,44 @@ if (MOCK_HANDLERS) {
 	);
 }
 
+/*
+interface CAIDesc {
+	enab: boolean;
+	generationalGuid: string;
+}
+
+addHandler(
+	'CAI ', // content credentials ? something to do with generative tech
+	() => false,
+	(reader, _target, left) => {
+		const version = readUint32(reader); // 3
+		const desc = readVersionAndDescriptor(reader) as CAIDesc;
+		console.log('CAI', require('util').inspect(desc, false, 99, true));
+		console.log('CAI', { version });
+		console.log('CAI left', readBytes(reader, left())); // 8 bytes left, all zeroes
+	},
+	(_writer, _target) => {
+	},
+);
+*/
+
+/*
+interface GenIDesc {
+	isUsingGenTech: number;
+}
+
+addHandler(
+	'GenI', // generative tech
+	() => false,
+	(reader, _target, left) => {
+		const desc = readVersionAndDescriptor(reader) as GenIDesc;
+		console.log('GenI', require('util').inspect(desc, false, 99, true));
+	},
+	(_writer, _target) => {
+	},
+);
+*/
+
 function readRect(reader: PsdReader) {
 	const top = readInt32(reader);
 	const left = readInt32(reader);
@@ -3454,6 +3492,9 @@ addHandler(
 			let size = readLength64(reader); // size
 			const startOffset = reader.offset;
 			const type = readSignature(reader) as 'liFD' | 'liFE' | 'liFA';
+			// liFD - linked file data
+			// liFE - linked file external
+			// liFA - linked file alias
 			const version = readInt32(reader);
 			const id = readPascalString(reader, 1);
 			const name = readUnicodeString(reader);
@@ -3463,7 +3504,7 @@ addHandler(
 			const hasFileOpenDescriptor = readUint8(reader);
 			const fileOpenDescriptor = hasFileOpenDescriptor ? readVersionAndDescriptor(reader) as FileOpenDescriptor : undefined;
 			const linkedFileDescriptor = type === 'liFE' ? readVersionAndDescriptor(reader) : undefined;
-			const file: LinkedFile = { id, name, data: undefined };
+			const file: LinkedFile = { id, name };
 
 			if (fileType) file.type = fileType;
 			if (fileCreator) file.creator = fileCreator;
@@ -3491,11 +3532,11 @@ addHandler(
 
 			const fileSize = type === 'liFE' ? readLength64(reader) : 0;
 			if (type === 'liFA') skipBytes(reader, 8);
-			if (type === 'liFD') file.data = readBytes(reader, dataSize);
+			if (type === 'liFD') file.data = readBytes(reader, dataSize); // seems to be a typo in docs
 			if (version >= 5) file.childDocumentID = readUnicodeString(reader);
 			if (version >= 6) file.assetModTime = readFloat64(reader);
 			if (version >= 7) file.assetLockedState = readUint8(reader);
-			if (type === 'liFE') file.data = readBytes(reader, fileSize);
+			if (type === 'liFE' && version === 2) file.data = readBytes(reader, fileSize);
 
 			if (options.skipLinkedFilesData) file.data = undefined;
 
@@ -4707,11 +4748,11 @@ interface CinfDescriptor {
 	description: string;
 	reason: string;
 	Engn: string; // 'Engn.compCore';
-	enableCompCore: string; // 'enable.feature';
-	enableCompCoreGPU: string; // 'enable.feature';
+	enableCompCore?: string; // 'enable.feature';
+	enableCompCoreGPU?: string; // 'enable.feature';
 	enableCompCoreThreads?: string; // 'enable.feature';
-	compCoreSupport: string; // 'reason.supported';
-	compCoreGPUSupport: string; // 'reason.featureDisabled';
+	compCoreSupport?: string; // 'reason.supported';
+	compCoreGPUSupport?: string; // 'reason.featureDisabled';
 }
 
 addHandler(
@@ -4728,12 +4769,13 @@ addHandler(
 		target.compositorUsed = {
 			description: desc.description,
 			reason: desc.reason,
-			engine: enumValue(desc.Engn),
-			enableCompCore: enumValue(desc.enableCompCore),
-			enableCompCoreGPU: enumValue(desc.enableCompCoreGPU),
-			compCoreSupport: enumValue(desc.compCoreSupport),
-			compCoreGPUSupport: enumValue(desc.compCoreGPUSupport),
+			engine: enumValue(desc.Engn)!,
 		};
+
+		if (desc.enableCompCore) target.compositorUsed.enableCompCore = enumValue(desc.enableCompCore);
+		if (desc.enableCompCoreGPU) target.compositorUsed.enableCompCoreGPU = enumValue(desc.enableCompCoreGPU);
+		if (desc.compCoreSupport) target.compositorUsed.compCoreSupport = enumValue(desc.compCoreSupport);
+		if (desc.compCoreGPUSupport) target.compositorUsed.compCoreGPUSupport = enumValue(desc.compCoreGPUSupport);
 
 		skipBytes(reader, left());
 	},
@@ -4745,12 +4787,14 @@ addHandler(
 			description: cinf.description,
 			reason: cinf.reason,
 			Engn: `Engn.${cinf.engine}`,
-			enableCompCore: `enable.${cinf.enableCompCore}`,
-			enableCompCoreGPU: `enable.${cinf.enableCompCoreGPU}`,
-			// enableCompCoreThreads: `enable.feature`, // TESTING
-			compCoreSupport: `reason.${cinf.compCoreSupport}`,
-			compCoreGPUSupport: `reason.${cinf.compCoreGPUSupport}`,
 		};
+
+		if (cinf.enableCompCore) desc.enableCompCore = `enable.${cinf.enableCompCore}`;
+		if (cinf.enableCompCoreGPU) desc.enableCompCoreGPU = `enable.${cinf.enableCompCoreGPU}`;
+		// desc.enableCompCoreThreads = `enable.feature`; // TESTING
+		if (cinf.compCoreSupport) desc.compCoreSupport = `reason.${cinf.compCoreSupport}`;
+		if (cinf.compCoreGPUSupport) desc.compCoreGPUSupport = `reason.${cinf.compCoreGPUSupport}`;
+
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );

@@ -1,6 +1,10 @@
 # Changelog
 
 ## v17.0.4
+- Fixed incorrect parsing of external linked files
+- Fixed incorrect parsing of compositorUsed section when some fields are missing
+
+## v17.0.4
 - Fixed saving smart layers without placedLayer.warp field present for newer versions of photoshop
 
 ## v17.0.3
