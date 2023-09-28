@@ -1,6 +1,9 @@
 # Changelog
 
-## v17.0.4
+## v17.0.6
+- Fixed broken file after saving with layer name longer than 255 characters
+
+## v17.0.5
 - Fixed incorrect parsing of external linked files
 - Fixed incorrect parsing of compositorUsed section when some fields are missing
 

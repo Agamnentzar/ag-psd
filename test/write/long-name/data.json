@@ -1,0 +1,9 @@
+{
+	"width": 300,
+	"height": 200,
+	"children": [
+		{
+			"name": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse sem diam, dictum sit amet ipsum blandit, tempus pharetra nisi. Maecenas porta est orci, ac dignissim enim rhoncus quis. Cras quis felis sapien. Morbi consectetur lectus dui, nec congue nunc vestibulum quis. Vivamus sollicitudin est nisi, quis vehicula lectus volutpat vitae. Donec velit nunc, suscipit sed nibh congue, aliquam scelerisque erat. Fusce dictum ut lorem at venenatis. Donec eu nibh mi. Praesent nec est eros. Nam convallis erat ut elit bibendum, quis tempor turpis ullamcorper. Pellentesque iaculis est ex, ut gravida ante placerat sit amet. Nunc non commodo lorem, sit amet sollicitudin lorem. Proin faucibus lacus sed ultrices finibus."
+		}
+	]
+}

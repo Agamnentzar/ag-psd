@@ -108,6 +108,8 @@ export function writeSignature(writer: PsdWriter, signature: string) {
 
 export function writePascalString(writer: PsdWriter, text: string, padTo: number) {
 	let length = text.length;
+	if (length > 255) throw new Error(`String too long`);
+
 	writeUint8(writer, length);
 
 	for (let i = 0; i < length; i++) {
@@ -331,7 +333,7 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 			writeSection(writer, 1, () => {
 				writeLayerMaskData(writer, layer, layerData);
 				writeLayerBlendingRanges(writer, psd);
-				writePascalString(writer, layer.name || '', 4);
+				writePascalString(writer, (layer.name || '').substring(0, 255), 4);
 				writeAdditionalLayerInfo(writer, layer, psd, options);
 			});
 		}
