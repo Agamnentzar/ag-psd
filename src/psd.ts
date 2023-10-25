@@ -441,6 +441,7 @@ export interface BezierPath {
 	open: boolean;
 	operation: BooleanOperation;
 	knots: BezierKnot[];
+	fillRule: 'even-odd' | 'non-zero';
 }
 
 export interface ExtraGradientInfo {

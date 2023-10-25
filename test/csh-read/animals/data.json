@@ -98,7 +98,8 @@
                 23.0912983417511
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -344,7 +345,8 @@
                 104.91479730606079
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -645,7 +647,8 @@
                 70.380420088768
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -990,7 +993,8 @@
                 62.877708435058594
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -1269,7 +1273,8 @@
                 138.60375452041626
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -1581,7 +1586,8 @@
                 117.99979770183563
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -1805,7 +1811,8 @@
                 104.44875991344452
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -2513,7 +2520,8 @@
                 298.15103352069855
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -2627,7 +2635,8 @@
                 21.367356956005096
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -2765,7 +2774,8 @@
                 34.830897867679596
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -2870,7 +2880,8 @@
                 9.82008969783783
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -2975,7 +2986,8 @@
                 21.936678886413574
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -3080,7 +3092,8 @@
                 32.956285178661346
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false
@@ -3139,7 +3152,8 @@
                 3.9710580706596375
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -3189,7 +3203,8 @@
                 5.21782648563385
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -3239,7 +3254,8 @@
                 15.864793241024017
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -3289,7 +3305,8 @@
                 22.457031965255737
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         },
         {
           "open": false,
@@ -3339,7 +3356,8 @@
                 40.81461125612259
               ]
             }
-          ]
+          ],
+          "fillRule": "even-odd"
         }
       ],
       "fillStartsWithAllPixels": false

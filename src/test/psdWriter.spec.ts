@@ -409,6 +409,41 @@ describe('PsdWriter', () => {
 			compareBuffers(buffer, expected, `ArrayBufferPsdWriter`, 0);
 		});
 	});
+
+	it.skip('test', () => {
+		const canvas = createCanvas(5000, 5000);
+		const context = canvas.getContext('2d')!;
+		context.fillStyle = 'pink';
+		context.fillRect(0, 0, canvas.width, canvas.height);
+
+		const canvas2 = createCanvas(300, 200);
+		const context2 = canvas2.getContext('2d')!;
+		context2.fillStyle = 'orange';
+		context2.fillRect(0, 0, canvas.width, canvas.height);
+
+		const canvas3 = createCanvas(300, 200);
+		const context3 = canvas3.getContext('2d')!;
+		context3.fillStyle = 'red';
+		context3.fillRect(0, 0, canvas.width, canvas.height);
+
+		const psd: Psd = {
+			width: 5000,
+			height: 5000,
+			canvas: canvas,
+			children: [
+				{
+					name: 'bg',
+					canvas: canvas3,
+				},
+			],
+			imageResources: {
+				thumbnail: canvas2,
+			},
+		};
+
+		const buffer = writePsdBuffer(psd, { generateThumbnail: false });
+		fs.writeFileSync(path.join(resultsFilesPath, `thumb_test.psd`), buffer);
+	});
 });
 
 function replacer(key: string, value: any) {

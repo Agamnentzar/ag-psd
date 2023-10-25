@@ -241,7 +241,8 @@
                   103.97244691848755
                 ]
               }
-            ]
+            ],
+            "fillRule": "even-odd"
           }
         ],
         "invert": false,

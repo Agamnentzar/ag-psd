@@ -1,5 +1,8 @@
 # Changelog
 
+## v18.0.0
+- Added `fillRule` field to vector paths
+
 ## v17.0.6
 - Fixed broken file after saving with layer name longer than 255 characters
 

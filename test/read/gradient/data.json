@@ -261,7 +261,8 @@
                   150
                 ]
               }
-            ]
+            ],
+            "fillRule": "even-odd"
           }
         ],
         "invert": false,

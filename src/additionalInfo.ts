@@ -266,10 +266,15 @@ export function readVectorMask(reader: PsdReader, vectorMask: LayerVectorMask, w
 			case 3: { // Open subpath length record
 				readUint16(reader); // count
 				const boolOp = readInt16(reader);
-				readUint16(reader); // always 1 ?
+				const flags = readUint16(reader); // bit 1 always 1 ?
 				skipBytes(reader, 18);
 				// TODO: 'combine' here might be wrong
-				path = { open: selector === 3, operation: boolOp === -1 ? 'combine' : booleanOperations[boolOp], knots: [] };
+				path = {
+					open: selector === 3,
+					operation: boolOp === -1 ? 'combine' : booleanOperations[boolOp],
+					knots: [],
+					fillRule: flags & 2 ? 'non-zero' : 'even-odd',
+				};
 				paths.push(path);
 				break;
 			}
@@ -359,7 +364,7 @@ addHandler(
 			writeUint16(writer, path.open ? 3 : 0);
 			writeUint16(writer, path.knots.length);
 			writeUint16(writer, Math.abs(booleanOperations.indexOf(path.operation))); // default to 1 if not found
-			writeUint16(writer, 1);
+			writeUint16(writer, 1 | (path.fillRule === 'non-zero' ? 2 : 0));
 			writeZeros(writer, 18); // TODO: these are sometimes non-zero
 
 			const linkedKnot = path.open ? 4 : 1;

@@ -1,14 +1,14 @@
 {
-  "width": 200,
-  "height": 200,
+  "width": 99,
+  "height": 93,
   "channels": 4,
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
-    "captionDigest": "00000000000000000000000000000000",
+    "captionDigest": "e8f15cf32fc118a1a27b67adc564d5ba",
     "printInformation": {
-      "printerName": "",
-      "renderingIntent": "relative colorimetric",
+      "printerName": "Canon MG5200 series Printer",
+      "renderingIntent": "perceptual",
       "printerManagesColors": true,
       "printSixteenBit": false,
       "proofSetup": {
@@ -18,10 +18,10 @@
     "resolutionInfo": {
       "horizontalResolution": 72,
       "horizontalResolutionUnit": "PPI",
-      "widthUnit": "Centimeters",
+      "widthUnit": "Inches",
       "verticalResolution": 72,
       "verticalResolutionUnit": "PPI",
-      "heightUnit": "Centimeters"
+      "heightUnit": "Inches"
     },
     "printScale": {
       "style": "centered",
@@ -35,7 +35,12 @@
     "alphaIdentifiers": [
       0
     ],
-    "globalAngle": 120,
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
+    "globalAngle": 90,
     "globalAltitude": 30,
     "printFlags": {
       "labels": false,
@@ -55,9 +60,7 @@
     "layerGroupsEnabledId": [
       1
     ],
-    "layerSelectionIds": [
-      3
-    ],
+    "layerSelectionIds": [],
     "gridAndGuidesInformation": {
       "grid": {
         "horizontal": 576,
@@ -71,8 +74,8 @@
         "bounds": {
           "top": 0,
           "left": 0,
-          "bottom": 200,
-          "right": 200
+          "bottom": 93,
+          "right": 99
         },
         "groupName": "",
         "slices": [
@@ -94,8 +97,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 200,
-              "right": 200
+              "bottom": 93,
+              "right": 99
             },
             "backgroundColorType": "none",
             "backgroundColor": {
@@ -115,42 +118,32 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 3,
+    "idsSeedNumber": 10,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
-      "readerName": "Adobe Photoshop CS6",
+      "readerName": "Adobe Photoshop CC 2019",
       "fileVersion": 1
     }
   },
   "children": [
     {
-      "top": 52,
-      "left": 37,
-      "bottom": 134,
-      "right": 162,
+      "top": 0,
+      "left": 0,
+      "bottom": 93,
+      "right": 99,
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
-      "mask": {
-        "top": 52,
-        "left": 37,
-        "bottom": 134,
-        "right": 162,
-        "defaultColor": 0,
-        "positionRelativeToLayer": false,
-        "disabled": false,
-        "fromVectorData": true
-      },
-      "name": "Rectangle 1",
+      "name": "Shape 1",
       "vectorFill": {
         "type": "color",
         "color": {
-          "r": 186.15175276994705,
-          "g": 65.15175238251686,
-          "b": 65.15175238251686
+          "r": 0,
+          "g": 0,
+          "b": 0
         }
       },
       "vectorMask": {
@@ -162,45 +155,56 @@
               {
                 "linked": false,
                 "points": [
-                  37.99999952316284,
-                  52.99999713897705,
-                  37.99999952316284,
-                  52.99999713897705,
-                  37.99999952316284,
-                  52.99999713897705
+                  49.999997556209564,
+                  1.9999980926513672,
+                  49.999997556209564,
+                  1.9999980926513672,
+                  49.999997556209564,
+                  1.9999980926513672
                 ]
               },
               {
                 "linked": false,
                 "points": [
-                  160.99998950958252,
-                  52.99999713897705,
-                  160.99998950958252,
-                  52.99999713897705,
-                  160.99998950958252,
-                  52.99999713897705
+                  20.999997675418854,
+                  91.99999541044235,
+                  20.999997675418854,
+                  91.99999541044235,
+                  20.999997675418854,
+                  91.99999541044235
                 ]
               },
               {
                 "linked": false,
                 "points": [
-                  160.99998950958252,
-                  132.99999237060547,
-                  160.99998950958252,
-                  132.99999237060547,
-                  160.99998950958252,
-                  132.99999237060547
+                  97.99999898672104,
+                  36.99999797344208,
+                  97.99999898672104,
+                  36.99999797344208,
+                  97.99999898672104,
+                  36.99999797344208
                 ]
               },
               {
                 "linked": false,
                 "points": [
-                  37.99999952316284,
-                  132.99999237060547,
-                  37.99999952316284,
-                  132.99999237060547,
-                  37.99999952316284,
-                  132.99999237060547
+                  1.9999961256980896,
+                  36.99999797344208,
+                  1.9999961256980896,
+                  36.99999797344208,
+                  1.9999961256980896,
+                  36.99999797344208
+                ]
+              },
+              {
+                "linked": false,
+                "points": [
+                  78.99999743700027,
+                  91.99999541044235,
+                  78.99999743700027,
+                  91.99999541044235,
+                  78.99999743700027,
+                  91.99999541044235
                 ]
               }
             ],
@@ -213,7 +217,7 @@
         "fillStartsWithAllPixels": false
       },
       "nameSource": "shap",
-      "id": 3,
+      "id": 9,
       "blendClippendElements": true,
       "blendInteriorElements": false,
       "knockout": false,
@@ -223,13 +227,11 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1580175577.1347148,
-      "usingAlignedRendering": true,
+      "timestamp": 1698249363.8272262,
       "referencePoint": {
         "x": 0,
         "y": 0
-      },
-      "version": 130
+      }
     }
   ],
   "filterMask": {
@@ -240,5 +242,13 @@
     },
     "opacity": 0.19607843137254902
   },
-  "pathList": []
+  "compositorUsed": {
+    "description": "",
+    "reason": "",
+    "engine": "umerge",
+    "enableCompCore": "feature",
+    "enableCompCoreGPU": "feature",
+    "compCoreSupport": "featureDisabled",
+    "compCoreGPUSupport": "featureDisabled"
+  }
 }

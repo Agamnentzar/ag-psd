@@ -194,7 +194,8 @@
                   413
                 ]
               }
-            ]
+            ],
+            "fillRule": "even-odd"
           }
         ],
         "invert": false,
