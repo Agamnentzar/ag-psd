@@ -1,5 +1,8 @@
 # Changelog
 
+## v18.0.1
+- Fixed incorrect writing of `fillRule` field for vector paths
+
 ## v18.0.0
 - Added `fillRule` field to vector paths
 

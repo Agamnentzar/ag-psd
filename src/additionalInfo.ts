@@ -273,7 +273,7 @@ export function readVectorMask(reader: PsdReader, vectorMask: LayerVectorMask, w
 					open: selector === 3,
 					operation: boolOp === -1 ? 'combine' : booleanOperations[boolOp],
 					knots: [],
-					fillRule: flags & 2 ? 'non-zero' : 'even-odd',
+					fillRule: flags === 2 ? 'non-zero' : 'even-odd',
 				};
 				paths.push(path);
 				break;
@@ -364,7 +364,7 @@ addHandler(
 			writeUint16(writer, path.open ? 3 : 0);
 			writeUint16(writer, path.knots.length);
 			writeUint16(writer, Math.abs(booleanOperations.indexOf(path.operation))); // default to 1 if not found
-			writeUint16(writer, 1 | (path.fillRule === 'non-zero' ? 2 : 0));
+			writeUint16(writer, path.fillRule === 'non-zero' ? 2 : 1);
 			writeZeros(writer, 18); // TODO: these are sometimes non-zero
 
 			const linkedKnot = path.open ? 4 : 1;
