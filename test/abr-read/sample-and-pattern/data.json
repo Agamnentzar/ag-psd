@@ -130,6 +130,7 @@
         }
       },
       "toolOptions": {
+        "type": "brush",
         "brushPreset": true,
         "flow": 100,
         "smooth": 0,

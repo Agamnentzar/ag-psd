@@ -338,47 +338,91 @@ describe('PsdWriter', () => {
 			expect(layer.right).equal(350);
 			expect(layer.bottom).equal(250);
 		});
+	});
 
-		it.skip('placedLayer with transform', () => {
-			const w = 300;
-			const h = 200;
-			const psd: Psd = {
-				width: 1000,
-				height: 1000,
-				canvas: createCanvas(1000, 1000),
-				children: [
-					{
-						name: 'canvas.png',
-						left: 200,
-						top: 200,
-						canvas: createCanvas(600, 600),
-						placedLayer: {
-							id: '20953ddb-9391-11ec-b4f1-c15674f50bc4',
-							placed: 'aaa',
-							type: 'raster',
-							transform: [200, 200, 800, 200, 800, 800, 200, 800],
-							width: w,
-							height: h,
-						},
-					},
-				],
-				linkedFiles: [
-					{
+	it.skip('placedLayer with transform', () => {
+		const w = 300;
+		const h = 200;
+		const psd: Psd = {
+			width: 1000,
+			height: 1000,
+			canvas: createCanvas(1000, 1000),
+			children: [
+				{
+					name: 'canvas.png',
+					left: 200,
+					top: 200,
+					canvas: createCanvas(600, 600),
+					placedLayer: {
 						id: '20953ddb-9391-11ec-b4f1-c15674f50bc4',
-						name: 'canvas.png',
-						data: fs.readFileSync(path.join('test', 'write', 'simple', 'canvas.png')),
+						placed: 'aaa',
+						type: 'raster',
+						transform: [200, 200, 800, 200, 800, 800, 200, 800],
+						width: w,
+						height: h,
 					},
-				],
-			};
+				},
+			],
+			linkedFiles: [
+				{
+					id: '20953ddb-9391-11ec-b4f1-c15674f50bc4',
+					name: 'canvas.png',
+					data: fs.readFileSync(path.join('test', 'write', 'simple', 'canvas.png')),
+				},
+			],
+		};
 
-			const buffer = writePsdBuffer(psd);
-			fs.writeFileSync(path.join(resultsFilesPath, `placedLayer-with-transform.psd`), buffer);
+		const buffer = writePsdBuffer(psd);
+		fs.writeFileSync(path.join(resultsFilesPath, `placedLayer-with-transform.psd`), buffer);
 
-			// TODO: need to test the file here
+		// TODO: need to test the file here
 
-			const psd2 = readPsdBuffer(buffer, { throwForMissingFeatures: true, logMissingFeatures: true });
-			console.log(require('util').inspect(psd2, false, 99, false), 'utf8');
-		});
+		const psd2 = readPsdBuffer(buffer, { throwForMissingFeatures: true, logMissingFeatures: true });
+		console.log(require('util').inspect(psd2, false, 99, false), 'utf8');
+	});
+
+	it.skip('vectorMaskFeather', () => {
+		const psd: Psd = {
+			width: 821,
+			height: 523,
+			children: [
+				{
+					name: 'Circle',
+					mask: { fromVectorData: true, vectorMaskFeather: 5 },
+					vectorFill: { type: 'color', color: { r: 0, g: 0, b: 255 } },
+					vectorMask: {
+						paths: [
+							{
+								fillRule: 'even-odd',
+								open: true,
+								operation: 'combine',
+								knots: [
+									{ points: [78, 162.1389086942608, 78, 124.02013999999997, 78, 85.90136716453082], linked: false },
+									{ points: [108.90136716453082, 55, 147.02013999999997, 55, 185.13890869426086, 55], linked: false },
+									{ points: [216.04027999999994, 85.90136716453082, 216.04027999999994, 124.02013999999997, 216.04027999999994, 162.1389086942608], linked: false },
+									{ points: [185.13890869426086, 193.04028, 147.02013999999997, 193.04028, 108.90136716453082, 193.04028], linked: false },
+								],
+							},
+						],
+					},
+				},
+				{
+					name: 'Image',
+					left: 296,
+					top: 271,
+					right: 476,
+					bottom: 361,
+					canvas: loadCanvasFromFile('test/gradient.png'),
+				},
+			],
+		};
+
+		const buffer = writePsdBuffer(psd);
+		fs.writeFileSync(path.join(resultsFilesPath, `vectorMaskFeather.psd`), buffer);
+		fs.writeFileSync(path.join(resultsFilesPath, `vectorMaskFeather.bin`), buffer);
+
+		const psd2 = readPsdBuffer(buffer, { throwForMissingFeatures: true, logMissingFeatures: true });
+		if (0) console.log(require('util').inspect(psd2, false, 99, false), 'utf8');
 	});
 
 	// fs.readdirSync(writeFilesPath).filter(f => /float-size/.test(f)).forEach(f => {

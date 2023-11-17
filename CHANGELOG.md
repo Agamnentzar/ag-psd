@@ -1,5 +1,11 @@
 # Changelog
 
+## v19.0.0
+- Added brush type to ABR
+- Fixed importing smudge and mixer brushes from ABR
+- Fixed saving mask without canvas/imageData
+- Fixed rare issue with saving files resulting in corrupted file
+
 ## v18.0.1
 - Fixed incorrect writing of `fillRule` field for vector paths
 

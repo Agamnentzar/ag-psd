@@ -116,8 +116,12 @@ export interface Brush {
 	interpretation?: boolean; // ?
 	useBrushSize: boolean; // ?
 	toolOptions?: {
+		type: 'brush' | 'mixer brush' | 'smudge brush';
 		brushPreset: boolean;
 		flow: number; // 0-100
+		wetness?: number; // 0-100
+		dryness?: number; // 0-100
+		mix?: number; // 0-100
 		smooth: number; // ?
 		mode: BlendMode;
 		opacity: number; // 0-100
@@ -131,9 +135,16 @@ export interface Brush {
 		usePressureOverridesSize: boolean;
 		usePressureOverridesOpacity: boolean;
 		useLegacy: boolean;
+		autoFill?: boolean;
+		autoClean?: boolean;
+		loadSolidColorOnly?: boolean;
+		sampleAllLayers?: boolean;
 		flowDynamics?: BrushDynamics;
 		opacityDynamics?: BrushDynamics;
 		sizeDynamics?: BrushDynamics;
+		smudgeFingerPainting?: boolean;
+		smudgeSampleAllLayers?: boolean;
+		strength?: number; // 0-100
 	};
 }
 
@@ -241,8 +252,12 @@ interface DescDescriptor {
 		brushPoseTiltY?: number;
 		brushPoseAngle?: number;
 		toolOptions?: {
+			_classID: string;
 			brushPreset: boolean;
 			flow?: number;
+			wetness?: number;
+			dryness?: number;
+			mix?: number;
 			Smoo?: number;
 			'Md  ': string;
 			Opct?: number;
@@ -256,15 +271,29 @@ interface DescDescriptor {
 			usePressureOverridesSize?: boolean;
 			usePressureOverridesOpacity?: boolean;
 			useLegacy: boolean;
-			'Prs '?: number; // TODO: ???
+			autoFill?: boolean;
+			autoClean?: boolean;
+			loadSolidColorOnly?: boolean;
+			sampleAllLayers?: boolean;
+			'Prs '?: number;
 			MgcE?: boolean; // TODO: ???
 			ErsB?: number; // TODO: ???
 			prVr?: DynamicsDescriptor;
 			opVr?: DynamicsDescriptor;
 			szVr?: DynamicsDescriptor;
+			SmdF?: boolean;
+			SmdS?: boolean;
 		};
 	}[];
 }
+
+const toBrushType: { [key: string]: 'brush' | 'mixer brush' | 'smudge brush'; } = {
+	_: 'brush',
+	MixB: 'mixer brush',
+	SmTl: 'smudge brush',
+	// PbTl
+	// ErTl
+};
 
 function parseDynamics(desc: DynamicsDescriptor): BrushDynamics {
 	return {
@@ -363,7 +392,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 					break;
 				}
 				case 'desc': {
-					const desc: DescDescriptor = readVersionAndDescriptor(reader);
+					const desc: DescDescriptor = readVersionAndDescriptor(reader, true);
 					// console.log(require('util').inspect(desc, false, 99, true));
 
 					for (const brush of desc.Brsh) {
@@ -471,6 +500,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 						const to = brush.toolOptions;
 						if (to) {
 							b.toolOptions = {
+								type: toBrushType[to._classID] || 'brush',
 								brushPreset: to.brushPreset,
 								flow: to.flow ?? 100,
 								smooth: to.Smoo ?? 0,
@@ -488,17 +518,21 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 								useLegacy: !!to.useLegacy,
 							};
 
-							if (to.prVr) {
-								b.toolOptions.flowDynamics = parseDynamics(to.prVr);
-							}
-
-							if (to.opVr) {
-								b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
-							}
-
-							if (to.szVr) {
-								b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
-							}
+							if (to.prVr) b.toolOptions.flowDynamics = parseDynamics(to.prVr);
+							if (to.opVr) b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
+							if (to.szVr) b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
+							if ('wetness' in to) b.toolOptions.wetness = to.wetness;
+							if ('dryness' in to) b.toolOptions.dryness = to.dryness;
+							if ('mix' in to) b.toolOptions.mix = to.mix;
+							if ('autoFill' in to) b.toolOptions.autoFill = to.autoFill;
+							if ('autoClean' in to) b.toolOptions.autoClean = to.autoClean;
+							if ('loadSolidColorOnly' in to) b.toolOptions.loadSolidColorOnly = to.loadSolidColorOnly;
+							if ('sampleAllLayers' in to) b.toolOptions.sampleAllLayers = to.sampleAllLayers;
+							if ('SmdF' in to) b.toolOptions.smudgeFingerPainting = to.SmdF;
+							if ('SmdS' in to) b.toolOptions.smudgeSampleAllLayers = to.SmdS;
+							if ('Prs ' in to) b.toolOptions.strength = to['Prs '];
+							if ('SmdF' in to) b.toolOptions.smudgeFingerPainting = to.SmdF;
+							if ('SmdS' in to) b.toolOptions.smudgeSampleAllLayers = to.SmdS;
 						}
 
 						brushes.push(b);

@@ -350,11 +350,9 @@ function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 	}
 }
 
-export function readDescriptorStructure(reader: PsdReader) {
-	// const struct =
-	readClassStructure(reader);
-	// const object: any = { _name: struct.name, _classID: struct.classID };
-	const object: any = {};
+export function readDescriptorStructure(reader: PsdReader, includeClass: boolean) {
+	const struct = readClassStructure(reader);
+	const object: any = includeClass ? { _name: struct.name, _classID: struct.classID } : {};
 	// console.log('>> ', struct);
 	const itemsCount = readUint32(reader);
 
@@ -362,7 +360,7 @@ export function readDescriptorStructure(reader: PsdReader) {
 		const key = readAsciiStringOrClassId(reader);
 		const type = readSignature(reader);
 		// console.log(`> '${key}' '${type}'`);
-		const data = readOSType(reader, type);
+		const data = readOSType(reader, type, includeClass);
 		// if (!getTypeByKey(key, data)) console.log(`> '${key}' '${type}'`, data);
 		object[key] = data;
 	}
@@ -463,13 +461,13 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	}
 }
 
-function readOSType(reader: PsdReader, type: string) {
+function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 	switch (type) {
 		case 'obj ': // Reference
 			return readReferenceStructure(reader);
 		case 'Objc': // Descriptor
 		case 'GlbO': // GlobalObject same as Descriptor
-			return readDescriptorStructure(reader);
+			return readDescriptorStructure(reader, includeClass);
 		case 'VlLs': { // List
 			const length = readInt32(reader);
 			const items: any[] = [];
@@ -477,7 +475,7 @@ function readOSType(reader: PsdReader, type: string) {
 			for (let i = 0; i < length; i++) {
 				const type = readSignature(reader);
 				// console.log('  >', type);
-				items.push(readOSType(reader, type));
+				items.push(readOSType(reader, type, includeClass));
 			}
 
 			return items;
@@ -770,10 +768,10 @@ function writeClassStructure(writer: PsdWriter, name: string, classID: string) {
 	writeAsciiStringOrClassId(writer, classID);
 }
 
-export function readVersionAndDescriptor(reader: PsdReader) {
+export function readVersionAndDescriptor(reader: PsdReader, includeClass = false) {
 	const version = readUint32(reader);
 	if (version !== 16) throw new Error(`Invalid descriptor version: ${version}`);
-	const desc = readDescriptorStructure(reader);
+	const desc = readDescriptorStructure(reader, includeClass);
 	// console.log(require('util').inspect(desc, false, 99, true));
 	return desc;
 }

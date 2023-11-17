@@ -177,7 +177,7 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 	let length = writer.offset - offset - 4;
 	let len = length;
 
-	while ((len % round) !== 0) {
+	while ((writer.offset % round) !== 0) {
 		writeUint8(writer, 0);
 		len++;
 	}
@@ -356,11 +356,11 @@ function writeLayerMaskData(writer: PsdWriter, { mask }: Layer, layerData: Layer
 		if (!mask) return;
 
 		const m = layerData.mask || {} as Partial<Bounds>;
-		writeInt32(writer, m.top!);
-		writeInt32(writer, m.left!);
-		writeInt32(writer, m.bottom!);
-		writeInt32(writer, m.right!);
-		writeUint8(writer, mask.defaultColor!);
+		writeInt32(writer, m.top || 0);
+		writeInt32(writer, m.left || 0);
+		writeInt32(writer, m.bottom || 0);
+		writeInt32(writer, m.right || 0);
+		writeUint8(writer, mask.defaultColor || 0);
 
 		let params = 0;
 		if (mask.userMaskDensity !== undefined) params |= MaskParams.UserMaskDensity;
@@ -430,17 +430,16 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 
 		if (handler.has(target)) {
 			const large = options.psb && largeAdditionalInfoKeys.indexOf(key) !== -1;
-
-			writeSignature(writer, large ? '8B64' : '8BIM');
-			writeSignature(writer, key);
-
+			const writeTotalLength = key !== 'Txt2' && key !== 'cinf' && key !== 'extn';
 			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
 				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno';
 
+			writeSignature(writer, large ? '8B64' : '8BIM');
+			writeSignature(writer, key);
 			writeSection(writer, fourBytes ? 4 : 2, () => {
 				handler.write(writer, target, psd, options);
-			}, key !== 'Txt2' && key !== 'cinf' && key !== 'extn', large);
+			}, writeTotalLength, large);
 		}
 	}
 }
@@ -581,7 +580,6 @@ function getChannels(
 			layerData.channels.push({ channelId: ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
 		} else {
 			layerData.mask = { top: 0, left: 0, right: 0, bottom: 0 };
-			layerData.channels.push({ channelId: ChannelID.UserMask, compression: Compression.RawData, buffer: new Uint8Array(0), length: 0 });
 		}
 	}
 

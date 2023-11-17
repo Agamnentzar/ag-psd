@@ -19,7 +19,7 @@ describe('descriptor', () => {
 		tests.forEach((value, index) => it(`test ${index}`, () => {
 			const expected = toByteArray(value);
 			const reader = createReader(expected.buffer, expected.byteOffset, expected.byteLength);
-			const struct = readDescriptorStructure(reader);
+			const struct = readDescriptorStructure(reader, false);
 			const writer = createWriter();
 			writeDescriptorStructure(writer, '', 'null', struct, 'null');
 			const actual = getWriterBufferNoCopy(writer);
