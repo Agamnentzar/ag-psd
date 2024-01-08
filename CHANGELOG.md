@@ -1,5 +1,8 @@
 # Changelog
 
+## v19.0.1
+- Fixed incorrect layer trimming when using `layer.imageData` property instead of `layer.canvas`
+
 ## v19.0.0
 - Added brush type to ABR
 - Fixed importing smudge and mixer brushes from ABR

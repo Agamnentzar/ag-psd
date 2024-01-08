@@ -597,7 +597,7 @@ function cropImageData(data: ImageData, left: number, top: number, width: number
 
 	for (let y = 0; y < height; y++) {
 		for (let x = 0; x < width; x++) {
-			let src = ((x + left) + (y + top) * width) * 4;
+			let src = ((x + left) + (y + top) * data.width) * 4;
 			let dst = (x + y * width) * 4;
 			dstData[dst] = srcData[src];
 			dstData[dst + 1] = srcData[src + 1];
@@ -646,15 +646,9 @@ function getLayerChannels(
 			width = right - left;
 			height = bottom - top;
 
-			if (!width || !height) {
-				return { layer, top, left, right, bottom, channels };
-			}
+			if (!width || !height) return { layer, top, left, right, bottom, channels };
 
-			if (layer.imageData) {
-				data = cropImageData(data, trimmed.left, trimmed.top, width, height);
-			} else {
-				data = layer.canvas!.getContext('2d')!.getImageData(trimmed.left, trimmed.top, width, height);
-			}
+			data = cropImageData(data, trimmed.left, trimmed.top, width, height);
 		}
 	}
 

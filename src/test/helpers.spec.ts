@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { writeDataRaw, offsetForChannel, PixelData, PixelArray, writeDataRLE } from '../helpers';
+import { writeDataRaw, offsetForChannel, PixelData, PixelArray, writeDataRLE, ChannelID } from '../helpers';
 import { createReader, readDataRLE } from '../psdReader';
 import { range, repeat } from './common';
 
@@ -121,7 +121,7 @@ describe('helpers', () => {
 
 	describe('offsetForChannel()', () => {
 		it('returns offset for other channelId', () => {
-			expect(offsetForChannel(10, false)).equal(11);
+			expect(offsetForChannel(10 as ChannelID, false)).equal(11);
 		});
 	});
 });
