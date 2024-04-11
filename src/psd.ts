@@ -24,7 +24,7 @@ export const enum SectionDividerType {
 
 export type RGBA = { r: number; g: number; b: number; a: number; }; // values from 0 to 255
 export type RGB = { r: number; g: number; b: number; }; // values from 0 to 255
-export type FRGB = { fr: number; fg: number; fb: number; }; // values from 0 to 1 (can be above 1)
+export type FRGB = { fr: number; fg: number; fb: number; }; // values from 0 to 1 (can be above 1, can be negative)
 export type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
 export type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
 export type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
@@ -222,6 +222,14 @@ export interface LayerEffectsInfo {
 	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
 }
 
+export type PixelArray = Uint8ClampedArray | Uint8Array | Uint16Array | Uint32Array;
+
+export interface PixelData {
+	data: PixelArray; // type depends on document bit depth
+	width: number;
+	height: number;
+}
+
 export interface LayerMaskData {
 	top?: number;
 	left?: number;
@@ -236,7 +244,7 @@ export interface LayerMaskData {
 	vectorMaskDensity?: number;
 	vectorMaskFeather?: number;
 	canvas?: HTMLCanvasElement;
-	imageData?: ImageData;
+	imageData?: PixelData;
 }
 
 export type TextGridding = 'none' | 'round'; // TODO: other values (no idea where to set it up in Photoshop)
@@ -416,7 +424,6 @@ export interface LayerTextData {
 	shapeType?: 'point' | 'box';
 	pointBase?: number[];
 	boxBounds?: number[];
-	
 	bounds?: UnitsBounds;
 	boundingBox?: UnitsBounds;
 }
@@ -1385,10 +1392,30 @@ export interface LayerAdditionalInfo {
 			data: Uint8Array;
 		};
 	}[];
+	comps?: {
+		originalEffectsReferencePoint?: { x: number; y: number; };
+		settings: {
+			enabled?: boolean;
+			compList: number[];
+			offset?: { x: number; y: number; };
+			effectsReferencePoint?: { x: number; y: number; };
+		}[];
+	};
+	userMask?: {
+		colorSpace: Color;
+		opacity: number;
+	};
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
 	engineData?: string;
+}
+
+export enum LayerCompCapturedInfo {
+	None = 0,
+	Visibility = 1,
+	Position = 2,
+	Appearance = 4,
 }
 
 export interface ImageResources {
@@ -1564,6 +1591,15 @@ export interface ImageResources {
 			rightOutset?: number;
 		}[];
 	}[];
+	layerComps?: {
+		list: {
+			id: number;
+			name: string;
+			comment?: string;
+			capturedInfo: LayerCompCapturedInfo;
+		}[];
+		lastApplied?: number;
+	};
 }
 
 export interface GlobalLayerMaskInfo {
@@ -1600,7 +1636,7 @@ export interface Layer extends LayerAdditionalInfo {
 	hidden?: boolean;
 	clipping?: boolean;
 	canvas?: HTMLCanvasElement;
-	imageData?: ImageData;
+	imageData?: PixelData;
 	children?: Layer[];
 	/** Applies only for layer groups. */
 	opened?: boolean;
@@ -1614,7 +1650,7 @@ export interface Psd extends LayerAdditionalInfo {
 	colorMode?: ColorMode;
 	children?: Layer[];
 	canvas?: HTMLCanvasElement;
-	imageData?: ImageData;
+	imageData?: PixelData;
 	imageResources?: ImageResources;
 	linkedFiles?: LinkedFile[]; // used in smart objects
 	artboards?: {

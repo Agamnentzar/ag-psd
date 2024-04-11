@@ -1,9 +1,5 @@
-import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo } from './psd';
-import {
-	hasAlpha, createCanvas, writeDataRLE, PixelData, LayerChannelData, ChannelData,
-	offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp,
-	LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction
-} from './helpers';
+import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData } from './psd';
+import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas } from './helpers';
 import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
 
@@ -189,12 +185,35 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 	writer.view.setUint32(offset, length, false);
 }
 
+function verifyBitCount(target: Psd | Layer) {
+	target.children?.forEach(verifyBitCount);
+
+	const data = target.imageData;
+	if (data && (data.data instanceof Uint32Array || data.data instanceof Uint16Array)) {
+		throw new Error('imageData has incorrect bitDepth');
+	}
+
+	if ('mask' in target && target.mask) {
+		const data = target.mask.imageData;
+		if (data && (data.data instanceof Uint32Array || data.data instanceof Uint16Array)) {
+			throw new Error('mask imageData has incorrect bitDepth');
+		}
+	}
+}
+
 export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}) {
 	if (!(+psd.width > 0 && +psd.height > 0))
 		throw new Error('Invalid document size');
 
 	if ((psd.width > 30000 || psd.height > 30000) && !options.psb)
 		throw new Error('Document size is too large (max is 30000x30000, use PSB format instead)');
+
+	const bitsPerChannel = psd.bitsPerChannel ?? 8;
+
+	if (bitsPerChannel !== 8)
+		throw new Error('bitsPerChannel other than 8 are not supported for writing');
+
+	verifyBitCount(psd);
 
 	let imageResources = psd.imageResources || {};
 
@@ -224,7 +243,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	writeUint16(writer, globalAlpha ? 4 : 3); // channels
 	writeUint32(writer, psd.height);
 	writeUint32(writer, psd.width);
-	writeUint16(writer, 8); // bits per channel
+	writeUint16(writer, bitsPerChannel); // bits per channel
 	writeUint16(writer, ColorMode.RGB); // we only support saving RGB right now
 
 	// color mode data
@@ -525,9 +544,7 @@ function createThumbnail(psd: Psd) {
 	context.scale(scale, scale);
 
 	if (psd.imageData) {
-		const temp = createCanvas(psd.imageData.width, psd.imageData.height);
-		temp.getContext('2d')!.putImageData(psd.imageData, 0, 0);
-		context.drawImage(temp, 0, 0);
+		context.drawImage(imageDataToCanvas(psd.imageData), 0, 0);
 	} else if (psd.canvas) {
 		context.drawImage(psd.canvas, 0, 0);
 	}
@@ -590,7 +607,11 @@ function getLayerDimentions({ canvas, imageData }: Layer): { width: number; heig
 	return imageData || canvas || { width: 0, height: 0 };
 }
 
-function cropImageData(data: ImageData, left: number, top: number, width: number, height: number) {
+function cropImageData(data: PixelData, left: number, top: number, width: number, height: number) {
+	if (data.data instanceof Uint32Array || data.data instanceof Uint16Array) {
+		throw new Error('imageData has incorrect bit depth');
+	}
+
 	const croppedData = createImageData(width, height);
 	const srcData = data.data;
 	const dstData = croppedData.data;
@@ -609,9 +630,7 @@ function cropImageData(data: ImageData, left: number, top: number, width: number
 	return croppedData;
 }
 
-function getLayerChannels(
-	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
-): LayerChannelData {
+function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions): LayerChannelData {
 	let top = (layer.top as any) | 0;
 	let left = (layer.left as any) | 0;
 	let right = (layer.right as any) | 0;

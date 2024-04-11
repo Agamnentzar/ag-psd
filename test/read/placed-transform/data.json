@@ -33,6 +33,9 @@
         "slices": []
       }
     ],
+    "layerComps": {
+      "list": []
+    },
     "layerSelectionIds": [
       3
     ]
@@ -57,6 +60,24 @@
       "referencePoint": {
         "x": 0,
         "y": 0
+      },
+      "comps": {
+        "settings": [
+          {
+            "compList": [
+              0
+            ],
+            "enabled": true,
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "effectsReferencePoint": {
+              "x": 0,
+              "y": 0
+            }
+          }
+        ]
       }
     },
     {
@@ -146,6 +167,24 @@
           986,
           543.0146484375001,
           986
+        ]
+      },
+      "comps": {
+        "settings": [
+          {
+            "compList": [
+              0
+            ],
+            "enabled": true,
+            "offset": {
+              "x": 0,
+              "y": 0
+            },
+            "effectsReferencePoint": {
+              "x": 513,
+              "y": 550
+            }
+          }
         ]
       }
     }

@@ -1,5 +1,10 @@
 # Changelog
 
+## v20.0.0
+- Added support for reading 16bit image data, when reading PSD width default settings 16bit data will be converted to regular 8bit canvases, when `useImageData: true` is passed in read options the image data will be of type `Uint16Array` for 16bit images. Because of that type of `layer.imageData` and `psd.imageData` and `layer.mask.imageData` can be of different types depending on PSD file bitDepth.
+- Added support for reading image data compressed with zip with prediction mode.
+- Added support for layer comps (`psd.imageResources.layerComps` and `layer.comps` fields)
+
 ## v19.0.1
 - Fixed incorrect layer trimming when using `layer.imageData` property instead of `layer.canvas`
 

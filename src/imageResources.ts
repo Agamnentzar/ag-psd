@@ -566,6 +566,59 @@ addHandler(
 	},
 );
 
+interface LayerCompsDescriptor {
+	list: {
+		_classID: 'Comp';
+		'Nm  ': string;
+		compID: number;
+		capturedInfo: number;
+		comment?: string;
+	}[];
+	lastAppliedComp?: number;
+}
+
+addHandler(
+	1065, // Layer Comps
+	target => target.layerComps !== undefined,
+	(reader, target) => {
+		const desc = readVersionAndDescriptor(reader, true) as LayerCompsDescriptor;
+		// console.log('CompList', require('util').inspect(desc, false, 99, true));
+
+		target.layerComps = { list: [] };
+
+		for (const item of desc.list) {
+			target.layerComps.list.push({
+				id: item.compID,
+				name: item['Nm  '],
+				capturedInfo: item.capturedInfo,
+			});
+
+			if ('comment' in item) target.layerComps.list[target.layerComps.list.length - 1].comment = item.comment;
+		}
+
+		if ('lastAppliedComp' in desc) target.layerComps.lastApplied = desc.lastAppliedComp;
+	},
+	(writer, target) => {
+		const layerComps = target.layerComps!;
+		const desc: LayerCompsDescriptor = { list: [] };
+
+		for (const item of layerComps.list) {
+			const t: LayerCompsDescriptor['list'][0] = {} as any;
+			t._classID = 'Comp';
+			t['Nm  '] = item.name;
+			if ('comment' in item) t.comment = item.comment;
+			t.compID = item.id;
+			t.capturedInfo = item.capturedInfo;
+			desc.list.push(t);
+		}
+
+		if ('lastApplied' in layerComps) desc.lastAppliedComp = layerComps.lastApplied;
+
+		// console.log('CompList', require('util').inspect(desc, false, 99, true));
+		writeVersionAndDescriptor(writer, '', 'CompList', desc);
+	},
+);
+
 MOCK_HANDLERS && addHandler(
 	1092, // ???
 	target => (target as any)._ir1092 !== undefined,

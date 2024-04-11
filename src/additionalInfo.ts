@@ -1,37 +1,10 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
-import {
-	LayerAdditionalInfo, BezierPath, Psd, ReadOptions, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment,
-	ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel,
-	ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK,
-	SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment,
-	CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel,
-	PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem,
-	BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter,
-	UnitsValue, Filter, PlacedLayer,
-} from './psd';
-import {
-	PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16,
-	readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32,
-	readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern,
-} from './psdReader';
-import {
-	PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8,
-	writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding,
-	writeColor, writePascalString, writeInt32,
-} from './psdWriter';
-import {
-	Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor,
-	strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding,
-	unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor,
-	readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor,
-	FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects,
-	parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList,
-	serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy,
-	Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd,
-	unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds,
-} from './descriptor';
+import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer } from './psd';
+import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo, ReadOptionsExt } from './psdReader';
+import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32 } from './psdWriter';
+import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
 
@@ -41,7 +14,7 @@ export interface ExtendedWriteOptions extends WriteOptions {
 }
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
-type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, options: ReadOptions) => void;
+type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, options: ReadOptionsExt) => void;
 type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: ExtendedWriteOptions) => void;
 
 export interface InfoHandler {
@@ -90,9 +63,11 @@ addHandler(
 
 		if (readInt16(reader) !== 50) throw new Error(`Invalid TySh text version`);
 		const text: TextDescriptor = readVersionAndDescriptor(reader);
+		// console.log(require('util').inspect(text, false, 99, false), 'utf8');
 
 		if (readInt16(reader) !== 1) throw new Error(`Invalid TySh warp version`);
 		const warp: WarpDescriptor = readVersionAndDescriptor(reader);
+		// console.log(require('util').inspect(warp, false, 99, false), 'utf8');
 
 		target.text = {
 			transform,
@@ -120,6 +95,7 @@ addHandler(
 		if (text.EngineData) {
 			const engineData = parseEngineData(text.EngineData);
 			const textData = decodeEngineData(engineData);
+			// console.log(require('util').inspect(engineData, false, 99, false), 'utf8');
 
 			// require('fs').writeFileSync(`layer-${target.name}.txt`, require('util').inspect(engineData, false, 99, false), 'utf8');
 			// const before = parseEngineData(text.EngineData);
@@ -732,10 +708,21 @@ interface CustomDescriptor {
 	layerTime?: number;
 }
 
+interface CmlsDescriptor {
+	origFXRefPoint?: { Hrzn: number; Vrtc: number; };
+	LyrI: number;
+	layerSettings: {
+		enab?: boolean;
+		Ofst?: { Hrzn: number; Vrtc: number; };
+		FXRefPoint?: { Hrzn: number; Vrtc: number; };
+		compList: number[];
+	}[];
+}
+
 addHandler(
 	'shmd',
 	target => target.timestamp !== undefined || target.animationFrames !== undefined ||
-		target.animationFrameFlags !== undefined || target.timeline !== undefined,
+		target.animationFrameFlags !== undefined || target.timeline !== undefined || target.comps !== undefined,
 	(reader, target, left, _, options) => {
 		const count = readUint32(reader);
 
@@ -798,8 +785,25 @@ addHandler(
 
 					target.timeline = timeline;
 					// console.log('tmln:result', target.name, target.id, require('util').inspect(timeline, false, 99, true));
+				} else if (key === 'cmls') {
+					const desc = readVersionAndDescriptor(reader) as CmlsDescriptor;
+					// console.log('cmls', require('util').inspect(desc, false, 99, true));
+
+					target.comps = {
+						settings: [],
+					};
+
+					if (desc.origFXRefPoint) target.comps.originalEffectsReferencePoint = { x: desc.origFXRefPoint.Hrzn, y: desc.origFXRefPoint.Vrtc };
+
+					for (const item of desc.layerSettings) {
+						target.comps.settings.push({ compList: item.compList });
+						const t = target.comps.settings[target.comps.settings.length - 1];
+						if ('enab' in item) t.enabled = item.enab;
+						if (item.Ofst) t.offset = { x: item.Ofst.Hrzn, y: item.Ofst.Vrtc };
+						if (item.FXRefPoint) t.effectsReferencePoint = { x: item.FXRefPoint.Hrzn, y: item.FXRefPoint.Vrtc };
+					}
 				} else {
-					options.logDevFeatures && console.log('Unhandled "shmd" section key', key);
+					options.logMissingFeatures && console.log('Unhandled "shmd" section key', key);
 				}
 
 				skipBytes(reader, left());
@@ -809,13 +813,14 @@ addHandler(
 		skipBytes(reader, left());
 	},
 	(writer, target, _, options) => {
-		const { animationFrames, animationFrameFlags, timestamp, timeline } = target;
+		const { animationFrames, animationFrameFlags, timestamp, timeline, comps } = target;
 
 		let count = 0;
 		if (animationFrames) count++;
 		if (animationFrameFlags) count++;
 		if (timeline) count++;
 		if (timestamp !== undefined) count++;
+		if (comps) count++;
 		writeUint32(writer, count);
 
 		if (animationFrames) {
@@ -883,7 +888,7 @@ addHandler(
 					desc.trackList = serializeTrackList(timeline.tracks);
 				}
 
-				const id = options.layerToId.get(target) || target.id || 0;
+				const id = options.layerToId.get(target) || target.id;
 				if (!id) throw new Error('You need to provide layer.id value whan writing document with animations');
 				desc.LyrI = id;
 
@@ -902,6 +907,38 @@ addHandler(
 					layerTime: timestamp,
 				};
 				writeVersionAndDescriptor(writer, '', 'metadata', desc);
+			}, true);
+		}
+
+		if (comps) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, 'cmls');
+			writeUint8(writer, 0); // copy (always false)
+			writeZeros(writer, 3);
+			writeSection(writer, 2, () => {
+				const id = options.layerToId.get(target) || target.id;
+				if (!id) throw new Error('You need to provide layer.id value whan writing document with layer comps');
+
+				const desc: CmlsDescriptor = {} as any;
+
+				if (comps.originalEffectsReferencePoint) {
+					desc.origFXRefPoint = { Hrzn: comps.originalEffectsReferencePoint.x, Vrtc: comps.originalEffectsReferencePoint.y };
+				}
+
+				desc.LyrI = id;
+				desc.layerSettings = [];
+
+				for (const item of comps.settings) {
+					const t: CmlsDescriptor['layerSettings'][0] = {} as any;
+					if (item.enabled !== undefined) t.enab = item.enabled;
+					if (item.offset) t.Ofst = { Hrzn: item.offset.x, Vrtc: item.offset.y };
+					if (item.effectsReferencePoint) t.FXRefPoint = { Hrzn: item.effectsReferencePoint.x, Vrtc: item.effectsReferencePoint.y };
+					t.compList = item.compList;
+					desc.layerSettings.push(t);
+				}
+
+				// console.log('cmls', require('util').inspect(desc, false, 99, true));
+				writeVersionAndDescriptor(writer, '', 'null', desc);
 			}, true);
 		}
 	},
@@ -3304,6 +3341,52 @@ addHandler(
 	},
 );
 
+addHandler(
+	'Lr16',
+	() => false,
+	(reader, _target, _left, psd, options) => {
+		readLayerInfo(reader, psd, options);
+	},
+	(_writer, _target) => {
+	},
+);
+
+addHandler(
+	'LMsk',
+	hasKey('userMask'),
+	(reader, target) => {
+		target.userMask = {
+			colorSpace: readColor(reader),
+			opacity: readUint16(reader) / 0xff,
+		};
+		const flag = readUint8(reader);
+		if (flag !== 128) throw new Error('Invalid flag value');
+		skipBytes(reader, 1);
+	},
+	(writer, target) => {
+		const userMask = target.userMask!;
+		writeColor(writer, userMask.colorSpace);
+		writeUint16(writer, clamp(userMask.opacity, 0, 1) * 0xff);
+		writeUint8(writer, 128);
+		writeZeros(writer, 1);
+	},
+);
+
+if (MOCK_HANDLERS) {
+	addHandler(
+		'vowv', // appears with Lr16 section ?
+		_ => false,
+		(reader, target, left) => {
+			const value = readUint32(reader); // 2 ????
+			reader; target;
+			console.log('vowv', { value }, left());
+		},
+		(_writer, _target) => {
+			// TODO: write
+		},
+	);
+}
+
 if (MOCK_HANDLERS) {
 	addHandler(
 		'Patt',
@@ -3614,30 +3697,33 @@ addHandlerAlias('lnkD', 'lnk2');
 addHandlerAlias('lnk3', 'lnk2');
 addHandlerAlias('lnkE', 'lnk2');
 
-interface ExtensionDesc {
-	generatorSettings: {
-		generator_45_assets: { json: string; };
-		layerTime: number;
-	};
+interface PthsDescriptor {
+	pathList: {
+		_classID: 'pathInfoClass';
+		pathUnicodeName: string;
+		pathSymmetryClass: {
+			_classID: 'pathSymmetryClass';
+			pathSymmetryMode: string; // 'pathSymmetryModeEnum.pathSymmetryModeBasicPath'
+		};
+	}[];
 }
 
 addHandler(
 	'pths',
 	hasKey('pathList'),
 	(reader, target) => {
-		const descriptor = readVersionAndDescriptor(reader);
-
-		target.pathList = []; // TODO: read paths (find example with non-empty list)
-
-		descriptor;
-		// console.log('pths', descriptor); // TODO: remove this
+		const desc = readVersionAndDescriptor(reader, true) as PthsDescriptor;
+		// console.log(require('util').inspect(desc, false, 99, true));
+		// if (options.throwForMissingFeatures && desc?.pathList?.length) throw new Error('non-empty pathList in `pths`');
+		desc;
+		target.pathList = []; // TODO: read paths
 	},
 	(writer, _target) => {
-		const descriptor = {
+		const desc: PthsDescriptor = {
 			pathList: [], // TODO: write paths
 		};
 
-		writeVersionAndDescriptor(writer, '', 'pathsDataClass', descriptor);
+		writeVersionAndDescriptor(writer, '', 'pathsDataClass', desc);
 	},
 );
 
@@ -4803,6 +4889,13 @@ addHandler(
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );
+
+interface ExtensionDesc {
+	generatorSettings: {
+		generator_45_assets: { json: string; };
+		layerTime: number;
+	};
+}
 
 // extension settings ?, ignore it
 addHandler(

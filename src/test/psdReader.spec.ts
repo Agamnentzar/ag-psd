@@ -1,10 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from 'chai';
-import {
-	readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas,
-	createReaderFromBuffer, compareBuffers, compareTwoFiles
-} from './common';
+import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas, createReaderFromBuffer, compareBuffers, compareTwoFiles } from './common';
 import { Layer, ReadOptions, Psd } from '../psd';
 import { byteArrayToBase64, readPsd, writePsdBuffer } from '../index';
 import { readPsd as readPsdInternal } from '../psdReader';
@@ -76,7 +73,7 @@ describe('PsdReader', () => {
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
 			const psd = readPsdFromFile(path.join(basePath, fileName), {
 				...opts,
-				// logDevFeatures: true, logMissingFeatures: true,
+				// logDevFeatures: true,
 			});
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);

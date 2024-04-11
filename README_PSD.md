@@ -105,6 +105,12 @@ const psd: Psd = {
 
 - `filterMask` don't really know what this is, it can be ommited when writing.
 
+## Bitmaps and image data
+
+Image data can be accessed from `psd.canvas` or `layer.canvas` fields by default. These fields store regular HTMLCanvasElement (or node-canvas object when running in node.js). If `useImageData` option is set to true in read options then the image data will be available in `psd.imageData` and `layer.imageData` fields instead. Using image data option gives you direct access to pixel data without having to go through the canvas object, which bypasses alpha premultiplication and convertion from 16/32bit image data to 8bit canvas data.
+
+For 16/32bit documents `imageData` fields will contain pixel data as `Uint16Array` or `Uint32Array` respectfully.
+
 ## Layers and Groups
 
 Psd document object has `children` property that contains all root level layers and groups in order from top to bottom as they appear in Photoshop (take note that if you want to draw the layer images to generate document image then you need to draw them in reverse order). The `children` property will contain both regular layers and groups. Each group will have `children` property, containing all the layers and groups that are inside that group. So the document will have a tree structure like this:

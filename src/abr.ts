@@ -360,19 +360,19 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 						const w = readInt32(reader) - x;
 						if (w <= 0 || h <= 0) throw new Error('Invalid bounds');
 
-						const depth = readInt16(reader);
+						const bithDepth = readInt16(reader);
 						const compression = readUint8(reader); // 0 - raw, 1 - RLE
 						const alpha = new Uint8Array(w * h);
 
-						if (depth === 8) {
+						if (bithDepth === 8) {
 							if (compression === 0) {
 								alpha.set(readBytes(reader, alpha.byteLength));
 							} else if (compression === 1) {
-								readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, 1, [0], false);
+								readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, bithDepth, 1, [0], false);
 							} else {
 								throw new Error('Invalid compression');
 							}
-						} else if (depth === 16) {
+						} else if (bithDepth === 16) {
 							if (compression === 0) {
 								for (let i = 0; i < alpha.byteLength; i++) {
 									alpha[i] = readUint16(reader) >> 8; // convert to 8bit values

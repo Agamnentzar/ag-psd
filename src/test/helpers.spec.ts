@@ -1,7 +1,8 @@
 import { expect } from 'chai';
-import { writeDataRaw, offsetForChannel, PixelData, PixelArray, writeDataRLE, ChannelID } from '../helpers';
+import { writeDataRaw, offsetForChannel, writeDataRLE, ChannelID } from '../helpers';
 import { createReader, readDataRLE } from '../psdReader';
 import { range, repeat } from './common';
+import { PixelArray, PixelData } from '../psd';
 
 function toData(data: number[]) {
 	const result: number[] = [];
@@ -97,6 +98,7 @@ describe('helpers', () => {
 					throw new Error(`Invalid image data size ${width * height} !== ${data.length}`);
 				}
 
+				const bitDepth = 8;
 				let array: Uint8Array | undefined;
 				let result: number[];
 
@@ -108,7 +110,7 @@ describe('helpers', () => {
 					array = writeDataRLE(buffer, input, [0], false)!;
 
 					const reader = createReader(array!.buffer);
-					readDataRLE(reader, output, width, height, 4, [0], false);
+					readDataRLE(reader, output, width, height, bitDepth, 4, [0], false);
 					result = fromData(output.data);
 				} catch (e) {
 					throw new Error(`Error for image: [${array}] ${e.stack}`);

@@ -1,12 +1,6 @@
 import { inflate } from 'pako';
-import {
-	Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color,
-	PatternInfo, GlobalLayerMaskInfo, RGB
-} from './psd';
-import {
-	resetImageData, offsetForChannel, decodeBitmap, PixelData, createCanvas, createImageData,
-	toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys
-} from './helpers';
+import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray } from './psd';
+import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
 
@@ -15,8 +9,9 @@ interface ChannelInfo {
 	length: number;
 }
 
-interface ReadOptionsExt extends ReadOptions {
+export interface ReadOptionsExt extends ReadOptions {
 	large: boolean;
+	globalAlpha: boolean;
 }
 
 export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
@@ -210,7 +205,7 @@ function isValidSignature(sig: string) {
 	return sig === '8BIM' || sig === 'MeSa' || sig === 'AgHg' || sig === 'PHUT' || sig === 'DCSR';
 }
 
-export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
+export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	// header
 	checkSignature(reader, '8BPS');
 	const version = readUint16(reader);
@@ -224,19 +219,18 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	const colorMode = readUint16(reader);
 	const maxSize = version === 1 ? 30000 : 300000;
 
-	if (width > maxSize || height > maxSize) throw new Error(`Invalid size`);
-	if (channels > 16) throw new Error(`Invalid channel count`);
-	if (bitsPerChannel > 32) throw new Error(`Invalid bitsPerChannel count`);
-	if (supportedColorModes.indexOf(colorMode) === -1)
-		throw new Error(`Color mode not supported: ${colorModes[colorMode] ?? colorMode}`);
+	if (width > maxSize || height > maxSize) throw new Error(`Invalid size: ${width}x${height}`);
+	if (channels > 16) throw new Error(`Invalid channel count: ${channels}`);
+	if (![1, 8, 16, 32].includes(bitsPerChannel)) throw new Error(`Invalid bitsPerChannel: ${bitsPerChannel}`);
+	if (supportedColorModes.indexOf(colorMode) === -1) throw new Error(`Color mode not supported: ${colorModes[colorMode] ?? colorMode}`);
 
 	const psd: Psd = { width, height, channels, bitsPerChannel, colorMode };
-	const opt: ReadOptionsExt = { ...options, large: version === 2 };
+	const options: ReadOptionsExt = { ...readOptions, large: version === 2, globalAlpha: false };
 	const fixOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
 
 	// color mode data
 	readSection(reader, 1, left => {
-		if (opt.throwForMissingFeatures) throw new Error('Color mode data not supported');
+		if (options.throwForMissingFeatures) throw new Error('Color mode data not supported');
 		skipBytes(reader, left());
 	});
 
@@ -264,7 +258,7 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 
 			readSection(reader, 2, left => {
 				const handler = resourceHandlersMap[id];
-				const skip = id === 1036 && !!opt.skipThumbnail;
+				const skip = id === 1036 && !!options.skipThumbnail;
 
 				if (!psd.imageResources) {
 					psd.imageResources = {};
@@ -272,13 +266,13 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 
 				if (handler && !skip) {
 					try {
-						handler.read(reader, psd.imageResources, left, opt);
+						handler.read(reader, psd.imageResources, left, options);
 					} catch (e) {
-						if (opt.throwForMissingFeatures) throw e;
+						if (options.throwForMissingFeatures) throw e;
 						skipBytes(reader, left());
 					}
 				} else {
-					// options.logMissingFeatures && console.log(`Unhandled image resource: ${id}`);
+					// options.logMissingFeatures && console.log(`Unhandled image resource: ${id} (${left()})`);
 					skipBytes(reader, left());
 				}
 			});
@@ -286,10 +280,11 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	});
 
 	// layer and mask info
-	let globalAlpha = false;
-
 	readSection(reader, 1, left => {
-		globalAlpha = readLayerInfo(reader, psd, opt);
+		readSection(reader, 2, left => {
+			readLayerInfo(reader, psd, options);
+			skipBytes(reader, left());
+		}, undefined, options.large);
 
 		// SAI does not include this section
 		if (left() > 0) {
@@ -309,19 +304,19 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 			}
 
 			if (left() >= 12) {
-				readAdditionalLayerInfo(reader, psd, psd, opt);
+				readAdditionalLayerInfo(reader, psd, psd, options);
 			} else {
 				// opt.logMissingFeatures && console.log('skipping leftover bytes', left());
 				skipBytes(reader, left());
 			}
 		}
-	}, undefined, opt.large);
+	}, undefined, options.large);
 
 	const hasChildren = psd.children && psd.children.length;
-	const skipComposite = opt.skipCompositeImageData && (opt.skipLayerImageData || hasChildren);
+	const skipComposite = options.skipCompositeImageData && (options.skipLayerImageData || hasChildren);
 
 	if (!skipComposite) {
-		readImageData(reader, psd, globalAlpha, opt);
+		readImageData(reader, psd, options);
 	}
 
 	// TODO: show converted color mode instead of original PSD file color mode
@@ -331,60 +326,52 @@ export function readPsd(reader: PsdReader, options: ReadOptions = {}) {
 	return psd;
 }
 
-function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
-	let globalAlpha = false;
+export function readLayerInfo(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
+	let layerCount = readInt16(reader);
 
-	readSection(reader, 2, left => {
-		let layerCount = readInt16(reader);
+	if (layerCount < 0) {
+		options.globalAlpha = true;
+		layerCount = -layerCount;
+	}
 
-		if (layerCount < 0) {
-			globalAlpha = true;
-			layerCount = -layerCount;
-		}
+	const layers: Layer[] = [];
+	const layerChannels: ChannelInfo[][] = [];
 
-		const layers: Layer[] = [];
-		const layerChannels: ChannelInfo[][] = [];
+	for (let i = 0; i < layerCount; i++) {
+		const { layer, channels } = readLayerRecord(reader, psd, options);
+		layers.push(layer);
+		layerChannels.push(channels);
+	}
 
+	if (!options.skipLayerImageData) {
 		for (let i = 0; i < layerCount; i++) {
-			const { layer, channels } = readLayerRecord(reader, psd, options);
-			layers.push(layer);
-			layerChannels.push(channels);
+			readLayerChannelImageData(reader, psd, layers[i], layerChannels[i], options);
 		}
+	}
 
-		if (!options.skipLayerImageData) {
-			for (let i = 0; i < layerCount; i++) {
-				readLayerChannelImageData(reader, psd, layers[i], layerChannels[i], options);
-			}
+	if (!psd.children) psd.children = [];
+
+	const stack: (Layer | Psd)[] = [psd];
+
+	for (let i = layers.length - 1; i >= 0; i--) {
+		const l = layers[i];
+		const type = l.sectionDivider ? l.sectionDivider.type : SectionDividerType.Other;
+
+		if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
+			l.opened = type === SectionDividerType.OpenFolder;
+			l.children = [];
+			stack[stack.length - 1].children!.unshift(l);
+			stack.push(l);
+		} else if (type === SectionDividerType.BoundingSectionDivider) {
+			stack.pop();
+			// this was workaround because I didn't know what `lsdk` section was, now it's probably not needed anymore
+			// } else if (l.name === '</Layer group>' && !l.sectionDivider && !l.top && !l.left && !l.bottom && !l.right) {
+			// 	// sometimes layer group terminator doesn't have sectionDivider, so we just guess here (PS bug ?)
+			// 	stack.pop();
+		} else {
+			stack[stack.length - 1].children!.unshift(l);
 		}
-
-		skipBytes(reader, left());
-
-		if (!psd.children) psd.children = [];
-
-		const stack: (Layer | Psd)[] = [psd];
-
-		for (let i = layers.length - 1; i >= 0; i--) {
-			const l = layers[i];
-			const type = l.sectionDivider ? l.sectionDivider.type : SectionDividerType.Other;
-
-			if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
-				l.opened = type === SectionDividerType.OpenFolder;
-				l.children = [];
-				stack[stack.length - 1].children!.unshift(l);
-				stack.push(l);
-			} else if (type === SectionDividerType.BoundingSectionDivider) {
-				stack.pop();
-				// this was workaround because I didn't know what `lsdk` section was, now it's probably not needed anymore
-				// } else if (l.name === '</Layer group>' && !l.sectionDivider && !l.top && !l.left && !l.bottom && !l.right) {
-				// 	// sometimes layer group terminator doesn't have sectionDivider, so we just guess here (PS bug ?)
-				// 	stack.pop();
-			} else {
-				stack[stack.length - 1].children!.unshift(l);
-			}
-		}
-	}, undefined, options.large);
-
-	return globalAlpha;
+	}
 }
 
 function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
@@ -499,21 +486,20 @@ function readLayerBlendingRanges(reader: PsdReader) {
 	});
 }
 
-function readLayerChannelImageData(
-	reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[], options: ReadOptionsExt
-) {
+function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[], options: ReadOptionsExt) {
 	const layerWidth = (layer.right || 0) - (layer.left || 0);
 	const layerHeight = (layer.bottom || 0) - (layer.top || 0);
 	const cmyk = psd.colorMode === ColorMode.CMYK;
 
-	let imageData: ImageData | undefined;
+	let imageData: PixelData | undefined;
 
 	if (layerWidth && layerHeight) {
 		if (cmyk) {
+			if (psd.bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) } as any as ImageData;
 			for (let p = 4; p < imageData.data.byteLength; p += 5) imageData.data[p] = 255;
 		} else {
-			imageData = createImageData(layerWidth, layerHeight);
+			imageData = createImageDataBitDepth(layerWidth, layerHeight, psd.bitsPerChannel ?? 8);
 			resetImageData(imageData);
 		}
 	}
@@ -551,11 +537,11 @@ function readLayerChannelImageData(
 			const maskHeight = (mask.bottom || 0) - (mask.top || 0);
 
 			if (maskWidth && maskHeight) {
-				const maskData = createImageData(maskWidth, maskHeight);
+				const maskData = createImageDataBitDepth(maskWidth, maskHeight, psd.bitsPerChannel ?? 8);
 				resetImageData(maskData);
 
 				const start = reader.offset;
-				readData(reader, channel.length, maskData, compression, maskWidth, maskHeight, 0, options.large, 4);
+				readData(reader, channel.length, maskData, compression, maskWidth, maskHeight, psd.bitsPerChannel ?? 8, 0, options.large, 4);
 
 				if (RAW_IMAGE_DATA) {
 					(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
@@ -566,8 +552,7 @@ function readLayerChannelImageData(
 				if (options.useImageData) {
 					mask.imageData = maskData;
 				} else {
-					mask.canvas = createCanvas(maskWidth, maskHeight);
-					mask.canvas.getContext('2d')!.putImageData(maskData, 0, 0);
+					mask.canvas = imageDataToCanvas(maskData);
 				}
 			}
 		} else {
@@ -582,7 +567,7 @@ function readLayerChannelImageData(
 				}
 			}
 
-			readData(reader, channel.length, targetData, compression, layerWidth, layerHeight, offset, options.large, cmyk ? 5 : 4);
+			readData(reader, channel.length, targetData, compression, layerWidth, layerHeight, psd.bitsPerChannel ?? 8, offset, options.large, cmyk ? 5 : 4);
 
 			if (RAW_IMAGE_DATA) {
 				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start + 2, channel.length - 2);
@@ -606,30 +591,26 @@ function readLayerChannelImageData(
 		if (options.useImageData) {
 			layer.imageData = imageData;
 		} else {
-			layer.canvas = createCanvas(layerWidth, layerHeight);
-			layer.canvas.getContext('2d')!.putImageData(imageData, 0, 0);
+			layer.canvas = imageDataToCanvas(imageData);
 		}
 	}
 }
 
-function readData(
-	reader: PsdReader, length: number, data: ImageData | undefined, compression: Compression, width: number, height: number,
-	offset: number, large: boolean, step: number
-) {
+function readData(reader: PsdReader, length: number, data: PixelData | undefined, compression: Compression, width: number, height: number, bitDepth: number, offset: number, large: boolean, step: number) {
 	if (compression === Compression.RawData) {
-		readDataRaw(reader, data, width, height, step, offset);
+		readDataRaw(reader, data, width, height, bitDepth, step, offset);
 	} else if (compression === Compression.RleCompressed) {
-		readDataRLE(reader, data, width, height, step, [offset], large);
+		readDataRLE(reader, data, width, height, bitDepth, step, [offset], large);
 	} else if (compression === Compression.ZipWithoutPrediction) {
-		readDataZipWithoutPrediction(reader, length, data, width, height, step, offset);
+		readDataZip(reader, length, data, width, height, bitDepth, step, offset, false);
 	} else if (compression === Compression.ZipWithPrediction) {
-		throw new Error(`Compression type not supported: ${compression}`);
+		readDataZip(reader, length, data, width, height, bitDepth, step, offset, true);
 	} else {
 		throw new Error(`Invalid Compression type: ${compression}`);
 	}
 }
 
-function readGlobalLayerMaskInfo(reader: PsdReader) {
+export function readGlobalLayerMaskInfo(reader: PsdReader) {
 	return readSection<GlobalLayerMaskInfo | undefined>(reader, 1, left => {
 		if (!left()) return undefined;
 
@@ -645,7 +626,7 @@ function readGlobalLayerMaskInfo(reader: PsdReader) {
 	});
 }
 
-function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo, psd: Psd, options: ReadOptionsExt) {
+export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo, psd: Psd, options: ReadOptionsExt) {
 	const sig = readSignature(reader);
 	if (sig !== '8BIM' && sig !== '8B64') throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
 	const key = readSignature(reader);
@@ -674,8 +655,21 @@ function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo,
 	}, false, u64);
 }
 
-function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, options: ReadOptionsExt) {
+function createImageDataBitDepth(width: number, height: number, bitDepth: number): PixelData {
+	if (bitDepth === 1 || bitDepth === 8) {
+		return createImageData(width, height);
+	} else if (bitDepth === 16) {
+		return { width, height, data: new Uint16Array(width * height * 4) };
+	} else if (bitDepth === 32) {
+		return { width, height, data: new Uint32Array(width * height * 4) };
+	} else {
+		throw new Error(`Invalid bitDepth (${bitDepth})`);
+	}
+}
+
+function readImageData(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 	const compression = readUint16(reader) as Compression;
+	const bitsPerChannel = psd.bitsPerChannel ?? 8;
 
 	if (supportedColorModes.indexOf(psd.colorMode!) === -1)
 		throw new Error(`Color mode not supported: ${psd.colorMode}`);
@@ -683,7 +677,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 	if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
 		throw new Error(`Compression type not supported: ${compression}`);
 
-	const imageData = createImageData(psd.width, psd.height);
+	const imageData = createImageDataBitDepth(psd.width, psd.height, bitsPerChannel);
 	resetImageData(imageData);
 
 	switch (psd.colorMode) {
@@ -694,7 +688,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 				bytes = readBytes(reader, Math.ceil(psd.width / 8) * psd.height);
 			} else if (compression === Compression.RleCompressed) {
 				bytes = new Uint8Array(psd.width * psd.height);
-				readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 1, [0], options.large);
+				readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, bitsPerChannel, 1, [0], options.large);
 			} else {
 				throw new Error(`Bitmap compression not supported: ${compression}`);
 			}
@@ -711,17 +705,17 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 					// TODO: store these channels in additional image data
 					channels.push(i);
 				}
-			} else if (globalAlpha) {
+			} else if (options.globalAlpha) {
 				channels.push(3);
 			}
 
 			if (compression === Compression.RawData) {
 				for (let i = 0; i < channels.length; i++) {
-					readDataRaw(reader, imageData, psd.width, psd.height, 4, channels[i]);
+					readDataRaw(reader, imageData, psd.width, psd.height, bitsPerChannel, 4, channels[i]);
 				}
 			} else if (compression === Compression.RleCompressed) {
 				const start = reader.offset;
-				readDataRLE(reader, imageData, psd.width, psd.height, 4, channels, options.large);
+				readDataRLE(reader, imageData, psd.width, psd.height, bitsPerChannel, 4, channels, options.large);
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
 			}
 
@@ -731,10 +725,11 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 			break;
 		}
 		case ColorMode.CMYK: {
+			if (psd.bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 			if (psd.channels !== 4) throw new Error(`Invalid channel count`);
 
 			const channels = [0, 1, 2, 3];
-			if (globalAlpha) channels.push(4);
+			if (options.globalAlpha) channels.push(4);
 
 			if (compression === Compression.RawData) {
 				throw new Error(`Not implemented`);
@@ -750,7 +745,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 				};
 
 				const start = reader.offset;
-				readDataRLE(reader, cmykImageData, psd.width, psd.height, 5, channels, options.large);
+				readDataRLE(reader, cmykImageData, psd.width, psd.height, psd.bitsPerChannel ?? 8, 5, channels, options.large);
 				cmykToRgb(cmykImageData, imageData, true);
 
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
@@ -762,7 +757,8 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 	}
 
 	// remove weird white matte
-	if (globalAlpha) {
+	if (options.globalAlpha) {
+		if (psd.bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 		const p = imageData.data;
 		const size = imageData.width * imageData.height * 4;
 		for (let i = 0; i < size; i += 4) {
@@ -781,8 +777,7 @@ function readImageData(reader: PsdReader, psd: Psd, globalAlpha: boolean, option
 	if (options.useImageData) {
 		psd.imageData = imageData;
 	} else {
-		psd.canvas = createCanvas(psd.width, psd.height);
-		psd.canvas.getContext('2d')!.putImageData(imageData, 0, 0);
+		psd.canvas = imageDataToCanvas(imageData);
 	}
 }
 
@@ -814,40 +809,87 @@ function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
 	// }
 }
 
-function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, step: number, offset: number) {
-	const size = width * height;
-	const buffer = readBytes(reader, size);
+function verifyCompatible(a: PixelArray, b: PixelArray) {
+	if ((a.byteLength / a.length) !== (b.byteLength / b.length)) {
+		throw new Error('Invalid array types');
+	}
+}
+
+function bytesToArray(bytes: Uint8Array, bitDepth: number) {
+	if (bitDepth === 8) {
+		return bytes;
+	} else if (bitDepth === 16) {
+		if (bytes.byteOffset % 2) {
+			const result = new Uint16Array(bytes.byteLength / 2);
+			new Uint8Array(result.buffer, result.byteOffset, result.byteLength).set(bytes);
+			return result;
+		} else {
+			return new Uint16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 2);
+		}
+	} else if (bitDepth === 32) {
+		if (bytes.byteOffset % 4) {
+			const result = new Uint32Array(bytes.byteLength / 4);
+			new Uint8Array(result.buffer, result.byteOffset, result.byteLength).set(bytes);
+			return result;
+		} else {
+			return new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+		}
+	} else {
+		throw new Error(`Invalid bitDepth (${bitDepth})`)
+	}
+}
+
+function copyChannelToPixelData(pixelData: PixelData, channel: PixelArray, offset: number, step: number) {
+	verifyCompatible(pixelData.data, channel);
+	const size = pixelData.width * pixelData.height;
+	const data = pixelData.data;
+	for (let i = 0, p = offset | 0; i < size; i++, p = (p + step) | 0) {
+		data[p] = channel[i];
+	}
+}
+
+function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number) {
+	const buffer = readBytes(reader, width * height * Math.floor(bitDepth / 8));
+	const array = bytesToArray(buffer, bitDepth);
 
 	if (pixelData && offset < step) {
-		const data = pixelData.data;
+		copyChannelToPixelData(pixelData, array, offset, step);
+	}
+}
 
-		for (let i = 0, p = offset | 0; i < size; i++, p = (p + step) | 0) {
-			data[p] = buffer[i];
+function decodePredicted(data: Uint8Array | Uint16Array, width: number, height: number, mod: number) {
+	for (let y = 0; y < height; y++) {
+		const offset = y * width;
+
+		for (let x = 1, o = offset + 1; x < width; x++, o++) {
+			data[o] = (data[o - 1] + data[o]) % mod;
 		}
 	}
 }
 
-export function readDataZipWithoutPrediction(
-	reader: PsdReader, length: number, pixelData: PixelData | undefined, width: number, height: number,
-	step: number, offset: number
-) {
+export function readDataZip(reader: PsdReader, length: number, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number, prediction: boolean) {
 	const compressed = readBytes(reader, length);
 	const decompressed = inflate(compressed);
-	const size = width * height;
 
 	if (pixelData && offset < step) {
-		const data = pixelData.data;
+		const array = bytesToArray(decompressed, bitDepth);
 
-		for (let i = 0, p = offset | 0; i < size; i++, p = (p + step) | 0) {
-			data[p] = decompressed[i];
+		if (bitDepth === 8) {
+			if (prediction) decodePredicted(decompressed, width, height, 0x100);
+			copyChannelToPixelData(pixelData, decompressed, offset, step);
+		} else if (bitDepth === 16) {
+			if (prediction) decodePredicted(array as Uint16Array, width, height, 0x10000);
+			copyChannelToPixelData(pixelData, array, offset, step);
+		} else if (bitDepth === 32) {
+			if (prediction) decodePredicted(decompressed, width, height, 0x100);
+			copyChannelToPixelData(pixelData, array, offset, step);
+		} else {
+			throw new Error('Invalid bitDepth');
 		}
 	}
 }
 
-export function readDataRLE(
-	reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, step: number, offsets: number[],
-	large: boolean
-) {
+export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, bitDepth: number, step: number, offsets: number[], large: boolean) {
 	const data = pixelData && pixelData.data;
 	let lengths: Uint16Array | Uint32Array;
 
@@ -868,6 +910,8 @@ export function readDataRLE(
 			}
 		}
 	}
+
+	if (bitDepth !== 1 && bitDepth !== 8) throw new Error(`Invalid bit depth (${bitDepth})`);
 
 	const extraLimit = (step - 1) | 0; // 3 for rgb, 4 for cmyk
 

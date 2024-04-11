@@ -136,6 +136,8 @@ const fieldToExtType: ExtTypeDict = {
 	sdwM: makeType('Parameters', 'adaptCorrectTones'),
 	hglM: makeType('Parameters', 'adaptCorrectTones'),
 	customShape: makeType('', 'customShape'),
+	origFXRefPoint: nullType,
+	FXRefPoint: nullType,
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -167,6 +169,8 @@ const fieldToArrayExtType: ExtTypeDict = {
 	puppetShapeList: makeType('', 'puppetShape'),
 	channelDenoise: makeType('', 'channelDenoiseParams'),
 	ShrP: makeType('', 'Pnt '),
+	layerSettings: nullType,
+	list: nullType,
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -174,7 +178,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
-		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth',
+		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth', 'comment',
 	],
 	'tdta': [
 		'EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray',
@@ -192,7 +196,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'topOutset', 'leftOutset', 'bottomOutset', 'rightOutset', 'filterID', 'meshQuality',
 		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN', 'NmbG', 'WLMn', 'WLMx', 'AmMn', 'AmMx', 'SclH', 'SclV',
 		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'FlRs', 'Vrnc', 'Strg', 'ExtS', 'ExtD',
-		'HrzS', 'VrtS', 'NmbR', 'EdgF', 'Ang1', 'Ang2', 'Ang3', 'Ang4',
+		'HrzS', 'VrtS', 'NmbR', 'EdgF', 'Ang1', 'Ang2', 'Ang3', 'Ang4', 'lastAppliedComp', 'capturedInfo',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS', 'BlrQ',
@@ -237,7 +241,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
 		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
 		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList', 'ShrP',
-		'channelDenoise', 'Mtrx',
+		'channelDenoise', 'Mtrx', 'layerSettings', 'list', 'compList',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null', 'Chnl'],
@@ -285,6 +289,7 @@ const fieldToArrayType: Dict = {
 	ShrP: 'Objc',
 	channelDenoise: 'Objc',
 	Mtrx: 'long',
+	compList: 'long',
 };
 
 const fieldToType: Dict = {};
@@ -336,7 +341,7 @@ export function readAsciiStringOrClassId(reader: PsdReader) {
 }
 
 function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
-	if (value.length === 4 && value !== 'warp' && value !== 'time' && value !== 'hold') {
+	if (value.length === 4 && value !== 'warp' && value !== 'time' && value !== 'hold' && value !== 'list') {
 		// write classId
 		writeInt32(writer, 0);
 		writeSignature(writer, value);
@@ -473,9 +478,9 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 			const items: any[] = [];
 
 			for (let i = 0; i < length; i++) {
-				const type = readSignature(reader);
-				// console.log('  >', type);
-				items.push(readOSType(reader, type, includeClass));
+				const itemType = readSignature(reader);
+				// console.log('  >', itemType);
+				items.push(readOSType(reader, itemType, includeClass));
 			}
 
 			return items;
@@ -497,9 +502,9 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		case 'TEXT': // String
 			return readUnicodeString(reader);
 		case 'enum': { // Enumerated
-			const type = readAsciiStringOrClassId(reader);
+			const enumType = readAsciiStringOrClassId(reader);
 			const value = readAsciiStringOrClassId(reader);
-			return `${type}.${value}`;
+			return `${enumType}.${value}`;
 		}
 		case 'long': // Integer
 			return readInt32(reader);

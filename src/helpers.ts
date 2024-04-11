@@ -1,6 +1,6 @@
 import { fromByteArray } from 'base64-js';
 import { deflate } from 'pako';
-import { Layer, BlendMode, LayerColor } from './psd';
+import { Layer, BlendMode, LayerColor, PixelData, PixelArray } from './psd';
 
 export const MOCK_HANDLERS = false;
 export const RAW_IMAGE_DATA = false;
@@ -138,14 +138,6 @@ export interface LayerChannelData {
 	mask?: Bounds;
 }
 
-export type PixelArray = Uint8ClampedArray | Uint8Array;
-
-export interface PixelData {
-	data: PixelArray;
-	width: number;
-	height: number;
-}
-
 export function offsetForChannel(channelId: ChannelID, cmyk: boolean) {
 	switch (channelId) {
 		case ChannelID.Color0: return 0;
@@ -174,26 +166,51 @@ export function hasAlpha(data: PixelData) {
 }
 
 export function resetImageData({ data }: PixelData) {
-	const buffer = new Uint32Array(data.buffer);
-	const size = buffer.length | 0;
+	const alpha = (data instanceof Uint32Array) ? (0xffffffff >>> 0) : ((data instanceof Uint16Array) ? 0xffff : 0xff);
 
-	for (let p = 0; p < size; p = (p + 1) | 0) {
-		buffer[p] = 0xff000000;
+	for (let p = 0, size = data.length | 0; p < size; p = (p + 4) | 0) {
+		data[p + 0] = 0;
+		data[p + 1] = 0;
+		data[p + 2] = 0;
+		data[p + 3] = alpha;
 	}
 }
 
+export function imageDataToCanvas(pixelData: PixelData) {
+	const canvas = createCanvas(pixelData.width, pixelData.height);
+	let imageData: ImageData;
+
+	if (pixelData.data instanceof Uint8ClampedArray) {
+		imageData = pixelData as ImageData;
+	} else {
+		imageData = createImageData(pixelData.width, pixelData.height);
+		const src = pixelData.data;
+		const dst = imageData.data;
+		const shift = (src instanceof Uint32Array) ? 24 : ((src instanceof Uint16Array) ? 8 : 0);
+
+		for (let i = 0, size = src.length; i < size; i++) {
+			dst[i] = src[i] >>> shift;
+		}
+	}
+
+	canvas.getContext('2d')!.putImageData(imageData, 0, 0);
+	return canvas;
+}
+
 export function decodeBitmap(input: PixelArray, output: PixelArray, width: number, height: number) {
+	if (input instanceof Uint32Array || input instanceof Uint16Array) throw new Error('Invalid bit depth');
+
 	for (let y = 0, p = 0, o = 0; y < height; y++) {
 		for (let x = 0; x < width;) {
 			let b = input[o++];
 
-			for (let i = 0; i < 8 && x < width; i++, x++) {
+			for (let i = 0; i < 8 && x < width; i++, x++, p += 4) {
 				const v = b & 0x80 ? 0 : 255;
 				b = b << 1;
-				output[p++] = v;
-				output[p++] = v;
-				output[p++] = v;
-				output[p++] = 255;
+				output[p + 0] = v;
+				output[p + 1] = v;
+				output[p + 2] = v;
+				output[p + 3] = 255;
 			}
 		}
 	}
