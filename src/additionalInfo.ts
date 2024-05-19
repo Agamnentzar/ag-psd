@@ -3352,6 +3352,16 @@ addHandler(
 );
 
 addHandler(
+	'Lr32',
+	() => false,
+	(reader, _target, _left, psd, options) => {
+		readLayerInfo(reader, psd, options);
+	},
+	(_writer, _target) => {
+	},
+);
+
+addHandler(
 	'LMsk',
 	hasKey('userMask'),
 	(reader, target) => {
@@ -4634,9 +4644,11 @@ addHandler(
 		const data = readBytes(reader, left());
 		target.engineData = fromByteArray(data);
 		// const engineData = parseEngineData(data);
+		// const engineData2 = decodeEngineData2(engineData);
 		// console.log(require('util').inspect(engineData, false, 99, true));
-		// require('fs').writeFileSync('resources/engineData2Simple.txt', require('util').inspect(engineData, false, 99, false), 'utf8');
-		// require('fs').writeFileSync('test_data.json', JSON.stringify(ed, null, 2), 'utf8');
+		// require('fs').writeFileSync('test_data.bin', data);
+		// require('fs').writeFileSync('test_data.txt', require('util').inspect(engineData, false, 99, false), 'utf8');
+		// require('fs').writeFileSync('test_data.json', JSON.stringify(engineData2, null, 2), 'utf8');
 	},
 	(writer, target) => {
 		const buffer = toByteArray(target.engineData!);

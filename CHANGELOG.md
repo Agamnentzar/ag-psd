@@ -1,5 +1,10 @@
 # Changelog
 
+## v20.1.0
+- Improve performance of encoding and decoding large text fields.
+- Added initial support for 32bit image data.
+- Fixed handling compressed encoding mode by switching to better compression library.
+
 ## v20.0.0
 - Added support for reading 16bit image data, when reading PSD width default settings 16bit data will be converted to regular 8bit canvases, when `useImageData: true` is passed in read options the image data will be of type `Uint16Array` for 16bit images. Because of that type of `layer.imageData` and `psd.imageData` and `layer.mask.imageData` can be of different types depending on PSD file bitDepth.
 - Added support for reading image data compressed with zip with prediction mode.

@@ -107,9 +107,21 @@ const psd: Psd = {
 
 ## Bitmaps and image data
 
-Image data can be accessed from `psd.canvas` or `layer.canvas` fields by default. These fields store regular HTMLCanvasElement (or node-canvas object when running in node.js). If `useImageData` option is set to true in read options then the image data will be available in `psd.imageData` and `layer.imageData` fields instead. Using image data option gives you direct access to pixel data without having to go through the canvas object, which bypasses alpha premultiplication and convertion from 16/32bit image data to 8bit canvas data.
+Image data can be accessed from `psd.canvas` or `layer.canvas` fields by default. These fields store regular HTMLCanvasElement (or node-canvas object when running in node.js). For 16bit and 32 bit documents image data will be converted to regular 8bit canvas (this will result in a loss of data, use `useImageData` option if you want to preserve precission of color data).
 
-For 16/32bit documents `imageData` fields will contain pixel data as `Uint16Array` or `Uint32Array` respectfully.
+If `useImageData` option is set to true in read options then the image data will be available in `psd.imageData` and `layer.imageData` fields instead. Using image data option gives you direct access to pixel data without having to go through the canvas object, which bypasses alpha premultiplication and convertion from 16/32bit image data to 8bit canvas data.
+
+For 16bit documents `imageData` fields will contain pixel data as `Uint16Array`, the values ranging from 0 to 65535.
+
+For 32bit documents `imageData` fields will contain pixel data as `Float32Array`, the values ranging from 0 to 1. 32bit values are in linear color space (as oposed to gamma corrected sRGB color). In order to convert the values to regular sRGB color space the values need to be gamma-corrected by using following conversion code (except alpha channel):
+
+```js
+// convert 32bit linear to 8bit sRGB
+destination[i] = Math.round(Math.pow(source[i], 1.0 / 2.2) * 255);
+
+// convert 8bit sRGB to 32bit linear
+destination[i] = Math.pow(source[i] / 255, 2.2);
+```
 
 ## Layers and Groups
 
@@ -241,7 +253,7 @@ Example layer structure:
 
   [](/files/blend-modes.png)
 
-- `canvas` (or `imageData`) see `canvas` property description in [Basic document structure](#basic-socument-structure)
+- `canvas` (or `imageData`) see `canvas` property description in [Basic document structure](#basic-document-structure)
 
   Vector, text and smart object layers still have image data with pregenerated bitmap. You also need to provide that image data when writing PSD files.
   
@@ -726,7 +738,7 @@ if ('l' in color) {
 }
 ```
 
-If you expect the fields to be in one specific format you can just verity that it's correct and throw an error if it's a format that you didn't expect:
+If you expect the fields to be in one specific format you can just verify that it's correct and throw an error if it's a format that you didn't expect:
 
 ```ts
 // handle only RGB colors

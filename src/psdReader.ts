@@ -1,4 +1,4 @@
-import { inflate } from 'pako';
+import { inflateSync } from 'zlib';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray } from './psd';
 import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
@@ -230,7 +230,16 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 
 	// color mode data
 	readSection(reader, 1, left => {
-		if (options.throwForMissingFeatures) throw new Error('Color mode data not supported');
+		if (!left()) return;
+
+		// const numbers: number[] = [];
+		// console.log('color mode', left());
+		// while (left()) {
+		// 	numbers.push(readUint32(reader));
+		// }
+		// console.log('color mode', numbers);
+
+		// if (options.throwForMissingFeatures) throw new Error('Color mode data not supported');
 		skipBytes(reader, left());
 	});
 
@@ -661,7 +670,7 @@ function createImageDataBitDepth(width: number, height: number, bitDepth: number
 	} else if (bitDepth === 16) {
 		return { width, height, data: new Uint16Array(width * height * 4) };
 	} else if (bitDepth === 32) {
-		return { width, height, data: new Uint32Array(width * height * 4) };
+		return { width, height, data: new Float32Array(width * height * 4) };
 	} else {
 		throw new Error(`Invalid bitDepth (${bitDepth})`);
 	}
@@ -682,13 +691,15 @@ function readImageData(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 
 	switch (psd.colorMode) {
 		case ColorMode.Bitmap: {
+			if (bitsPerChannel !== 1) throw new Error('Invalid bitsPerChannel for bitmap color mode');
+
 			let bytes: Uint8Array;
 
 			if (compression === Compression.RawData) {
 				bytes = readBytes(reader, Math.ceil(psd.width / 8) * psd.height);
 			} else if (compression === Compression.RleCompressed) {
 				bytes = new Uint8Array(psd.width * psd.height);
-				readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, bitsPerChannel, 1, [0], options.large);
+				readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 8, 1, [0], options.large);
 			} else {
 				throw new Error(`Bitmap compression not supported: ${compression}`);
 			}
@@ -828,11 +839,11 @@ function bytesToArray(bytes: Uint8Array, bitDepth: number) {
 		}
 	} else if (bitDepth === 32) {
 		if (bytes.byteOffset % 4) {
-			const result = new Uint32Array(bytes.byteLength / 4);
+			const result = new Float32Array(bytes.byteLength / 4);
 			new Uint8Array(result.buffer, result.byteOffset, result.byteLength).set(bytes);
 			return result;
 		} else {
-			return new Uint32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
+			return new Float32Array(bytes.buffer, bytes.byteOffset, bytes.byteLength / 4);
 		}
 	} else {
 		throw new Error(`Invalid bitDepth (${bitDepth})`)
@@ -850,6 +861,20 @@ function copyChannelToPixelData(pixelData: PixelData, channel: PixelArray, offse
 
 function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number) {
 	const buffer = readBytes(reader, width * height * Math.floor(bitDepth / 8));
+
+	if (bitDepth == 32) {
+		for (let i = 0; i < buffer.byteLength; i += 4) {
+			const a = buffer[i + 0];
+			const b = buffer[i + 1];
+			const c = buffer[i + 2];
+			const d = buffer[i + 3];
+			buffer[i + 0] = d;
+			buffer[i + 1] = c;
+			buffer[i + 2] = b;
+			buffer[i + 3] = a;
+		}
+	}
+
 	const array = bytesToArray(buffer, bitDepth);
 
 	if (pixelData && offset < step) {
@@ -869,7 +894,7 @@ function decodePredicted(data: Uint8Array | Uint16Array, width: number, height: 
 
 export function readDataZip(reader: PsdReader, length: number, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number, prediction: boolean) {
 	const compressed = readBytes(reader, length);
-	const decompressed = inflate(compressed);
+	const decompressed = inflateSync(compressed);
 
 	if (pixelData && offset < step) {
 		const array = bytesToArray(decompressed, bitDepth);
@@ -881,8 +906,21 @@ export function readDataZip(reader: PsdReader, length: number, pixelData: PixelD
 			if (prediction) decodePredicted(array as Uint16Array, width, height, 0x10000);
 			copyChannelToPixelData(pixelData, array, offset, step);
 		} else if (bitDepth === 32) {
-			if (prediction) decodePredicted(decompressed, width, height, 0x100);
-			copyChannelToPixelData(pixelData, array, offset, step);
+			if (prediction) decodePredicted(decompressed, width * 4, height, 0x100);
+
+			let di = offset;
+			const dst = new Uint32Array(pixelData.data.buffer, pixelData.data.byteOffset, pixelData.data.length);
+
+			for (let y = 0; y < height; y++) {
+				let a = width * 4 * y;
+
+				for (let x = 0; x < width; x++, a++, di += step) {
+					const b = a + width;
+					const c = b + width;
+					const d = c + width;
+					dst[di] = ((decompressed[a] << 24) | (decompressed[b] << 16) | (decompressed[c] << 8) | decompressed[d]) >>> 0;
+				}
+			}
 		} else {
 			throw new Error('Invalid bitDepth');
 		}

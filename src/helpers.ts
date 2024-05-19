@@ -1,5 +1,5 @@
 import { fromByteArray } from 'base64-js';
-import { deflate } from 'pako';
+import { deflateSync } from 'zlib';
 import { Layer, BlendMode, LayerColor, PixelData, PixelArray } from './psd';
 
 export const MOCK_HANDLERS = false;
@@ -166,7 +166,7 @@ export function hasAlpha(data: PixelData) {
 }
 
 export function resetImageData({ data }: PixelData) {
-	const alpha = (data instanceof Uint32Array) ? (0xffffffff >>> 0) : ((data instanceof Uint16Array) ? 0xffff : 0xff);
+	const alpha = (data instanceof Float32Array) ? 1.0 : ((data instanceof Uint16Array) ? 0xffff : 0xff);
 
 	for (let p = 0, size = data.length | 0; p < size; p = (p + 4) | 0) {
 		data[p + 0] = 0;
@@ -186,10 +186,20 @@ export function imageDataToCanvas(pixelData: PixelData) {
 		imageData = createImageData(pixelData.width, pixelData.height);
 		const src = pixelData.data;
 		const dst = imageData.data;
-		const shift = (src instanceof Uint32Array) ? 24 : ((src instanceof Uint16Array) ? 8 : 0);
 
-		for (let i = 0, size = src.length; i < size; i++) {
-			dst[i] = src[i] >>> shift;
+		if (src instanceof Float32Array) {
+			for (let i = 0, size = src.length; i < size; i += 4) {
+				dst[i + 0] = Math.round(Math.pow(src[i + 0], 1.0 / 2.2) * 255);
+				dst[i + 1] = Math.round(Math.pow(src[i + 1], 1.0 / 2.2) * 255);
+				dst[i + 2] = Math.round(Math.pow(src[i + 2], 1.0 / 2.2) * 255);
+				dst[i + 3] = Math.round(src[i + 3] * 255);
+			}
+		} else {
+			const shift = (src instanceof Uint16Array) ? 8 : 0;
+
+			for (let i = 0, size = src.length; i < size; i++) {
+				dst[i] = src[i] >>> shift;
+			}
 		}
 	}
 
@@ -198,7 +208,7 @@ export function imageDataToCanvas(pixelData: PixelData) {
 }
 
 export function decodeBitmap(input: PixelArray, output: PixelArray, width: number, height: number) {
-	if (input instanceof Uint32Array || input instanceof Uint16Array) throw new Error('Invalid bit depth');
+	if (!(input instanceof Uint8Array || input instanceof Uint8ClampedArray)) throw new Error('Invalid bit depth');
 
 	for (let y = 0, p = 0, o = 0; y < height; y++) {
 		for (let x = 0; x < width;) {
@@ -339,7 +349,7 @@ export function writeDataZipWithoutPrediction({ data, width, height }: PixelData
 			channel[i] = data[o];
 		}
 
-		const buffer = deflate(channel);
+		const buffer = deflateSync(channel);
 		buffers.push(buffer);
 		totalLength += buffer.byteLength;
 	}

@@ -87,6 +87,10 @@ export function encodeStringTo(buffer: Uint8Array | Buffer, offset: number, valu
 }
 
 export function encodeString(value: string): Uint8Array {
+	if (value.length > 1000 && typeof TextEncoder !== 'undefined') {
+		return (new TextEncoder()).encode(value);
+	}
+
 	const buffer = new Uint8Array(stringLengthInBytes(value));
 	encodeStringTo(buffer, 0, value);
 	return buffer;
@@ -107,7 +111,11 @@ function continuationByte(buffer: Uint8Array, index: number): number {
 }
 
 export function decodeString(value: Uint8Array): string {
-	let result = '';
+	if (value.byteLength > 1000 && typeof TextDecoder !== 'undefined') {
+		return (new TextDecoder()).decode(value);
+	}
+
+	let result: string[] = [];
 
 	for (let i = 0; i < value.length;) {
 		const byte1 = value[i++];
@@ -149,12 +157,12 @@ export function decodeString(value: Uint8Array): string {
 
 		if (code > 0xffff) {
 			code -= 0x10000;
-			result += String.fromCharCode(code >>> 10 & 0x3ff | 0xd800);
+			result.push(String.fromCharCode(code >>> 10 & 0x3ff | 0xd800));
 			code = 0xdc00 | code & 0x3ff;
 		}
 
-		result += String.fromCharCode(code);
+		result.push(String.fromCharCode(code));
 	}
 
-	return result;
+	return result.join('');
 }

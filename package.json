@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "20.0.0",
+  "version": "20.1.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -34,20 +34,19 @@
   "author": "Agamnentzar",
   "license": "MIT",
   "devDependencies": {
-    "@types/mocha": "^9.1.1",
+    "@types/mocha": "^10.0.6",
     "@types/node": "^18.11.18",
     "browserify": "^17.0.0",
     "canvas": "^2.11.0",
     "chai": "^4.3.7",
-    "mocha": "^6.2.0",
+    "mocha": "^10.4.0",
+    "source-map-support": "^0.5.21",
     "tslint": "^6.1.3",
-    "typescript": "^4.9.4",
-    "source-map-support": "^0.5.21"
+    "typescript": "^4.9.4"
   },
   "dependencies": {
     "@types/base64-js": "^1.3.0",
-    "@types/pako": "^2.0.0",
     "base64-js": "^1.5.1",
-    "pako": "^2.1.0"
+    "zlib": "^1.0.5"
   }
 }

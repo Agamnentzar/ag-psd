@@ -98,8 +98,12 @@ addHandler(
 addHandler(
 	1060,
 	target => target.xmpMetadata !== undefined,
-	(reader, target, left) => target.xmpMetadata = readUtf8String(reader, left()),
-	(writer, target) => writeUtf8String(writer, target.xmpMetadata!),
+	(reader, target, left) => {
+		target.xmpMetadata = readUtf8String(reader, left());
+	},
+	(writer, target) => {
+		writeUtf8String(writer, target.xmpMetadata!);
+	},
 );
 
 const Inte = createEnum<RenderingIntent>('Inte', 'perceptual', {

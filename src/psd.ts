@@ -222,7 +222,7 @@ export interface LayerEffectsInfo {
 	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
 }
 
-export type PixelArray = Uint8ClampedArray | Uint8Array | Uint16Array | Uint32Array;
+export type PixelArray = Uint8ClampedArray | Uint8Array | Uint16Array | Float32Array;
 
 export interface PixelData {
 	data: PixelArray; // type depends on document bit depth
