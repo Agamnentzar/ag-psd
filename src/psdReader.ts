@@ -1,4 +1,4 @@
-import { inflateSync } from 'zlib';
+import { inflate as inflateSync } from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray } from './psd';
 import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';

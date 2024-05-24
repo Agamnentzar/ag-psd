@@ -1,5 +1,5 @@
 import { fromByteArray } from 'base64-js';
-import { deflateSync } from 'zlib';
+import { deflate as deflateSync } from 'pako';
 import { Layer, BlendMode, LayerColor, PixelData, PixelArray } from './psd';
 
 export const MOCK_HANDLERS = false;

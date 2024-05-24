@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "20.1.0",
+  "version": "20.1.1",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -36,6 +36,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.6",
     "@types/node": "^18.11.18",
+    "@types/pako": "^2.0.3",
     "browserify": "^17.0.0",
     "canvas": "^2.11.0",
     "chai": "^4.3.7",
@@ -47,6 +48,6 @@
   "dependencies": {
     "@types/base64-js": "^1.3.0",
     "base64-js": "^1.5.1",
-    "zlib": "^1.0.5"
+    "pako": "^2.1.0"
   }
 }
