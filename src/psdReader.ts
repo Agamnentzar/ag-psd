@@ -234,7 +234,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 
 		// const numbers: number[] = [];
 		// console.log('color mode', left());
-		// while (left()) {
+		// while (left() > 0) {
 		// 	numbers.push(readUint32(reader));
 		// }
 		// console.log('color mode', numbers);
@@ -245,7 +245,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 
 	// image resources
 	readSection(reader, 1, left => {
-		while (left()) {
+		while (left() > 0) {
 			const sigOffset = reader.offset;
 			let sig = '';
 
@@ -431,7 +431,7 @@ function readLayerRecord(reader: PsdReader, psd: Psd, options: ReadOptionsExt) {
 		/*const blendingRanges =*/ readLayerBlendingRanges(reader);
 		layer.name = readPascalString(reader, 4);
 
-		while (left()) {
+		while (left() > 0) {
 			readAdditionalLayerInfo(reader, layer, psd, options);
 		}
 	});
@@ -485,7 +485,7 @@ function readLayerBlendingRanges(reader: PsdReader) {
 		const compositeGraphBlendDestinationRange = readUint32(reader);
 		const ranges = [];
 
-		while (left()) {
+		while (left() > 0) {
 			const sourceRange = readUint32(reader);
 			const destRange = readUint32(reader);
 			ranges.push({ sourceRange, destRange });

@@ -275,7 +275,7 @@ addHandler(
 	(reader, target, left) => {
 		target.alphaChannelNames = [];
 
-		while (left()) {
+		while (left() > 0) {
 			const value = readPascalString(reader, 1);
 			target.alphaChannelNames.push(value);
 		}
@@ -293,7 +293,7 @@ addHandler(
 	(reader, target, left) => {
 		target.alphaChannelNames = [];
 
-		while (left()) {
+		while (left() > 0) {
 			target.alphaChannelNames.push(readUnicodeString(reader));
 		}
 	},
@@ -482,7 +482,7 @@ addHandler(
 	(reader, target, left) => {
 		target.layersGroup = [];
 
-		while (left()) {
+		while (left() > 0) {
 			target.layersGroup.push(readUint16(reader));
 		}
 	},
@@ -499,7 +499,7 @@ addHandler(
 	(reader, target, left) => {
 		target.layerGroupsEnabledId = [];
 
-		while (left()) {
+		while (left() > 0) {
 			target.layerGroupsEnabledId.push(readUint8(reader));
 		}
 	},
@@ -1368,7 +1368,7 @@ addHandler(
 		if (key === 'mani') {
 			checkSignature(reader, 'IRFR');
 			readSection(reader, 1, left => {
-				while (left()) {
+				while (left() > 0) {
 					checkSignature(reader, '8BIM');
 					const key = readSignature(reader);
 

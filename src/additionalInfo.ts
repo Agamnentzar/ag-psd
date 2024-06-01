@@ -3596,6 +3596,7 @@ addHandler(
 			const version = readInt32(reader);
 			const id = readPascalString(reader, 1);
 			const name = readUnicodeString(reader);
+
 			const fileType = readSignature(reader).trim(); // '    ' if empty
 			const fileCreator = readSignature(reader).trim(); // '    ' or '\0\0\0\0' if empty
 			const dataSize = readLength64(reader);

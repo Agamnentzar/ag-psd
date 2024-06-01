@@ -7,7 +7,7 @@ function createCanvasFromData(data: Uint8Array) {
 
 	try {
 		const context = canvas.getContext('2d')!;
-		const imageData = decodeJpeg(data, (w, h) => context.createImageData(w, h));
+		const imageData = decodeJpeg(data, (w, h) => context.createImageData(w, h) as any);
 		canvas.width = imageData.width;
 		canvas.height = imageData.height;
 		context.putImageData(imageData, 0, 0);
@@ -18,8 +18,8 @@ function createCanvasFromData(data: Uint8Array) {
 	return canvas;
 }
 
-initializeCanvas(createCanvas, createCanvasFromData);
+initializeCanvas(createCanvas as any, createCanvasFromData as any);
 
 export function initialize() {
-	initializeCanvas(createCanvas, createCanvasFromData);
+	initializeCanvas(createCanvas as any, createCanvasFromData as any);
 }
