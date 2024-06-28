@@ -959,7 +959,7 @@ addHandler(
 	(reader, target) => {
 		const version = readUint32(reader);
 
-		if (version == 6) {
+		if (version === 6) {
 			if (!target.slices) target.slices = [];
 
 			const top = readInt32(reader);
@@ -1012,7 +1012,7 @@ addHandler(
 					slice.rightOutset = d.rightOutset;
 				}
 			});
-		} else if (version == 7 || version == 8) {
+		} else if (version === 7 || version === 8) {
 			const desc = readVersionAndDescriptor(reader) as SlicesDesc7;
 
 			if (!target.slices) target.slices = [];
@@ -1020,7 +1020,7 @@ addHandler(
 				groupName: desc.baseName,
 				bounds: boundsFromBounds(desc.bounds),
 				slices: desc.slices.map(s => ({
-					name: '',
+					...(s['Nm  '] ? { name: s['Nm  '] } : {}),
 					id: s.sliceID,
 					groupId: s.groupID,
 					associatedLayerId: 0,
@@ -1073,7 +1073,7 @@ addHandler(
 			writeUint32(writer, slice.groupId);
 			writeUint32(writer, sliceOrigins.indexOf(slice.origin));
 			if (slice.origin === 'layer') writeUint32(writer, slice.associatedLayerId);
-			writeUnicodeString(writer, slice.name);
+			writeUnicodeString(writer, slice.name || '');
 			writeUint32(writer, sliceTypes.indexOf(slice.type));
 			writeInt32(writer, slice.bounds.left);
 			writeInt32(writer, slice.bounds.top);

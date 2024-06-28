@@ -260,7 +260,15 @@ const styleKeys: (keyof TextStyle)[] = [
 ];
 
 const antialias: AntiAlias[] = ['none', 'crisp', 'strong', 'smooth', 'sharp'];
-const justification: Justification[] = ['left', 'right', 'center'];
+const justification: Justification[] = [
+	'left', // 0
+	'right', // 1
+	'center', // 2
+	'justify-left', // 3
+	'justify-right', // 4
+	'justify-center', // 5
+	'justify-all', // 6
+];
 
 function upperFirst(value: string) {
 	return value.substring(0, 1).toUpperCase() + value.substring(1);
@@ -437,7 +445,7 @@ export function decodeEngineData(engineData: EngineData) {
 	let removedCharacters = 0;
 
 	while (/\n$/.test(text)) {
-		text = text.substr(0, text.length - 1);
+		text = text.substring(0, text.length - 1);
 		removedCharacters++;
 	}
 
@@ -467,7 +475,7 @@ export function decodeEngineData(engineData: EngineData) {
 	// const theNormalParagraphSheet = resourceDict.TheNormalParagraphSheet;
 	// const paragraphSheetSet = resourceDict.ParagraphSheetSet;
 	// const paragraphProperties = paragraphSheetSet[theNormalParagraphSheet].Properties;
-	const paragraphRun = engineData.EngineDict.ParagraphRun;
+	const paragraphRun = engineDict.ParagraphRun;
 
 	result.paragraphStyle = {}; // decodeParagraphStyle(paragraphProperties, fonts);
 	result.paragraphStyleRuns = [];
@@ -498,7 +506,7 @@ export function decodeEngineData(engineData: EngineData) {
 	// const theNormalStyleSheet = resourceDict.TheNormalStyleSheet;
 	// const styleSheetSet = resourceDict.StyleSheetSet;
 	// const styleSheetData = styleSheetSet[theNormalStyleSheet].StyleSheetData;
-	const styleRun = engineData.EngineDict.StyleRun;
+	const styleRun = engineDict.StyleRun;
 
 	result.style = {}; // decodeStyle(styleSheetData, fonts);
 	result.styleRuns = [];

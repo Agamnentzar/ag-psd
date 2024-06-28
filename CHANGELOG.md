@@ -1,5 +1,9 @@
 # Changelog
 
+## v20.2.0
+- Fixed missing handling for justified paragraphs
+- Fixed reading slice names
+
 ## v20.1.0
 - Improve performance of encoding and decoding large text fields.
 - Added initial support for 32bit image data.

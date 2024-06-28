@@ -464,14 +464,20 @@ function readLayerMaskData(reader: PsdReader, options: ReadOptions) {
 		}
 
 		if (left() > 2) {
-			options.logMissingFeatures && console.log('Unhandled extra mask params');
-			// TODO: handle these values
-			/*const realFlags =*/ readUint8(reader);
-			/*const realUserMaskBackground =*/ readUint8(reader);
-			/*const top2 =*/ readInt32(reader);
-			/*const left2 =*/ readInt32(reader);
-			/*const bottom2 =*/ readInt32(reader);
-			/*const right2 =*/ readInt32(reader);
+			// TODO: handle these values, this is RealUserMask
+			/*const realFlags = readUint8(reader);
+			const realUserMaskBackground = readUint8(reader);
+			const top2 = readInt32(reader);
+			const left2 = readInt32(reader);
+			const bottom2 = readInt32(reader);
+			const right2 = readInt32(reader);
+
+			// TEMP
+			(mask as any)._real = { realFlags, realUserMaskBackground, top2, left2, bottom2, right2 };*/
+
+			if (options.logMissingFeatures) {
+				console.log('Unhandled extra reaal user mask params');
+			}
 		}
 
 		skipBytes(reader, left());
@@ -564,6 +570,12 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 					mask.canvas = imageDataToCanvas(maskData);
 				}
 			}
+		} else if (channel.id === ChannelID.RealUserMask) {
+			if (options.logMissingFeatures) {
+				console.log(`RealUserMask not supported`);
+			}
+
+			reader.offset = start + channel.length;
 		} else {
 			const offset = offsetForChannel(channel.id, cmyk);
 			let targetData = imageData;
