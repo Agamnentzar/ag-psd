@@ -1,5 +1,8 @@
 # Changelog
 
+## v20.2.1
+- Fixed invalid value of `globalAngle` when the value is negative
+
 ## v20.2.0
 - Fixed missing handling for justified paragraphs
 - Fixed reading slice names

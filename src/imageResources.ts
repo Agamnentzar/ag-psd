@@ -343,8 +343,8 @@ addHandler(
 addHandler(
 	1037,
 	target => target.globalAngle !== undefined,
-	(reader, target) => target.globalAngle = readUint32(reader),
-	(writer, target) => writeUint32(writer, target.globalAngle!),
+	(reader, target) => target.globalAngle = readInt32(reader),
+	(writer, target) => writeInt32(writer, target.globalAngle!),
 );
 
 addHandler(
