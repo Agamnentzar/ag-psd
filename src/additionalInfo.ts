@@ -1717,7 +1717,7 @@ type SoLdDescriptorFilterItem = {
 		'Fl  ': string;
 	};
 } | {
-	filterID: 991;
+	filterID: 991 | 943; // TODO: why 2 different IDs? do we need to handle them separately?
 	Fltr: {
 		_name: 'Rigid Transform';
 		_classID: 'rigidTransform';
@@ -2358,6 +2358,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 				undefinedAreas: FlMd.decode(f.Fltr['Fl  ']),
 			},
 		};
+		case 943:
 		case 991: return {
 			...base,
 			type: 'puppet',
@@ -2476,6 +2477,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 			};
 		}
 		default:
+			// console.log('FILTER', require('util').inspect(f, false, 99, true));
 			throw new Error(`Unknown filterID: ${(f as any).filterID}`);
 	}
 }
