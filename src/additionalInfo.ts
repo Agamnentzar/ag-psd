@@ -1,7 +1,7 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
-import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer } from './psd';
+import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo, ReadOptionsExt } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32 } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds } from './descriptor';
@@ -1945,7 +1945,7 @@ function pointToHrznVrtc(point: { x: UnitsValue; y: UnitsValue; }): HrznVrtcDesc
 	};
 }
 
-function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
+function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): Filter | undefined {
 	const base: Omit<Filter, 'type' | 'filter'> = {
 		name: f['Nm  '],
 		opacity: parsePercent(f.blendOptions.Opct),
@@ -1956,540 +1956,551 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem): Filter {
 		backgroundColor: parseColor(f.BckC),
 	};
 
-	switch (f.filterID) {
-		case 1098281575: return { ...base, type: 'average' };
-		case 1114403360: return { ...base, type: 'blur' };
-		case 1114403405: return { ...base, type: 'blur more' };
-		case 697: return {
-			...base,
-			type: 'box blur',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-			},
-		};
-		case 1198747202: return {
-			...base,
-			type: 'gaussian blur',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-			},
-		};
-		case 1299476034: return {
-			...base,
-			type: 'motion blur',
-			filter: {
-				angle: f.Fltr.Angl,
-				distance: parseUnits(f.Fltr.Dstn),
-			},
-		};
-		case 1382313026: return {
-			...base,
-			type: 'radial blur',
-			filter: {
-				amount: f.Fltr.Amnt,
-				method: BlrM.decode(f.Fltr.BlrM),
-				quality: BlrQ.decode(f.Fltr.BlrQ),
-			},
-		};
-		case 702: return {
-			...base,
-			type: 'shape blur',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-				customShape: { name: f.Fltr.customShape['Nm  '], id: f.Fltr.customShape.Idnt },
-			},
-		};
-		case 1399681602: return {
-			...base,
-			type: 'smart blur',
-			filter: {
-				radius: f.Fltr['Rds '],
-				threshold: f.Fltr.Thsh,
-				quality: SmBQ.decode(f.Fltr.SmBQ),
-				mode: SmBM.decode(f.Fltr.SmBM),
-			},
-		};
-		case 701: return {
-			...base,
-			type: 'surface blur',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-				threshold: f.Fltr.Thsh,
-			},
-		};
-		case 1148416108: return {
-			...base,
-			type: 'displace',
-			filter: {
-				horizontalScale: f.Fltr.HrzS,
-				verticalScale: f.Fltr.VrtS,
-				displacementMap: DspM.decode(f.Fltr.DspM),
-				undefinedAreas: UndA.decode(f.Fltr.UndA),
-				displacementFile: {
-					signature: f.Fltr.DspF.sig,
-					path: f.Fltr.DspF.path, // TODO: this is decoded incorrectly ???
-				},
-			},
-		};
-		case 1349411688: return {
-			...base,
-			type: 'pinch',
-			filter: {
-				amount: f.Fltr.Amnt,
-			},
-		};
-		case 1349284384: return {
-			...base,
-			type: 'polar coordinates',
-			filter: {
-				conversion: Cnvr.decode(f.Fltr.Cnvr),
-			},
-		};
-		case 1383099493: return {
-			...base,
-			type: 'ripple',
-			filter: {
-				amount: f.Fltr.Amnt,
-				size: RplS.decode(f.Fltr.RplS),
-			},
-		};
-		case 1399353888: return {
-			...base,
-			type: 'shear',
-			filter: {
-				shearPoints: f.Fltr.ShrP.map(p => ({ x: p.Hrzn, y: p.Vrtc })),
-				shearStart: f.Fltr.ShrS,
-				shearEnd: f.Fltr.ShrE,
-				undefinedAreas: UndA.decode(f.Fltr.UndA),
-			},
-		};
-		case 1399875698: return {
-			...base,
-			type: 'spherize',
-			filter: {
-				amount: f.Fltr.Amnt,
-				mode: SphM.decode(f.Fltr.SphM),
-			},
-		};
-		case 1417114220: return {
-			...base,
-			type: 'twirl',
-			filter: {
-				angle: f.Fltr.Angl,
-			},
-		};
-		case 1466005093: return {
-			...base,
-			type: 'wave',
-			filter: {
-				numberOfGenerators: f.Fltr.NmbG,
-				type: Wvtp.decode(f.Fltr.Wvtp),
-				wavelength: { min: f.Fltr.WLMn, max: f.Fltr.WLMx },
-				amplitude: { min: f.Fltr.AmMn, max: f.Fltr.AmMx },
-				scale: { x: f.Fltr.SclH, y: f.Fltr.SclV },
-				randomSeed: f.Fltr.RndS,
-				undefinedAreas: UndA.decode(f.Fltr.UndA),
-			},
-		};
-		case 1516722791: return {
-			...base,
-			type: 'zigzag',
-			filter: {
-				amount: f.Fltr.Amnt,
-				ridges: f.Fltr.NmbR,
-				style: ZZTy.decode(f.Fltr.ZZTy),
-			},
-		};
-		case 1097092723: return {
-			...base,
-			type: 'add noise',
-			filter: {
-				amount: parsePercent(f.Fltr.Nose),
-				distribution: Dstr.decode(f.Fltr.Dstr),
-				monochromatic: f.Fltr.Mnch,
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1148416099: return { ...base, type: 'despeckle' };
-		case 1148417107: return {
-			...base,
-			type: 'dust and scratches',
-			filter: {
-				radius: f.Fltr['Rds '],
-				threshold: f.Fltr.Thsh,
-			},
-		};
-		case 1298427424: return {
-			...base,
-			type: 'median',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-			},
-		};
-		case 633: return {
-			...base,
-			type: 'reduce noise',
-			filter: {
-				preset: f.Fltr.preset,
-				removeJpegArtifact: f.Fltr.removeJPEGArtifact,
-				reduceColorNoise: parsePercent(f.Fltr.ClNs),
-				sharpenDetails: parsePercent(f.Fltr.Shrp),
-				channelDenoise: f.Fltr.channelDenoise.map(c => ({
-					channels: c.Chnl.map(i => Chnl.decode(i)),
-					amount: c.Amnt,
-					...(c.EdgF ? { preserveDetails: c.EdgF } : {}),
-				})),
-			},
-		};
-		case 1131180616: return {
-			...base,
-			type: 'color halftone',
-			filter: {
-				radius: f.Fltr['Rds '],
-				angle1: f.Fltr.Ang1,
-				angle2: f.Fltr.Ang2,
-				angle3: f.Fltr.Ang3,
-				angle4: f.Fltr.Ang4,
-			},
-		};
-		case 1131574132: return {
-			...base,
-			type: 'crystallize',
-			filter: {
-				cellSize: f.Fltr.ClSz,
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1180922912: return { ...base, type: 'facet' };
-		case 1181902701: return { ...base, type: 'fragment' };
-		case 1299870830: return {
-			...base,
-			type: 'mezzotint',
-			filter: {
-				type: MztT.decode(f.Fltr.MztT),
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1299407648: return {
-			...base,
-			type: 'mosaic',
-			filter: {
-				cellSize: parseUnits(f.Fltr.ClSz),
-			},
-		};
-		case 1349416044: return {
-			...base,
-			type: 'pointillize',
-			filter: {
-				cellSize: f.Fltr.ClSz,
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1131177075: return {
-			...base,
-			type: 'clouds',
-			filter: {
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1147564611: return {
-			...base,
-			type: 'difference clouds',
-			filter: {
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1180856947: return {
-			...base,
-			type: 'fibers',
-			filter: {
-				variance: f.Fltr.Vrnc,
-				strength: f.Fltr.Strg,
-				randomSeed: f.Fltr.RndS,
-			},
-		};
-		case 1282306886: return {
-			...base,
-			type: 'lens flare',
-			filter: {
-				brightness: f.Fltr.Brgh,
-				position: { x: f.Fltr.FlrC.Hrzn, y: f.Fltr.FlrC.Vrtc },
-				lensType: Lns.decode(f.Fltr['Lns ']),
-			},
-		};
-		case 1399353968: return { ...base, type: 'sharpen' };
-		case 1399353925: return { ...base, type: 'sharpen edges' };
-		case 1399353933: return { ...base, type: 'sharpen more' };
-		case 698: return {
-			...base,
-			type: 'smart sharpen',
-			filter: {
-				amount: parsePercent(f.Fltr.Amnt),
-				radius: parseUnits(f.Fltr['Rds ']),
-				threshold: f.Fltr.Thsh,
-				angle: f.Fltr.Angl,
-				moreAccurate: f.Fltr.moreAccurate,
-				blur: blurType.decode(f.Fltr.blur),
-				preset: f.Fltr.preset,
-				shadow: {
-					fadeAmount: parsePercent(f.Fltr.sdwM.Amnt),
-					tonalWidth: parsePercent(f.Fltr.sdwM.Wdth),
-					radius: f.Fltr.sdwM['Rds '],
-				},
-				highlight: {
-					fadeAmount: parsePercent(f.Fltr.hglM.Amnt),
-					tonalWidth: parsePercent(f.Fltr.hglM.Wdth),
-					radius: f.Fltr.hglM['Rds '],
-				},
-			},
-		};
-		case 1433301837: return {
-			...base,
-			type: 'unsharp mask',
-			filter: {
-				amount: parsePercent(f.Fltr.Amnt),
-				radius: parseUnits(f.Fltr['Rds ']),
-				threshold: f.Fltr.Thsh,
-			},
-		};
-		case 1147564832: return {
-			...base,
-			type: 'diffuse',
-			filter: {
-				mode: DfsM.decode(f.Fltr['Md  ']),
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1164796531: return {
-			...base,
-			type: 'emboss',
-			filter: {
-				angle: f.Fltr.Angl,
-				height: f.Fltr.Hght,
-				amount: f.Fltr.Amnt,
-			},
-		};
-		case 1165522034: return {
-			...base,
-			type: 'extrude',
-			filter: {
-				type: ExtT.decode(f.Fltr.ExtT),
-				size: f.Fltr.ExtS,
-				depth: f.Fltr.ExtD,
-				depthMode: ExtR.decode(f.Fltr.ExtR),
-				randomSeed: f.Fltr.FlRs,
-				solidFrontFaces: f.Fltr.ExtF,
-				maskIncompleteBlocks: f.Fltr.ExtM,
-			},
-		};
-		case 1181639749: return { ...base, type: 'find edges' };
-		case 1399616122: return { ...base, type: 'solarize' };
-		case 1416393504: return {
-			...base,
-			type: 'tiles',
-			filter: {
-				numberOfTiles: f.Fltr.TlNm,
-				maximumOffset: f.Fltr.TlOf,
-				fillEmptyAreaWith: FlCl.decode(f.Fltr.FlCl),
-				randomSeed: f.Fltr.FlRs,
-			},
-		};
-		case 1416782659: return {
-			...base,
-			type: 'trace contour',
-			filter: {
-				level: f.Fltr['Lvl '],
-				edge: CntE.decode(f.Fltr['Edg ']),
-			},
-		};
-		case 1466852384: return {
-			...base,
-			type: 'wind',
-			filter: {
-				method: WndM.decode(f.Fltr.WndM),
-				direction: Drct.decode(f.Fltr.Drct),
-			},
-		};
-		case 1148089458: return {
-			...base,
-			type: 'de-interlace',
-			filter: {
-				eliminate: IntE.decode(f.Fltr.IntE),
-				newFieldsBy: IntC.decode(f.Fltr.IntC),
-			},
-		};
-		case 1314149187: return { ...base, type: 'ntsc colors' };
-		case 1131639917: return {
-			...base,
-			type: 'custom',
-			filter: {
-				scale: f.Fltr['Scl '],
-				offset: f.Fltr.Ofst,
-				matrix: f.Fltr.Mtrx,
-			},
-		};
-		case 1214736464: return {
-			...base,
-			type: 'high pass',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-			},
-		};
-		case 1299737888: return {
-			...base,
-			type: 'maximum',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-			},
-		};
-		case 1299082528: return {
-			...base,
-			type: 'minimum',
-			filter: {
-				radius: parseUnits(f.Fltr['Rds ']),
-			},
-		};
-		case 1332114292: return {
-			...base,
-			type: 'offset',
-			filter: {
-				horizontal: f.Fltr.Hrzn,
-				vertical: f.Fltr.Vrtc,
-				undefinedAreas: FlMd.decode(f.Fltr['Fl  ']),
-			},
-		};
-		case 943:
-		case 991: return {
-			...base,
-			type: 'puppet',
-			filter: {
-				rigidType: f.Fltr.rigidType,
-				bounds: [
-					{ x: f.Fltr.PuX0, y: f.Fltr.PuY0, },
-					{ x: f.Fltr.PuX1, y: f.Fltr.PuY1, },
-					{ x: f.Fltr.PuX2, y: f.Fltr.PuY2, },
-					{ x: f.Fltr.PuX3, y: f.Fltr.PuY3, },
-				],
-				puppetShapeList: f.Fltr.puppetShapeList!.map(p => ({
-					rigidType: p.rigidType,
-					// TODO: VrsM
-					// TODO: VrsN
-					originalVertexArray: uint8ToPoints(p.originalVertexArray),
-					deformedVertexArray: uint8ToPoints(p.deformedVertexArray),
-					indexArray: Array.from(uint8ToUint32(p.indexArray)),
-					pinOffsets: arrayToPoints(p.pinOffsets),
-					posFinalPins: arrayToPoints(p.posFinalPins),
-					pinVertexIndices: p.pinVertexIndices,
-					selectedPin: p.selectedPin,
-					pinPosition: arrayToPoints(p.PinP),
-					pinRotation: p.PnRt,
-					pinOverlay: p.PnOv,
-					pinDepth: p.PnDp,
-					meshQuality: p.meshQuality,
-					meshExpansion: p.meshExpansion,
-					meshRigidity: p.meshRigidity,
-					imageResolution: p.imageResolution,
-					meshBoundaryPath: {
-						pathComponents: p.meshBoundaryPath.pathComponents.map(c => ({
-							shapeOperation: c.shapeOperation.split('.')[1],
-							paths: c.SbpL.map(t => ({
-								closed: t.Clsp,
-								points: t['Pts '].map(pt => ({
-									anchor: hrznVrtcToPoint(pt.Anch),
-									forward: hrznVrtcToPoint(pt['Fwd ']),
-									backward: hrznVrtcToPoint(pt['Bwd ']),
-									smooth: pt.Smoo,
-								})),
-							})),
-						})),
-					},
-				})),
-			},
-		};
-		case 1348620396: {
-			const parameters: { name: string; value: number; }[] = [];
-			const Flrt = f.Fltr as any;
-
-			for (let i = 0; i < fromAtoZ.length; i++) {
-				if (!Flrt[`PN${fromAtoZ[i]}a`]) break;
-
-				for (let j = 0; j < fromAtoZ.length; j++) {
-					if (!Flrt[`PN${fromAtoZ[i]}${fromAtoZ[j]}`]) break;
-
-					parameters.push({
-						name: Flrt[`PN${fromAtoZ[i]}${fromAtoZ[j]}`],
-						value: Flrt[`PF${fromAtoZ[i]}${fromAtoZ[j]}`]
-					});
-				}
-			}
-
-			return {
+	if ('Fltr' in f) {
+		switch (f.Fltr._classID) {
+			case 'boxblur': return {
 				...base,
-				type: 'oil paint plugin',
+				type: 'box blur',
 				filter: {
-					name: f.Fltr.KnNm,
-					gpu: f.Fltr.GpuY,
-					lighting: f.Fltr.LIWy,
-					parameters,
-				},
-			}
-		}
-		// case 2089: return {
-		// 	...base,
-		// 	type: 'adaptive wide angle',
-		// 	params: {
-		// 		correction: prjM.decode(f.Fltr.prjM),
-		// 		focalLength: f.Fltr.focL,
-		// 		cropFactor: f.Fltr.CrpF,
-		// 		imageScale: f.Fltr.imgS,
-		// 		imageX: f.Fltr.imgX,
-		// 		imageY: f.Fltr.imgY,
-		// 	},
-		// };
-		case 1215521360: return {
-			...base,
-			type: 'hsb/hsl',
-			filter: {
-				inputMode: ClrS.decode(f.Fltr.Inpt) as any,
-				rowOrder: ClrS.decode(f.Fltr.Otpt) as any,
-			},
-		};
-		case 1122: return {
-			...base,
-			type: 'oil paint',
-			filter: {
-				lightingOn: f.Fltr.lightingOn,
-				stylization: f.Fltr.stylization,
-				cleanliness: f.Fltr.cleanliness,
-				brushScale: f.Fltr.brushScale,
-				microBrush: f.Fltr.microBrush,
-				lightDirection: f.Fltr.LghD,
-				specularity: f.Fltr.specularity,
-			},
-		};
-		case 1282492025: {
-			return {
-				...base,
-				type: 'liquify',
-				filter: {
-					liquifyMesh: f.Fltr.LqMe,
+					radius: parseUnits(f.Fltr['Rds ']),
 				},
 			};
+			case 'GsnB': return {
+				...base,
+				type: 'gaussian blur',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+				},
+			};
+			case 'MtnB': return {
+				...base,
+				type: 'motion blur',
+				filter: {
+					angle: f.Fltr.Angl,
+					distance: parseUnits(f.Fltr.Dstn),
+				},
+			};
+			case 'RdlB': return {
+				...base,
+				type: 'radial blur',
+				filter: {
+					amount: f.Fltr.Amnt,
+					method: BlrM.decode(f.Fltr.BlrM),
+					quality: BlrQ.decode(f.Fltr.BlrQ),
+				},
+			};
+			case 'shapeBlur': return {
+				...base,
+				type: 'shape blur',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+					customShape: { name: f.Fltr.customShape['Nm  '], id: f.Fltr.customShape.Idnt },
+				},
+			};
+			case 'SmrB': return {
+				...base,
+				type: 'smart blur',
+				filter: {
+					radius: f.Fltr['Rds '],
+					threshold: f.Fltr.Thsh,
+					quality: SmBQ.decode(f.Fltr.SmBQ),
+					mode: SmBM.decode(f.Fltr.SmBM),
+				},
+			};
+			case 'surfaceBlur': return {
+				...base,
+				type: 'surface blur',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+					threshold: f.Fltr.Thsh,
+				},
+			};
+			case 'Dspl': return {
+				...base,
+				type: 'displace',
+				filter: {
+					horizontalScale: f.Fltr.HrzS,
+					verticalScale: f.Fltr.VrtS,
+					displacementMap: DspM.decode(f.Fltr.DspM),
+					undefinedAreas: UndA.decode(f.Fltr.UndA),
+					displacementFile: {
+						signature: f.Fltr.DspF.sig,
+						path: f.Fltr.DspF.path, // TODO: this is decoded incorrectly ???
+					},
+				},
+			};
+			case 'Pnch': return {
+				...base,
+				type: 'pinch',
+				filter: {
+					amount: f.Fltr.Amnt,
+				},
+			};
+			case 'Plr ': return {
+				...base,
+				type: 'polar coordinates',
+				filter: {
+					conversion: Cnvr.decode(f.Fltr.Cnvr),
+				},
+			};
+			case 'Rple': return {
+				...base,
+				type: 'ripple',
+				filter: {
+					amount: f.Fltr.Amnt,
+					size: RplS.decode(f.Fltr.RplS),
+				},
+			};
+			case 'Shr ': return {
+				...base,
+				type: 'shear',
+				filter: {
+					shearPoints: f.Fltr.ShrP.map(p => ({ x: p.Hrzn, y: p.Vrtc })),
+					shearStart: f.Fltr.ShrS,
+					shearEnd: f.Fltr.ShrE,
+					undefinedAreas: UndA.decode(f.Fltr.UndA),
+				},
+			};
+			case 'Sphr': return {
+				...base,
+				type: 'spherize',
+				filter: {
+					amount: f.Fltr.Amnt,
+					mode: SphM.decode(f.Fltr.SphM),
+				},
+			};
+			case 'Twrl': return {
+				...base,
+				type: 'twirl',
+				filter: {
+					angle: f.Fltr.Angl,
+				},
+			};
+			case 'Wave': return {
+				...base,
+				type: 'wave',
+				filter: {
+					numberOfGenerators: f.Fltr.NmbG,
+					type: Wvtp.decode(f.Fltr.Wvtp),
+					wavelength: { min: f.Fltr.WLMn, max: f.Fltr.WLMx },
+					amplitude: { min: f.Fltr.AmMn, max: f.Fltr.AmMx },
+					scale: { x: f.Fltr.SclH, y: f.Fltr.SclV },
+					randomSeed: f.Fltr.RndS,
+					undefinedAreas: UndA.decode(f.Fltr.UndA),
+				},
+			};
+			case 'ZgZg': return {
+				...base,
+				type: 'zigzag',
+				filter: {
+					amount: f.Fltr.Amnt,
+					ridges: f.Fltr.NmbR,
+					style: ZZTy.decode(f.Fltr.ZZTy),
+				},
+			};
+			case 'AdNs': return {
+				...base,
+				type: 'add noise',
+				filter: {
+					amount: parsePercent(f.Fltr.Nose),
+					distribution: Dstr.decode(f.Fltr.Dstr),
+					monochromatic: f.Fltr.Mnch,
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'DstS': return {
+				...base,
+				type: 'dust and scratches',
+				filter: {
+					radius: f.Fltr['Rds '],
+					threshold: f.Fltr.Thsh,
+				},
+			};
+			case 'Mdn ': return {
+				...base,
+				type: 'median',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+				},
+			};
+			case 'denoise': return {
+				...base,
+				type: 'reduce noise',
+				filter: {
+					preset: f.Fltr.preset,
+					removeJpegArtifact: f.Fltr.removeJPEGArtifact,
+					reduceColorNoise: parsePercent(f.Fltr.ClNs),
+					sharpenDetails: parsePercent(f.Fltr.Shrp),
+					channelDenoise: f.Fltr.channelDenoise.map(c => ({
+						channels: c.Chnl.map(i => Chnl.decode(i)),
+						amount: c.Amnt,
+						...(c.EdgF ? { preserveDetails: c.EdgF } : {}),
+					})),
+				},
+			};
+			case 'ClrH': return {
+				...base,
+				type: 'color halftone',
+				filter: {
+					radius: f.Fltr['Rds '],
+					angle1: f.Fltr.Ang1,
+					angle2: f.Fltr.Ang2,
+					angle3: f.Fltr.Ang3,
+					angle4: f.Fltr.Ang4,
+				},
+			};
+			case 'Crst': return {
+				...base,
+				type: 'crystallize',
+				filter: {
+					cellSize: f.Fltr.ClSz,
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'Mztn': return {
+				...base,
+				type: 'mezzotint',
+				filter: {
+					type: MztT.decode(f.Fltr.MztT),
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'Msc ': return {
+				...base,
+				type: 'mosaic',
+				filter: {
+					cellSize: parseUnits(f.Fltr.ClSz),
+				},
+			};
+			case 'Pntl': return {
+				...base,
+				type: 'pointillize',
+				filter: {
+					cellSize: f.Fltr.ClSz,
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'Clds': return {
+				...base,
+				type: 'clouds',
+				filter: {
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'DfrC': return {
+				...base,
+				type: 'difference clouds',
+				filter: {
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'Fbrs': return {
+				...base,
+				type: 'fibers',
+				filter: {
+					variance: f.Fltr.Vrnc,
+					strength: f.Fltr.Strg,
+					randomSeed: f.Fltr.RndS,
+				},
+			};
+			case 'LnsF': return {
+				...base,
+				type: 'lens flare',
+				filter: {
+					brightness: f.Fltr.Brgh,
+					position: { x: f.Fltr.FlrC.Hrzn, y: f.Fltr.FlrC.Vrtc },
+					lensType: Lns.decode(f.Fltr['Lns ']),
+				},
+			};
+			case 'smartSharpen': return {
+				...base,
+				type: 'smart sharpen',
+				filter: {
+					amount: parsePercent(f.Fltr.Amnt),
+					radius: parseUnits(f.Fltr['Rds ']),
+					threshold: f.Fltr.Thsh,
+					angle: f.Fltr.Angl,
+					moreAccurate: f.Fltr.moreAccurate,
+					blur: blurType.decode(f.Fltr.blur),
+					preset: f.Fltr.preset,
+					shadow: {
+						fadeAmount: parsePercent(f.Fltr.sdwM.Amnt),
+						tonalWidth: parsePercent(f.Fltr.sdwM.Wdth),
+						radius: f.Fltr.sdwM['Rds '],
+					},
+					highlight: {
+						fadeAmount: parsePercent(f.Fltr.hglM.Amnt),
+						tonalWidth: parsePercent(f.Fltr.hglM.Wdth),
+						radius: f.Fltr.hglM['Rds '],
+					},
+				},
+			};
+			case 'UnsM': return {
+				...base,
+				type: 'unsharp mask',
+				filter: {
+					amount: parsePercent(f.Fltr.Amnt),
+					radius: parseUnits(f.Fltr['Rds ']),
+					threshold: f.Fltr.Thsh,
+				},
+			};
+			case 'Dfs ': return {
+				...base,
+				type: 'diffuse',
+				filter: {
+					mode: DfsM.decode(f.Fltr['Md  ']),
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'Embs': return {
+				...base,
+				type: 'emboss',
+				filter: {
+					angle: f.Fltr.Angl,
+					height: f.Fltr.Hght,
+					amount: f.Fltr.Amnt,
+				},
+			};
+			case 'Extr': return {
+				...base,
+				type: 'extrude',
+				filter: {
+					type: ExtT.decode(f.Fltr.ExtT),
+					size: f.Fltr.ExtS,
+					depth: f.Fltr.ExtD,
+					depthMode: ExtR.decode(f.Fltr.ExtR),
+					randomSeed: f.Fltr.FlRs,
+					solidFrontFaces: f.Fltr.ExtF,
+					maskIncompleteBlocks: f.Fltr.ExtM,
+				},
+			};
+			case 'Tls ': return {
+				...base,
+				type: 'tiles',
+				filter: {
+					numberOfTiles: f.Fltr.TlNm,
+					maximumOffset: f.Fltr.TlOf,
+					fillEmptyAreaWith: FlCl.decode(f.Fltr.FlCl),
+					randomSeed: f.Fltr.FlRs,
+				},
+			};
+			case 'TrcC': return {
+				...base,
+				type: 'trace contour',
+				filter: {
+					level: f.Fltr['Lvl '],
+					edge: CntE.decode(f.Fltr['Edg ']),
+				},
+			};
+			case 'Wnd ': return {
+				...base,
+				type: 'wind',
+				filter: {
+					method: WndM.decode(f.Fltr.WndM),
+					direction: Drct.decode(f.Fltr.Drct),
+				},
+			};
+			case 'Dntr': return {
+				...base,
+				type: 'de-interlace',
+				filter: {
+					eliminate: IntE.decode(f.Fltr.IntE),
+					newFieldsBy: IntC.decode(f.Fltr.IntC),
+				},
+			};
+			case 'Cstm': return {
+				...base,
+				type: 'custom',
+				filter: {
+					scale: f.Fltr['Scl '],
+					offset: f.Fltr.Ofst,
+					matrix: f.Fltr.Mtrx,
+				},
+			};
+			case 'HghP': return {
+				...base,
+				type: 'high pass',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+				},
+			};
+			case 'Mxm ': return {
+				...base,
+				type: 'maximum',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+				},
+			};
+			case 'Mnm ': return {
+				...base,
+				type: 'minimum',
+				filter: {
+					radius: parseUnits(f.Fltr['Rds ']),
+				},
+			};
+			case 'Ofst': return {
+				...base,
+				type: 'offset',
+				filter: {
+					horizontal: f.Fltr.Hrzn,
+					vertical: f.Fltr.Vrtc,
+					undefinedAreas: FlMd.decode(f.Fltr['Fl  ']),
+				},
+			};
+			case 'rigidTransform': return {
+				...base,
+				type: 'puppet',
+				filter: {
+					rigidType: f.Fltr.rigidType,
+					bounds: [
+						{ x: f.Fltr.PuX0, y: f.Fltr.PuY0, },
+						{ x: f.Fltr.PuX1, y: f.Fltr.PuY1, },
+						{ x: f.Fltr.PuX2, y: f.Fltr.PuY2, },
+						{ x: f.Fltr.PuX3, y: f.Fltr.PuY3, },
+					],
+					puppetShapeList: f.Fltr.puppetShapeList!.map(p => ({
+						rigidType: p.rigidType,
+						// TODO: VrsM
+						// TODO: VrsN
+						originalVertexArray: uint8ToPoints(p.originalVertexArray),
+						deformedVertexArray: uint8ToPoints(p.deformedVertexArray),
+						indexArray: Array.from(uint8ToUint32(p.indexArray)),
+						pinOffsets: arrayToPoints(p.pinOffsets),
+						posFinalPins: arrayToPoints(p.posFinalPins),
+						pinVertexIndices: p.pinVertexIndices,
+						selectedPin: p.selectedPin,
+						pinPosition: arrayToPoints(p.PinP),
+						pinRotation: p.PnRt,
+						pinOverlay: p.PnOv,
+						pinDepth: p.PnDp,
+						meshQuality: p.meshQuality,
+						meshExpansion: p.meshExpansion,
+						meshRigidity: p.meshRigidity,
+						imageResolution: p.imageResolution,
+						meshBoundaryPath: {
+							pathComponents: p.meshBoundaryPath.pathComponents.map(c => ({
+								shapeOperation: c.shapeOperation.split('.')[1],
+								paths: c.SbpL.map(t => ({
+									closed: t.Clsp,
+									points: t['Pts '].map(pt => ({
+										anchor: hrznVrtcToPoint(pt.Anch),
+										forward: hrznVrtcToPoint(pt['Fwd ']),
+										backward: hrznVrtcToPoint(pt['Bwd ']),
+										smooth: pt.Smoo,
+									})),
+								})),
+							})),
+						},
+					})),
+				},
+			};
+			case 'PbPl': {
+				const parameters: { name: string; value: number; }[] = [];
+				const Flrt = f.Fltr as any;
+
+				for (let i = 0; i < fromAtoZ.length; i++) {
+					if (!Flrt[`PN${fromAtoZ[i]}a`]) break;
+
+					for (let j = 0; j < fromAtoZ.length; j++) {
+						if (!Flrt[`PN${fromAtoZ[i]}${fromAtoZ[j]}`]) break;
+
+						parameters.push({
+							name: Flrt[`PN${fromAtoZ[i]}${fromAtoZ[j]}`],
+							value: Flrt[`PF${fromAtoZ[i]}${fromAtoZ[j]}`]
+						});
+					}
+				}
+
+				return {
+					...base,
+					type: 'oil paint plugin',
+					filter: {
+						name: f.Fltr.KnNm,
+						gpu: f.Fltr.GpuY,
+						lighting: f.Fltr.LIWy,
+						parameters,
+					},
+				}
+			}
+			// case 2089: return {
+			// 	...base,
+			// 	type: 'adaptive wide angle',
+			// 	params: {
+			// 		correction: prjM.decode(f.Fltr.prjM),
+			// 		focalLength: f.Fltr.focL,
+			// 		cropFactor: f.Fltr.CrpF,
+			// 		imageScale: f.Fltr.imgS,
+			// 		imageX: f.Fltr.imgX,
+			// 		imageY: f.Fltr.imgY,
+			// 	},
+			// };
+			case 'HsbP': return {
+				...base,
+				type: 'hsb/hsl',
+				filter: {
+					inputMode: ClrS.decode(f.Fltr.Inpt) as any,
+					rowOrder: ClrS.decode(f.Fltr.Otpt) as any,
+				},
+			};
+			case 'oilPaint': return {
+				...base,
+				type: 'oil paint',
+				filter: {
+					lightingOn: f.Fltr.lightingOn,
+					stylization: f.Fltr.stylization,
+					cleanliness: f.Fltr.cleanliness,
+					brushScale: f.Fltr.brushScale,
+					microBrush: f.Fltr.microBrush,
+					lightDirection: f.Fltr.LghD,
+					specularity: f.Fltr.specularity,
+				},
+			};
+			case 'LqFy': {
+				return {
+					...base,
+					type: 'liquify',
+					filter: {
+						liquifyMesh: f.Fltr.LqMe,
+					},
+				};
+			}
+			default:
+				if (options.throwForMissingFeatures) {
+					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
+				}
+				return undefined;
 		}
-		default:
-			// console.log('FILTER', require('util').inspect(f, false, 99, true));
-			throw new Error(`Unknown filterID: ${(f as any).filterID}`);
+	} else {
+		switch (f.filterID) {
+			case 1098281575: return { ...base, type: 'average' };
+			case 1114403360: return { ...base, type: 'blur' };
+			case 1114403405: return { ...base, type: 'blur more' };
+			case 1148416099: return { ...base, type: 'despeckle' };
+			case 1180922912: return { ...base, type: 'facet' };
+			case 1181902701: return { ...base, type: 'fragment' };
+			case 1399353968: return { ...base, type: 'sharpen' };
+			case 1399353925: return { ...base, type: 'sharpen edges' };
+			case 1399353933: return { ...base, type: 'sharpen more' };
+			case 1181639749: return { ...base, type: 'find edges' };
+			case 1399616122: return { ...base, type: 'solarize' };
+			case 1314149187: return { ...base, type: 'ntsc colors' };
+			default:
+				if (options.throwForMissingFeatures) {
+					// console.log('FILTER', require('util').inspect(f, false, 99, true));
+					throw new Error(`Unknown filterID: ${(f as any).filterID}`);
+				}
+		}
 	}
 }
 
-function parseFilterFX(desc: SoLdDescriptorFilter): PlacedLayerFilter {
+function parseFilterFX(desc: SoLdDescriptorFilter, options: ReadOptions): PlacedLayerFilter {
 	return {
 		enabled: desc.enab,
 		validAtPosition: desc.validAtPosition,
 		maskEnabled: desc.filterMaskEnable,
 		maskLinked: desc.filterMaskLinked,
 		maskExtendWithWhite: desc.filterMaskExtendWithWhite,
-		list: desc.filterFXList.map(parseFilterFXItem),
+		list: desc.filterFXList.map(x => parseFilterFXItem(x, options)).filter((x): x is Filter => !!x),
 	};
 }
 
@@ -3199,11 +3210,11 @@ function getWarpFromPlacedLayer(placed: PlacedLayer): Warp {
 addHandler(
 	'SoLd',
 	hasKey('placedLayer'),
-	(reader, target, left) => {
+	(reader, target, left, _, options) => {
 		if (readSignature(reader) !== 'soLD') throw new Error(`Invalid SoLd type`);
 		const version = readInt32(reader);
 		if (version !== 4 && version !== 5) throw new Error(`Invalid SoLd version`);
-		const desc: SoLdDescriptor = readVersionAndDescriptor(reader);
+		const desc: SoLdDescriptor = readVersionAndDescriptor(reader, true);
 		// console.log('SoLd', require('util').inspect(desc, false, 99, true));
 		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
 		// console.log('SoLd.quiltWarp', require('util').inspect(desc.quiltWarp, false, 99, true));
@@ -3240,7 +3251,7 @@ addHandler(
 				originalCompID: desc.compInfo.originalCompID,
 			};
 		}
-		if (desc.filterFX) target.placedLayer.filter = parseFilterFX(desc.filterFX);
+		if (desc.filterFX) target.placedLayer.filter = parseFilterFX(desc.filterFX, options);
 
 		// console.log('filter', require('util').inspect(target.placedLayer.filter, false, 99, true));
 
