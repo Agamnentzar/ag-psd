@@ -1,5 +1,8 @@
 # Changelog
 
+## v21.0.0
+- Fixed parsing path `operation` field to handle empty value
+
 ## v20.2.1
 - Fixed invalid value of `globalAngle` when the value is negative
 

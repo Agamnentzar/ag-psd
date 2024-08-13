@@ -2640,7 +2640,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": false,
@@ -2779,7 +2778,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": false,
@@ -2885,7 +2883,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": false,
@@ -2991,7 +2988,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": false,
@@ -3157,7 +3153,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": true,
@@ -3208,7 +3203,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": true,
@@ -3259,7 +3253,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": true,
@@ -3310,7 +3303,6 @@
         },
         {
           "open": false,
-          "operation": "combine",
           "knots": [
             {
               "linked": true,

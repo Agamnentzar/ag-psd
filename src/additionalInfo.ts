@@ -244,13 +244,12 @@ export function readVectorMask(reader: PsdReader, vectorMask: LayerVectorMask, w
 				const boolOp = readInt16(reader);
 				const flags = readUint16(reader); // bit 1 always 1 ?
 				skipBytes(reader, 18);
-				// TODO: 'combine' here might be wrong
 				path = {
 					open: selector === 3,
-					operation: boolOp === -1 ? 'combine' : booleanOperations[boolOp],
 					knots: [],
 					fillRule: flags === 2 ? 'non-zero' : 'even-odd',
 				};
+				if (boolOp !== -1) path.operation = booleanOperations[boolOp];
 				paths.push(path);
 				break;
 			}
@@ -339,7 +338,7 @@ addHandler(
 		for (const path of vectorMask.paths) {
 			writeUint16(writer, path.open ? 3 : 0);
 			writeUint16(writer, path.knots.length);
-			writeUint16(writer, Math.abs(booleanOperations.indexOf(path.operation))); // default to 1 if not found
+			writeUint16(writer, path.operation ? booleanOperations.indexOf(path.operation) : -1); // -1 for undefined
 			writeUint16(writer, path.fillRule === 'non-zero' ? 2 : 1);
 			writeZeros(writer, 18); // TODO: these are sometimes non-zero
 

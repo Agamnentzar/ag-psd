@@ -446,7 +446,7 @@ export type BooleanOperation = 'exclude' | 'combine' | 'subtract' | 'intersect';
 
 export interface BezierPath {
 	open: boolean;
-	operation: BooleanOperation;
+	operation?: BooleanOperation;
 	knots: BezierKnot[];
 	fillRule: 'even-odd' | 'non-zero';
 }
