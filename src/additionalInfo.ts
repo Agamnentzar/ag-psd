@@ -371,10 +371,10 @@ interface VogkDescriptor {
 		};
 		keyOriginShapeBBox?: {
 			unitValueQuadVersion: number;
-			'Top ': DescriptorUnitsValue;
-			Left: DescriptorUnitsValue;
-			Btom: DescriptorUnitsValue;
-			Rght: DescriptorUnitsValue;
+			'Top ': DescriptorUnitsValue | number;
+			Left: DescriptorUnitsValue | number;
+			Btom: DescriptorUnitsValue | number;
+			Rght: DescriptorUnitsValue | number;
 		};
 		keyOriginBoxCorners?: {
 			rectangleCornerA: { Hrzn: number; Vrtc: number; };
@@ -405,10 +405,10 @@ addHandler(
 			if (i.keyOriginResolution != null) item.keyOriginResolution = i.keyOriginResolution;
 			if (i.keyOriginShapeBBox) {
 				item.keyOriginShapeBoundingBox = {
-					top: parseUnits(i.keyOriginShapeBBox['Top ']),
-					left: parseUnits(i.keyOriginShapeBBox.Left),
-					bottom: parseUnits(i.keyOriginShapeBBox.Btom),
-					right: parseUnits(i.keyOriginShapeBBox.Rght),
+					top: parseUnitsOrNumber(i.keyOriginShapeBBox['Top ']),
+					left: parseUnitsOrNumber(i.keyOriginShapeBBox.Left),
+					bottom: parseUnitsOrNumber(i.keyOriginShapeBBox.Btom),
+					right: parseUnitsOrNumber(i.keyOriginShapeBBox.Rght),
 				};
 			}
 			const rectRadii = i.keyOriginRRectRadii;
@@ -3399,7 +3399,7 @@ if (MOCK_HANDLERS) {
 		'vowv', // appears with Lr16 section ?
 		_ => false,
 		(reader, target, left) => {
-			const value = readUint32(reader); // 2 ????
+			const value = readUint32(reader); // always 2 ????
 			reader; target;
 			console.log('vowv', { value }, left());
 		},

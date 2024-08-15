@@ -476,7 +476,7 @@ function readLayerMaskData(reader: PsdReader, options: ReadOptions) {
 			(mask as any)._real = { realFlags, realUserMaskBackground, top2, left2, bottom2, right2 };*/
 
 			if (options.logMissingFeatures) {
-				console.log('Unhandled extra reaal user mask params');
+				console.log('Unhandled extra real user mask params');
 			}
 		}
 
