@@ -205,6 +205,7 @@ export interface LayerEffectGradientOverlay {
 	offset?: { x: number; y: number; };
 	gradient?: EffectSolidGradient | EffectNoiseGradient;
 	interpolationMethod?: InterpolationMethod;
+	angle?: number; // degrees
 }
 
 export interface LayerEffectsInfo {
