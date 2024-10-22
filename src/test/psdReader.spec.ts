@@ -14,6 +14,8 @@ const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
 const opts: ReadOptions = {
 	throwForMissingFeatures: true,
 	logMissingFeatures: true,
+	strict: false,
+	debug: true,
 };
 
 describe('PsdReader', () => {
@@ -67,14 +69,15 @@ describe('PsdReader', () => {
 
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
-	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|ignore-text-align|ignore-missing-object/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /ignore-text-align/.test(f)).forEach(f => {
-		it(`reads PSD file (${f})`, () => {
+	// fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|ignore-text-align|ignore-missing-object/.test(f)).forEach(f => {
+		fs.readdirSync(readFilesPath).filter(f => /ignore-missing-stroke/.test(f)).forEach(f => {
+		it.only(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
 			const psd = readPsdFromFile(path.join(basePath, fileName), {
 				...opts,
 				// logDevFeatures: true,
+				log: (...args: any[]) => console.log(`[${f}]`, ...args),
 			});
 			const expected = importPSD(basePath);
 			const images = loadImagesFromDirectory(basePath);

@@ -1,5 +1,5 @@
 import { toByteArray } from 'base64-js';
-import { BlendMode, ImageResources, ReadOptions, RenderingIntent } from './psd';
+import { BlendMode, ImageResources, RenderingIntent } from './psd';
 import {
 	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
 	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature,
@@ -21,7 +21,7 @@ import {
 export interface ResourceHandler {
 	key: number;
 	has: (target: ImageResources) => boolean | number;
-	read: (reader: PsdReader, target: ImageResources, left: () => number, options: ReadOptions) => void;
+	read: (reader: PsdReader, target: ImageResources, left: () => number) => void;
 	write: (writer: PsdWriter, target: ImageResources, index: number) => void;
 }
 
@@ -31,7 +31,7 @@ export const resourceHandlersMap: { [key: number]: ResourceHandler } = {};
 function addHandler(
 	key: number,
 	has: (target: ImageResources) => boolean | number,
-	read: (reader: PsdReader, target: ImageResources, left: () => number, options: ReadOptions) => void,
+	read: (reader: PsdReader, target: ImageResources, left: () => number) => void,
 	write: (writer: PsdWriter, target: ImageResources, index: number) => void,
 ) {
 	const handler: ResourceHandler = { key, has, read, write };
@@ -732,7 +732,7 @@ interface TimelineInformationDescriptor {
 addHandler(
 	1075, // Timeline Information
 	target => target.timelineInformation !== undefined,
-	(reader, target, _, options) => {
+	(reader, target) => {
 		const desc = readVersionAndDescriptor(reader) as TimelineInformationDescriptor;
 
 		target.timelineInformation = {
@@ -745,7 +745,7 @@ addHandler(
 			workOutTime: frac(desc.workOutTime),
 			repeats: desc.LCnt,
 			hasMotion: desc.hasMotion,
-			globalTracks: parseTrackList(desc.globalTrackList, !!options.logMissingFeatures),
+			globalTracks: parseTrackList(desc.globalTrackList, !!reader.logMissingFeatures),
 		};
 
 		if (desc.audioClipGroupList?.audioClipGroupList?.length) {
@@ -874,13 +874,13 @@ addHandler(
 addHandler(
 	1054, // URL List
 	target => target.urlsList !== undefined,
-	(reader, target, _, options) => {
+	(reader, target) => {
 		const count = readUint32(reader);
 		target.urlsList = [];
 
 		for (let i = 0; i < count; i++) {
 			const long = readSignature(reader);
-			if (long !== 'slic' && options.throwForMissingFeatures) throw new Error('Unknown long');
+			if (long !== 'slic' && reader.throwForMissingFeatures) throw new Error('Unknown long');
 			const id = readUint32(reader);
 			const url = readUnicodeString(reader);
 			target.urlsList.push({ id, url, ref: 'slice' });
@@ -1180,7 +1180,7 @@ addHandler(
 addHandler(
 	1036,
 	target => target.thumbnail !== undefined || target.thumbnailRaw !== undefined,
-	(reader, target, left, options) => {
+	(reader, target, left) => {
 		const format = readUint32(reader); // 1 = kJpegRGB, 0 = kRawRGB
 		const width = readUint32(reader);
 		const height = readUint32(reader);
@@ -1191,7 +1191,7 @@ addHandler(
 		const planes = readUint16(reader); // 1
 
 		if (format !== 1 || bitsPerPixel !== 24 || planes !== 1) {
-			options.logMissingFeatures && console.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
+			reader.logMissingFeatures && reader.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
 			skipBytes(reader, left());
 			return;
 		}
@@ -1199,7 +1199,7 @@ addHandler(
 		const size = left();
 		const data = readBytes(reader, size);
 
-		if (options.useRawThumbnail) {
+		if (reader.useRawThumbnail) {
 			target.thumbnailRaw = { width, height, data };
 		} else if (data.byteLength) {
 			target.thumbnail = createCanvasFromData(data);
@@ -1362,7 +1362,7 @@ interface AnimationsDescriptor {
 addHandler(
 	4000, // Plug-In resource(s)
 	target => target.animations !== undefined,
-	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
+	(reader, target, left) => {
 		const key = readSignature(reader);
 
 		if (key === 'mani') {
@@ -1395,18 +1395,18 @@ addHandler(
 							// console.log('#4000 AnDs:result', require('util').inspect(target.animations, false, 99, true));
 						} else if (key === 'Roll') {
 							const bytes = readBytes(reader, left());
-							logDevFeatures && console.log('#4000 Roll', bytes);
+							reader.logDevFeatures && reader.log('#4000 Roll', bytes);
 						} else {
-							logMissingFeatures && console.log('Unhandled subsection in #4000', key);
+							reader.logMissingFeatures && reader.log('Unhandled subsection in #4000', key);
 						}
 					});
 				}
 			});
 		} else if (key === 'mopt') {
 			const bytes = readBytes(reader, left());
-			logDevFeatures && console.log('#4000 mopt', bytes);
+			reader.logDevFeatures && reader.log('#4000 mopt', bytes);
 		} else {
-			logMissingFeatures && console.log('Unhandled key in #4000:', key);
+			reader.logMissingFeatures && reader.log('Unhandled key in #4000:', key);
 		}
 	},
 	(writer, target) => {
@@ -1462,7 +1462,7 @@ addHandler(
 MOCK_HANDLERS && addHandler(
 	4001, // Plug-In resource(s)
 	target => (target as any)._ir4001 !== undefined,
-	(reader, target, left, { logMissingFeatures, logDevFeatures }) => {
+	(reader, target, left) => {
 		if (MOCK_HANDLERS) {
 			LOG_MOCK_HANDLERS && console.log('image resource 4001', left());
 			(target as any)._ir4001 = readBytes(reader, left());
@@ -1477,12 +1477,12 @@ MOCK_HANDLERS && addHandler(
 
 			const length = readUint32(reader);
 			const bytes = readBytes(reader, length);
-			logDevFeatures && console.log('mfri', bytes);
+			reader.logDevFeatures && reader.log('mfri', bytes);
 		} else if (key === 'mset') {
 			const desc = readVersionAndDescriptor(reader);
-			logDevFeatures && console.log('mset', desc);
+			reader.logDevFeatures && reader.log('mset', desc);
 		} else {
-			logMissingFeatures && console.log('Unhandled key in #4001', key);
+			reader.logMissingFeatures && reader.log('Unhandled key in #4001', key);
 		}
 	},
 	(writer, target) => {

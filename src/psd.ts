@@ -402,7 +402,7 @@ export interface LayerTextData {
 	antiAlias?: AntiAlias;
 	gridding?: TextGridding;
 	orientation?: Orientation;
-	index?: number;
+	index?: number; // index of Editor in extra editor data related to this layer
 	warp?: Warp;
 	top?: number;
 	left?: number;
@@ -1689,8 +1689,15 @@ export interface ReadOptions {
 	/** Loads thumbnail raw data instead of decoding it's content into canvas.
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;
-	/** Usend only for development. */
+
+	/** Used only for development. */
 	logDevFeatures?: boolean;
+	/** Used only for development. */
+	strict?: boolean;
+	/** Used only for development. */
+	debug?: boolean;
+	/** Used only for development. */
+	log?: (...args: any[]) => void;
 }
 
 export interface WriteOptions {

@@ -31,7 +31,7 @@ const keysStyleSheet: KeysDict = {
 	'8': { name: 'Tracking' },
 	'9': { name: 'BaselineShift' },
 	// '10': ???
-	'11': { name: 'Kerning?' }, // different value than EngineData
+	'11': { name: 'Kerning?' }, // different value than EngineData (0 - numerical value, 1 - metric, 2 - optical)
 	'12': { name: 'FontCaps' },
 	'13': { name: 'FontBaseline' },
 
@@ -255,7 +255,7 @@ const keysRoot: KeysDict = {
 				},
 			},
 			'1': {
-				name: 'Editors?',
+				name: 'Editors?', // layer.text.index is specifying the index of the editor related to the layer
 				children: {
 					'0': {
 						name: 'Editor',

@@ -1910,6 +1910,7 @@ export const gradientInterpolationMethodType = createEnum<InterpolationMethod>('
 	perceptual: 'Perc',
 	linear: 'Lnr',
 	classic: 'Gcls',
+	smooth: 'Smoo',
 });
 
 export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {

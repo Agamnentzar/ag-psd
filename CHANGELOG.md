@@ -1,5 +1,9 @@
 # Changelog
 
+## v22.0.0
+- Fixed parsing path `smooth` gradient interpolation method
+- Changed `PsdReader` type
+
 ## v21.0.0
 - Fixed parsing path `operation` field to handle empty value
 

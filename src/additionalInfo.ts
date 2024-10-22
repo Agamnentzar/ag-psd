@@ -2,7 +2,7 @@ import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
 import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions } from './psd';
-import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo, ReadOptionsExt } from './psdReader';
+import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32 } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
@@ -14,7 +14,7 @@ export interface ExtendedWriteOptions extends WriteOptions {
 }
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
-type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, options: ReadOptionsExt) => void;
+type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd) => void;
 type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: ExtendedWriteOptions) => void;
 
 export interface InfoHandler {
@@ -513,7 +513,7 @@ addHandler(
 addHandler(
 	'lmfx',
 	target => target.effects !== undefined && hasMultiEffects(target.effects),
-	(reader, target, left, _, options) => {
+	(reader, target, left) => {
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error('Invalid lmfx version');
 
@@ -521,7 +521,7 @@ addHandler(
 		// console.log(require('util').inspect(info, false, 99, true));
 
 		// discard if read in 'lrFX' or 'lfx2' section
-		target.effects = parseEffects(desc, !!options.logMissingFeatures);
+		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
 
 		skipBytes(reader, left());
 	},
@@ -550,7 +550,18 @@ addHandler(
 	'luni',
 	hasKey('name'),
 	(reader, target, left) => {
-		target.name = readUnicodeString(reader);
+		if (left() > 4) {
+			const length = readUint32(reader);
+
+			if (left() >= (length * 2)) {
+				target.name = readUnicodeStringWithLength(reader, length);
+			} else {
+				if (reader.logDevFeatures) reader.log('name in luni section is too long');
+			}
+		} else {
+			if (reader.logDevFeatures) reader.log('empty luni section');
+		}
+
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
@@ -722,7 +733,7 @@ addHandler(
 	'shmd',
 	target => target.timestamp !== undefined || target.animationFrames !== undefined ||
 		target.animationFrameFlags !== undefined || target.timeline !== undefined || target.comps !== undefined,
-	(reader, target, left, _, options) => {
+	(reader, target, left) => {
 		const count = readUint32(reader);
 
 		for (let i = 0; i < count; i++) {
@@ -748,7 +759,7 @@ addHandler(
 						if (f.enab !== undefined) frame.enable = f.enab;
 						if (f.Ofst) frame.offset = horzVrtcToXY(f.Ofst);
 						if (f.FXRf) frame.referencePoint = horzVrtcToXY(f.FXRf);
-						if (f.Lefx) frame.effects = parseEffects(f.Lefx, !!options.logMissingFeatures);
+						if (f.Lefx) frame.effects = parseEffects(f.Lefx, !!reader.logMissingFeatures);
 						if (f.blendOptions && f.blendOptions.Opct) frame.opacity = parsePercent(f.blendOptions.Opct);
 						target.animationFrames.push(frame);
 					}
@@ -779,7 +790,7 @@ addHandler(
 					};
 
 					if (desc.trackList) {
-						timeline.tracks = parseTrackList(desc.trackList, !!options.logMissingFeatures);
+						timeline.tracks = parseTrackList(desc.trackList, !!reader.logMissingFeatures);
 					}
 
 					target.timeline = timeline;
@@ -802,7 +813,7 @@ addHandler(
 						if (item.FXRefPoint) t.effectsReferencePoint = { x: item.FXRefPoint.Hrzn, y: item.FXRefPoint.Vrtc };
 					}
 				} else {
-					options.logMissingFeatures && console.log('Unhandled "shmd" section key', key);
+					reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
 				}
 
 				skipBytes(reader, left());
@@ -3209,7 +3220,7 @@ function getWarpFromPlacedLayer(placed: PlacedLayer): Warp {
 addHandler(
 	'SoLd',
 	hasKey('placedLayer'),
-	(reader, target, left, _, options) => {
+	(reader, target, left) => {
 		if (readSignature(reader) !== 'soLD') throw new Error(`Invalid SoLd type`);
 		const version = readInt32(reader);
 		if (version !== 4 && version !== 5) throw new Error(`Invalid SoLd version`);
@@ -3250,7 +3261,7 @@ addHandler(
 				originalCompID: desc.compInfo.originalCompID,
 			};
 		}
-		if (desc.filterFX) target.placedLayer.filter = parseFilterFX(desc.filterFX, options);
+		if (desc.filterFX) target.placedLayer.filter = parseFilterFX(desc.filterFX, reader);
 
 		// console.log('filter', require('util').inspect(target.placedLayer.filter, false, 99, true));
 
@@ -3356,8 +3367,8 @@ addHandler(
 addHandler(
 	'Lr16',
 	() => false,
-	(reader, _target, _left, psd, options) => {
-		readLayerInfo(reader, psd, options);
+	(reader, _target, _left, psd) => {
+		readLayerInfo(reader, psd);
 	},
 	(_writer, _target) => {
 	},
@@ -3366,8 +3377,8 @@ addHandler(
 addHandler(
 	'Lr32',
 	() => false,
-	(reader, _target, _left, psd, options) => {
-		readLayerInfo(reader, psd, options);
+	(reader, _target, _left, psd) => {
+		readLayerInfo(reader, psd);
 	},
 	(_writer, _target) => {
 	},
@@ -3594,7 +3605,7 @@ interface FileOpenDescriptor {
 addHandler(
 	'lnk2',
 	(target: any) => !!(target as Psd).linkedFiles && (target as Psd).linkedFiles!.length > 0,
-	(reader, target, left, _, options) => {
+	(reader, target, left) => {
 		const psd = target as Psd;
 		psd.linkedFiles = psd.linkedFiles || [];
 
@@ -3649,7 +3660,7 @@ addHandler(
 			if (version >= 7) file.assetLockedState = readUint8(reader);
 			if (type === 'liFE' && version === 2) file.data = readBytes(reader, fileSize);
 
-			if (options.skipLinkedFilesData) file.data = undefined;
+			if (reader.skipLinkedFilesData) file.data = undefined;
 
 			psd.linkedFiles.push(file);
 			linkedFileDescriptor;
@@ -4836,7 +4847,7 @@ export function hasMultiEffects(effects: LayerEffectsInfo) {
 addHandler(
 	'lfx2',
 	target => target.effects !== undefined && !hasMultiEffects(target.effects),
-	(reader, target, left, _, options) => {
+	(reader, target, left) => {
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error(`Invalid lfx2 version`);
 
@@ -4845,7 +4856,7 @@ addHandler(
 
 		// TODO: don't discard if we got it from lmfx
 		// discard if read in 'lrFX' section
-		target.effects = parseEffects(desc, !!options.logMissingFeatures);
+		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
 
 		skipBytes(reader, left());
 	},
