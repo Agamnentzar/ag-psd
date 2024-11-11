@@ -377,6 +377,11 @@ export function readLayerInfo(reader: PsdReader, psd: Psd) {
 		if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
 			l.opened = type === SectionDividerType.OpenFolder;
 			l.children = [];
+
+			if (l.sectionDivider?.key) {
+				l.blendMode = toBlendMode[l.sectionDivider.key] ?? l.blendMode;
+			}
+
 			stack[stack.length - 1].children!.unshift(l);
 			stack.push(l);
 		} else if (type === SectionDividerType.BoundingSectionDivider) {

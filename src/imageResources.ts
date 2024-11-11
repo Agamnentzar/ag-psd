@@ -1208,22 +1208,22 @@ addHandler(
 	(writer, target) => {
 		let width = 0;
 		let height = 0;
-		let data: Uint8Array;
+		let data = new Uint8Array(0);
 
 		if (target.thumbnailRaw) {
 			width = target.thumbnailRaw.width;
 			height = target.thumbnailRaw.height;
 			data = target.thumbnailRaw.data;
 		} else {
-			const dataUrl = target.thumbnail!.toDataURL('image/jpeg', 1)?.substring('data:image/jpeg;base64,'.length);
+			try {
+				const dataUrl = target.thumbnail!.toDataURL('image/jpeg', 1)?.substring('data:image/jpeg;base64,'.length);
 
-			if (dataUrl) {
-				width = target.thumbnail!.width;
-				height = target.thumbnail!.height;
-				data = toByteArray(dataUrl);
-			} else {
-				data = new Uint8Array(0);
-			}
+				if (dataUrl) {
+					data = toByteArray(dataUrl); // this sometimes fails for some reason, maybe some browser bugs
+					width = target.thumbnail!.width;
+					height = target.thumbnail!.height;
+				}
+			} catch { }
 		}
 
 		const bitsPerPixel = 24;

@@ -1,11 +1,11 @@
 {
-  "width": 300,
+  "width": 200,
   "height": 200,
-  "channels": 4,
+  "channels": 3,
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
-    "captionDigest": "6b3ac2dabc68ebf0a233088eed51d142",
+    "captionDigest": "cdcffa7da8c7be09057076aeaf05c34e",
     "printInformation": {
       "printerName": "",
       "renderingIntent": "relative colorimetric",
@@ -29,12 +29,11 @@
       "y": 0,
       "scale": 1
     },
-    "alphaChannelNames": [
-      "Transparency"
-    ],
-    "alphaIdentifiers": [
-      0
-    ],
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
     "globalAngle": 120,
     "globalAltitude": 30,
     "printFlags": {
@@ -48,10 +47,8 @@
       "caption": false,
       "printFlags": true
     },
-    "layerState": 6,
+    "layerState": 4,
     "layersGroup": [
-      0,
-      0,
       0,
       0,
       0,
@@ -59,8 +56,6 @@
       0
     ],
     "layerGroupsEnabledId": [
-      1,
-      1,
       1,
       1,
       1,
@@ -82,7 +77,7 @@
           "top": 0,
           "left": 0,
           "bottom": 200,
-          "right": 300
+          "right": 200
         },
         "groupName": "",
         "slices": [
@@ -105,7 +100,7 @@
               "top": 0,
               "left": 0,
               "bottom": 200,
-              "right": 300
+              "right": 200
             },
             "backgroundColorType": "none",
             "backgroundColor": {
@@ -125,9 +120,9 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 8,
+    "idsSeedNumber": 6,
     "versionInfo": {
-      "hasRealMergedData": true,
+      "hasRealMergedData": false,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
@@ -136,15 +131,15 @@
   "children": [
     {
       "top": 0,
-      "left": 36,
-      "bottom": 200,
-      "right": 279,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
-      "name": "Layer 0",
+      "name": "Layer 1",
       "nameSource": "layr",
       "id": 2,
       "blendClippendElements": true,
@@ -156,7 +151,7 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1450198418.5244036,
+      "timestamp": 1731344307.292423,
       "referencePoint": {
         "x": 0,
         "y": 0
@@ -174,7 +169,7 @@
       "hidden": false,
       "name": "Group 1",
       "nameSource": "lset",
-      "id": 5,
+      "id": 3,
       "sectionDivider": {
         "type": 1,
         "key": "pass",
@@ -186,102 +181,45 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1450198418.5245173,
+      "timestamp": 1731344307.2924335,
       "referencePoint": {
         "x": 0,
         "y": 0
       },
       "opened": true,
-      "children": [
-        {
-          "top": 0,
-          "left": 0,
-          "bottom": 0,
-          "right": 0,
-          "blendMode": "pass through",
-          "opacity": 0.5019607843137255,
-          "clipping": false,
-          "transparencyProtected": false,
-          "hidden": true,
-          "name": "Group 2",
-          "nameSource": "lset",
-          "id": 7,
-          "sectionDivider": {
-            "type": 1,
-            "key": "pass",
-            "subType": 0
-          },
-          "protected": {
-            "transparency": false,
-            "composite": false,
-            "position": false
-          },
-          "layerColor": "none",
-          "timestamp": 1450198418.5244923,
-          "referencePoint": {
-            "x": 0,
-            "y": 0
-          },
-          "version": 80,
-          "opened": true,
-          "children": []
-        },
-        {
-          "top": 15,
-          "left": 0,
-          "bottom": 200,
-          "right": 273,
-          "blendMode": "normal",
-          "opacity": 1,
-          "clipping": false,
-          "transparencyProtected": false,
-          "hidden": false,
-          "name": "Layer 3",
-          "id": 4,
-          "blendClippendElements": true,
-          "blendInteriorElements": false,
-          "knockout": false,
-          "protected": {
-            "transparency": false,
-            "composite": false,
-            "position": false
-          },
-          "layerColor": "none",
-          "timestamp": 1450198418.5245013,
-          "referencePoint": {
-            "x": 0,
-            "y": 0
-          }
-        },
-        {
-          "top": 11,
-          "left": 24,
-          "bottom": 168,
-          "right": 268,
-          "blendMode": "normal",
-          "opacity": 1,
-          "clipping": false,
-          "transparencyProtected": false,
-          "hidden": false,
-          "name": "Layer 1",
-          "nameSource": "layr",
-          "id": 3,
-          "blendClippendElements": true,
-          "blendInteriorElements": false,
-          "knockout": false,
-          "protected": {
-            "transparency": false,
-            "composite": false,
-            "position": false
-          },
-          "layerColor": "none",
-          "timestamp": 1450198418.5245092,
-          "referencePoint": {
-            "x": 0,
-            "y": 0
-          }
-        }
-      ]
+      "children": []
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "name": "Group 2",
+      "nameSource": "lset",
+      "id": 5,
+      "sectionDivider": {
+        "type": 1,
+        "key": "norm",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1731344307.2924395,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "opened": true,
+      "children": []
     }
   ],
   "filterMask": {

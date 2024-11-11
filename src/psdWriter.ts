@@ -486,12 +486,13 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 			});
 			addChildren(layers, c.children);
 			layers.push({
+				...c,
+				blendMode: c.blendMode === 'pass through' ? 'normal' : c.blendMode,
 				sectionDivider: {
 					type: c.opened === false ? SectionDividerType.ClosedFolder : SectionDividerType.OpenFolder,
 					key: fromBlendMode[c.blendMode!] || 'pass',
 					subType: 0,
 				},
-				...c,
 			});
 		} else {
 			layers.push({ ...c });

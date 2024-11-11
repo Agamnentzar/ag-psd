@@ -274,7 +274,7 @@
           "left": 0,
           "bottom": 0,
           "right": 0,
-          "blendMode": "normal",
+          "blendMode": "pass through",
           "opacity": 1,
           "clipping": false,
           "transparencyProtected": false,
