@@ -1180,21 +1180,24 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 		if (e[key] && !Array.isArray(e[key])) throw new Error(`${key} should be an array`);
 	}
 
-	if (e.dropShadow?.[0] && !multi) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', log);
-	if (e.dropShadow?.[0] && multi) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', log));
-	if (e.innerShadow?.[0] && !multi) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', log);
-	if (e.innerShadow?.[0] && multi) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', log));
+	const useMulti = <T>(arr: undefined | T[]): arr is T[] => !!arr && arr.length > 1 && multi;
+	const useSingle = <T>(arr: undefined | T[]): arr is T[] => !!arr && arr.length >= 1 && (!multi || arr.length === 1);
+
+	if (useSingle(e.dropShadow)) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', log);
+	if (useMulti(e.dropShadow)) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', log));
+	if (useSingle(e.innerShadow)) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', log);
+	if (useMulti(e.innerShadow)) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', log));
 	if (e.outerGlow) info.OrGl = serializeEffectObject(e.outerGlow, 'outerGlow', log);
-	if (e.solidFill?.[0] && multi) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', log));
-	if (e.gradientOverlay?.[0] && multi) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', log));
-	if (e.stroke?.[0] && multi) info.frameFXMulti = e.stroke.map(i => serializeFxObject(i));
+	if (useMulti(e.solidFill)) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', log));
+	if (useMulti(e.gradientOverlay)) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', log));
+	if (useMulti(e.stroke)) info.frameFXMulti = e.stroke.map(i => serializeFxObject(i));
 	if (e.innerGlow) info.IrGl = serializeEffectObject(e.innerGlow, 'innerGlow', log);
 	if (e.bevel) info.ebbl = serializeEffectObject(e.bevel, 'bevel', log);
-	if (e.solidFill?.[0] && !multi) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', log);
+	if (useSingle(e.solidFill)) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', log);
 	if (e.patternOverlay) info.patternFill = serializeEffectObject(e.patternOverlay, 'patternOverlay', log);
-	if (e.gradientOverlay?.[0] && !multi) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', log);
+	if (useSingle(e.gradientOverlay)) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', log);
 	if (e.satin) info.ChFX = serializeEffectObject(e.satin, 'satin', log);
-	if (e.stroke?.[0] && !multi) info.FrFX = serializeFxObject(e.stroke?.[0]);
+	if (useSingle(e.stroke)) info.FrFX = serializeFxObject(e.stroke?.[0]);
 
 	if (multi) {
 		info.numModifyingFX = 0;

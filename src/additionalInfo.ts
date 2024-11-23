@@ -518,7 +518,7 @@ addHandler(
 		if (version !== 0) throw new Error('Invalid lmfx version');
 
 		const desc: LmfxDescriptor = readVersionAndDescriptor(reader);
-		// console.log(require('util').inspect(info, false, 99, true));
+		// console.log('READ', require('util').inspect(desc, false, 99, true));
 
 		// discard if read in 'lrFX' or 'lfx2' section
 		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
@@ -527,6 +527,7 @@ addHandler(
 	},
 	(writer, target, _, options) => {
 		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+		// console.log('WRITE', require('util').inspect(desc, false, 99, true));
 
 		writeUint32(writer, 0); // version
 		writeVersionAndDescriptor(writer, '', 'null', desc);
