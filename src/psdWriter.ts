@@ -173,7 +173,7 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 	let length = writer.offset - offset - 4;
 	let len = length;
 
-	while ((writer.offset % round) !== 0) {
+	while ((writer.offset - offset) % round !== 0) {
 		writeUint8(writer, 0);
 		len++;
 	}
