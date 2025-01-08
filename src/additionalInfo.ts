@@ -3247,7 +3247,6 @@ addHandler(
 		const version = readInt32(reader);
 		if (version !== 4 && version !== 5) throw new Error(`Invalid SoLd version`);
 		const desc: SoLdDescriptor = readVersionAndDescriptor(reader, true);
-		console.log('SoLd', desc);
 		// console.log('SoLd', require('util').inspect(desc, false, 99, true));
 		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
 		// console.log('SoLd.quiltWarp', require('util').inspect(desc.quiltWarp, false, 99, true));
