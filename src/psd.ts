@@ -1119,6 +1119,13 @@ type FilterVariant = {
 	filter: {
 		liquifyMesh: Uint8Array;
 	};
+} | {
+	type: 'perspective warp';
+	filter: {
+		indexes: number[][];
+		vertices: { x: number; y: number; }[];
+		warpedVertices: { x: number; y: number; }[];
+	}
 };
 
 /*

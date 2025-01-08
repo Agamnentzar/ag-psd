@@ -1893,6 +1893,15 @@ type SoLdDescriptorFilterItem = {
 		_classID: 'LqFy',
 		LqMe: Uint8Array;
 	};
+} | {
+	filterID: 442;
+	Fltr: {
+		_name: 'Perspective Warp';
+		_classID: 'perspectiveWarpTransform';
+		quads: { indices: number[] }[];
+		vertices: HrznVrtcDescriptor[];
+		warpedVertices: HrznVrtcDescriptor[];
+	}
 });
 
 interface SoLdDescriptorFilter {
@@ -2474,7 +2483,18 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 						liquifyMesh: f.Fltr.LqMe,
 					},
 				};
-			}
+			};
+			case 'perspectiveWarpTransform': {
+				return {
+					...base,
+					type: 'perspective warp',
+					filter: {
+						vertices: f.Fltr.vertices.map(v => ({ x: v.Hrzn.value, y: v.Vrtc.value })),
+						warpedVertices: f.Fltr.warpedVertices.map(v => ({ x: v.Hrzn.value, y: v.Vrtc.value })),
+						indexes: f.Fltr.quads.map(q => q.indices),
+					},
+				};
+			};
 			default:
 				if (options.throwForMissingFeatures) {
 					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
