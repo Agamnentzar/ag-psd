@@ -1902,7 +1902,7 @@ type SoLdDescriptorFilterItem = {
 		vertices: HrznVrtcDescriptor[];
 		warpedVertices: HrznVrtcDescriptor[];
 	}
-})
+});
 
 interface SoLdDescriptorFilter {
 	_name: '',
@@ -2485,7 +2485,6 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 				};
 			};
 			case 'perspectiveWarpTransform': {
-				console.log("FILTERFX", f.Fltr);
 				return {
 					...base,
 					type: 'perspective warp',
