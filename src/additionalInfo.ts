@@ -1893,7 +1893,7 @@ type SoLdDescriptorFilterItem = {
 		_classID: 'LqFy',
 		LqMe: Uint8Array;
 	};
-}) | {
+} | {
 	filterID: 442;
 	Fltr: {
 		_name: 'Perspective Warp';
@@ -1902,7 +1902,7 @@ type SoLdDescriptorFilterItem = {
 		vertices: HrznVrtcDescriptor[];
 		warpedVertices: HrznVrtcDescriptor[];
 	}
-}
+})
 
 interface SoLdDescriptorFilter {
 	_name: '',
