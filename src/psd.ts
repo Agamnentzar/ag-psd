@@ -678,7 +678,7 @@ export interface SelectiveColorAdjustment {
 	blacks?: CMYK;
 }
 
-export interface LinkedFile {
+export type LinkedFile = {
 	id: string; // must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)
 	name: string;
 	type?: string;
@@ -691,6 +691,15 @@ export interface LinkedFile {
 	childDocumentID?: string;
 	assetModTime?: number;
 	assetLockedState?: number;
+
+	// external files
+	linkedFile?: {
+		fileSize: number;
+		name: string;
+		fullPath: string;
+		originalPath: string;
+		relativePath: string;
+	};
 }
 
 type FilterVariant = {

@@ -3603,134 +3603,187 @@ interface FileOpenDescriptor {
 	compInfo: { compID: number; originalCompID: number; };
 }
 
-addHandler(
-	'lnk2',
-	(target: any) => !!(target as Psd).linkedFiles && (target as Psd).linkedFiles!.length > 0,
-	(reader, target, left) => {
-		const psd = target as Psd;
-		psd.linkedFiles = psd.linkedFiles || [];
+interface LinkedFileDescriptor {
+	descVersion: 2;
+	'Nm  ': string;
+	fullPath: string;
+	originalPath: string;
+	relPath: string;
+}
 
-		while (left() > 8) {
-			let size = readLength64(reader); // size
-			const startOffset = reader.offset;
-			const type = readSignature(reader) as 'liFD' | 'liFE' | 'liFA';
-			// liFD - linked file data
-			// liFE - linked file external
-			// liFA - linked file alias
-			const version = readInt32(reader);
-			const id = readPascalString(reader, 1);
-			const name = readUnicodeString(reader);
+function createLnkHandler(tag: string) {
+	addHandler(
+		tag,
+		(target: any) => {
+			const psd = target as Psd;
+			if (!psd.linkedFiles || !psd.linkedFiles.length) return false;
+			if (tag === 'lnkE' && !psd.linkedFiles.some(f => f.linkedFile)) return false;
+			return true;
+		},
+		(reader, target, left, _psd) => {
+			const psd = target as Psd;
+			psd.linkedFiles = psd.linkedFiles || [];
 
-			const fileType = readSignature(reader).trim(); // '    ' if empty
-			const fileCreator = readSignature(reader).trim(); // '    ' or '\0\0\0\0' if empty
-			const dataSize = readLength64(reader);
-			const hasFileOpenDescriptor = readUint8(reader);
-			const fileOpenDescriptor = hasFileOpenDescriptor ? readVersionAndDescriptor(reader) as FileOpenDescriptor : undefined;
-			const linkedFileDescriptor = type === 'liFE' ? readVersionAndDescriptor(reader) : undefined;
-			const file: LinkedFile = { id, name };
+			while (left() > 8) {
+				let size = readLength64(reader);
+				const startOffset = reader.offset;
+				const type = readSignature(reader) as 'liFD' | 'liFE' | 'liFA';
+				// liFD - linked file data
+				// liFE - linked file external
+				// liFA - linked file alias
+				const version = readInt32(reader);
+				const id = readPascalString(reader, 1);
+				const name = readUnicodeString(reader);
 
-			if (fileType) file.type = fileType;
-			if (fileCreator) file.creator = fileCreator;
+				const fileType = readSignature(reader).trim(); // '    ' if empty
+				const fileCreator = readSignature(reader).trim(); // '    ' or '\0\0\0\0' if empty
+				const dataSize = readLength64(reader);
+				const hasFileOpenDescriptor = readUint8(reader);
+				const fileOpenDescriptor = hasFileOpenDescriptor ? readVersionAndDescriptor(reader) as FileOpenDescriptor : undefined;
+				const linkedFileDescriptor = type === 'liFE' ? readVersionAndDescriptor(reader) as LinkedFileDescriptor : undefined;
+				const file: LinkedFile = { id, name };
 
-			if (fileOpenDescriptor) {
-				file.descriptor = {
-					compInfo: {
-						compID: fileOpenDescriptor.compInfo.compID,
-						originalCompID: fileOpenDescriptor.compInfo.originalCompID,
-					}
-				};
+				if (fileType) file.type = fileType;
+				if (fileCreator) file.creator = fileCreator;
+
+				if (fileOpenDescriptor) {
+					file.descriptor = {
+						compInfo: {
+							compID: fileOpenDescriptor.compInfo.compID,
+							originalCompID: fileOpenDescriptor.compInfo.originalCompID,
+						}
+					};
+				}
+
+				if (type === 'liFE' && version > 3) {
+					const year = readInt32(reader);
+					const month = readUint8(reader);
+					const day = readUint8(reader);
+					const hour = readUint8(reader);
+					const minute = readUint8(reader);
+					const seconds = readFloat64(reader);
+					const wholeSeconds = Math.floor(seconds);
+					const ms = (seconds - wholeSeconds) * 1000;
+					file.time = (new Date(Date.UTC(year, month, day, hour, minute, wholeSeconds, ms))).toISOString();
+				}
+
+				const fileSize = type === 'liFE' ? readLength64(reader) : 0;
+
+				if (type === 'liFA') skipBytes(reader, 8);
+				if (type === 'liFD') file.data = readBytes(reader, dataSize); // seems to be a typo in docs
+				if (version >= 5) file.childDocumentID = readUnicodeString(reader);
+				if (version >= 6) file.assetModTime = readFloat64(reader);
+				if (version >= 7) file.assetLockedState = readUint8(reader);
+				if (type === 'liFE' && version === 2) file.data = readBytes(reader, fileSize);
+
+				if (reader.skipLinkedFilesData) file.data = undefined;
+
+				if (tag === 'lnkE') {
+					file.linkedFile = {
+						fileSize,
+						name: linkedFileDescriptor?.['Nm  '] || '',
+						fullPath: linkedFileDescriptor?.fullPath || '',
+						originalPath: linkedFileDescriptor?.originalPath || '',
+						relativePath: linkedFileDescriptor?.relPath || '',
+					};
+				}
+
+				psd.linkedFiles.push(file);
+
+				while (size % 4) size++;
+				reader.offset = startOffset + size;
 			}
 
-			if (type === 'liFE' && version > 3) {
-				const year = readInt32(reader);
-				const month = readUint8(reader);
-				const day = readUint8(reader);
-				const hour = readUint8(reader);
-				const minute = readUint8(reader);
-				const seconds = readFloat64(reader);
-				const wholeSeconds = Math.floor(seconds);
-				const ms = (seconds - wholeSeconds) * 1000;
-				file.time = (new Date(year, month, day, hour, minute, wholeSeconds, ms)).toISOString();
+			skipBytes(reader, left()); // ?
+		},
+		(writer, target) => {
+			const psd = target as Psd;
+
+			for (const file of psd.linkedFiles!) {
+				if ((tag === 'lnkE') !== !!file.linkedFile) continue;
+
+				let version = 2;
+
+				if (file.assetLockedState != null) version = 7;
+				else if (file.assetModTime != null) version = 6;
+				else if (file.childDocumentID != null) version = 5;
+				else if (tag == 'lnkE') version = 3;
+
+				writeLength64(writer, 0);
+
+				const sizeOffset = writer.offset;
+				writeSignature(writer, (tag === 'lnkE') ? 'liFE' : (file.data ? 'liFD' : 'liFA'));
+				writeInt32(writer, version);
+				if (!file.id || typeof file.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(file.id)) {
+					throw new Error('Linked file ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
+				}
+				writePascalString(writer, file.id, 1);
+				writeUnicodeStringWithPadding(writer, file.name || '');
+				writeSignature(writer, file.type ? `${file.type}    `.substring(0, 4) : '    ');
+				writeSignature(writer, file.creator ? `${file.creator}    `.substring(0, 4) : '\0\0\0\0');
+				writeLength64(writer, file.data ? file.data.byteLength : 0);
+
+				if (file.descriptor && file.descriptor.compInfo) {
+					const desc: FileOpenDescriptor = {
+						compInfo: {
+							compID: file.descriptor.compInfo.compID,
+							originalCompID: file.descriptor.compInfo.originalCompID,
+						},
+					};
+
+					writeUint8(writer, 1);
+					writeVersionAndDescriptor(writer, '', 'null', desc);
+				} else {
+					writeUint8(writer, 0);
+				}
+
+				if (tag === 'lnkE') {
+					const desc: LinkedFileDescriptor = {
+						descVersion: 2,
+						'Nm  ': file.linkedFile?.name ?? '',
+						fullPath: file.linkedFile?.fullPath ?? '',
+						originalPath: file.linkedFile?.originalPath ?? '',
+						relPath: file.linkedFile?.relativePath ?? '',
+					};
+
+					writeVersionAndDescriptor(writer, '', 'ExternalFileLink', desc);
+
+					const time = file.time ? new Date(file.time) : new Date();
+					writeInt32(writer, time.getUTCFullYear());
+					writeUint8(writer, time.getUTCMonth());
+					writeUint8(writer, time.getUTCDate());
+					writeUint8(writer, time.getUTCHours());
+					writeUint8(writer, time.getUTCMinutes());
+					writeFloat64(writer, time.getUTCSeconds() + time.getUTCMilliseconds() / 1000);
+				}
+
+				if (file.data) {
+					writeBytes(writer, file.data);
+				} else {
+					writeLength64(writer, file.linkedFile?.fileSize || 0);
+				}
+
+				if (version >= 5) writeUnicodeStringWithPadding(writer, file.childDocumentID || '');
+				if (version >= 6) writeFloat64(writer, file.assetModTime || 0);
+				if (version >= 7) writeUint8(writer, file.assetLockedState || 0);
+
+				let size = writer.offset - sizeOffset;
+				writer.view.setUint32(sizeOffset - 4, size, false); // write size
+
+				while (size % 4) {
+					size++;
+					writeUint8(writer, 0);
+				}
 			}
+		},
+	);
+}
 
-			const fileSize = type === 'liFE' ? readLength64(reader) : 0;
-			if (type === 'liFA') skipBytes(reader, 8);
-			if (type === 'liFD') file.data = readBytes(reader, dataSize); // seems to be a typo in docs
-			if (version >= 5) file.childDocumentID = readUnicodeString(reader);
-			if (version >= 6) file.assetModTime = readFloat64(reader);
-			if (version >= 7) file.assetLockedState = readUint8(reader);
-			if (type === 'liFE' && version === 2) file.data = readBytes(reader, fileSize);
-
-			if (reader.skipLinkedFilesData) file.data = undefined;
-
-			psd.linkedFiles.push(file);
-			linkedFileDescriptor;
-
-			while (size % 4) size++;
-			reader.offset = startOffset + size;
-		}
-
-		skipBytes(reader, left()); // ?
-	},
-	(writer, target) => {
-		const psd = target as Psd;
-
-		for (const file of psd.linkedFiles!) {
-			let version = 2;
-
-			if (file.assetLockedState != null) version = 7;
-			else if (file.assetModTime != null) version = 6;
-			else if (file.childDocumentID != null) version = 5;
-			// TODO: else if (file.time != null) version = 3; (only for liFE)
-
-			writeUint32(writer, 0);
-			writeUint32(writer, 0); // size
-			const sizeOffset = writer.offset;
-			writeSignature(writer, file.data ? 'liFD' : 'liFA');
-			writeInt32(writer, version);
-			if (!file.id || typeof file.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(file.id)) {
-				throw new Error('Linked file ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
-			}
-			writePascalString(writer, file.id, 1);
-			writeUnicodeStringWithPadding(writer, file.name || '');
-			writeSignature(writer, file.type ? `${file.type}    `.substring(0, 4) : '    ');
-			writeSignature(writer, file.creator ? `${file.creator}    `.substring(0, 4) : '\0\0\0\0');
-			writeLength64(writer, file.data ? file.data.byteLength : 0);
-
-			if (file.descriptor && file.descriptor.compInfo) {
-				const desc: FileOpenDescriptor = {
-					compInfo: {
-						compID: file.descriptor.compInfo.compID,
-						originalCompID: file.descriptor.compInfo.originalCompID,
-					}
-				};
-
-				writeUint8(writer, 1);
-				writeVersionAndDescriptor(writer, '', 'null', desc);
-			} else {
-				writeUint8(writer, 0);
-			}
-
-			if (file.data) writeBytes(writer, file.data);
-			else writeLength64(writer, 0);
-			if (version >= 5) writeUnicodeStringWithPadding(writer, file.childDocumentID || '');
-			if (version >= 6) writeFloat64(writer, file.assetModTime || 0);
-			if (version >= 7) writeUint8(writer, file.assetLockedState || 0);
-
-			let size = writer.offset - sizeOffset;
-			writer.view.setUint32(sizeOffset - 4, size, false); // write size
-
-			while (size % 4) {
-				size++;
-				writeUint8(writer, 0);
-			}
-		}
-	},
-);
+createLnkHandler('lnk2');
+createLnkHandler('lnkE');
 
 addHandlerAlias('lnkD', 'lnk2');
 addHandlerAlias('lnk3', 'lnk2');
-addHandlerAlias('lnkE', 'lnk2');
 
 interface PthsDescriptor {
 	pathList: {

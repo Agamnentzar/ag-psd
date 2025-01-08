@@ -178,7 +178,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
-		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth', 'comment',
+		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth', 'comment', 'originalPath',
 	],
 	'tdta': [
 		'EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray',
@@ -935,7 +935,13 @@ export interface WarpDescriptor {
 		Left: DescriptorUnitsValue;
 		Btom: DescriptorUnitsValue;
 		Rght: DescriptorUnitsValue;
-	};
+	} | {
+		_classID: 'classFloatRect',
+		'Top ': number,
+		Left: number,
+		Btom: number,
+		Rght: number,
+	},
 	uOrder: number;
 	vOrder: number;
 	customEnvelopeWarp?: {

@@ -476,13 +476,6 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 				sectionDivider: {
 					type: SectionDividerType.BoundingSectionDivider,
 				},
-				// TESTING
-				// nameSource: 'lset',
-				// id: [4, 0, 0, 8, 11, 0, 0, 0, 0, 14][layers.length] || 0,
-				// layerColor: 'none',
-				// timestamp: [1611346817.349021, 0, 0, 1611346817.349175, 1611346817.3491833, 0, 0, 0, 0, 1611346817.349832][layers.length] || 0,
-				// protected: {},
-				// referencePoint: { x: 0, y: 0 },
 			});
 			addChildren(layers, c.children);
 			layers.push({

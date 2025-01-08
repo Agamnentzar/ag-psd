@@ -1,5 +1,8 @@
 # Changelog
 
+## v23.0.0
+- Fixed handling externally linked files in smart object layers
+
 ## v22.0.0
 - Fixed parsing path `smooth` gradient interpolation method
 - Changed `PsdReader` type
