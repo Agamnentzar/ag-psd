@@ -2489,9 +2489,9 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					...base,
 					type: 'perspective warp',
 					filter: {
-						vertices: f.Fltr.vertices.map(v => ({ x: v.Hrzn.value, y: v.Vrtc.value })),
-						warpedVertices: f.Fltr.warpedVertices.map(v => ({ x: v.Hrzn.value, y: v.Vrtc.value })),
-						indexes: f.Fltr.quads.map(q => q.indices),
+						vertices: f.Fltr.vertices.map(hrznVrtcToPoint),
+						warpedVertices: f.Fltr.warpedVertices.map(hrznVrtcToPoint),
+						quads: f.Fltr.quads.map(q => q.indices),
 					},
 				};
 			};
@@ -3173,6 +3173,17 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 				LqMe: f.filter.liquifyMesh,
 			},
 			filterID: 1282492025,
+		};
+		case 'perspective warp': return {
+			...base,
+			Fltr: {
+				_name: 'Perspective Warp',
+				_classID: 'perspectiveWarpTransform',
+				vertices: f.filter.vertices.map(pointToHrznVrtc),
+				warpedVertices: f.filter.warpedVertices.map(pointToHrznVrtc),
+				quads: f.filter.quads.map(indices => ({ indices })),
+			},
+			filterID: 442,
 		};
 		default: throw new Error(`Unknow filter type: ${(f as any).type}`);
 	}

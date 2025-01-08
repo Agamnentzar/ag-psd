@@ -1,5 +1,8 @@
 # Changelog
 
+## v23.1.0
+- Added support for perspective warp filter
+
 ## v23.0.0
 - Fixed handling externally linked files in smart object layers
 

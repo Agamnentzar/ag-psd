@@ -1122,9 +1122,9 @@ type FilterVariant = {
 } | {
 	type: 'perspective warp';
 	filter: {
-		indexes: number[][];
-		vertices: { x: number; y: number; }[];
-		warpedVertices: { x: number; y: number; }[];
+		quads: number[][]; // quad indices
+		vertices: { x: UnitsValue; y: UnitsValue; }[];
+		warpedVertices: { x: UnitsValue; y: UnitsValue; }[];
 	}
 };
 
