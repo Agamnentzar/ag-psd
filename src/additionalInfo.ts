@@ -1893,7 +1893,16 @@ type SoLdDescriptorFilterItem = {
 		_classID: 'LqFy',
 		LqMe: Uint8Array;
 	};
-});
+}) | {
+	filterID: 442;
+	Fltr: {
+		_name: 'Perspective Warp';
+		_classID: 'perspectiveWarpTransform';
+		quads: { indices: number[] }[];
+		vertices: HrznVrtcDescriptor[];
+		warpedVertices: HrznVrtcDescriptor[];
+	}
+}
 
 interface SoLdDescriptorFilter {
 	_name: '',
@@ -2474,7 +2483,19 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 						liquifyMesh: f.Fltr.LqMe,
 					},
 				};
-			}
+			};
+			case 'perspectiveWarpTransform': {
+				console.log("FILTERFX", f.Fltr);
+				return {
+					...base,
+					type: 'perspective warp',
+					filter: {
+						vertices: f.Fltr.vertices.map(v => ({ x: v.Hrzn.value, y: v.Vrtc.value })),
+						warpedVertices: f.Fltr.warpedVertices.map(v => ({ x: v.Hrzn.value, y: v.Vrtc.value })),
+						indexes: f.Fltr.quads.map(q => q.indices),
+					},
+				};
+			};
 			default:
 				if (options.throwForMissingFeatures) {
 					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
@@ -3226,6 +3247,7 @@ addHandler(
 		const version = readInt32(reader);
 		if (version !== 4 && version !== 5) throw new Error(`Invalid SoLd version`);
 		const desc: SoLdDescriptor = readVersionAndDescriptor(reader, true);
+		console.log('SoLd', desc);
 		// console.log('SoLd', require('util').inspect(desc, false, 99, true));
 		// console.log('SoLd.warp', require('util').inspect(desc.warp, false, 99, true));
 		// console.log('SoLd.quiltWarp', require('util').inspect(desc.quiltWarp, false, 99, true));
