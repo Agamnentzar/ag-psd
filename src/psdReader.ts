@@ -447,7 +447,9 @@ function readLayerRecord(reader: PsdReader, psd: Psd) {
 		// HACK: fix for sometimes layer.name string not being padded correctly, just skip until we get valid signature
 		while (left() > 4 && !validSignatureAt(reader, reader.offset)) reader.offset++;
 
-		while (left() > 4) readAdditionalLayerInfo(reader, layer, psd);
+		while (left() >= 12) readAdditionalLayerInfo(reader, layer, psd);
+
+		skipBytes(reader, left());
 	});
 
 	return { layer, channels };
@@ -953,7 +955,7 @@ export function readDataZip(reader: PsdReader, length: number, pixelData: PixelD
 	}
 }
 
-export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, bitDepth: number, step: number, offsets: number[], large: boolean) {
+export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offsets: number[], large: boolean) {
 	const data = pixelData && pixelData.data;
 	let lengths: Uint16Array | Uint32Array;
 
@@ -992,19 +994,19 @@ export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined,
 				const length = lengths[li];
 				const buffer = readBytes(reader, length);
 
-				for (let i = 0; i < length; i++) {
+				for (let i = 0, x = 0; i < length; i++) {
 					let header = buffer[i];
 
 					if (header > 128) {
 						const value = buffer[++i];
 						header = (256 - header) | 0;
 
-						for (let j = 0; j <= header; j = (j + 1) | 0) {
+						for (let j = 0; j <= header && x < width; j = (j + 1) | 0, x = (x + 1) | 0) {
 							data[p] = value;
 							p = (p + step) | 0;
 						}
 					} else if (header < 128) {
-						for (let j = 0; j <= header; j = (j + 1) | 0) {
+						for (let j = 0; j <= header && x < width; j = (j + 1) | 0, x = (x + 1) | 0) {
 							data[p] = buffer[++i];
 							p = (p + step) | 0;
 						}

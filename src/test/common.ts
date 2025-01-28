@@ -123,7 +123,7 @@ export function compareTwoFiles(expectedPath: string, actual: Uint8Array, name: 
 	const expected = new Uint8Array(expectedBuffer.buffer, expectedBuffer.byteOffset, expectedBuffer.byteLength);
 
 	if (expected.byteLength !== actual.byteLength) {
-		throw new Error(`File size is different than expected (${name})`);
+		throw new Error(`File size is different than expected (${name}, ${expected.byteLength} != ${actual.byteLength})`);
 	}
 
 	for (let i = 0; i < expected.byteLength; i++) {

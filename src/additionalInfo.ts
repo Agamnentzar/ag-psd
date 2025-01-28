@@ -813,6 +813,19 @@ addHandler(
 						if (item.Ofst) t.offset = { x: item.Ofst.Hrzn, y: item.Ofst.Vrtc };
 						if (item.FXRefPoint) t.effectsReferencePoint = { x: item.FXRefPoint.Hrzn, y: item.FXRefPoint.Vrtc };
 					}
+				} else if (key === 'extn') {
+					interface ExtnDescriptor {
+						generatorSettings: {
+							exportAs: {
+								exportOption: string;
+							};
+							layerTime: number;
+						};
+					}
+
+					const desc = readVersionAndDescriptor(reader) as ExtnDescriptor;
+					desc; // TODO: save this
+					reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
 				} else {
 					reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
 				}
@@ -3501,6 +3514,15 @@ addHandler(
 	},
 );
 */
+
+/*addHandler(
+	'OCIO', // generative tech?
+	() => false,
+	(reader, _target, left) => {
+	},
+	(_writer, _target) => {
+	},
+);*/
 
 /*
 interface GenIDesc {

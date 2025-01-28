@@ -156,7 +156,11 @@ describe('PsdReader', () => {
 			if (psd.linkedFiles) {
 				for (const file of psd.linkedFiles) {
 					if (file.data) {
-						compareFiles.push({ name: file.name, data: file.data });
+						let { name, data } = file;
+						while (compareFiles.some(f => f.name === name)) {
+							name = 'x' + name;
+						}
+						compareFiles.push({ name, data });
 						delete file.data;
 					}
 				}
