@@ -427,6 +427,18 @@ export interface LayerTextData {
 	boxBounds?: number[];
 	bounds?: UnitsBounds;
 	boundingBox?: UnitsBounds;
+
+	textPath?: {
+		BezierCurve?: {
+			/**the length number should be multiples of 8, which is present a bezier curve */
+			ControlPoints: number[];
+		},
+		Data: {
+			Type: number;
+			FrameMatrix: number[];
+			TextRange: number[];
+		}
+	}
 }
 
 export interface PatternInfo {
