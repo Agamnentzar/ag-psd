@@ -221,6 +221,7 @@ export interface LayerEffectsInfo {
 	stroke?: LayerEffectStroke[];
 	gradientOverlay?: LayerEffectGradientOverlay[];
 	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
+	curves?: any;
 }
 
 export type PixelArray = Uint8ClampedArray | Uint8Array | Uint16Array | Float32Array;
