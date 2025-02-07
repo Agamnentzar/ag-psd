@@ -97,6 +97,7 @@ interface ResourceDict {
 	SubscriptSize: number;
 	SubscriptPosition: number;
 	SmallCapSize: number;
+	TextFrameSet?: any[];
 }
 
 interface ParagraphRun {
@@ -120,7 +121,7 @@ interface PhotoshopNode {
 	};
 }
 
-interface EngineData {
+export interface EngineData {
 	EngineDict: {
 		Editor: { Text: string; };
 		ParagraphRun: {
