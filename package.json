@@ -35,7 +35,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^22.13.1",
+    "@types/node": "^18.11.18",
     "@types/pako": "^2.0.3",
     "browserify": "^17.0.1",
     "canvas": "^3.1.0",
