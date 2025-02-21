@@ -4,7 +4,7 @@ import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
 import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32 } from './psdWriter';
-import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds } from './descriptor';
+import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
 
@@ -581,7 +581,9 @@ addHandler(
 addHandler(
 	'lyid',
 	hasKey('id'),
-	(reader, target) => target.id = readUint32(reader),
+	(reader, target) => {
+		target.id = readUint32(reader);
+	},
 	(writer, target, _psd, options) => {
 		let id = target.id!;
 		while (options.layerIds.has(id)) id += 100; // make sure we don't have duplicate layer ids
@@ -731,9 +733,8 @@ interface CmlsDescriptor {
 }
 
 addHandler(
-	'shmd',
-	target => target.timestamp !== undefined || target.animationFrames !== undefined ||
-		target.animationFrameFlags !== undefined || target.timeline !== undefined || target.comps !== undefined,
+	'shmd', // Metadata setting
+	target => target.timestamp !== undefined || target.animationFrames !== undefined || target.animationFrameFlags !== undefined || target.timeline !== undefined || target.comps !== undefined,
 	(reader, target, left) => {
 		const count = readUint32(reader);
 
@@ -824,6 +825,7 @@ addHandler(
 					}
 
 					const desc = readVersionAndDescriptor(reader) as ExtnDescriptor;
+					// console.log(require('util').inspect(desc, false, 99, true));
 					desc; // TODO: save this
 					reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
 				} else {
@@ -1889,8 +1891,8 @@ type SoLdDescriptorFilterItem = {
 } | {
 	filterID: 1122;
 	Fltr: {
-		_name: 'Oil Paint',
-		_classID: 'oilPaint',
+		_name: 'Oil Paint';
+		_classID: 'oilPaint';
 		lightingOn: boolean;
 		stylization: number;
 		cleanliness: number;
@@ -1902,8 +1904,8 @@ type SoLdDescriptorFilterItem = {
 } | {
 	filterID: 1282492025;
 	Fltr: {
-		_name: 'Liquify',
-		_classID: 'LqFy',
+		_name: 'Liquify';
+		_classID: 'LqFy';
 		LqMe: Uint8Array;
 	};
 } | {
@@ -1911,11 +1913,33 @@ type SoLdDescriptorFilterItem = {
 	Fltr: {
 		_name: 'Perspective Warp';
 		_classID: 'perspectiveWarpTransform';
-		quads: { indices: number[] }[];
+		quads: { indices: number[]; }[];
 		vertices: HrznVrtcDescriptor[];
 		warpedVertices: HrznVrtcDescriptor[];
-	}
+	};
+} | {
+	filterID: 1131574899;
+	Fltr: {
+		_name: 'Curves';
+		_classID: 'Crvs';
+		presetKind: string; // 'presetKindType.presetKindCustom';
+		Adjs: {
+			_name: '';
+			_classID: 'CrvA';
+			Chnl: string[]; // 'Chnl.Cmps' | 'Chnl.Rd  ' | 'Chnl.Grn ' | 'Chnl.Bl  '
+			'Crv '?: FilterCurvesCurvePoint[];
+			Mpng?: number[];
+		}[];
+	};
 });
+
+interface FilterCurvesCurvePoint {
+	_name: '';
+	_classID: 'Pnt ';
+	Hrzn: 0;
+	Vrtc: 0;
+	Cnty?: boolean;
+}
 
 interface SoLdDescriptorFilter {
 	_name: '',
@@ -2505,6 +2529,33 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 						vertices: f.Fltr.vertices.map(hrznVrtcToPoint),
 						warpedVertices: f.Fltr.warpedVertices.map(hrznVrtcToPoint),
 						quads: f.Fltr.quads.map(q => q.indices),
+					},
+				};
+			};
+			case 'Crvs': {
+				return {
+					...base,
+					type: 'curves',
+					filter: {
+						presetKind: presetKindType.decode(f.Fltr.presetKind),
+						adjustments: f.Fltr.Adjs.map(a => {
+							const channels = a.Chnl.map(c => Chnl.decode(c));
+
+							if (a['Crv ']) {
+								return {
+									channels,
+									curve: a['Crv '].map(c => {
+										const point: { x: number; y: number; curved?: boolean; } = { x: c.Hrzn, y: c.Vrtc };
+										if (c.Cnty) point.curved = true;
+										return point;
+									}),
+								};
+							} else if (a.Mpng) {
+								return { channels, values: a.Mpng };
+							} else {
+								throw new Error(`Unknown curve adjustment`);
+							}
+						}),
 					},
 				};
 			};
@@ -3198,6 +3249,35 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			},
 			filterID: 442,
 		};
+		case 'curves': return {
+			...base,
+			Fltr: {
+				_name: 'Curves',
+				_classID: 'Crvs',
+				presetKind: presetKindType.encode(f.filter.presetKind),
+				Adjs: f.filter.adjustments.map(a => 'curve' in a ? {
+					_name: '',
+					_classID: 'CrvA',
+					Chnl: a.channels.map(c => Chnl.encode(c)),
+					'Crv ': a.curve.map(c => ({
+						_name: '',
+						_classID: 'Pnt ',
+						Hrzn: c.x,
+						Vrtc: c.y,
+						...(c.curved ? { Cnty: true } : {}),
+					}) as FilterCurvesCurvePoint),
+				} : {
+					_name: '',
+					_classID: 'CrvA',
+					Chnl: a.channels.map(c => Chnl.encode(c)),
+					Mpng: a.values,
+				}),
+			},
+			filterID: 1131574899,
+		};
+		// case 'hsb/hsl': return {
+		// TODO: ...
+		// };
 		default: throw new Error(`Unknow filter type: ${(f as any).type}`);
 	}
 }
@@ -3220,9 +3300,14 @@ interface SoLdDescriptor {
 	'Sz  ': { _name: '', _classID: 'Pnt ', Wdth: number; Hght: number; };
 	Rslt: DescriptorUnitsValue;
 	filterFX?: SoLdDescriptorFilter;
-	comp?: number;
-	compInfo?: { compID: number; originalCompID: number; };
+	comp?: number; // TODO: support this ?
+	compInfo?: { compID: number; originalCompID: number; }; // TODO: support this ?
 	Impr?: {}; // ???
+	ClMg?: { // TODO: support this ?
+		_name: '';
+		_classID: 'ClMg';
+		placedLayerOCIOConversion: string; // 'placedLayerOCIOConversion.placedLayerOCIOConvertEmbedded'
+	};
 }
 
 // let t: any;
@@ -3359,7 +3444,14 @@ addHandler(
 			};
 		}
 
-		// console.log('write', require('util').inspect(desc.filterFX, false, 99, true)); ///
+		// TODO:
+		// desc.comp = -1;
+		// desc.compInfo = { _name: '', _classID: 'null', compID: -1, originalCompID: -1 } as any;
+		// desc.ClMg = {
+		// 	_name: '',
+		// 	_classID: 'ClMg',
+		// 	placedLayerOCIOConversion: 'placedLayerOCIOConversion.placedLayerOCIOConvertEmbedded'
+		// } as any;
 
 		// if (JSON.stringify(t) !== JSON.stringify(desc)) {
 		// 	console.log('read', require('util').inspect(t, false, 99, true));
@@ -3515,31 +3607,50 @@ addHandler(
 );
 */
 
-/*addHandler(
-	'OCIO', // generative tech?
-	() => false,
-	(reader, _target, left) => {
-	},
-	(_writer, _target) => {
-	},
-);*/
-
-/*
-interface GenIDesc {
-	isUsingGenTech: number;
+if (MOCK_HANDLERS) {
+	addHandler(
+		'CAI ',
+		target => (target as any)._CAI_ !== undefined,
+		(reader, target, left) => {
+			(target as any)._CAI_ = readBytes(reader, left());
+		},
+		(writer, target) => {
+			writeBytes(writer, (target as any)._CAI_);
+		},
+	);
 }
 
-addHandler(
-	'GenI', // generative tech
-	() => false,
-	(reader, _target, left) => {
-		const desc = readVersionAndDescriptor(reader) as GenIDesc;
-		console.log('GenI', require('util').inspect(desc, false, 99, true));
-	},
-	(_writer, _target) => {
-	},
-);
-*/
+if (MOCK_HANDLERS) {
+	addHandler(
+		'OCIO', // generative tech?
+		target => (target as any)._OCIO !== undefined,
+		(reader, target, left) => {
+			(target as any)._OCIO = readBytes(reader, left());
+		},
+		(writer, target) => {
+			writeBytes(writer, (target as any)._OCIO);
+		},
+	);
+}
+
+// interface GenIDesc {
+// 	isUsingGenTech: number;
+// }
+
+if (MOCK_HANDLERS) {
+	addHandler(
+		'GenI', // generative tech
+		target => (target as any)._GenI !== undefined,
+		(reader, target, left) => {
+			(target as any)._GenI = readBytes(reader, left());
+			// const desc = readVersionAndDescriptor(reader) as GenIDesc;
+			// console.log('GenI', require('util').inspect(desc, false, 99, true));
+		},
+		(writer, target) => {
+			writeBytes(writer, (target as any)._GenI);
+		},
+	);
+}
 
 function readRect(reader: PsdReader) {
 	const top = readInt32(reader);
@@ -4794,18 +4905,22 @@ addHandler(
 		const version = readInt32(reader);
 		if (version < 1 || version > 3) throw new Error(`Invalid filterEffects version ${version}`);
 
-		if (readUint32(reader)) throw new Error('filterEffects: 64 bit length is not supported');
-		const length = readUint32(reader);
-		const end = reader.offset + length;
 		target.filterEffectsMasks = [];
 
-		while (reader.offset < end) {
+		while (leftBytes() > 8) {
+			if (readUint32(reader)) throw new Error('filterEffects: 64 bit length is not supported');
+			const length = readUint32(reader);
+			const end = reader.offset + length;
+
 			const id = readPascalString(reader, 1);
+
 			const effectVersion = readInt32(reader);
 			if (effectVersion !== 1) throw new Error(`Invalid filterEffect version ${effectVersion}`);
+
 			if (readUint32(reader)) throw new Error('filterEffect: 64 bit length is not supported');
 			/*const effectLength =*/ readUint32(reader);
 			// const endOfEffect = reader.offset + effectLength;
+
 			const top = readInt32(reader);
 			const left = readInt32(reader);
 			const bottom = readInt32(reader);
@@ -4815,11 +4930,12 @@ addHandler(
 			const channels: ({ compressionMode: number; data: Uint8Array; } | undefined)[] = [];
 
 			// 0 -> R, 1 -> G, 2 -> B, 25 -> A
-			for (let i = 0; i < (maxChannels + 2); i++) {
+			for (let i = 0; i < (maxChannels + 2); i++) { // channels + user mask + sheet mask
 				const exists = readInt32(reader);
 				if (exists) {
 					if (readUint32(reader)) throw new Error('filterEffect: 64 bit length is not supported');
 					const channelLength = readUint32(reader);
+					if (!channelLength) throw new Error('filterEffect: Empty channel');
 					const compressionMode = readUint16(reader);
 					const data = readBytes(reader, channelLength - 2);
 					channels.push({ compressionMode, data });
@@ -4830,25 +4946,41 @@ addHandler(
 
 			target.filterEffectsMasks.push({ id, top, left, bottom, right, depth, channels });
 
-			if (leftBytes() && readUint8(reader)) {
+			if (reader.offset < end && readUint8(reader)) {
+				const top = readInt32(reader);
+				const left = readInt32(reader);
+				const bottom = readInt32(reader);
+				const right = readInt32(reader);
+				if (readUint32(reader)) throw new Error('filterEffect: 64 bit length is not supported');
+				const extraLength = readUint32(reader);
 				const compressionMode = readUint16(reader);
-				const data = readBytes(reader, leftBytes());
-				target.filterEffectsMasks[target.filterEffectsMasks.length - 1].extra = { compressionMode, data };
+				const data = readBytes(reader, extraLength - 2);
+				target.filterEffectsMasks[target.filterEffectsMasks.length - 1].extra = { top, left, bottom, right, compressionMode, data };
+			}
+
+			reader.offset = end;
+			let len = length;
+			while (len % 4) {
+				reader.offset++;
+				len++;
 			}
 		}
 	},
 	(writer, target) => {
-		writeInt32(writer, 3);
-		writeUint32(writer, 0);
-		writeUint32(writer, 0);
-		const lengthOffset = writer.offset;
+		writeInt32(writer, 3); // version
 
 		for (const mask of target.filterEffectsMasks!) {
+			writeUint32(writer, 0);
+			writeUint32(writer, 0);
+			const lengthOffset = writer.offset;
+
 			writePascalString(writer, mask.id, 1);
-			writeInt32(writer, 1);
+			writeInt32(writer, 1); // version
+
 			writeUint32(writer, 0);
 			writeUint32(writer, 0);
 			const length2Offset = writer.offset;
+
 			writeInt32(writer, mask.top);
 			writeInt32(writer, mask.left);
 			writeInt32(writer, mask.bottom);
@@ -4869,16 +5001,28 @@ addHandler(
 			}
 
 			writer.view.setUint32(length2Offset - 4, writer.offset - length2Offset, false);
-		}
 
-		const extra = target.filterEffectsMasks![target.filterEffectsMasks!.length - 1]?.extra;
-		if (extra) {
-			writeUint8(writer, 1);
-			writeUint16(writer, extra.compressionMode);
-			writeBytes(writer, extra.data);
-		}
+			const extra = target.filterEffectsMasks![target.filterEffectsMasks!.length - 1]?.extra;
+			if (extra) {
+				writeUint8(writer, 1);
+				writeInt32(writer, extra.top);
+				writeInt32(writer, extra.left);
+				writeInt32(writer, extra.bottom);
+				writeInt32(writer, extra.right);
+				writeUint32(writer, 0);
+				writeUint32(writer, extra.data.byteLength + 2);
+				writeUint16(writer, extra.compressionMode);
+				writeBytes(writer, extra.data);
+			}
 
-		writer.view.setUint32(lengthOffset - 4, writer.offset - lengthOffset, false);
+			let length = writer.offset - lengthOffset;
+			writer.view.setUint32(lengthOffset - 4, length, false);
+
+			while (length % 4) {
+				writeZeros(writer, 1);
+				length++;
+			}
+		}
 	},
 );
 
@@ -5006,8 +5150,11 @@ addHandler(
 			engine: enumValue(desc.Engn)!,
 		};
 
+		if (desc.Vrsn) target.compositorUsed.version = desc.Vrsn;
+		if (desc.psVersion) target.compositorUsed.photoshopVersion = desc.psVersion;
 		if (desc.enableCompCore) target.compositorUsed.enableCompCore = enumValue(desc.enableCompCore);
 		if (desc.enableCompCoreGPU) target.compositorUsed.enableCompCoreGPU = enumValue(desc.enableCompCoreGPU);
+		if (desc.enableCompCoreThreads) target.compositorUsed.enableCompCoreThreads = enumValue(desc.enableCompCoreThreads);
 		if (desc.compCoreSupport) target.compositorUsed.compCoreSupport = enumValue(desc.compCoreSupport);
 		if (desc.compCoreGPUSupport) target.compositorUsed.compCoreGPUSupport = enumValue(desc.compCoreGPUSupport);
 
@@ -5016,16 +5163,16 @@ addHandler(
 	(writer, target) => {
 		const cinf = target.compositorUsed!;
 		const desc: CinfDescriptor = {
-			Vrsn: { major: 1, minor: 0, fix: 0 }, // TEMP
-			// psVersion: { major: 22, minor: 3, fix: 1 }, // TESTING
-			description: cinf.description,
-			reason: cinf.reason,
-			Engn: `Engn.${cinf.engine}`,
-		};
+			Vrsn: cinf.version || { major: 1, minor: 0, fix: 0 },
+		} as any;
 
+		if (cinf.photoshopVersion) desc.psVersion = cinf.photoshopVersion;
+		desc.description = cinf.description;
+		desc.reason = cinf.reason;
+		desc.Engn = `Engn.${cinf.engine}`;
 		if (cinf.enableCompCore) desc.enableCompCore = `enable.${cinf.enableCompCore}`;
 		if (cinf.enableCompCoreGPU) desc.enableCompCoreGPU = `enable.${cinf.enableCompCoreGPU}`;
-		// desc.enableCompCoreThreads = `enable.feature`; // TESTING
+		if (cinf.enableCompCoreThreads) desc.enableCompCoreThreads = `enable.${cinf.enableCompCoreThreads}`;
 		if (cinf.compCoreSupport) desc.compCoreSupport = `reason.${cinf.compCoreSupport}`;
 		if (cinf.compCoreGPUSupport) desc.compCoreGPUSupport = `reason.${cinf.compCoreGPUSupport}`;
 

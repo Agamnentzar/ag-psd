@@ -7,13 +7,14 @@ export interface PsdWriter {
 	offset: number;
 	buffer: ArrayBuffer;
 	view: DataView;
+	tempBuffer: Uint8Array | undefined;
 }
 
 export function createWriter(size = 4096): PsdWriter {
 	const buffer = new ArrayBuffer(size);
 	const view = new DataView(buffer);
 	const offset = 0;
-	return { buffer, view, offset };
+	return { buffer, view, offset, tempBuffer: undefined };
 }
 
 export function getWriterBuffer(writer: PsdWriter) {
@@ -173,10 +174,15 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 	let length = writer.offset - offset - 4;
 	let len = length;
 
-	while ((writer.offset % round) !== 0) {
+	while ((len % round) !== 0) {
 		writeUint8(writer, 0);
 		len++;
 	}
+
+	// while ((writer.offset % round) !== 0) {
+	// 	writeUint8(writer, 0);
+	// 	len++;
+	// }
 
 	if (writeTotalLength) {
 		length = len;
@@ -234,7 +240,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	const globalAlpha = !!imageData && hasAlpha(imageData);
 	const maxBufferSize = Math.max(getLargestLayerSize(psd.children), 4 * 2 * psd.width * psd.height + 2 * psd.height);
-	const tempBuffer = new Uint8Array(maxBufferSize);
+	writer.tempBuffer = new Uint8Array(maxBufferSize);
 
 	// header
 	writeSignature(writer, '8BPS');
@@ -248,7 +254,13 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// color mode data
 	writeSection(writer, 1, () => {
-		// TODO: implement
+		if (psd.palette) {
+			for (let i = 0; i < 256; i++) writeUint8(writer, psd.palette[i]?.r || 0);
+			for (let i = 0; i < 256; i++) writeUint8(writer, psd.palette[i]?.g || 0);
+			for (let i = 0; i < 256; i++) writeUint8(writer, psd.palette[i]?.b || 0);
+		}
+
+		// TODO: other data?
 	});
 
 	// image resources
@@ -267,7 +279,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// layer and mask info
 	writeSection(writer, 2, () => {
-		writeLayerInfo(tempBuffer, writer, psd, globalAlpha, opt);
+		writeLayerInfo(writer, psd, globalAlpha, opt);
 		writeGlobalLayerMaskInfo(writer, psd.globalLayerMaskInfo);
 		writeAdditionalLayerInfo(writer, psd, psd, opt);
 	}, undefined, !!opt.psb);
@@ -302,11 +314,11 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 			}
 		}
 
-		writeBytes(writer, writeDataRLE(tempBuffer, data, channels, !!options.psb));
+		writeBytes(writer, writeDataRLE(writer.tempBuffer, data, channels, !!options.psb));
 	}
 }
 
-function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
+function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
 	writeSection(writer, 4, () => {
 		const layers: Layer[] = [];
 
@@ -316,7 +328,7 @@ function writeLayerInfo(tempBuffer: Uint8Array, writer: PsdWriter, psd: Psd, glo
 
 		writeInt16(writer, globalAlpha ? -layers.length : layers.length);
 
-		const layersData = layers.map((l, i) => getChannels(tempBuffer, l, i === 0, options));
+		const layersData = layers.map((l, i) => getChannels(writer.tempBuffer!, l, i === 0, options));
 
 		// layer records
 		for (const layerData of layersData) {
@@ -449,10 +461,10 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 
 		if (handler.has(target)) {
 			const large = options.psb && largeAdditionalInfoKeys.indexOf(key) !== -1;
-			const writeTotalLength = key !== 'Txt2' && key !== 'cinf' && key !== 'extn';
+			const writeTotalLength = key !== 'Txt2' && key !== 'cinf' && key !== 'extn' && key !== 'CAI ' && key !== 'OCIO';
 			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
-				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno';
+				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno' || key === 'CAI ' || key === 'OCIO' || key === 'GenI' || key === 'FEid';
 
 			writeSignature(writer, large ? '8B64' : '8BIM');
 			writeSignature(writer, key);
@@ -462,9 +474,11 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		}
 	}
 }
-
 function addChildren(layers: Layer[], children: Layer[] | undefined) {
 	if (!children) return;
+
+	// const layerIds = [];
+	// const timestamps = []
 
 	for (const c of children) {
 		if (c.children && c.canvas) throw new Error(`Invalid layer, cannot have both 'canvas' and 'children' properties`);
@@ -476,6 +490,19 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 				sectionDivider: {
 					type: SectionDividerType.BoundingSectionDivider,
 				},
+				// nameSource: 'lset',
+				// id: layerIds.shift(),
+				// protected: {
+				// 	transparency: false,
+				// 	composite: false,
+				// 	position: false,
+				// },
+				// layerColor: 'none',
+				// timestamp: timestamps.shift(),
+				// referencePoint: {
+				// 	x: 0,
+				// 	y: 0,
+				// },
 			});
 			addChildren(layers, c.children);
 			layers.push({
@@ -578,7 +605,7 @@ function getChannels(
 			if (RAW_IMAGE_DATA && (layer as any).maskDataRaw) {
 				// console.log('written raw layer image data');
 				buffer = (layer as any).maskDataRaw;
-				compression = Compression.RleCompressed;
+				compression = (layer as any).maskDataRawCompression;
 			} else if (options.compress) {
 				buffer = writeDataZipWithoutPrediction(imageData, [0]);
 				compression = Compression.ZipWithoutPrediction;
@@ -683,7 +710,7 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
 			// console.log('written raw layer image data');
 			buffer = (layer as any).imageDataRaw[channelId];
-			compression = Compression.RleCompressed;
+			compression = (layer as any).imageDataRawCompression[channelId];
 		} else if (options.compress) {
 			buffer = writeDataZipWithoutPrediction(data, [offset]);
 			compression = Compression.ZipWithoutPrediction;

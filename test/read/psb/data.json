@@ -148,7 +148,6 @@
         "paths": [
           {
             "open": false,
-            "operation": "combine",
             "knots": [
               {
                 "linked": true,
@@ -195,7 +194,8 @@
                 ]
               }
             ],
-            "fillRule": "even-odd"
+            "fillRule": "even-odd",
+            "operation": "combine"
           }
         ],
         "invert": false,
@@ -344,8 +344,19 @@
     "description": "",
     "reason": "",
     "engine": "compCore",
+    "version": {
+      "major": 1,
+      "minor": 3,
+      "fix": 0
+    },
+    "photoshopVersion": {
+      "major": 22,
+      "minor": 3,
+      "fix": 1
+    },
     "enableCompCore": "feature",
     "enableCompCoreGPU": "feature",
+    "enableCompCoreThreads": "feature",
     "compCoreSupport": "supported",
     "compCoreGPUSupport": "featureDisabled"
   }

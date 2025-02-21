@@ -179,7 +179,6 @@
         "paths": [
           {
             "open": false,
-            "operation": "combine",
             "knots": [
               {
                 "linked": true,
@@ -226,7 +225,8 @@
                 ]
               }
             ],
-            "fillRule": "even-odd"
+            "fillRule": "even-odd",
+            "operation": "combine"
           }
         ],
         "invert": false,
@@ -290,6 +290,11 @@
     "description": "",
     "reason": "",
     "engine": "compCore",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "fix": 1
+    },
     "enableCompCore": "feature",
     "enableCompCoreGPU": "feature",
     "compCoreSupport": "supported",

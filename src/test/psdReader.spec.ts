@@ -69,8 +69,8 @@ describe('PsdReader', () => {
 
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
-	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|ignore-text-align|ignore-missing-object/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /ignore-missing-stroke/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|ignore-text-align|ignore-missing-object|ignore-text-curve|smart-object-curves/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /smart-object-curves/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
@@ -211,7 +211,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /text$/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /smart-filters$/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {

@@ -1,5 +1,14 @@
 # Changelog
 
+## v24.0.0
+- Added support for `curves` smart object filter
+- Added support for reading and writing `palette` field
+- Added support for reading PSD file with palette color mode
+- Fixed parsing for `filterEffectsMasks` section
+- Fixed padding for section data
+- Fixed reading some fields in `compositorUsed` section
+- Fixed incorrect writing for some smart object filters
+
 ## v23.1.0
 - Added support for perspective warp filter
 

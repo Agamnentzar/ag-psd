@@ -1125,7 +1125,19 @@ type FilterVariant = {
 		quads: number[][]; // quad indices
 		vertices: { x: UnitsValue; y: UnitsValue; }[];
 		warpedVertices: { x: UnitsValue; y: UnitsValue; }[];
-	}
+	};
+} | {
+	type: 'curves';
+	filter: {
+		presetKind: 'custom' | 'default';
+		adjustments: ({
+			channels: ('composite' | 'red' | 'green' | 'blue')[];
+			curve: { x: number; y: number; curved?: boolean; }[];
+		} | {
+			channels: ('composite' | 'red' | 'green' | 'blue')[];
+			values: number[];
+		})[];
+	};
 };
 
 /*
@@ -1367,11 +1379,14 @@ export interface LayerAdditionalInfo {
 		keyDescriptorList: KeyDescriptorItem[];
 	};
 	compositorUsed?: {
+		version?: { major: number; minor: number; fix: number; };
+		photoshopVersion?: { major: number; minor: number; fix: number; };
 		description: string;
 		reason: string;
 		engine: string;
 		enableCompCore?: string;
 		enableCompCoreGPU?: string;
+		enableCompCoreThreads?: string;
 		compCoreSupport?: string;
 		compCoreGPUSupport?: string;
 	};
@@ -1405,6 +1420,10 @@ export interface LayerAdditionalInfo {
 			data: Uint8Array;
 		} | undefined)[];
 		extra?: {
+			top: number;
+			left: number;
+			bottom: number;
+			right: number;
 			compressionMode: number;
 			data: Uint8Array;
 		};
@@ -1665,6 +1684,7 @@ export interface Psd extends LayerAdditionalInfo {
 	channels?: number;
 	bitsPerChannel?: number;
 	colorMode?: ColorMode;
+	palette?: RGB[]; // colors for indexed color mode
 	children?: Layer[];
 	canvas?: HTMLCanvasElement;
 	imageData?: PixelData;
