@@ -137,6 +137,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 0",
       "nameSource": "layr",
       "id": 2,
@@ -165,6 +237,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 3",
       "id": 4,
       "blendClippendElements": true,
@@ -192,6 +336,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 1",
       "nameSource": "layr",
       "id": 3,

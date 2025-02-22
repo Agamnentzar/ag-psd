@@ -357,6 +357,17 @@ addHandler(
 addHandlerAlias('vsms', 'vmsk');
 // addHandlerAlias('vmsk', 'vsms');
 
+addHandler(
+	'vowv', // something with vectors?
+	hasKey('vowv'),
+	(reader, target) => {
+		target.vowv = readUint32(reader); // always 2 ????
+	},
+	(writer, target) => {
+		writeUint32(writer, target.vowv!);
+	},
+);
+
 interface VogkDescriptor {
 	keyDescriptorList: {
 		keyShapeInvalidated?: boolean;
@@ -3541,21 +3552,6 @@ addHandler(
 		writeZeros(writer, 1);
 	},
 );
-
-if (MOCK_HANDLERS) {
-	addHandler(
-		'vowv', // appears with Lr16 section ?
-		_ => false,
-		(reader, target, left) => {
-			const value = readUint32(reader); // always 2 ????
-			reader; target;
-			console.log('vowv', { value }, left());
-		},
-		(_writer, _target) => {
-			// TODO: write
-		},
-	);
-}
 
 if (MOCK_HANDLERS) {
 	addHandler(

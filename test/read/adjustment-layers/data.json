@@ -167,6 +167,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 1",
       "id": 24,
       "blendClippendElements": true,
@@ -203,6 +275,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Brightness/Contrast 1",
       "adjustment": {
@@ -250,6 +394,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Levels 1",
       "adjustment": {
@@ -322,6 +538,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Curves 1",
       "adjustment": {
         "type": "curves",
@@ -387,6 +675,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Exposure 1",
       "adjustment": {
         "type": "exposure",
@@ -433,6 +793,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Vibrance 1",
       "adjustment": {
         "type": "vibrance",
@@ -475,6 +907,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Hue/Saturation 1",
       "adjustment": {
@@ -582,6 +1086,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Color Balance 1",
       "adjustment": {
         "type": "color balance",
@@ -639,6 +1215,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Black & White 1",
       "adjustment": {
         "type": "black & white",
@@ -694,6 +1342,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Photo Filter 1",
       "adjustment": {
         "type": "photo filter",
@@ -741,6 +1461,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Channel Mixer 1",
       "adjustment": {
@@ -792,6 +1584,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Color Lookup 1",
       "adjustment": {
         "type": "color lookup",
@@ -842,6 +1706,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Invert 1",
       "adjustment": {
         "type": "invert"
@@ -882,6 +1818,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Posterize 1",
       "adjustment": {
@@ -925,6 +1933,78 @@
         "disabled": false,
         "fromVectorData": false
       },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Threshold 1",
       "adjustment": {
         "type": "threshold",
@@ -966,6 +2046,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Gradient Map 1",
       "adjustment": {
@@ -1061,6 +2213,78 @@
         "positionRelativeToLayer": false,
         "disabled": false,
         "fromVectorData": false
+      },
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
       },
       "name": "Selective Color 1",
       "adjustment": {

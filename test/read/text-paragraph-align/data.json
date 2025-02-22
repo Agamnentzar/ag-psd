@@ -135,6 +135,78 @@
       "clipping": false,
       "transparencyProtected": true,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Background",
       "nameSource": "bgnd",
       "id": 1,
@@ -163,6 +235,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Do you think there is an argument that there should be a ‘branc",
       "text": {
         "transform": [

@@ -9,7 +9,7 @@ if (type === 'read-write' || type === 'write') {
         const file = `expected.${ext}`;
         if (fs.existsSync(path.join('results', type, dir, file))) {
           fs.unlinkSync(path.join('test', type, dir, file));
-          fs.renameSync(
+          fs.copyFileSync(
             path.join('results', type, dir, file),
             path.join('test', type, dir, file));
           console.log('copied', dir);
@@ -17,6 +17,23 @@ if (type === 'read-write' || type === 'write') {
         } else {
           console.log('skipped', dir);
         }
+      }
+    } catch (e) {
+      console.log('failed', dir, e.message);
+    }
+  }
+} else if (type === 'read') {
+  for (const dir of fs.readdirSync(path.join('test', type))) {
+    try {
+      const file = `data.json`;
+      if (fs.existsSync(path.join('results', type, dir, file))) {
+        fs.unlinkSync(path.join('test', type, dir, file));
+        fs.copyFileSync(
+          path.join('results', type, dir, file),
+          path.join('test', type, dir, file));
+        console.log('copied', dir);
+      } else {
+        console.log('skipped', dir);
       }
     } catch (e) {
       console.log('failed', dir, e.message);

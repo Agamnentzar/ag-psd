@@ -1,5 +1,9 @@
 # Changelog
 
+## v25.0.0
+- Added support for `blendingRanges` section
+- Added support for `interpolationMethod` for gradients
+
 ## v24.0.0
 - Added support for `curves` smart object filter
 - Added support for reading and writing `palette` field

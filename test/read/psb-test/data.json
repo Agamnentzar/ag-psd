@@ -176,6 +176,78 @@
       "clipping": false,
       "transparencyProtected": true,
       "hidden": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Background",
       "nameSource": "layr",
       "id": 61,
@@ -205,6 +277,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Background",
       "effects": {
         "scale": 8.333333333333334,
@@ -397,6 +541,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "レイヤー 1",
       "nameSource": "layr",
       "id": 68,
@@ -425,6 +641,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "ウニフラ白",
       "nameSource": "layr",
       "id": 67,
@@ -580,6 +868,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Clean",
       "id": 70,
       "sectionDivider": {
@@ -610,6 +970,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "Clean",
           "nameSource": "layr",
           "id": 62,
@@ -640,6 +1072,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Text",
       "id": 72,
       "sectionDivider": {
@@ -670,6 +1174,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": true,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "Text",
           "nameSource": "layr",
           "id": 63,
@@ -698,6 +1274,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "… hein !? ",
           "text": {
             "transform": [
@@ -821,6 +1469,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "SFX",
       "id": 74,
       "sectionDivider": {
@@ -851,6 +1571,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "SFX",
           "nameSource": "layr",
           "id": 64,

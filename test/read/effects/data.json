@@ -147,6 +147,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "other2",
       "effects": {
         "scale": 1,
@@ -241,6 +313,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "other",
       "effects": {
         "scale": 1,
@@ -372,6 +516,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "drop shadow",
       "effects": {
         "scale": 1,
@@ -445,6 +661,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "inner shadow",
       "effects": {
         "scale": 1,
@@ -517,6 +805,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "inner outer glow",
       "effects": {
         "scale": 1,
@@ -621,6 +981,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "bevel",
       "effects": {
         "scale": 1,
@@ -700,6 +1132,78 @@
       "transparencyProtected": false,
       "hidden": false,
       "effectsOpen": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "solid fill",
       "effects": {
         "disabled": true,

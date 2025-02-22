@@ -446,7 +446,8 @@ function readLayerRecord(reader: PsdReader, psd: Psd) {
 		const mask = readLayerMaskData(reader);
 		if (mask) layer.mask = mask;
 
-		/*const blendingRanges =*/ readLayerBlendingRanges(reader);
+		const blendingRanges = readLayerBlendingRanges(reader);
+		if (blendingRanges) layer.blendingRanges = blendingRanges;
 		layer.name = readPascalString(reader, 1); // should be padded to 4, but is not sometimes
 
 		// HACK: fix for sometimes layer.name string not being padded correctly, just skip until we get valid signature
@@ -506,15 +507,19 @@ function readLayerMaskData(reader: PsdReader) {
 	});
 }
 
+function readBlendingRange(reader: PsdReader) {
+	return [readUint8(reader), readUint8(reader), readUint8(reader), readUint8(reader)];
+}
+
 function readLayerBlendingRanges(reader: PsdReader) {
 	return readSection(reader, 1, left => {
-		const compositeGrayBlendSource = readUint32(reader);
-		const compositeGraphBlendDestinationRange = readUint32(reader);
-		const ranges = [];
+		const compositeGrayBlendSource = readBlendingRange(reader);
+		const compositeGraphBlendDestinationRange = readBlendingRange(reader);
+		const ranges: { sourceRange: number[]; destRange: number[]; }[] = [];
 
 		while (left() > 0) {
-			const sourceRange = readUint32(reader);
-			const destRange = readUint32(reader);
+			const sourceRange = readBlendingRange(reader);
+			const destRange = readBlendingRange(reader);
 			ranges.push({ sourceRange, destRange });
 		}
 

@@ -264,7 +264,7 @@ export type Justification = 'left' | 'right' | 'center' | 'justify-left' | 'just
 export type LineCapType = 'butt' | 'round' | 'square';
 export type LineJoinType = 'miter' | 'round' | 'bevel';
 export type LineAlignment = 'inside' | 'center' | 'outside';
-export type InterpolationMethod = 'classic' | 'perceptual' | 'linear';
+export type InterpolationMethod = 'classic' | 'perceptual' | 'linear' | 'smooth';
 
 export interface Warp {
 	style?: WarpStyle;
@@ -457,6 +457,7 @@ export interface ExtraGradientInfo {
 	scale?: number;
 	angle?: number;
 	dither?: boolean;
+	interpolationMethod?: InterpolationMethod;
 	reverse?: boolean;
 	align?: boolean;
 	offset?: { x: number; y: number; };
@@ -1441,6 +1442,12 @@ export interface LayerAdditionalInfo {
 		colorSpace: Color;
 		opacity: number;
 	};
+	blendingRanges?: {
+		compositeGrayBlendSource: number[];
+		compositeGraphBlendDestinationRange: number[];
+		ranges: { sourceRange: number[]; destRange: number[]; }[];
+	};
+	vowv?: number; // ???
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.

@@ -16,6 +16,21 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": []
+      },
       "name": "Layer #1"
     }
   ]

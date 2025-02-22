@@ -208,7 +208,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
 		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
-		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion',
+		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion', 'gradientsInterpolationMethod',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -879,11 +879,12 @@ export interface DescriptorColorContent {
 }
 
 export interface DescriptorGradientContent {
-	Grad: DesciptorGradient;
-	Type: string;
 	Dthr?: boolean;
-	Rvrs?: boolean;
+	gradientsInterpolationMethod?: string; // 'gradientInterpolationMethodType.Smoo'
 	Angl?: DescriptorUnitsValue;
+	Type: string;
+	Grad: DesciptorGradient;
+	Rvrs?: boolean;
 	'Scl '?: DescriptorUnitsValue;
 	Algn?: boolean;
 	Ofst?: { Hrzn: DescriptorUnitsValue; Vrtc: DescriptorUnitsValue; };
@@ -1611,6 +1612,7 @@ function parseGradientContent(descriptor: DescriptorGradientContent) {
 	const result = parseGradient(descriptor.Grad) as (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
 	result.style = GrdT.decode(descriptor.Type);
 	if (descriptor.Dthr !== undefined) result.dither = descriptor.Dthr;
+	if (descriptor.gradientsInterpolationMethod !== undefined) result.interpolationMethod = gradientInterpolationMethodType.decode(descriptor.gradientsInterpolationMethod);
 	if (descriptor.Rvrs !== undefined) result.reverse = descriptor.Rvrs;
 	if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
 	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
@@ -1650,6 +1652,7 @@ export function parseVectorContent(descriptor: DescriptorVectorContent): VectorC
 function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo) {
 	const result: DescriptorGradientContent = {} as any;
 	if (content.dither !== undefined) result.Dthr = content.dither;
+	if (content.interpolationMethod !== undefined) result.gradientsInterpolationMethod = gradientInterpolationMethodType.encode(content.interpolationMethod);
 	if (content.reverse !== undefined) result.Rvrs = content.reverse;
 	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
 	result.Type = GrdT.encode(content.style);

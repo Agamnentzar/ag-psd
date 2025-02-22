@@ -171,6 +171,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer1 (#ff)",
       "id": 2,
       "blendClippendElements": true,
@@ -198,6 +270,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Folder1",
       "id": 4,
       "sectionDivider": {
@@ -228,6 +372,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "Folder2",
           "id": 5,
           "sectionDivider": {
@@ -259,6 +475,78 @@
               "clipping": false,
               "transparencyProtected": false,
               "hidden": false,
+              "blendingRanges": {
+                "compositeGrayBlendSource": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "compositeGraphBlendDestinationRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "ranges": [
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  }
+                ]
+              },
               "name": "Folder3",
               "id": 6,
               "sectionDivider": {
@@ -289,6 +577,78 @@
                   "clipping": false,
                   "transparencyProtected": false,
                   "hidden": false,
+                  "blendingRanges": {
+                    "compositeGrayBlendSource": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "compositeGraphBlendDestinationRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "ranges": [
+                      {
+                        "sourceRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ],
+                        "destRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ]
+                      },
+                      {
+                        "sourceRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ],
+                        "destRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ]
+                      },
+                      {
+                        "sourceRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ],
+                        "destRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ]
+                      },
+                      {
+                        "sourceRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ],
+                        "destRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ]
+                      }
+                    ]
+                  },
                   "name": "Folder4",
                   "id": 7,
                   "sectionDivider": {
@@ -319,6 +679,78 @@
                       "clipping": false,
                       "transparencyProtected": false,
                       "hidden": false,
+                      "blendingRanges": {
+                        "compositeGrayBlendSource": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ],
+                        "compositeGraphBlendDestinationRange": [
+                          0,
+                          0,
+                          255,
+                          255
+                        ],
+                        "ranges": [
+                          {
+                            "sourceRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ],
+                            "destRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ]
+                          },
+                          {
+                            "sourceRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ],
+                            "destRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ]
+                          },
+                          {
+                            "sourceRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ],
+                            "destRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ]
+                          },
+                          {
+                            "sourceRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ],
+                            "destRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ]
+                          }
+                        ]
+                      },
                       "name": "Folder5",
                       "id": 8,
                       "sectionDivider": {
@@ -349,6 +781,78 @@
                           "clipping": false,
                           "transparencyProtected": false,
                           "hidden": false,
+                          "blendingRanges": {
+                            "compositeGrayBlendSource": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ],
+                            "compositeGraphBlendDestinationRange": [
+                              0,
+                              0,
+                              255,
+                              255
+                            ],
+                            "ranges": [
+                              {
+                                "sourceRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ],
+                                "destRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ]
+                              },
+                              {
+                                "sourceRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ],
+                                "destRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ]
+                              },
+                              {
+                                "sourceRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ],
+                                "destRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ]
+                              },
+                              {
+                                "sourceRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ],
+                                "destRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ]
+                              }
+                            ]
+                          },
                           "name": "Folder6",
                           "id": 9,
                           "sectionDivider": {
@@ -379,6 +883,78 @@
                               "clipping": false,
                               "transparencyProtected": false,
                               "hidden": false,
+                              "blendingRanges": {
+                                "compositeGrayBlendSource": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ],
+                                "compositeGraphBlendDestinationRange": [
+                                  0,
+                                  0,
+                                  255,
+                                  255
+                                ],
+                                "ranges": [
+                                  {
+                                    "sourceRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ],
+                                    "destRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ]
+                                  },
+                                  {
+                                    "sourceRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ],
+                                    "destRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ]
+                                  },
+                                  {
+                                    "sourceRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ],
+                                    "destRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ]
+                                  },
+                                  {
+                                    "sourceRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ],
+                                    "destRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ]
+                                  }
+                                ]
+                              },
                               "name": "Folder7",
                               "id": 10,
                               "sectionDivider": {
@@ -410,6 +986,78 @@
                                   "clipping": false,
                                   "transparencyProtected": false,
                                   "hidden": false,
+                                  "blendingRanges": {
+                                    "compositeGrayBlendSource": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ],
+                                    "compositeGraphBlendDestinationRange": [
+                                      0,
+                                      0,
+                                      255,
+                                      255
+                                    ],
+                                    "ranges": [
+                                      {
+                                        "sourceRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ],
+                                        "destRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ]
+                                      },
+                                      {
+                                        "sourceRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ],
+                                        "destRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ]
+                                      },
+                                      {
+                                        "sourceRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ],
+                                        "destRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ]
+                                      },
+                                      {
+                                        "sourceRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ],
+                                        "destRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ]
+                                      }
+                                    ]
+                                  },
                                   "name": "Folder8",
                                   "id": 11,
                                   "sectionDivider": {
@@ -441,6 +1089,78 @@
                                       "clipping": false,
                                       "transparencyProtected": false,
                                       "hidden": false,
+                                      "blendingRanges": {
+                                        "compositeGrayBlendSource": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ],
+                                        "compositeGraphBlendDestinationRange": [
+                                          0,
+                                          0,
+                                          255,
+                                          255
+                                        ],
+                                        "ranges": [
+                                          {
+                                            "sourceRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ],
+                                            "destRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ]
+                                          },
+                                          {
+                                            "sourceRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ],
+                                            "destRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ]
+                                          },
+                                          {
+                                            "sourceRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ],
+                                            "destRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ]
+                                          },
+                                          {
+                                            "sourceRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ],
+                                            "destRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ]
+                                          }
+                                        ]
+                                      },
                                       "name": "Folder9",
                                       "id": 12,
                                       "sectionDivider": {
@@ -472,6 +1192,78 @@
                                           "clipping": false,
                                           "transparencyProtected": false,
                                           "hidden": false,
+                                          "blendingRanges": {
+                                            "compositeGrayBlendSource": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ],
+                                            "compositeGraphBlendDestinationRange": [
+                                              0,
+                                              0,
+                                              255,
+                                              255
+                                            ],
+                                            "ranges": [
+                                              {
+                                                "sourceRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ],
+                                                "destRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ]
+                                              },
+                                              {
+                                                "sourceRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ],
+                                                "destRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ]
+                                              },
+                                              {
+                                                "sourceRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ],
+                                                "destRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ]
+                                              },
+                                              {
+                                                "sourceRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ],
+                                                "destRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ]
+                                              }
+                                            ]
+                                          },
                                           "name": "Folder10",
                                           "id": 13,
                                           "sectionDivider": {
@@ -503,6 +1295,78 @@
                                               "clipping": false,
                                               "transparencyProtected": false,
                                               "hidden": false,
+                                              "blendingRanges": {
+                                                "compositeGrayBlendSource": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ],
+                                                "compositeGraphBlendDestinationRange": [
+                                                  0,
+                                                  0,
+                                                  255,
+                                                  255
+                                                ],
+                                                "ranges": [
+                                                  {
+                                                    "sourceRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ],
+                                                    "destRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ]
+                                                  },
+                                                  {
+                                                    "sourceRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ],
+                                                    "destRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ]
+                                                  },
+                                                  {
+                                                    "sourceRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ],
+                                                    "destRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ]
+                                                  },
+                                                  {
+                                                    "sourceRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ],
+                                                    "destRange": [
+                                                      0,
+                                                      0,
+                                                      255,
+                                                      255
+                                                    ]
+                                                  }
+                                                ]
+                                              },
                                               "name": "Layer10 (#00)",
                                               "id": 3,
                                               "blendClippendElements": true,

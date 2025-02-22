@@ -363,7 +363,7 @@ function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, optio
 			writeUint8(writer, 0); // filler
 			writeSection(writer, 1, () => {
 				writeLayerMaskData(writer, layer, layerData);
-				writeLayerBlendingRanges(writer, psd);
+				writeLayerBlendingRanges(writer, layer);
 				writePascalString(writer, (layer.name || '').substring(0, 255), 4);
 				writeAdditionalLayerInfo(writer, layer, psd, options);
 			});
@@ -422,17 +422,25 @@ function writeLayerMaskData(writer: PsdWriter, { mask }: Layer, layerData: Layer
 	});
 }
 
-function writeLayerBlendingRanges(writer: PsdWriter, psd: Psd) {
+function writerBlendingRange(writer: PsdWriter, range: number[]) {
+	writeUint8(writer, range[0]);
+	writeUint8(writer, range[1]);
+	writeUint8(writer, range[2]);
+	writeUint8(writer, range[3]);
+}
+
+function writeLayerBlendingRanges(writer: PsdWriter, layer: Layer) {
 	writeSection(writer, 1, () => {
-		writeUint32(writer, 65535);
-		writeUint32(writer, 65535);
+		const ranges = layer.blendingRanges;
 
-		let channels = psd.channels || 0; // TODO: use always 4 instead ?
-		// channels = 4; // TESTING
+		if (ranges) {
+			writerBlendingRange(writer, ranges.compositeGrayBlendSource);
+			writerBlendingRange(writer, ranges.compositeGraphBlendDestinationRange);
 
-		for (let i = 0; i < channels; i++) {
-			writeUint32(writer, 65535);
-			writeUint32(writer, 65535);
+			for (const r of ranges.ranges) {
+				writerBlendingRange(writer, r.sourceRange);
+				writerBlendingRange(writer, r.destRange);
+			}
 		}
 	});
 }
