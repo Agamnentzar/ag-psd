@@ -1323,6 +1323,7 @@ export interface LayerAdditionalInfo {
 	id?: number; // layer id
 	version?: number; // layer version
 	mask?: LayerMaskData;
+	realMask?: LayerMaskData;
 	blendClippendElements?: boolean; // has to be set to `true` when using `color burn` blend mode (otherwise `transparencyShapesLayer` is set incorrectly)
 	blendInteriorElements?: boolean;
 	knockout?: boolean;

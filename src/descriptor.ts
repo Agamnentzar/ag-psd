@@ -56,12 +56,14 @@ function makeType(name: string, classID: string) {
 
 const nullType = makeType('', 'null');
 
+const USE_CHINESE = false; // Testing
+
 const fieldToExtType: ExtTypeDict = {
 	strokeStyleContent: makeType('', 'solidColorLayer'),
-	// printProofSetup: makeType('校样设置', 'proofSetup'), // TESTING
-	printProofSetup: makeType('Proof Setup', 'proofSetup'),
+	printProofSetup: makeType(USE_CHINESE ? '校样设置' : 'Proof Setup', 'proofSetup'),
+	Grad: makeType(USE_CHINESE ? '渐变' : 'Gradient', 'Grdn'),
+	Trnf: makeType(USE_CHINESE ? '变换' : 'Transform', 'Trnf'),
 	patternFill: makeType('', 'patternFill'),
-	Grad: makeType('Gradient', 'Grdn'),
 	ebbl: makeType('', 'ebbl'),
 	SoFi: makeType('', 'SoFi'),
 	GrFl: makeType('', 'GrFl'),
@@ -103,7 +105,6 @@ const fieldToExtType: ExtTypeDict = {
 	rectangleCornerC: makeType('', 'Pnt '),
 	rectangleCornerD: makeType('', 'Pnt '),
 	compInfo: nullType,
-	Trnf: makeType('Transform', 'Trnf'),
 	quiltWarp: makeType('', 'quiltWarp'),
 	generatorSettings: nullType,
 	crema: nullType,

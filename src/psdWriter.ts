@@ -1,4 +1,4 @@
-import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData } from './psd';
+import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData } from './psd';
 import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas } from './helpers';
 import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { resourceHandlers } from './imageResources';
@@ -354,7 +354,7 @@ function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, optio
 			let flags = 0x08; // 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
 			if (layer.transparencyProtected) flags |= 0x01;
 			if (layer.hidden) flags |= 0x02;
-			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other)) {
+			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other) || layer.adjustment) {
 				flags |= 0x10; // pixel data irrelevant to appearance of document
 			}
 			if (layer.effectsOpen) flags |= 0x20;
@@ -382,41 +382,53 @@ function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, optio
 	}, true, options.psb);
 }
 
-function writeLayerMaskData(writer: PsdWriter, { mask }: Layer, layerData: LayerChannelData) {
+function writeLayerMaskData(writer: PsdWriter, { mask, realMask }: Layer, layerData: LayerChannelData) {
 	writeSection(writer, 1, () => {
-		if (!mask) return;
+		if (!mask && !realMask) return;
+
+		let params = 0, flags = 0, realFlags = 0;
+
+		if (mask) {
+			if (mask.userMaskDensity !== undefined) params |= MaskParams.UserMaskDensity;
+			if (mask.userMaskFeather !== undefined) params |= MaskParams.UserMaskFeather;
+			if (mask.vectorMaskDensity !== undefined) params |= MaskParams.VectorMaskDensity;
+			if (mask.vectorMaskFeather !== undefined) params |= MaskParams.VectorMaskFeather;
+
+			if (mask.disabled) flags |= LayerMaskFlags.LayerMaskDisabled;
+			if (mask.positionRelativeToLayer) flags |= LayerMaskFlags.PositionRelativeToLayer;
+			if (mask.fromVectorData) flags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
+			if (params) flags |= LayerMaskFlags.MaskHasParametersAppliedToIt;
+		}
 
 		const m = layerData.mask || {} as Partial<Bounds>;
 		writeInt32(writer, m.top || 0);
 		writeInt32(writer, m.left || 0);
 		writeInt32(writer, m.bottom || 0);
 		writeInt32(writer, m.right || 0);
-		writeUint8(writer, mask.defaultColor || 0);
-
-		let params = 0;
-		if (mask.userMaskDensity !== undefined) params |= MaskParams.UserMaskDensity;
-		if (mask.userMaskFeather !== undefined) params |= MaskParams.UserMaskFeather;
-		if (mask.vectorMaskDensity !== undefined) params |= MaskParams.VectorMaskDensity;
-		if (mask.vectorMaskFeather !== undefined) params |= MaskParams.VectorMaskFeather;
-
-		let flags = 0;
-		if (mask.disabled) flags |= LayerMaskFlags.LayerMaskDisabled;
-		if (mask.positionRelativeToLayer) flags |= LayerMaskFlags.PositionRelativeToLayer;
-		if (mask.fromVectorData) flags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
-		if (params) flags |= LayerMaskFlags.MaskHasParametersAppliedToIt;
-
+		writeUint8(writer, mask && mask.defaultColor || 0);
 		writeUint8(writer, flags);
 
-		if (params) {
-			writeUint8(writer, params);
+		if (realMask) {
+			if (realMask.disabled) realFlags |= LayerMaskFlags.LayerMaskDisabled;
+			if (realMask.positionRelativeToLayer) realFlags |= LayerMaskFlags.PositionRelativeToLayer;
+			if (realMask.fromVectorData) realFlags |= LayerMaskFlags.LayerMaskFromRenderingOtherData;
 
+			const r = layerData.realMask || {} as Partial<Bounds>;
+			writeUint8(writer, realFlags);
+			writeUint8(writer, realMask.defaultColor || 0);
+			writeInt32(writer, r.top || 0);
+			writeInt32(writer, r.left || 0);
+			writeInt32(writer, r.bottom || 0);
+			writeInt32(writer, r.right || 0);
+		}
+
+		if (params && mask) {
+			writeUint8(writer, params);
 			if (mask.userMaskDensity !== undefined) writeUint8(writer, Math.round(mask.userMaskDensity * 0xff));
 			if (mask.userMaskFeather !== undefined) writeFloat64(writer, mask.userMaskFeather);
 			if (mask.vectorMaskDensity !== undefined) writeUint8(writer, Math.round(mask.vectorMaskDensity * 0xff));
 			if (mask.vectorMaskFeather !== undefined) writeFloat64(writer, mask.vectorMaskFeather);
 		}
-
-		// TODO: handle rest of the fields
 
 		writeZeros(writer, 2);
 	});
@@ -485,8 +497,8 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 function addChildren(layers: Layer[], children: Layer[] | undefined) {
 	if (!children) return;
 
-	// const layerIds = [];
-	// const timestamps = []
+	// const layerIds: number[] = [2];
+	// const timestamps: number[] = [1740120767.0230637];
 
 	for (const c of children) {
 		if (c.children && c.canvas) throw new Error(`Invalid layer, cannot have both 'canvas' and 'children' properties`);
@@ -498,6 +510,7 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 				sectionDivider: {
 					type: SectionDividerType.BoundingSectionDivider,
 				},
+				// blendingRanges: children[0].blendingRanges,
 				// nameSource: 'lset',
 				// id: layerIds.shift(),
 				// protected: {
@@ -505,12 +518,9 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 				// 	composite: false,
 				// 	position: false,
 				// },
-				// layerColor: 'none',
+				// layerColor: 'red',
 				// timestamp: timestamps.shift(),
-				// referencePoint: {
-				// 	x: 0,
-				// 	y: 0,
-				// },
+				// referencePoint: { x: 0, y: 0 },
 			});
 			addChildren(layers, c.children);
 			layers.push({
@@ -581,54 +591,50 @@ function createThumbnail(psd: Psd) {
 	return canvas;
 }
 
-function getChannels(
-	tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions
-): LayerChannelData {
-	const layerData = getLayerChannels(tempBuffer, layer, background, options);
-	const mask = layer.mask;
+function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, layer: Layer, mask: LayerMaskData, options: WriteOptions, realMask: boolean) {
+	let top = (mask.top as any) | 0;
+	let left = (mask.left as any) | 0;
+	let right = (mask.right as any) | 0;
+	let bottom = (mask.bottom as any) | 0;
+	let { width, height } = getLayerDimentions(mask);
+	let imageData = mask.imageData;
 
-	if (mask) {
-		let top = (mask.top as any) | 0;
-		let left = (mask.left as any) | 0;
-		let right = (mask.right as any) | 0;
-		let bottom = (mask.bottom as any) | 0;
-		let { width, height } = getLayerDimentions(mask);
-		let imageData = mask.imageData;
-
-		if (!imageData && mask.canvas && width && height) {
-			imageData = mask.canvas.getContext('2d')!.getImageData(0, 0, width, height);
-		}
-
-		if (width && height && imageData) {
-			right = left + width;
-			bottom = top + height;
-
-			if (imageData.width !== width || imageData.height !== height) {
-				throw new Error('Invalid imageData dimentions');
-			}
-
-			let buffer: Uint8Array;
-			let compression: Compression;
-
-			if (RAW_IMAGE_DATA && (layer as any).maskDataRaw) {
-				// console.log('written raw layer image data');
-				buffer = (layer as any).maskDataRaw;
-				compression = (layer as any).maskDataRawCompression;
-			} else if (options.compress) {
-				buffer = writeDataZipWithoutPrediction(imageData, [0]);
-				compression = Compression.ZipWithoutPrediction;
-			} else {
-				buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb)!;
-				compression = Compression.RleCompressed;
-			}
-
-			layerData.mask = { top, left, right, bottom };
-			layerData.channels.push({ channelId: ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
-		} else {
-			layerData.mask = { top: 0, left: 0, right: 0, bottom: 0 };
-		}
+	if (!imageData && mask.canvas && width && height) {
+		imageData = mask.canvas.getContext('2d')!.getImageData(0, 0, width, height);
 	}
 
+	if (width && height && imageData) {
+		right = left + width;
+		bottom = top + height;
+
+		if (imageData.width !== width || imageData.height !== height) {
+			throw new Error('Invalid imageData dimentions');
+		}
+
+		let buffer: Uint8Array;
+		let compression: Compression;
+
+		if (RAW_IMAGE_DATA && (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw']) {
+			buffer = (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw'];
+			compression = (layer as any)[realMask ? 'realMaskDataRawCompression' : 'maskDataRawCompression'];
+		} else if (options.compress) {
+			buffer = writeDataZipWithoutPrediction(imageData, [0]);
+			compression = Compression.ZipWithoutPrediction;
+		} else {
+			buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb)!;
+			compression = Compression.RleCompressed;
+		}
+
+		layerData.channels.push({ channelId: realMask ? ChannelID.RealUserMask : ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
+	}
+
+	layerData[realMask ? 'realMask' : 'mask'] = { top, left, right, bottom };
+}
+
+function getChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions): LayerChannelData {
+	const layerData = getLayerChannels(tempBuffer, layer, background, options);
+	if (layer.mask) getMaskChannels(tempBuffer, layerData, layer, layer.mask, options, false);
+	if (layer.realMask) getMaskChannels(tempBuffer, layerData, layer, layer.realMask, options, true);
 	return layerData;
 }
 

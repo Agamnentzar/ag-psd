@@ -326,7 +326,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 			}
 
 			if (left() >= 12) {
-				readAdditionalLayerInfo(reader, psd, psd,);
+				readAdditionalLayerInfo(reader, psd, psd);
 			} else {
 				// opt.logMissingFeatures && console.log('skipping leftover bytes', left());
 				skipBytes(reader, left());
@@ -443,8 +443,7 @@ function readLayerRecord(reader: PsdReader, psd: Psd) {
 	skipBytes(reader, 1);
 
 	readSection(reader, 1, left => {
-		const mask = readLayerMaskData(reader);
-		if (mask) layer.mask = mask;
+		readLayerMaskData(reader, layer);
 
 		const blendingRanges = readLayerBlendingRanges(reader);
 		if (blendingRanges) layer.blendingRanges = blendingRanges;
@@ -461,11 +460,13 @@ function readLayerRecord(reader: PsdReader, psd: Psd) {
 	return { layer, channels };
 }
 
-function readLayerMaskData(reader: PsdReader) {
+function readLayerMaskData(reader: PsdReader, layer: Layer) {
 	return readSection<LayerMaskData | undefined>(reader, 1, left => {
 		if (!left()) return undefined;
 
 		const mask: LayerMaskData = {};
+		layer.mask = mask;
+
 		mask.top = readInt32(reader);
 		mask.left = readInt32(reader);
 		mask.bottom = readInt32(reader);
@@ -477,6 +478,22 @@ function readLayerMaskData(reader: PsdReader) {
 		mask.disabled = (flags & LayerMaskFlags.LayerMaskDisabled) !== 0;
 		mask.fromVectorData = (flags & LayerMaskFlags.LayerMaskFromRenderingOtherData) !== 0;
 
+		if (left() >= 18) {
+			const realMask: LayerMaskData = {};
+			layer.realMask = realMask;
+
+			const realFlags = readUint8(reader);
+			realMask.positionRelativeToLayer = (realFlags & LayerMaskFlags.PositionRelativeToLayer) !== 0;
+			realMask.disabled = (realFlags & LayerMaskFlags.LayerMaskDisabled) !== 0;
+			realMask.fromVectorData = (realFlags & LayerMaskFlags.LayerMaskFromRenderingOtherData) !== 0;
+
+			realMask.defaultColor = readUint8(reader); // Real user mask background. 0 or 255.
+			realMask.top = readInt32(reader);
+			realMask.left = readInt32(reader);
+			realMask.bottom = readInt32(reader);
+			realMask.right = readInt32(reader);
+		}
+
 		if (flags & LayerMaskFlags.MaskHasParametersAppliedToIt) {
 			const params = readUint8(reader);
 			if (params & MaskParams.UserMaskDensity) mask.userMaskDensity = readUint8(reader) / 0xff;
@@ -485,25 +502,7 @@ function readLayerMaskData(reader: PsdReader) {
 			if (params & MaskParams.VectorMaskFeather) mask.vectorMaskFeather = readFloat64(reader);
 		}
 
-		if (left() > 2) {
-			// TODO: handle these values, this is RealUserMask
-			/*const realFlags = readUint8(reader);
-			const realUserMaskBackground = readUint8(reader);
-			const top2 = readInt32(reader);
-			const left2 = readInt32(reader);
-			const bottom2 = readInt32(reader);
-			const right2 = readInt32(reader);
-
-			// TEMP
-			(mask as any)._real = { realFlags, realUserMaskBackground, top2, left2, bottom2, right2 };*/
-
-			if (reader.logMissingFeatures) {
-				reader.log('Unhandled extra real user mask params');
-			}
-		}
-
 		skipBytes(reader, left());
-		return mask;
 	});
 }
 
@@ -572,13 +571,13 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 
 		if (compression > 3) throw new Error(`Invalid compression: ${compression}`);
 
-		if (channel.id === ChannelID.UserMask) {
-			const mask = layer.mask;
-
-			if (!mask) throw new Error(`Missing layer mask data`);
+		if (channel.id === ChannelID.UserMask || channel.id === ChannelID.RealUserMask) {
+			const mask = channel.id === ChannelID.UserMask ? layer.mask : layer.realMask;
+			if (!mask) throw new Error(`Missing layer ${channel.id === ChannelID.UserMask ? 'mask' : 'real mask'} data`);
 
 			const maskWidth = (mask.right || 0) - (mask.left || 0);
 			const maskHeight = (mask.bottom || 0) - (mask.top || 0);
+			if (maskWidth < 0 || maskHeight < 0 || maskWidth > 30000 || maskHeight > 30000) throw new Error('Invalid mask size');
 
 			if (maskWidth && maskHeight) {
 				const maskData = createImageDataBitDepth(maskWidth, maskHeight, psd.bitsPerChannel ?? 8);
@@ -588,8 +587,13 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 				readData(reader, channel.length, maskData, compression, maskWidth, maskHeight, psd.bitsPerChannel ?? 8, 0, reader.large, 4);
 
 				if (RAW_IMAGE_DATA) {
-					(layer as any).maskDataRawCompression = compression;
-					(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+					if (channel.id === ChannelID.UserMask) {
+						(layer as any).maskDataRawCompression = compression;
+						(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+					} else {
+						(layer as any).realMaskDataRawCompression = compression;
+						(layer as any).realMaskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+					}
 				}
 
 				setupGrayscale(maskData);
@@ -600,12 +604,6 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 					mask.canvas = imageDataToCanvas(maskData);
 				}
 			}
-		} else if (channel.id === ChannelID.RealUserMask) {
-			if (reader.logMissingFeatures) {
-				reader.log(`RealUserMask not supported`);
-			}
-
-			reader.offset = start + channel.length;
 		} else {
 			const offset = offsetForChannel(channel.id, cmyk);
 			let targetData = imageData;

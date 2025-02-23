@@ -1,5 +1,8 @@
 # Changelog
 
+## v26.0.0
+- Added support for `realMask` section
+
 ## v25.0.0
 - Added support for `blendingRanges` section
 - Added support for `interpolationMethod` for gradients

@@ -458,62 +458,59 @@ addHandler(
 		for (let i = 0; i < orig.keyDescriptorList.length; i++) {
 			const item = orig.keyDescriptorList[i];
 
-			if (item.keyShapeInvalidated) {
-				desc.keyDescriptorList.push({ keyShapeInvalidated: true, keyOriginIndex: i });
-			} else {
-				desc.keyDescriptorList.push({} as any); // we're adding keyOriginIndex at the end
+			desc.keyDescriptorList.push({} as any); // we're adding keyOriginIndex at the end
 
-				const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
+			const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
 
-				if (item.keyOriginType != null) out.keyOriginType = item.keyOriginType;
-				if (item.keyOriginResolution != null) out.keyOriginResolution = item.keyOriginResolution;
+			if (item.keyOriginType != null) out.keyOriginType = item.keyOriginType;
+			if (item.keyOriginResolution != null) out.keyOriginResolution = item.keyOriginResolution;
 
-				const radii = item.keyOriginRRectRadii;
-				if (radii) {
-					out.keyOriginRRectRadii = {
-						unitValueQuadVersion: 1,
-						topRight: unitsValue(radii.topRight, 'topRight'),
-						topLeft: unitsValue(radii.topLeft, 'topLeft'),
-						bottomLeft: unitsValue(radii.bottomLeft, 'bottomLeft'),
-						bottomRight: unitsValue(radii.bottomRight, 'bottomRight'),
-					};
-				}
-
-				const box = item.keyOriginShapeBoundingBox;
-				if (box) {
-					out.keyOriginShapeBBox = {
-						unitValueQuadVersion: 1,
-						'Top ': unitsValue(box.top, 'top'),
-						Left: unitsValue(box.left, 'left'),
-						Btom: unitsValue(box.bottom, 'bottom'),
-						Rght: unitsValue(box.right, 'right'),
-					};
-				}
-
-				const corners = item.keyOriginBoxCorners;
-				if (corners && corners.length === 4) {
-					out.keyOriginBoxCorners = {
-						rectangleCornerA: { Hrzn: corners[0].x, Vrtc: corners[0].y },
-						rectangleCornerB: { Hrzn: corners[1].x, Vrtc: corners[1].y },
-						rectangleCornerC: { Hrzn: corners[2].x, Vrtc: corners[2].y },
-						rectangleCornerD: { Hrzn: corners[3].x, Vrtc: corners[3].y },
-					};
-				}
-
-				const transform = item.transform;
-				if (transform && transform.length === 6) {
-					out.Trnf = {
-						xx: transform[0],
-						xy: transform[1],
-						yx: transform[2],
-						yy: transform[3],
-						tx: transform[4],
-						ty: transform[5],
-					};
-				}
-
-				out.keyOriginIndex = i;
+			const radii = item.keyOriginRRectRadii;
+			if (radii) {
+				out.keyOriginRRectRadii = {
+					unitValueQuadVersion: 1,
+					topRight: unitsValue(radii.topRight, 'topRight'),
+					topLeft: unitsValue(radii.topLeft, 'topLeft'),
+					bottomLeft: unitsValue(radii.bottomLeft, 'bottomLeft'),
+					bottomRight: unitsValue(radii.bottomRight, 'bottomRight'),
+				};
 			}
+
+			const box = item.keyOriginShapeBoundingBox;
+			if (box) {
+				out.keyOriginShapeBBox = {
+					unitValueQuadVersion: 1,
+					'Top ': unitsValue(box.top, 'top'),
+					Left: unitsValue(box.left, 'left'),
+					Btom: unitsValue(box.bottom, 'bottom'),
+					Rght: unitsValue(box.right, 'right'),
+				};
+			}
+
+			const corners = item.keyOriginBoxCorners;
+			if (corners && corners.length === 4) {
+				out.keyOriginBoxCorners = {
+					rectangleCornerA: { Hrzn: corners[0].x, Vrtc: corners[0].y },
+					rectangleCornerB: { Hrzn: corners[1].x, Vrtc: corners[1].y },
+					rectangleCornerC: { Hrzn: corners[2].x, Vrtc: corners[2].y },
+					rectangleCornerD: { Hrzn: corners[3].x, Vrtc: corners[3].y },
+				};
+			}
+
+			const transform = item.transform;
+			if (transform && transform.length === 6) {
+				out.Trnf = {
+					xx: transform[0],
+					xy: transform[1],
+					yx: transform[2],
+					yy: transform[3],
+					tx: transform[4],
+					ty: transform[5],
+				};
+			}
+
+			if (item.keyShapeInvalidated != null) out.keyShapeInvalidated = item.keyShapeInvalidated;
+			out.keyOriginIndex = i;
 		}
 
 		writeInt32(writer, 1); // version
@@ -1139,7 +1136,13 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 		warpPerspective: warp.perspective || 0,
 		warpPerspectiveOther: warp.perspectiveOther || 0,
 		warpRotate: Ornt.encode(warp.rotate),
-		bounds: {
+		bounds: /*1 ? { // testing
+			_classID: 'classFloatRect',
+			'Top ': bounds && bounds.top && bounds.top.value || 0,
+			Left: bounds && bounds.left && bounds.left.value || 0,
+			Btom: bounds && bounds.bottom && bounds.bottom.value || 0,
+			Rght: bounds && bounds.right && bounds.right.value || 0,
+		} :*/ {
 			'Top ': unitsValue(bounds && bounds.top || { units: 'Pixels', value: 0 }, 'bounds.top'),
 			Left: unitsValue(bounds && bounds.left || { units: 'Pixels', value: 0 }, 'bounds.left'),
 			Btom: unitsValue(bounds && bounds.bottom || { units: 'Pixels', value: 0 }, 'bounds.bottom'),
@@ -1326,7 +1329,7 @@ type SoLdDescriptorFilterItem = {
 } | {
 	filterID: 1198747202;
 	Fltr: {
-		_name: 'Gaussian Blur';
+		_name: 'Gaussian Blur' | '高斯模糊';
 		_classID: 'GsnB';
 		'Rds ': DescriptorUnitsValue;
 	};
@@ -2647,6 +2650,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 		case 'gaussian blur': return {
 			...base,
 			Fltr: {
+				// _name: '高斯模糊', // Testing
 				_name: 'Gaussian Blur',
 				_classID: 'GsnB',
 				'Rds ': uvRadius(f.filter),
