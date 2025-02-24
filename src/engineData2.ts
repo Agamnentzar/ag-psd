@@ -1,6 +1,8 @@
 /// Engine data 2 experiments
 // /test/engineData2.json:1109 is character codes
 
+import { EngineData } from './text';
+
 interface KeysDict {
 	[key: string]: {
 		name?: string;
@@ -127,7 +129,7 @@ const keysRoot: KeysDict = {
 										},
 									},
 								},
-							}
+							},
 						},
 					},
 				},
@@ -217,8 +219,64 @@ const keysRoot: KeysDict = {
 				},
 			},
 			'8': {
-				name: '8',
-				children: {},
+				name: 'TextFrameSet',
+				children: {
+					'0': {
+						uproot: true,
+						children: {
+							'0': {
+								name: 'TextPath',
+								children: {
+									'0': { name: 'Name' },
+									'1': {
+										name: 'BezierCurve',
+										children: {
+											'0': { name: 'ControlPoints' },
+										},
+									},
+									'2': {
+										name: 'Data',
+										children: {
+											'0': { name: 'Type' },
+											'1': { name: 'Orientation' },
+											'2': { name: 'FrameMatrix' },
+											'4': { name: '4' },
+											'6': { name: 'TextRange' },
+											'7': { name: 'RowGutter' },
+											'8': { name: 'ColumnGutter' },
+											'9': { name: '9' },
+											'10': {
+												name: 'BaselineAlignment',
+												children: {
+													'0': { name: 'Flag' },
+													'1': { name: 'Min' },
+												},
+											},
+											'11': {
+												name: 'PathData',
+												children: {
+													'1': { name: '1' },
+													'0': { name: 'Reversed' },
+													'2': { name: '2' },
+													'3': { name: '3' },
+													'4': { name: 'Spacing' },
+													'5': { name: '5' },
+													'6': { name: '6' },
+													'7': { name: '7' },
+													'18': { name: '18' },
+												},
+											},
+											'12': { name: '12' },
+											'13': { name: '13' },
+										},
+									},
+									'3': { name: '3' },
+									'97': { name: 'UUID' },
+								},
+							},
+						},
+					},
+				},
 			},
 			'9': {
 				name: 'Predefined',
@@ -343,7 +401,7 @@ const keysRoot: KeysDict = {
 	},
 };
 
-function decodeObj(obj: any, keys: KeysDict): any {
+function decodeObj(obj: EngineData, keys: KeysDict): any {
 	if (obj === null) return obj;
 	if (Array.isArray(obj)) return obj.map(x => decodeObj(x, keys));
 	if (typeof obj !== 'object') return obj;
