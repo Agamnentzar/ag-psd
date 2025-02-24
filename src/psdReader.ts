@@ -3,10 +3,6 @@ import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOpt
 import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { resourceHandlersMap } from './imageResources';
-import { parseEngineData } from './engineData';
-import { toByteArray } from 'base64-js';
-import { decodeEngineData2 } from './engineData2';
-import type { EngineData } from './text';
 
 interface ChannelInfo {
 	id: ChannelID;
@@ -349,14 +345,6 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	//       but add option to preserve file color mode (need to return image data instead of canvas in that case)
 	// psd.colorMode = ColorMode.RGB; // we convert all color modes to RGB
 
-	if(psd.engineData){
-		const byteArray = toByteArray(psd.engineData);
-		const engineData = parseEngineData(byteArray);
-		const parsedEngineData = decodeEngineData2(engineData);
-		
-		assignGlobalEngineData(psd.children, parsedEngineData);
-	}
-	
 	return psd;
 }
 
@@ -715,31 +703,6 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 			skipBytes(reader, left());
 		}
 	}, false, u64);
-}
-
-/**
- * There is a Global text engine data outside text element.
- * So, we need to pick global engine data and set to per text element.
- */
-function assignGlobalEngineData(layers: Layer[] | undefined, globalEngineData: EngineData) {
-	const resources = globalEngineData?.ResourceDict?.TextFrameSet;
-
-	if (!resources || Object.keys(resources).length === 0 || !layers?.length) {
-		return;
-	}
-	const resourceLength = Object.keys(resources).length;
-	let textIndex = 0;
-	layers.forEach((layer) => {
-		const isText = !!layer.text;
-		if (isText) {
-			if (textIndex < resourceLength) {
-				const resource = resources[textIndex++];
-				layer.text!.textPath = resource.TextPath;
-			} else {
-				console.warn('Not enough resources for all text layers');
-			}
-		}
-	});
 }
 
 export function createImageDataBitDepth(width: number, height: number, bitDepth: number, channels = 4): PixelData {

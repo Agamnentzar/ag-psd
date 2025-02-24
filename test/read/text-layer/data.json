@@ -401,7 +401,19 @@
               "autoKerning": true
             }
           }
-        ]
+        ],
+        "textPath": {
+          "data": {
+            "textRange": [
+              -1,
+              -1
+            ],
+            "pathData": {
+              "7": false,
+              "spacing": -1
+            }
+          }
+        }
       },
       "nameSource": "rend",
       "id": 2,

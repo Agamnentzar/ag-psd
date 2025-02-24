@@ -1,7 +1,7 @@
 /// Engine data 2 experiments
 // /test/engineData2.json:1109 is character codes
 
-import { EngineData } from './text';
+import type { GlobalEngineData } from './text';
 
 interface KeysDict {
 	[key: string]: {
@@ -225,41 +225,41 @@ const keysRoot: KeysDict = {
 						uproot: true,
 						children: {
 							'0': {
-								name: 'TextPath',
+								name: 'path',
 								children: {
-									'0': { name: 'Name' },
+									'0': { name: 'name' },
 									'1': {
-										name: 'BezierCurve',
+										name: 'bezierCurve',
 										children: {
-											'0': { name: 'ControlPoints' },
+											'0': { name: 'controlPoints' },
 										},
 									},
 									'2': {
-										name: 'Data',
+										name: 'data',
 										children: {
-											'0': { name: 'Type' },
-											'1': { name: 'Orientation' },
-											'2': { name: 'FrameMatrix' },
+											'0': { name: 'type' },
+											'1': { name: 'orientation' },
+											'2': { name: 'frameMatrix' },
 											'4': { name: '4' },
-											'6': { name: 'TextRange' },
-											'7': { name: 'RowGutter' },
-											'8': { name: 'ColumnGutter' },
+											'6': { name: 'textRange' },
+											'7': { name: 'rowGutter' },
+											'8': { name: 'columnGutter' },
 											'9': { name: '9' },
 											'10': {
-												name: 'BaselineAlignment',
+												name: 'baselineAlignment',
 												children: {
-													'0': { name: 'Flag' },
-													'1': { name: 'Min' },
+													'0': { name: 'flag' },
+													'1': { name: 'min' },
 												},
 											},
 											'11': {
-												name: 'PathData',
+												name: 'pathData',
 												children: {
 													'1': { name: '1' },
-													'0': { name: 'Reversed' },
+													'0': { name: 'reversed' },
 													'2': { name: '2' },
 													'3': { name: '3' },
-													'4': { name: 'Spacing' },
+													'4': { name: 'spacing' },
 													'5': { name: '5' },
 													'6': { name: '6' },
 													'7': { name: '7' },
@@ -271,7 +271,7 @@ const keysRoot: KeysDict = {
 										},
 									},
 									'3': { name: '3' },
-									'97': { name: 'UUID' },
+									'97': { name: 'uuid' },
 								},
 							},
 						},
@@ -401,7 +401,7 @@ const keysRoot: KeysDict = {
 	},
 };
 
-function decodeObj(obj: EngineData, keys: KeysDict): any {
+function decodeObj(obj: any, keys: KeysDict): any {
 	if (obj === null) return obj;
 	if (Array.isArray(obj)) return obj.map(x => decodeObj(x, keys));
 	if (typeof obj !== 'object') return obj;
@@ -427,6 +427,6 @@ function decodeObj(obj: EngineData, keys: KeysDict): any {
 	return result;
 }
 
-export function decodeEngineData2(data: any) {
+export function decodeEngineData2(data: any): GlobalEngineData {
 	return decodeObj(data, keysRoot);
 }

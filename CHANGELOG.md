@@ -1,5 +1,8 @@
 # Changelog
 
+## v27.0.0
+- Added support for read-only field `text.textPath` with text path information for text layers. This field is extracted from psd.engineData, which is not fully supported yet.
+
 ## v26.0.0
 - Added support for `realMask` section
 
