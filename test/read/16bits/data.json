@@ -131,6 +131,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 1",
       "nameSource": "layr",
       "id": 76,
@@ -159,6 +231,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Ellipse 1",
       "vectorFill": {
         "type": "color",
@@ -172,7 +316,6 @@
         "paths": [
           {
             "open": false,
-            "operation": "combine",
             "knots": [
               {
                 "linked": true,
@@ -219,7 +362,8 @@
                 ]
               }
             ],
-            "fillRule": "even-odd"
+            "fillRule": "even-odd",
+            "operation": "combine"
           }
         ],
         "invert": false,
@@ -227,6 +371,7 @@
         "disable": false,
         "fillStartsWithAllPixels": false
       },
+      "vowv": 2,
       "vectorOrigination": {
         "keyDescriptorList": [
           {
@@ -349,7 +494,18 @@
     "description": "",
     "reason": "",
     "engine": "compCore",
+    "version": {
+      "major": 1,
+      "minor": 3,
+      "fix": 0
+    },
+    "photoshopVersion": {
+      "major": 25,
+      "minor": 1,
+      "fix": 0
+    },
     "enableCompCoreGPU": "feature",
+    "enableCompCoreThreads": "feature",
     "compCoreGPUSupport": "supported"
   }
 }

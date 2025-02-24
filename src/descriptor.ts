@@ -56,12 +56,14 @@ function makeType(name: string, classID: string) {
 
 const nullType = makeType('', 'null');
 
+const USE_CHINESE = false; // Testing
+
 const fieldToExtType: ExtTypeDict = {
 	strokeStyleContent: makeType('', 'solidColorLayer'),
-	// printProofSetup: makeType('校样设置', 'proofSetup'), // TESTING
-	printProofSetup: makeType('Proof Setup', 'proofSetup'),
+	printProofSetup: makeType(USE_CHINESE ? '校样设置' : 'Proof Setup', 'proofSetup'),
+	Grad: makeType(USE_CHINESE ? '渐变' : 'Gradient', 'Grdn'),
+	Trnf: makeType(USE_CHINESE ? '变换' : 'Transform', 'Trnf'),
 	patternFill: makeType('', 'patternFill'),
-	Grad: makeType('Gradient', 'Grdn'),
 	ebbl: makeType('', 'ebbl'),
 	SoFi: makeType('', 'SoFi'),
 	GrFl: makeType('', 'GrFl'),
@@ -103,7 +105,6 @@ const fieldToExtType: ExtTypeDict = {
 	rectangleCornerC: makeType('', 'Pnt '),
 	rectangleCornerD: makeType('', 'Pnt '),
 	compInfo: nullType,
-	Trnf: makeType('Transform', 'Trnf'),
 	quiltWarp: makeType('', 'quiltWarp'),
 	generatorSettings: nullType,
 	crema: nullType,
@@ -138,6 +139,7 @@ const fieldToExtType: ExtTypeDict = {
 	customShape: makeType('', 'customShape'),
 	origFXRefPoint: nullType,
 	FXRefPoint: nullType,
+	ClMg: makeType('', 'ClMg'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -171,6 +173,7 @@ const fieldToArrayExtType: ExtTypeDict = {
 	ShrP: makeType('', 'Pnt '),
 	layerSettings: nullType,
 	list: nullType,
+	Adjs: makeType('', 'CrvA'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -186,7 +189,7 @@ const typeToField: { [key: string]: string[]; } = {
 	],
 	'long': [
 		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn', 'Cnt ',
-		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'presetKind', 'comp', 'compID', 'originalCompID',
+		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'comp', 'compID', 'originalCompID',
 		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages', 'Crop',
 		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
 		'keyOriginIndex', 'major', 'minor', 'fix', 'docDefaultNewArtboardBackgroundType', 'artboardBackgroundType',
@@ -206,7 +209,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
 		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
-		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ',
+		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion', 'gradientsInterpolationMethod',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -219,7 +222,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
 		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch', 'ExtF', 'ExtM',
-		'moreAccurate', 'GpuY', 'LIWy',
+		'moreAccurate', 'GpuY', 'LIWy', 'Cnty',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
@@ -241,7 +244,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
 		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
 		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList', 'ShrP',
-		'channelDenoise', 'Mtrx', 'layerSettings', 'list', 'compList',
+		'channelDenoise', 'Mtrx', 'layerSettings', 'list', 'compList', 'Adjs',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null', 'Chnl'],
@@ -290,6 +293,7 @@ const fieldToArrayType: Dict = {
 	channelDenoise: 'Objc',
 	Mtrx: 'long',
 	compList: 'long',
+	Chnl: 'enum',
 };
 
 const fieldToType: Dict = {};
@@ -309,7 +313,9 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 }
 
 function getTypeByKey(key: string, value: any, root: string, parent: any) {
-	if (key === 'null' && root === 'slices') {
+	if (key === 'presetKind') {
+		return typeof value === 'string' ? 'enum' : 'long';
+	} if (key === 'null' && root === 'slices') {
 		return 'TEXT';
 	} else if (key === 'groupID') {
 		return root === 'slices' ? 'long' : 'TEXT';
@@ -319,7 +325,7 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 		return typeof value === 'string' ? 'enum' : 'long';
 	} else if (key === 'AntA') {
 		return typeof value === 'string' ? 'enum' : 'bool';
-	} else if ((key === 'Hrzn' || key === 'Vrtc') && parent.Type === 'keyType.Pstn') {
+	} else if ((key === 'Hrzn' || key === 'Vrtc') && (parent.Type === 'keyType.Pstn' || parent._classID === 'Ofst')) {
 		return 'long';
 	} else if (key === 'Hrzn' || key === 'Vrtc' || key === 'Top ' || key === 'Left' || key === 'Btom' || key === 'Rght') {
 		if (root === 'slices') return 'long';
@@ -405,12 +411,18 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			type = 'long';
 		} else if (/^PF[a-z][a-z]$/.test(key)) {
 			type = 'doub';
+		} else if ((key === 'Rds ' || key === 'Thsh') && typeof value[key] === 'number' && value._classID === 'SmrB') {
+			type = 'doub';
 		} else if (key === 'ClSz' || key === 'Rds ' || key === 'Amnt') {
 			type = typeof value[key] === 'number' ? 'long' : 'UntF';
 		} else if ((key === 'sdwM' || key === 'hglM') && typeof value[key] === 'string') {
 			type = 'enum';
 		} else if (key === 'blur' && typeof value[key] === 'string') {
 			type = 'enum';
+		} else if (key === 'Hght' && typeof value[key] === 'number' && value._classID === 'Embs') {
+			type = 'long';
+		} else if (key === 'Angl' && typeof value[key] === 'number' && (value._classID === 'Embs' || value._classID === 'smartSharpen' || value._classID === 'Twrl' || value._classID === 'MtnB')) {
+			type = 'long';
 		} else if (key === 'Angl' && typeof value[key] === 'number') {
 			type = 'doub'; // ???
 		} else if (key === 'bounds' && root === 'slices') {
@@ -727,7 +739,7 @@ function writeReferenceStructure(writer: PsdWriter, _key: string, items: any[]) 
 		let type = 'unknown';
 
 		if (typeof value === 'string') {
-			if (/^[a-z]+\.[a-z]+$/i.test(value)) {
+			if (/^[a-z ]+\.[a-z ]+$/i.test(value)) {
 				type = 'Enmr';
 			} else {
 				type = 'name';
@@ -868,11 +880,12 @@ export interface DescriptorColorContent {
 }
 
 export interface DescriptorGradientContent {
-	Grad: DesciptorGradient;
-	Type: string;
 	Dthr?: boolean;
-	Rvrs?: boolean;
+	gradientsInterpolationMethod?: string; // 'gradientInterpolationMethodType.Smoo'
 	Angl?: DescriptorUnitsValue;
+	Type: string;
+	Grad: DesciptorGradient;
+	Rvrs?: boolean;
 	'Scl '?: DescriptorUnitsValue;
 	Algn?: boolean;
 	Ofst?: { Hrzn: DescriptorUnitsValue; Vrtc: DescriptorUnitsValue; };
@@ -1600,6 +1613,7 @@ function parseGradientContent(descriptor: DescriptorGradientContent) {
 	const result = parseGradient(descriptor.Grad) as (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
 	result.style = GrdT.decode(descriptor.Type);
 	if (descriptor.Dthr !== undefined) result.dither = descriptor.Dthr;
+	if (descriptor.gradientsInterpolationMethod !== undefined) result.interpolationMethod = gradientInterpolationMethodType.decode(descriptor.gradientsInterpolationMethod);
 	if (descriptor.Rvrs !== undefined) result.reverse = descriptor.Rvrs;
 	if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
 	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
@@ -1639,6 +1653,7 @@ export function parseVectorContent(descriptor: DescriptorVectorContent): VectorC
 function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo) {
 	const result: DescriptorGradientContent = {} as any;
 	if (content.dither !== undefined) result.Dthr = content.dither;
+	if (content.interpolationMethod !== undefined) result.gradientsInterpolationMethod = gradientInterpolationMethodType.encode(content.interpolationMethod);
 	if (content.reverse !== undefined) result.Rvrs = content.reverse;
 	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
 	result.Type = GrdT.encode(content.style);
@@ -2145,4 +2160,9 @@ export const prjM = createEnum<'fisheye' | 'perspective' | 'auto' | 'full spheri
 	'perspective': 'perP',
 	'auto': 'auto',
 	'full spherical': 'fusP',
+});
+
+export const presetKindType = createEnum<'custom' | 'default'>('presetKindType', 'presetKindCustom', {
+	custom: 'presetKindCustom',
+	default: 'presetKindDefault',
 });

@@ -133,6 +133,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Large",
       "id": 4,
       "sectionDivider": {
@@ -180,6 +252,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "1 2",
           "effects": {
             "scale": 1,
@@ -708,8 +852,19 @@
     "description": "",
     "reason": "",
     "engine": "compCore",
+    "version": {
+      "major": 1,
+      "minor": 3,
+      "fix": 0
+    },
+    "photoshopVersion": {
+      "major": 22,
+      "minor": 2,
+      "fix": 0
+    },
     "enableCompCore": "feature",
     "enableCompCoreGPU": "feature",
+    "enableCompCoreThreads": "feature",
     "compCoreSupport": "supported",
     "compCoreGPUSupport": "featureDisabled"
   }

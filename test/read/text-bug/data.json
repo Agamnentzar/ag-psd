@@ -143,6 +143,78 @@
       "clipping": false,
       "transparencyProtected": true,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "背景",
       "nameSource": "bgnd",
       "id": 1,
@@ -172,6 +244,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "组 7",
       "nameSource": "lset",
       "id": 8478,
@@ -203,6 +347,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "圆角矩形 638 拷贝",
           "vectorFill": {
             "type": "color",
@@ -388,6 +604,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "3月",
           "text": {
             "transform": [
@@ -560,6 +848,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "应收：2908",
           "text": {
             "transform": [
@@ -732,6 +1092,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "实收：3104",
           "text": {
             "transform": [
@@ -910,6 +1342,11 @@
     "description": "",
     "reason": "",
     "engine": "compCore",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "fix": 0
+    },
     "enableCompCore": "feature",
     "enableCompCoreGPU": "feature",
     "compCoreSupport": "supported",

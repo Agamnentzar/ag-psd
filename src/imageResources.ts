@@ -1,22 +1,10 @@
 import { toByteArray } from 'base64-js';
 import { BlendMode, ImageResources, RenderingIntent } from './psd';
-import {
-	PsdReader, readPascalString, readUnicodeString, readUint32, readUint16, readUint8, readFloat64,
-	readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature,
-	readSection, readColor, readInt32
-} from './psdReader';
-import {
-	PsdWriter, writePascalString, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16,
-	writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature,
-	writeSection, writeInt32,
-} from './psdWriter';
+import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32 } from './psdReader';
+import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
-import {
-	ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac,
-	FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor,
-	TimeScopeDescriptor, writeVersionAndDescriptor
-} from './descriptor';
+import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface ResourceHandler {
 	key: number;
@@ -59,6 +47,38 @@ function readUtf8String(reader: PsdReader, length: number) {
 
 function writeUtf8String(writer: PsdWriter, value: string) {
 	const buffer = encodeString(value);
+	writeBytes(writer, buffer);
+}
+
+function readEncodedString(reader: PsdReader) {
+	const length = readUint8(reader);
+	const buffer = readBytes(reader, length);
+
+	let notAscii = false;
+	for (let i = 0; i < buffer.byteLength; i++) {
+		if (buffer[i] & 0x80) {
+			notAscii = true;
+			break;
+		}
+	}
+
+	if (notAscii) {
+		const decoder = new TextDecoder('gbk');
+		return decoder.decode(buffer)
+	} else {
+		return decodeString(buffer);
+	}
+}
+
+function writeEncodedString(writer: PsdWriter, value: string) {
+	let ascii = '';
+
+	for (let i = 0, code = value.codePointAt(i++); code !== undefined; code = value.codePointAt(i++)) {
+		ascii += code > 0x7f ? '?' : String.fromCodePoint(code);
+	}
+
+	const buffer = encodeString(ascii);
+	writeUint8(writer, buffer.byteLength);
 	writeBytes(writer, buffer);
 }
 
@@ -273,16 +293,22 @@ addHandler(
 	1006,
 	target => target.alphaChannelNames !== undefined,
 	(reader, target, left) => {
-		target.alphaChannelNames = [];
+		if (!target.alphaChannelNames) { // skip if the unicode versions are already read
+			target.alphaChannelNames = [];
 
-		while (left() > 0) {
-			const value = readPascalString(reader, 1);
-			target.alphaChannelNames.push(value);
+			while (left() > 0) {
+				const value = readEncodedString(reader);
+				// const value = readPascalString(reader, 1);
+				target.alphaChannelNames.push(value);
+			}
+		} else {
+			skipBytes(reader, left());
 		}
 	},
 	(writer, target) => {
 		for (const name of target.alphaChannelNames!) {
-			writePascalString(writer, name, 1);
+			writeEncodedString(writer, name);
+			// writePascalString(writer, name, 1);
 		}
 	},
 );

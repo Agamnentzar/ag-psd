@@ -13,7 +13,7 @@ interface ChannelInfo {
 	length: number;
 }
 
-export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB];
+export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
 
 function setupGrayscale(data: PixelData) {
@@ -135,7 +135,7 @@ export function readPascalString(reader: PsdReader, padTo: number) {
 	let length = readUint8(reader);
 	const text = length ? readShortString(reader, length) : '';
 
-	while (++length % padTo) {
+	while (++length % padTo) { // starts with length + 1 so we count the size byte too
 		reader.offset++;
 	}
 
@@ -244,14 +244,19 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	readSection(reader, 1, left => {
 		if (!left()) return;
 
-		// const numbers: number[] = [];
-		// console.log('color mode', left());
-		// while (left() > 0) {
-		// 	numbers.push(readUint32(reader));
-		// }
-		// console.log('color mode', numbers);
+		if (colorMode === ColorMode.Indexed) {
+			// should have 256 colors here saved as 8bit channels RGB
+			if (left() != 768) throw new Error('Invalid color palette size');
 
-		// if (options.throwForMissingFeatures) throw new Error('Color mode data not supported');
+			psd.palette = [];
+			for (let i = 0; i < 256; i++) psd.palette.push({ r: readUint8(reader), g: 0, b: 0 });
+			for (let i = 0; i < 256; i++) psd.palette[i].g = readUint8(reader);
+			for (let i = 0; i < 256; i++) psd.palette[i].b = readUint8(reader);
+		} else {
+			// TODO: unknown format for duotone, also seems to have some data here for 32bit colors
+			// if (options.throwForMissingFeatures) throw new Error('Color mode data not supported');
+		}
+
 		skipBytes(reader, left());
 	});
 
@@ -325,7 +330,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 			}
 
 			if (left() >= 12) {
-				readAdditionalLayerInfo(reader, psd, psd,);
+				readAdditionalLayerInfo(reader, psd, psd);
 			} else {
 				// opt.logMissingFeatures && console.log('skipping leftover bytes', left());
 				skipBytes(reader, left());
@@ -450,26 +455,30 @@ function readLayerRecord(reader: PsdReader, psd: Psd) {
 	skipBytes(reader, 1);
 
 	readSection(reader, 1, left => {
-		const mask = readLayerMaskData(reader);
-		if (mask) layer.mask = mask;
+		readLayerMaskData(reader, layer);
 
-		/*const blendingRanges =*/ readLayerBlendingRanges(reader);
+		const blendingRanges = readLayerBlendingRanges(reader);
+		if (blendingRanges) layer.blendingRanges = blendingRanges;
 		layer.name = readPascalString(reader, 1); // should be padded to 4, but is not sometimes
 
 		// HACK: fix for sometimes layer.name string not being padded correctly, just skip until we get valid signature
 		while (left() > 4 && !validSignatureAt(reader, reader.offset)) reader.offset++;
 
-		while (left() > 4) readAdditionalLayerInfo(reader, layer, psd);
+		while (left() >= 12) readAdditionalLayerInfo(reader, layer, psd);
+
+		skipBytes(reader, left());
 	});
 
 	return { layer, channels };
 }
 
-function readLayerMaskData(reader: PsdReader) {
+function readLayerMaskData(reader: PsdReader, layer: Layer) {
 	return readSection<LayerMaskData | undefined>(reader, 1, left => {
 		if (!left()) return undefined;
 
 		const mask: LayerMaskData = {};
+		layer.mask = mask;
+
 		mask.top = readInt32(reader);
 		mask.left = readInt32(reader);
 		mask.bottom = readInt32(reader);
@@ -481,6 +490,22 @@ function readLayerMaskData(reader: PsdReader) {
 		mask.disabled = (flags & LayerMaskFlags.LayerMaskDisabled) !== 0;
 		mask.fromVectorData = (flags & LayerMaskFlags.LayerMaskFromRenderingOtherData) !== 0;
 
+		if (left() >= 18) {
+			const realMask: LayerMaskData = {};
+			layer.realMask = realMask;
+
+			const realFlags = readUint8(reader);
+			realMask.positionRelativeToLayer = (realFlags & LayerMaskFlags.PositionRelativeToLayer) !== 0;
+			realMask.disabled = (realFlags & LayerMaskFlags.LayerMaskDisabled) !== 0;
+			realMask.fromVectorData = (realFlags & LayerMaskFlags.LayerMaskFromRenderingOtherData) !== 0;
+
+			realMask.defaultColor = readUint8(reader); // Real user mask background. 0 or 255.
+			realMask.top = readInt32(reader);
+			realMask.left = readInt32(reader);
+			realMask.bottom = readInt32(reader);
+			realMask.right = readInt32(reader);
+		}
+
 		if (flags & LayerMaskFlags.MaskHasParametersAppliedToIt) {
 			const params = readUint8(reader);
 			if (params & MaskParams.UserMaskDensity) mask.userMaskDensity = readUint8(reader) / 0xff;
@@ -489,37 +514,23 @@ function readLayerMaskData(reader: PsdReader) {
 			if (params & MaskParams.VectorMaskFeather) mask.vectorMaskFeather = readFloat64(reader);
 		}
 
-		if (left() > 2) {
-			// TODO: handle these values, this is RealUserMask
-			/*const realFlags = readUint8(reader);
-			const realUserMaskBackground = readUint8(reader);
-			const top2 = readInt32(reader);
-			const left2 = readInt32(reader);
-			const bottom2 = readInt32(reader);
-			const right2 = readInt32(reader);
-
-			// TEMP
-			(mask as any)._real = { realFlags, realUserMaskBackground, top2, left2, bottom2, right2 };*/
-
-			if (reader.logMissingFeatures) {
-				reader.log('Unhandled extra real user mask params');
-			}
-		}
-
 		skipBytes(reader, left());
-		return mask;
 	});
+}
+
+function readBlendingRange(reader: PsdReader) {
+	return [readUint8(reader), readUint8(reader), readUint8(reader), readUint8(reader)];
 }
 
 function readLayerBlendingRanges(reader: PsdReader) {
 	return readSection(reader, 1, left => {
-		const compositeGrayBlendSource = readUint32(reader);
-		const compositeGraphBlendDestinationRange = readUint32(reader);
-		const ranges = [];
+		const compositeGrayBlendSource = readBlendingRange(reader);
+		const compositeGraphBlendDestinationRange = readBlendingRange(reader);
+		const ranges: { sourceRange: number[]; destRange: number[]; }[] = [];
 
 		while (left() > 0) {
-			const sourceRange = readUint32(reader);
-			const destRange = readUint32(reader);
+			const sourceRange = readBlendingRange(reader);
+			const destRange = readBlendingRange(reader);
 			ranges.push({ sourceRange, destRange });
 		}
 
@@ -545,7 +556,10 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		}
 	}
 
-	if (RAW_IMAGE_DATA) (layer as any).imageDataRaw = [];
+	if (RAW_IMAGE_DATA) {
+		(layer as any).imageDataRaw = [];
+		(layer as any).imageDataRawCompression = [];
+	}
 
 	for (const channel of channels) {
 		if (channel.length === 0) continue;
@@ -569,13 +583,13 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 
 		if (compression > 3) throw new Error(`Invalid compression: ${compression}`);
 
-		if (channel.id === ChannelID.UserMask) {
-			const mask = layer.mask;
-
-			if (!mask) throw new Error(`Missing layer mask data`);
+		if (channel.id === ChannelID.UserMask || channel.id === ChannelID.RealUserMask) {
+			const mask = channel.id === ChannelID.UserMask ? layer.mask : layer.realMask;
+			if (!mask) throw new Error(`Missing layer ${channel.id === ChannelID.UserMask ? 'mask' : 'real mask'} data`);
 
 			const maskWidth = (mask.right || 0) - (mask.left || 0);
 			const maskHeight = (mask.bottom || 0) - (mask.top || 0);
+			if (maskWidth < 0 || maskHeight < 0 || maskWidth > 30000 || maskHeight > 30000) throw new Error('Invalid mask size');
 
 			if (maskWidth && maskHeight) {
 				const maskData = createImageDataBitDepth(maskWidth, maskHeight, psd.bitsPerChannel ?? 8);
@@ -585,7 +599,13 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 				readData(reader, channel.length, maskData, compression, maskWidth, maskHeight, psd.bitsPerChannel ?? 8, 0, reader.large, 4);
 
 				if (RAW_IMAGE_DATA) {
-					(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+					if (channel.id === ChannelID.UserMask) {
+						(layer as any).maskDataRawCompression = compression;
+						(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+					} else {
+						(layer as any).realMaskDataRawCompression = compression;
+						(layer as any).realMaskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+					}
 				}
 
 				setupGrayscale(maskData);
@@ -596,12 +616,6 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 					mask.canvas = imageDataToCanvas(maskData);
 				}
 			}
-		} else if (channel.id === ChannelID.RealUserMask) {
-			if (reader.logMissingFeatures) {
-				reader.log(`RealUserMask not supported`);
-			}
-
-			reader.offset = start + channel.length;
 		} else {
 			const offset = offsetForChannel(channel.id, cmyk);
 			let targetData = imageData;
@@ -617,6 +631,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 			readData(reader, channel.length, targetData, compression, layerWidth, layerHeight, psd.bitsPerChannel ?? 8, offset, reader.large, cmyk ? 5 : 4);
 
 			if (RAW_IMAGE_DATA) {
+				(layer as any).imageDataRawCompression[channel.id] = compression;
 				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start + 2, channel.length - 2);
 			}
 
@@ -643,7 +658,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 	}
 }
 
-function readData(reader: PsdReader, length: number, data: PixelData | undefined, compression: Compression, width: number, height: number, bitDepth: number, offset: number, large: boolean, step: number) {
+export function readData(reader: PsdReader, length: number, data: PixelData | undefined, compression: Compression, width: number, height: number, bitDepth: number, offset: number, large: boolean, step: number) {
 	if (compression === Compression.RawData) {
 		readDataRaw(reader, data, width, height, bitDepth, step, offset);
 	} else if (compression === Compression.RleCompressed) {
@@ -727,13 +742,17 @@ function assignGlobalEngineData(layers: Layer[] | undefined, globalEngineData: E
 	});
 }
 
-function createImageDataBitDepth(width: number, height: number, bitDepth: number): PixelData {
+export function createImageDataBitDepth(width: number, height: number, bitDepth: number, channels = 4): PixelData {
 	if (bitDepth === 1 || bitDepth === 8) {
-		return createImageData(width, height);
+		if (channels === 4) {
+			return createImageData(width, height);
+		} else {
+			return { width, height, data: new Uint8ClampedArray(width * height * channels) };
+		}
 	} else if (bitDepth === 16) {
-		return { width, height, data: new Uint16Array(width * height * 4) };
+		return { width, height, data: new Uint16Array(width * height * channels) };
 	} else if (bitDepth === 32) {
-		return { width, height, data: new Float32Array(width * height * 4) };
+		return { width, height, data: new Float32Array(width * height * channels) };
 	} else {
 		throw new Error(`Invalid bitDepth (${bitDepth})`);
 	}
@@ -798,8 +817,29 @@ function readImageData(reader: PsdReader, psd: Psd) {
 			}
 			break;
 		}
+		case ColorMode.Indexed: {
+			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
+			if (psd.channels !== 1) throw new Error('Invalid channel count');
+			if (!psd.palette) throw new Error('Missing color palette');
+
+			if (compression === Compression.RawData) {
+				throw new Error(`Not implemented`);
+			} else if (compression === Compression.RleCompressed) {
+				const indexedImageData: PixelData = {
+					width: imageData.width,
+					height: imageData.height,
+					data: new Uint8Array(imageData.width * imageData.height),
+				};
+				readDataRLE(reader, indexedImageData, psd.width, psd.height, bitsPerChannel, 1, [0], reader.large);
+				indexedToRgb(indexedImageData, imageData, psd.palette);
+			} else {
+				throw new Error(`Not implemented`);
+			}
+
+			break;
+		}
 		case ColorMode.CMYK: {
-			if (psd.bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
+			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 			if (psd.channels !== 4) throw new Error(`Invalid channel count`);
 
 			const channels = [0, 1, 2, 3];
@@ -819,10 +859,12 @@ function readImageData(reader: PsdReader, psd: Psd) {
 				};
 
 				const start = reader.offset;
-				readDataRLE(reader, cmykImageData, psd.width, psd.height, psd.bitsPerChannel ?? 8, 5, channels, reader.large);
+				readDataRLE(reader, cmykImageData, psd.width, psd.height, bitsPerChannel, 5, channels, reader.large);
 				cmykToRgb(cmykImageData, imageData, true);
 
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+			} else {
+				throw new Error(`Not implemented`);
 			}
 
 			break;
@@ -881,6 +923,20 @@ function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
 	// 	dstData[dst + 2] = ((1 - y * 0.8) * 255) | 0;
 	// 	dstData[dst + 3] = reverseAlpha ? 255 - srcData[src + 4] : srcData[src + 4];
 	// }
+}
+
+function indexedToRgb(indexed: PixelData, rgb: PixelData, palette: RGB[]) {
+	const size = indexed.width * indexed.height;
+	const srcData = indexed.data;
+	const dstData = rgb.data;
+
+	for (let src = 0, dst = 0; src < size; src++, dst += 4) {
+		const c = palette[srcData[src]];
+		dstData[dst + 0] = c.r;
+		dstData[dst + 1] = c.g;
+		dstData[dst + 2] = c.b;
+		dstData[dst + 3] = 255;
+	}
 }
 
 function verifyCompatible(a: PixelArray, b: PixelArray) {
@@ -990,7 +1046,7 @@ export function readDataZip(reader: PsdReader, length: number, pixelData: PixelD
 	}
 }
 
-export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, _width: number, height: number, bitDepth: number, step: number, offsets: number[], large: boolean) {
+export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offsets: number[], large: boolean) {
 	const data = pixelData && pixelData.data;
 	let lengths: Uint16Array | Uint32Array;
 
@@ -1029,19 +1085,19 @@ export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined,
 				const length = lengths[li];
 				const buffer = readBytes(reader, length);
 
-				for (let i = 0; i < length; i++) {
+				for (let i = 0, x = 0; i < length; i++) {
 					let header = buffer[i];
 
 					if (header > 128) {
 						const value = buffer[++i];
 						header = (256 - header) | 0;
 
-						for (let j = 0; j <= header; j = (j + 1) | 0) {
+						for (let j = 0; j <= header && x < width; j = (j + 1) | 0, x = (x + 1) | 0) {
 							data[p] = value;
 							p = (p + step) | 0;
 						}
 					} else if (header < 128) {
-						for (let j = 0; j <= header; j = (j + 1) | 0) {
+						for (let j = 0; j <= header && x < width; j = (j + 1) | 0, x = (x + 1) | 0) {
 							data[p] = buffer[++i];
 							p = (p + step) | 0;
 						}

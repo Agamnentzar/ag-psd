@@ -136,6 +136,7 @@ export interface LayerChannelData {
 	right: number;
 	bottom: number;
 	mask?: Bounds;
+	realMask?: Bounds;
 }
 
 export function offsetForChannel(channelId: ChannelID, cmyk: boolean) {

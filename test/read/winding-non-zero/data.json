@@ -134,6 +134,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Shape 1",
       "vectorFill": {
         "type": "color",
@@ -147,7 +219,6 @@
         "paths": [
           {
             "open": false,
-            "operation": "combine",
             "knots": [
               {
                 "linked": false,
@@ -205,7 +276,8 @@
                 ]
               }
             ],
-            "fillRule": "non-zero"
+            "fillRule": "non-zero",
+            "operation": "combine"
           }
         ],
         "invert": false,
@@ -243,6 +315,11 @@
     "description": "",
     "reason": "",
     "engine": "umerge",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "fix": 1
+    },
     "enableCompCore": "feature",
     "enableCompCoreGPU": "feature",
     "compCoreSupport": "featureDisabled",

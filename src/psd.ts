@@ -264,7 +264,7 @@ export type Justification = 'left' | 'right' | 'center' | 'justify-left' | 'just
 export type LineCapType = 'butt' | 'round' | 'square';
 export type LineJoinType = 'miter' | 'round' | 'bevel';
 export type LineAlignment = 'inside' | 'center' | 'outside';
-export type InterpolationMethod = 'classic' | 'perceptual' | 'linear';
+export type InterpolationMethod = 'classic' | 'perceptual' | 'linear' | 'smooth';
 
 export interface Warp {
 	style?: WarpStyle;
@@ -469,6 +469,7 @@ export interface ExtraGradientInfo {
 	scale?: number;
 	angle?: number;
 	dither?: boolean;
+	interpolationMethod?: InterpolationMethod;
 	reverse?: boolean;
 	align?: boolean;
 	offset?: { x: number; y: number; };
@@ -1137,7 +1138,19 @@ type FilterVariant = {
 		quads: number[][]; // quad indices
 		vertices: { x: UnitsValue; y: UnitsValue; }[];
 		warpedVertices: { x: UnitsValue; y: UnitsValue; }[];
-	}
+	};
+} | {
+	type: 'curves';
+	filter: {
+		presetKind: 'custom' | 'default';
+		adjustments: ({
+			channels: ('composite' | 'red' | 'green' | 'blue')[];
+			curve: { x: number; y: number; curved?: boolean; }[];
+		} | {
+			channels: ('composite' | 'red' | 'green' | 'blue')[];
+			values: number[];
+		})[];
+	};
 };
 
 /*
@@ -1322,6 +1335,7 @@ export interface LayerAdditionalInfo {
 	id?: number; // layer id
 	version?: number; // layer version
 	mask?: LayerMaskData;
+	realMask?: LayerMaskData;
 	blendClippendElements?: boolean; // has to be set to `true` when using `color burn` blend mode (otherwise `transparencyShapesLayer` is set incorrectly)
 	blendInteriorElements?: boolean;
 	knockout?: boolean;
@@ -1379,11 +1393,14 @@ export interface LayerAdditionalInfo {
 		keyDescriptorList: KeyDescriptorItem[];
 	};
 	compositorUsed?: {
+		version?: { major: number; minor: number; fix: number; };
+		photoshopVersion?: { major: number; minor: number; fix: number; };
 		description: string;
 		reason: string;
 		engine: string;
 		enableCompCore?: string;
 		enableCompCoreGPU?: string;
+		enableCompCoreThreads?: string;
 		compCoreSupport?: string;
 		compCoreGPUSupport?: string;
 	};
@@ -1417,6 +1434,10 @@ export interface LayerAdditionalInfo {
 			data: Uint8Array;
 		} | undefined)[];
 		extra?: {
+			top: number;
+			left: number;
+			bottom: number;
+			right: number;
 			compressionMode: number;
 			data: Uint8Array;
 		};
@@ -1434,6 +1455,12 @@ export interface LayerAdditionalInfo {
 		colorSpace: Color;
 		opacity: number;
 	};
+	blendingRanges?: {
+		compositeGrayBlendSource: number[];
+		compositeGraphBlendDestinationRange: number[];
+		ranges: { sourceRange: number[]; destRange: number[]; }[];
+	};
+	vowv?: number; // ???
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.
@@ -1677,6 +1704,7 @@ export interface Psd extends LayerAdditionalInfo {
 	channels?: number;
 	bitsPerChannel?: number;
 	colorMode?: ColorMode;
+	palette?: RGB[]; // colors for indexed color mode
 	children?: Layer[];
 	canvas?: HTMLCanvasElement;
 	imageData?: PixelData;

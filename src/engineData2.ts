@@ -60,7 +60,7 @@ const keysStyleSheet: KeysDict = {
 
 	'52': { name: 'NoBreak' },
 	'53': { name: 'FillColor', children: keysColor },
-	'54': { name: 'StrokeColor?', children: keysColor },
+	'54': { name: 'StrokeColor', children: keysColor },
 	'55': { children: { '99': { uproot: true } } },
 
 	// '68': ???
@@ -379,6 +379,13 @@ const keysRoot: KeysDict = {
 						// 		// '6'
 						// 	},
 						// }
+						//     "1": [ // this is probably bounding box? there seem to be many of them nested
+						//       0,
+						//       0,
+						//       999,
+						//       176.30014
+						//     ],
+						// various types: /PC, /F, /R, /L, /S, /G
 					},
 				},
 			},

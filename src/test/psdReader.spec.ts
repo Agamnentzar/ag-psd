@@ -69,8 +69,8 @@ describe('PsdReader', () => {
 
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
-	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|ignore-text-align|ignore-missing-object/.test(f)).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /ignore-missing-stroke/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk|ignore-text-align|ignore-missing-object|ignore-text-curve/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /ignore-masks/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = fs.existsSync(path.join(basePath, 'src.psb')) ? 'src.psb' : 'src.psd';
@@ -109,6 +109,12 @@ describe('PsdReader', () => {
 						compare.push({ name: `layer-${layerId}-mask.png`, canvas: l.mask.canvas });
 						delete l.mask.canvas;
 						delete l.mask.imageData;
+					}
+
+					if (l.realMask) {
+						compare.push({ name: `layer-${layerId}-real-mask.png`, canvas: l.realMask.canvas });
+						delete l.realMask.canvas;
+						delete l.realMask.imageData;
 					}
 
 					// if (l.vectorMask) {
@@ -156,7 +162,11 @@ describe('PsdReader', () => {
 			if (psd.linkedFiles) {
 				for (const file of psd.linkedFiles) {
 					if (file.data) {
-						compareFiles.push({ name: file.name, data: file.data });
+						let { name, data } = file;
+						while (compareFiles.some(f => f.name === name)) {
+							name = 'x' + name;
+						}
+						compareFiles.push({ name, data });
 						delete file.data;
 					}
 				}
@@ -207,7 +217,7 @@ describe('PsdReader', () => {
 	});
 
 	fs.readdirSync(readWriteFilesPath).forEach(f => {
-		// fs.readdirSync(readWriteFilesPath).filter(f => /text$/.test(f)).forEach(f => {
+		// fs.readdirSync(readWriteFilesPath).filter(f => /smart-filters$/.test(f)).forEach(f => {
 		it(`reads-writes PSD file (${f})`, () => {
 			const ext = fs.existsSync(path.join(readWriteFilesPath, f, 'src.psb')) ? 'psb' : 'psd';
 			const psd = readPsdFromFile(path.join(readWriteFilesPath, f, `src.${ext}`), {

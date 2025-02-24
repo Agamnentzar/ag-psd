@@ -155,6 +155,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "white board",
       "id": 3,
       "sectionDivider": {
@@ -202,6 +274,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "Layer 1",
           "nameSource": "layr",
           "id": 2,
@@ -232,6 +376,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "transparent board",
       "id": 7,
       "sectionDivider": {
@@ -279,6 +495,78 @@
           "clipping": false,
           "transparencyProtected": false,
           "hidden": false,
+          "blendingRanges": {
+            "compositeGrayBlendSource": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "compositeGraphBlendDestinationRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "ranges": [
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              },
+              {
+                "sourceRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "destRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ]
+              }
+            ]
+          },
           "name": "Group 1",
           "nameSource": "lset",
           "id": 10,
@@ -311,6 +599,78 @@
               "clipping": false,
               "transparencyProtected": false,
               "hidden": false,
+              "blendingRanges": {
+                "compositeGrayBlendSource": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "compositeGraphBlendDestinationRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "ranges": [
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  }
+                ]
+              },
               "name": "Layer 2",
               "nameSource": "layr",
               "id": 9,
@@ -339,6 +699,78 @@
               "clipping": false,
               "transparencyProtected": false,
               "hidden": false,
+              "blendingRanges": {
+                "compositeGrayBlendSource": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "compositeGraphBlendDestinationRange": [
+                  0,
+                  0,
+                  255,
+                  255
+                ],
+                "ranges": [
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  },
+                  {
+                    "sourceRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ],
+                    "destRange": [
+                      0,
+                      0,
+                      255,
+                      255
+                    ]
+                  }
+                ]
+              },
               "name": "Layer 3",
               "nameSource": "layr",
               "id": 12,
@@ -371,6 +803,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "custom board",
       "id": 13,
       "sectionDivider": {
@@ -443,6 +947,16 @@
     "description": "",
     "reason": "",
     "engine": "compCore",
+    "version": {
+      "major": 1,
+      "minor": 3,
+      "fix": 0
+    },
+    "photoshopVersion": {
+      "major": 22,
+      "minor": 1,
+      "fix": 0
+    },
     "enableCompCore": "feature",
     "enableCompCoreGPU": "feature",
     "compCoreSupport": "supported",

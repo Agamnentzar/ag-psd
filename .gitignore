@@ -11,5 +11,6 @@
 /test/read/ignore-*
 /test/read-write/ignore-*
 .vscode
-TODO
+.v8-cache
+TODO.md
 .idea

@@ -165,6 +165,78 @@
       "clipping": false,
       "transparencyProtected": true,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Background",
       "nameSource": "bgnd",
       "id": 1,
@@ -178,10 +250,6 @@
       },
       "layerColor": "none",
       "comps": {
-        "originalEffectsReferencePoint": {
-          "x": 0,
-          "y": 0
-        },
         "settings": [
           {
             "compList": [
@@ -213,7 +281,11 @@
               0
             ]
           }
-        ]
+        ],
+        "originalEffectsReferencePoint": {
+          "x": 0,
+          "y": 0
+        }
       },
       "timestamp": 1712609152.3865044,
       "referencePoint": {
@@ -231,6 +303,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 1",
       "nameSource": "layr",
       "id": 2,
@@ -244,10 +388,6 @@
       },
       "layerColor": "none",
       "comps": {
-        "originalEffectsReferencePoint": {
-          "x": 0,
-          "y": 0
-        },
         "settings": [
           {
             "compList": [
@@ -282,7 +422,11 @@
               0
             ]
           }
-        ]
+        ],
+        "originalEffectsReferencePoint": {
+          "x": 0,
+          "y": 0
+        }
       },
       "timestamp": 1712609152.3865128,
       "referencePoint": {
@@ -300,6 +444,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": true,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 2",
       "nameSource": "layr",
       "id": 3,
@@ -313,10 +529,6 @@
       },
       "layerColor": "none",
       "comps": {
-        "originalEffectsReferencePoint": {
-          "x": 0,
-          "y": 0
-        },
         "settings": [
           {
             "compList": [
@@ -349,7 +561,11 @@
               0
             ]
           }
-        ]
+        ],
+        "originalEffectsReferencePoint": {
+          "x": 0,
+          "y": 0
+        }
       },
       "timestamp": 1712609152.3865194,
       "referencePoint": {
@@ -367,6 +583,78 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
       "name": "Layer 3",
       "nameSource": "layr",
       "id": 4,
@@ -380,10 +668,6 @@
       },
       "layerColor": "none",
       "comps": {
-        "originalEffectsReferencePoint": {
-          "x": 48,
-          "y": 35
-        },
         "settings": [
           {
             "compList": [
@@ -436,7 +720,11 @@
               0
             ]
           }
-        ]
+        ],
+        "originalEffectsReferencePoint": {
+          "x": 48,
+          "y": 35
+        }
       },
       "timestamp": 1712609152.3865242,
       "referencePoint": {
