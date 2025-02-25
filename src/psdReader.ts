@@ -13,7 +13,7 @@ interface ChannelInfo {
 	length: number;
 }
 
-export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed];
+export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed, ColorMode.CMYK];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
 
 function setupGrayscale(data: PixelData) {
@@ -840,10 +840,11 @@ function readImageData(reader: PsdReader, psd: Psd) {
 		}
 		case ColorMode.CMYK: {
 			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
-			if (psd.channels !== 4) throw new Error(`Invalid channel count`);
 
+			if (psd.channels !== 4 && psd.channels !== 5) throw new Error(`Invalid channel count`);
+			const channelLen = psd.channels! + 1;
 			const channels = [0, 1, 2, 3];
-			if (reader.globalAlpha) channels.push(4);
+			if (psd.channels === 5 || reader.globalAlpha) channels.push(4);
 
 			if (compression === Compression.RawData) {
 				throw new Error(`Not implemented`);
@@ -855,12 +856,12 @@ function readImageData(reader: PsdReader, psd: Psd) {
 				const cmykImageData: PixelData = {
 					width: imageData.width,
 					height: imageData.height,
-					data: new Uint8Array(imageData.width * imageData.height * 5),
+					data: new Uint8Array(imageData.width * imageData.height * channelLen),
 				};
 
 				const start = reader.offset;
-				readDataRLE(reader, cmykImageData, psd.width, psd.height, bitsPerChannel, 5, channels, reader.large);
-				cmykToRgb(cmykImageData, imageData, true);
+				readDataRLE(reader, cmykImageData, psd.width, psd.height, bitsPerChannel, channelLen, channels, reader.large);
+				cmykToRgb(cmykImageData, imageData, false, channelLen);
 
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
 			} else {
@@ -897,19 +898,19 @@ function readImageData(reader: PsdReader, psd: Psd) {
 	}
 }
 
-function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
+function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean, channelLen: number = 5) {
 	const size = rgb.width * rgb.height * 4;
 	const srcData = cmyk.data;
 	const dstData = rgb.data;
 
-	for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
-		const c = srcData[src];
-		const m = srcData[src + 1];
-		const y = srcData[src + 2];
-		const k = srcData[src + 3];
-		dstData[dst] = ((((c * k) | 0) / 255) | 0);
-		dstData[dst + 1] = ((((m * k) | 0) / 255) | 0);
-		dstData[dst + 2] = ((((y * k) | 0) / 255) | 0);
+	for (let src = 0, dst = 0; dst < size; src += channelLen, dst += 4) {
+		const c = 255 - srcData[src];
+		const m = 255 - srcData[src + 1];
+		const y = 255 - srcData[src + 2];
+		const k = 255 - srcData[src + 3];
+		dstData[dst + 0] = ((65535 - (c * (255 - k) + (k << 8))) >> 8) | 0;
+		dstData[dst + 1] = ((65535 - (m * (255 - k) + (k << 8))) >> 8) | 0;
+		dstData[dst + 2] = ((65535 - (y * (255 - k) + (k << 8))) >> 8) | 0;
 		dstData[dst + 3] = reverseAlpha ? 255 - srcData[src + 4] : srcData[src + 4];
 	}
 
