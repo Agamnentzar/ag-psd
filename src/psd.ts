@@ -396,6 +396,32 @@ export interface UnitsBounds {
 	bottom: UnitsValue;
 }
 
+export interface TextPath {
+	name?: number[]; // TODO: this is probably not a name
+	bezierCurve?: {
+		controlPoints: number[]; // 8 values per bezier curve
+	};
+	data: {
+		// TODO: other fields
+		type?: number;
+		orientation?: number;
+		frameMatrix: number[];
+		textRange: number[];
+		rowGutter?: number;
+		columnGutter?: number;
+		BaselineAlignment?: {
+			flag?: number;
+			min?: number;
+		};
+		pathData: {
+			// TODO: other fields
+			reversed?: boolean;
+			spacing?: number;
+		};
+	};
+	uuid?: string;
+}
+
 export interface LayerTextData {
 	text: string;
 	transform?: number[]; // 2d transform matrix [xx, xy, yx, yy, tx, ty]
@@ -428,17 +454,8 @@ export interface LayerTextData {
 	bounds?: UnitsBounds;
 	boundingBox?: UnitsBounds;
 
-	textPath?: {
-		BezierCurve?: {
-			/**the length number should be multiples of 8, which is present a bezier curve */
-			ControlPoints: number[];
-		},
-		Data: {
-			Type: number;
-			FrameMatrix: number[];
-			TextRange: number[];
-		}
-	}
+	/** This is read-only field, any changes will not be saved */
+	textPath?: TextPath;
 }
 
 export interface PatternInfo {

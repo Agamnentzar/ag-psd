@@ -409,7 +409,56 @@
               "autoKerning": true
             }
           }
-        ]
+        ],
+        "textPath": {
+          "bezierCurve": {
+            "controlPoints": [
+              0,
+              0,
+              0,
+              0,
+              174,
+              0,
+              174,
+              0,
+              174,
+              0,
+              174,
+              0,
+              174,
+              95,
+              174,
+              95,
+              174,
+              95,
+              174,
+              95,
+              0,
+              95,
+              0,
+              95,
+              0,
+              95,
+              0,
+              95,
+              0,
+              0,
+              0,
+              0
+            ]
+          },
+          "data": {
+            "type": 1,
+            "textRange": [
+              -2,
+              -2
+            ],
+            "pathData": {
+              "7": false,
+              "spacing": -2
+            }
+          }
+        }
       },
       "nameSource": "rend",
       "id": 2,

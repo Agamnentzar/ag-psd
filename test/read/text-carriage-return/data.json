@@ -797,6 +797,18 @@
                 "b": 150.00119999999998
               },
               "yUnderline": 1
+            },
+            "textPath": {
+              "data": {
+                "textRange": [
+                  -1,
+                  -1
+                ],
+                "pathData": {
+                  "7": false,
+                  "spacing": -1
+                }
+              }
             }
           },
           "id": 3,

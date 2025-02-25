@@ -819,7 +819,19 @@
                   "autoKerning": true
                 }
               }
-            ]
+            ],
+            "textPath": {
+              "data": {
+                "textRange": [
+                  -1,
+                  -1
+                ],
+                "pathData": {
+                  "7": false,
+                  "spacing": -1
+                }
+              }
+            }
           },
           "nameSource": "rend",
           "id": 8382,
@@ -1063,7 +1075,19 @@
                   "autoKerning": true
                 }
               }
-            ]
+            ],
+            "textPath": {
+              "data": {
+                "textRange": [
+                  -1,
+                  -1
+                ],
+                "pathData": {
+                  "7": false,
+                  "spacing": -1
+                }
+              }
+            }
           },
           "nameSource": "rend",
           "id": 8384,
@@ -1307,7 +1331,19 @@
                   "autoKerning": true
                 }
               }
-            ]
+            ],
+            "textPath": {
+              "data": {
+                "textRange": [
+                  -1,
+                  -1
+                ],
+                "pathData": {
+                  "7": false,
+                  "spacing": -1
+                }
+              }
+            }
           },
           "nameSource": "rend",
           "id": 8386,

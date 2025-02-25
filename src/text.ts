@@ -1,4 +1,4 @@
-import { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color } from './psd';
+import type { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color, TextPath } from './psd';
 
 interface Adjustments {
 	Axis: number[];
@@ -164,6 +164,20 @@ export interface EngineData {
 	};
 	ResourceDict: ResourceDict;
 	DocumentResources: ResourceDict;
+}
+
+export interface GlobalEngineData {
+	ResourceDict: {
+		FontSet: any[]; // TODO
+		StyleSheetSet: any[]; // TODO
+		ParagraphSheetSet: any[]; // TODO
+		TextFrameSet?: {
+			path: TextPath;
+		}[];
+	};
+	EngineDict: {
+		// TODO
+	};
 }
 
 const defaultFont: Font = {
