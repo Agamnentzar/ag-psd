@@ -9,7 +9,7 @@ interface ChannelInfo {
 	length: number;
 }
 
-export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed];
+export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed, ColorMode.CMYK];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', 'multichannel', 'duotone', 'lab'];
 
 function setupGrayscale(data: PixelData) {
@@ -635,7 +635,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		if (cmyk) {
 			const cmykData = imageData;
 			imageData = createImageData(cmykData.width, cmykData.height);
-			cmykToRgb(cmykData, imageData, false);
+			cmykToRgb(cmykData, imageData);
 		}
 
 		if (reader.useImageData) {
@@ -802,10 +802,14 @@ function readImageData(reader: PsdReader, psd: Psd) {
 			break;
 		}
 		case ColorMode.CMYK: {
-			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
-			if (psd.channels !== 4) throw new Error(`Invalid channel count`);
+			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supported');
+			// there is additional color channel for cmyk when channels === 5
+			if (psd.channels !== 4 && psd.channels !== 5) throw new Error(`Invalid channel count`);
+			// there is additional alpha channel for cmyk
+			const channelLen = psd.channels! + 1;
 
 			const channels = [0, 1, 2, 3];
+			const haveAlpha = reader.globalAlpha || psd.channels === 5;
 			if (reader.globalAlpha) channels.push(4);
 
 			if (compression === Compression.RawData) {
@@ -818,12 +822,12 @@ function readImageData(reader: PsdReader, psd: Psd) {
 				const cmykImageData: PixelData = {
 					width: imageData.width,
 					height: imageData.height,
-					data: new Uint8Array(imageData.width * imageData.height * 5),
+					data: new Uint8Array(imageData.width * imageData.height * channelLen),
 				};
 
 				const start = reader.offset;
-				readDataRLE(reader, cmykImageData, psd.width, psd.height, bitsPerChannel, 5, channels, reader.large);
-				cmykToRgb(cmykImageData, imageData, true);
+				readDataRLE(reader, cmykImageData, psd.width, psd.height, bitsPerChannel, channelLen, channels, reader.large);
+				cmykToRgb(cmykImageData, imageData, !haveAlpha, channelLen);
 
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
 			} else {
@@ -860,12 +864,12 @@ function readImageData(reader: PsdReader, psd: Psd) {
 	}
 }
 
-function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
+function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha = false, channelLen = 5) {
 	const size = rgb.width * rgb.height * 4;
 	const srcData = cmyk.data;
 	const dstData = rgb.data;
 
-	for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
+	for (let src = 0, dst = 0; dst < size; src += channelLen, dst += 4) {
 		const c = srcData[src];
 		const m = srcData[src + 1];
 		const y = srcData[src + 2];
@@ -1033,7 +1037,8 @@ export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined,
 
 	if (bitDepth !== 1 && bitDepth !== 8) throw new Error(`Invalid bit depth (${bitDepth})`);
 
-	const extraLimit = (step - 1) | 0; // 3 for rgb, 4 for cmyk
+	const extraLimit = (step - 1) | 0; // 3 for rgb, 4 for cmyk, 5 for cmyk+extraColor
+	
 
 	for (let c = 0, li = 0; c < offsets.length; c++) {
 		const offset = offsets[c] | 0;
