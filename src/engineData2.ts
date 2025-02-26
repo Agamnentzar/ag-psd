@@ -401,7 +401,7 @@ const keysRoot: KeysDict = {
 	},
 };
 
-function decodeObj(obj: any, keys: KeysDict): any {
+function decodeObj(obj: EngineData, keys: KeysDict): any {
 	if (obj === null) return obj;
 	if (Array.isArray(obj)) return obj.map(x => decodeObj(x, keys));
 	if (typeof obj !== 'object') return obj;

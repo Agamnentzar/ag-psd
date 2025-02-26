@@ -97,6 +97,7 @@ interface ResourceDict {
 	SubscriptSize: number;
 	SubscriptPosition: number;
 	SmallCapSize: number;
+	TextFrameSet?: any[];
 }
 
 interface ParagraphRun {
