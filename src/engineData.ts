@@ -110,7 +110,11 @@ export function parseEngineData(data: number[] | Uint8Array) {
 
 	skipWhitespace();
 
-	while (index < data.length) {
+	let dataLength = data.length;
+
+	while (dataLength > 0 && data[dataLength - 1] === 0) dataLength--; // trim 0 bytes from end
+
+	while (index < dataLength) {
 		const i = index;
 		const char = data[i];
 
@@ -164,10 +168,11 @@ export function parseEngineData(data: number[] | Uint8Array) {
 			pushValue(parseFloat(value));
 		} else {
 			index += 1;
-			console.log(`Invalid token ${String.fromCharCode(char)} at ${index}`);
+			console.log(`Invalid token '${String.fromCharCode(char)}' (${char}) at ${index}`
+				// + ` near '${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}'`
+				// + ` data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`
+			);
 			// throw new Error(`Invalid token ${String.fromCharCode(char)} at ${index}`);
-			// ` near ${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}` +
-			// `data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`
 		}
 
 		skipWhitespace();
