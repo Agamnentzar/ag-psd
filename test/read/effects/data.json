@@ -49,24 +49,6 @@
       "printFlags": true
     },
     "layerState": 0,
-    "layersGroup": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
     "layerSelectionIds": [
       12
     ],
@@ -300,7 +282,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 93,
@@ -503,7 +487,9 @@
       "referencePoint": {
         "x": -56,
         "y": 7
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 117,
@@ -648,7 +634,9 @@
       "referencePoint": {
         "x": -1,
         "y": 49
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 6,
@@ -792,7 +780,9 @@
       "referencePoint": {
         "x": -16,
         "y": -10
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 80,
@@ -968,7 +958,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 166,
@@ -1119,7 +1111,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 7,
@@ -1235,7 +1229,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     }
   ],
   "filterMask": {

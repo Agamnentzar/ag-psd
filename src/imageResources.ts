@@ -6,11 +6,16 @@ import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
 import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
 
+export interface InternalImageResources extends ImageResources {
+	layersGroup?: number[];
+	layerGroupsEnabledId?: number[];
+}
+
 export interface ResourceHandler {
 	key: number;
-	has: (target: ImageResources) => boolean | number;
-	read: (reader: PsdReader, target: ImageResources, left: () => number) => void;
-	write: (writer: PsdWriter, target: ImageResources, index: number) => void;
+	has: (target: InternalImageResources) => boolean | number;
+	read: (reader: PsdReader, target: InternalImageResources, left: () => number) => void;
+	write: (writer: PsdWriter, target: InternalImageResources, index: number) => void;
 }
 
 export const resourceHandlers: ResourceHandler[] = [];
@@ -18,9 +23,9 @@ export const resourceHandlersMap: { [key: number]: ResourceHandler } = {};
 
 function addHandler(
 	key: number,
-	has: (target: ImageResources) => boolean | number,
-	read: (reader: PsdReader, target: ImageResources, left: () => number) => void,
-	write: (writer: PsdWriter, target: ImageResources, index: number) => void,
+	has: (target: InternalImageResources) => boolean | number,
+	read: (reader: PsdReader, target: InternalImageResources, left: () => number) => void,
+	write: (writer: PsdWriter, target: InternalImageResources, index: number) => void,
 ) {
 	const handler: ResourceHandler = { key, has, read, write };
 	resourceHandlers.push(handler);

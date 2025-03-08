@@ -43,14 +43,6 @@
       "printFlags": true
     },
     "layerState": 1,
-    "layersGroup": [
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1
-    ],
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
       "grid": {
@@ -401,7 +393,9 @@
         "x": 0,
         "y": 0
       },
-      "version": 130
+      "version": 130,
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 208,
@@ -999,7 +993,9 @@
         "x": 0,
         "y": 0
       },
-      "version": 130
+      "version": 130,
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     }
   ],
   "filterMask": {

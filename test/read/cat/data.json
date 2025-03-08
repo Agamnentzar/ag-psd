@@ -51,12 +51,6 @@
       "printFlags": true
     },
     "layerState": 0,
-    "layersGroup": [
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1
-    ],
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
       "grid": {
@@ -344,7 +338,9 @@
       "referencePoint": {
         "x": -30,
         "y": -62
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     }
   ],
   "filterMask": {

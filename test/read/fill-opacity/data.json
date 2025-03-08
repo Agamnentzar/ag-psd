@@ -14,11 +14,6 @@
       "heightUnit": "Centimeters"
     },
     "layerState": 2,
-    "layersGroup": [
-      0,
-      0,
-      0
-    ],
     "alphaChannelNames": [
       "Opacities"
     ],
@@ -38,7 +33,8 @@
       "transparencyProtected": false,
       "hidden": false,
       "name": "[#00f] Normal opacity 60% (Normal mode)",
-      "id": 3
+      "id": 3,
+      "linkGroup": 0
     },
     {
       "top": 0,
@@ -51,7 +47,8 @@
       "transparencyProtected": false,
       "hidden": false,
       "name": "[#0f0] Normal opacity 40% (TS Linear light mode)",
-      "id": 4
+      "id": 4,
+      "linkGroup": 0
     },
     {
       "top": 0,
@@ -66,7 +63,8 @@
       "name": "[#f00] Fill opacity 20% (non-TS Linear light mode)",
       "id": 5,
       "fillOpacity": 0.2,
-      "transparencyShapesLayer": false
+      "transparencyShapesLayer": false,
+      "linkGroup": 0
     }
   ]
 }

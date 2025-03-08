@@ -1493,9 +1493,7 @@ export enum LayerCompCapturedInfo {
 
 export interface ImageResources {
 	layerState?: number;
-	layersGroup?: number[];
 	layerSelectionIds?: number[];
-	layerGroupsEnabledId?: number[];
 	versionInfo?: {
 		hasRealMergedData: boolean;
 		writerName: string;
@@ -1713,6 +1711,8 @@ export interface Layer extends LayerAdditionalInfo {
 	children?: Layer[];
 	/** Applies only for layer groups. */
 	opened?: boolean;
+	linkGroup?: number;
+	linkGroupEnabled?: boolean;
 }
 
 export interface Psd extends LayerAdditionalInfo {

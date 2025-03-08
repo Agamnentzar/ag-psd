@@ -5,7 +5,7 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
-    "captionDigest": "00000000000000000000000000000000",
+    "captionDigest": "cdcffa7da8c7be09057076aeaf05c34e",
     "printInformation": {
       "printerName": "",
       "renderingIntent": "relative colorimetric",
@@ -29,6 +29,11 @@
       "y": 0,
       "scale": 1
     },
+    "backgroundColor": {
+      "r": 255,
+      "g": 255,
+      "b": 255
+    },
     "globalAngle": 120,
     "globalAltitude": 30,
     "printFlags": {
@@ -42,7 +47,7 @@
       "caption": false,
       "printFlags": true
     },
-    "layerState": 1,
+    "layerState": 0,
     "layerSelectionIds": [
       2
     ],
@@ -103,159 +108,20 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "idsSeedNumber": 2,
+    "idsSeedNumber": 6,
     "versionInfo": {
       "hasRealMergedData": false,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
-    },
-    "animations": {
-      "frames": [
-        {
-          "id": 2118567514,
-          "delay": 0.5,
-          "dispose": "auto"
-        },
-        {
-          "id": 2122752457,
-          "delay": 0.5,
-          "dispose": "auto"
-        }
-      ],
-      "animations": [
-        {
-          "id": 0,
-          "frames": [
-            2118567514,
-            2122752457
-          ],
-          "repeats": 0,
-          "activeFrame": 1
-        }
-      ]
     }
   },
   "children": [
     {
-      "top": 0,
-      "left": 0,
-      "bottom": 200,
-      "right": 200,
-      "blendMode": "normal",
-      "opacity": 1,
-      "clipping": false,
-      "transparencyProtected": true,
-      "hidden": false,
-      "blendingRanges": {
-        "compositeGrayBlendSource": [
-          0,
-          0,
-          255,
-          255
-        ],
-        "compositeGraphBlendDestinationRange": [
-          0,
-          0,
-          255,
-          255
-        ],
-        "ranges": [
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          },
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          },
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          },
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          }
-        ]
-      },
-      "name": "Background",
-      "nameSource": "bgnd",
-      "id": 1,
-      "blendClippendElements": true,
-      "blendInteriorElements": false,
-      "knockout": false,
-      "protected": {
-        "transparency": true,
-        "composite": false,
-        "position": true
-      },
-      "layerColor": "none",
-      "animationFrames": [
-        {
-          "frames": [
-            2118567514
-          ]
-        },
-        {
-          "frames": [
-            2122752457
-          ]
-        }
-      ],
-      "timestamp": 1664381512.352063,
-      "referencePoint": {
-        "x": 0,
-        "y": 0
-      },
-      "linkGroup": 0,
-      "linkGroupEnabled": true
-    },
-    {
-      "top": 17,
-      "left": 90,
-      "bottom": 99,
-      "right": 172,
+      "top": 25,
+      "left": 38,
+      "bottom": 164,
+      "right": 151,
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
@@ -345,38 +211,322 @@
         "position": false
       },
       "layerColor": "none",
-      "animationFrames": [
-        {
-          "frames": [
-            2118567514
-          ],
-          "enable": true,
-          "offset": {
-            "x": -38,
-            "y": 51
-          },
-          "referencePoint": {
-            "x": 0,
-            "y": 0
-          }
-        },
-        {
-          "frames": [
-            2122752457
-          ],
-          "enable": true,
-          "offset": {
-            "x": 0,
-            "y": 0
-          }
-        }
-      ],
-      "timestamp": 1664381512.352068,
+      "timestamp": 1741451593.7248037,
       "referencePoint": {
-        "x": 38,
-        "y": -51
+        "x": 0,
+        "y": 0
       },
-      "linkGroup": 0,
+      "linkGroup": 2,
+      "linkGroupEnabled": true
+    },
+    {
+      "top": 0,
+      "left": 0,
+      "bottom": 0,
+      "right": 0,
+      "blendMode": "pass through",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
+      "name": "Group 1",
+      "nameSource": "lset",
+      "id": 5,
+      "sectionDivider": {
+        "type": 1,
+        "key": "pass",
+        "subType": 0
+      },
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1741451593.7248158,
+      "referencePoint": {
+        "x": 0,
+        "y": 0
+      },
+      "linkGroup": 2,
+      "linkGroupEnabled": true,
+      "opened": true,
+      "children": []
+    },
+    {
+      "top": 69,
+      "left": 72,
+      "bottom": 177,
+      "right": 171,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
+      "name": "Layer 2",
+      "nameSource": "layr",
+      "id": 3,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1741451593.7248192,
+      "referencePoint": {
+        "x": -5,
+        "y": 6
+      },
+      "linkGroup": 1,
+      "linkGroupEnabled": true
+    },
+    {
+      "top": 17,
+      "left": 21,
+      "bottom": 105,
+      "right": 103,
+      "blendMode": "normal",
+      "opacity": 1,
+      "clipping": false,
+      "transparencyProtected": false,
+      "hidden": false,
+      "blendingRanges": {
+        "compositeGrayBlendSource": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "compositeGraphBlendDestinationRange": [
+          0,
+          0,
+          255,
+          255
+        ],
+        "ranges": [
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          },
+          {
+            "sourceRange": [
+              0,
+              0,
+              255,
+              255
+            ],
+            "destRange": [
+              0,
+              0,
+              255,
+              255
+            ]
+          }
+        ]
+      },
+      "name": "Layer 3",
+      "nameSource": "layr",
+      "id": 4,
+      "blendClippendElements": true,
+      "blendInteriorElements": false,
+      "knockout": false,
+      "protected": {
+        "transparency": false,
+        "composite": false,
+        "position": false
+      },
+      "layerColor": "none",
+      "timestamp": 1741451593.724822,
+      "referencePoint": {
+        "x": -5,
+        "y": 6
+      },
+      "linkGroup": 1,
       "linkGroupEnabled": true
     }
   ],

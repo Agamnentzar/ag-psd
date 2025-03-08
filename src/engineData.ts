@@ -165,6 +165,7 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		} else {
 			index += 1;
 			console.log(`Invalid token ${String.fromCharCode(char)} at ${index}`);
+			// throw new Error(`Invalid token ${String.fromCharCode(char)} at ${index}`);
 			// ` near ${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}` +
 			// `data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`
 		}

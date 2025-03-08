@@ -13,10 +13,7 @@
       "verticalResolutionUnit": "PPI",
       "heightUnit": "Centimeters"
     },
-    "layerState": 0,
-    "layersGroup": [
-      0
-    ]
+    "layerState": 0
   },
   "children": [
     {
@@ -29,7 +26,8 @@
       "clipping": false,
       "transparencyProtected": false,
       "hidden": false,
-      "name": "Layer1"
+      "name": "Layer1",
+      "linkGroup": 0
     }
   ]
 }

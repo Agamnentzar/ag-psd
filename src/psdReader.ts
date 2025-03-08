@@ -2,7 +2,7 @@ import { inflate as inflateSync } from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray } from './psd';
 import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
-import { resourceHandlersMap } from './imageResources';
+import { InternalImageResources, resourceHandlersMap } from './imageResources';
 
 interface ChannelInfo {
 	id: ChannelID;
@@ -257,6 +257,9 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	});
 
 	// image resources
+
+	const imageResources: InternalImageResources = {};
+
 	readSection(reader, 1, left => {
 		while (left() > 0) {
 			const sigOffset = reader.offset;
@@ -282,13 +285,9 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 				const handler = resourceHandlersMap[id];
 				const skip = id === 1036 && !!reader.skipThumbnail;
 
-				if (!psd.imageResources) {
-					psd.imageResources = {};
-				}
-
 				if (handler && !skip) {
 					try {
-						handler.read(reader, psd.imageResources, left);
+						handler.read(reader, imageResources, left);
 					} catch (e) {
 						if (reader.throwForMissingFeatures) throw e;
 						skipBytes(reader, left());
@@ -301,10 +300,16 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 		}
 	});
 
+	const { layersGroup, layerGroupsEnabledId, ...rest } = imageResources;
+
+	if (Object.keys(rest)) {
+		psd.imageResources = rest;
+	}
+
 	// layer and mask info
 	readSection(reader, 1, left => {
 		readSection(reader, 2, left => {
-			readLayerInfo(reader, psd);
+			readLayerInfo(reader, psd, imageResources);
 			skipBytes(reader, left());
 		}, undefined, reader.large);
 
@@ -326,7 +331,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 			}
 
 			if (left() >= 12) {
-				readAdditionalLayerInfo(reader, psd, psd);
+				readAdditionalLayerInfo(reader, psd, psd, imageResources);
 			} else {
 				// opt.logMissingFeatures && console.log('skipping leftover bytes', left());
 				skipBytes(reader, left());
@@ -348,7 +353,9 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	return psd;
 }
 
-export function readLayerInfo(reader: PsdReader, psd: Psd) {
+export function readLayerInfo(reader: PsdReader, psd: Psd, imageResources: InternalImageResources) {
+	const { layersGroup = [], layerGroupsEnabledId = [] } = imageResources;
+
 	let layerCount = readInt16(reader);
 
 	if (layerCount < 0) {
@@ -360,7 +367,9 @@ export function readLayerInfo(reader: PsdReader, psd: Psd) {
 	const layerChannels: ChannelInfo[][] = [];
 
 	for (let i = 0; i < layerCount; i++) {
-		const { layer, channels } = readLayerRecord(reader, psd);
+		const { layer, channels } = readLayerRecord(reader, psd, imageResources);
+		if (layersGroup[i] !== undefined) layer.linkGroup = layersGroup[i];
+		if (layerGroupsEnabledId[i] !== undefined) layer.linkGroupEnabled = !!layerGroupsEnabledId[i];
 		layers.push(layer);
 		layerChannels.push(channels);
 	}
@@ -401,7 +410,7 @@ export function readLayerInfo(reader: PsdReader, psd: Psd) {
 	}
 }
 
-function readLayerRecord(reader: PsdReader, psd: Psd) {
+function readLayerRecord(reader: PsdReader, psd: Psd, imageResources: InternalImageResources) {
 	const layer: Layer = {};
 	layer.top = readInt32(reader);
 	layer.left = readInt32(reader);
@@ -452,7 +461,7 @@ function readLayerRecord(reader: PsdReader, psd: Psd) {
 		// HACK: fix for sometimes layer.name string not being padded correctly, just skip until we get valid signature
 		while (left() > 4 && !validSignatureAt(reader, reader.offset)) reader.offset++;
 
-		while (left() >= 12) readAdditionalLayerInfo(reader, layer, psd);
+		while (left() >= 12) readAdditionalLayerInfo(reader, layer, psd, imageResources);
 
 		skipBytes(reader, left());
 	});
@@ -676,7 +685,7 @@ export function readGlobalLayerMaskInfo(reader: PsdReader) {
 	});
 }
 
-export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo, psd: Psd) {
+export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo, psd: Psd, imageResources: InternalImageResources) {
 	const sig = readSignature(reader);
 	if (sig !== '8BIM' && sig !== '8B64') throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
 	const key = readSignature(reader);
@@ -689,7 +698,7 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 
 		if (handler) {
 			try {
-				handler.read(reader, target, left, psd);
+				handler.read(reader, target, left, psd, imageResources);
 			} catch (e) {
 				if (reader.throwForMissingFeatures) throw e;
 			}

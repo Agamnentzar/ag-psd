@@ -1,7 +1,7 @@
 import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData } from './psd';
 import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, ChannelID, Compression, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas } from './helpers';
 import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
-import { resourceHandlers } from './imageResources';
+import { InternalImageResources, resourceHandlers } from './imageResources';
 
 export interface PsdWriter {
 	offset: number;
@@ -221,12 +221,11 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	verifyBitCount(psd);
 
-	let imageResources = psd.imageResources || {};
-
+	const imageResources: InternalImageResources = { ...psd.imageResources };
 	const opt: ExtendedWriteOptions = { ...options, layerIds: new Set(), layerToId: new Map() };
 
 	if (opt.generateThumbnail) {
-		imageResources = { ...imageResources, thumbnail: createThumbnail(psd) };
+		imageResources.thumbnail = createThumbnail(psd);
 	}
 
 	let imageData = psd.imageData;
@@ -263,7 +262,15 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		// TODO: other data?
 	});
 
+	const layers: Layer[] = [];
+	addChildren(layers, psd.children);
+	if (!layers.length) layers.push({});
+
 	// image resources
+
+	imageResources.layersGroup = layers.map(l => l.linkGroup || 0);
+	imageResources.layerGroupsEnabledId = layers.map(l => l.linkGroupEnabled == false ? 0 : 1);
+
 	writeSection(writer, 1, () => {
 		for (const handler of resourceHandlers) {
 			const has = handler.has(imageResources);
@@ -279,7 +286,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// layer and mask info
 	writeSection(writer, 2, () => {
-		writeLayerInfo(writer, psd, globalAlpha, opt);
+		writeLayerInfo(writer, layers, psd, globalAlpha, opt);
 		writeGlobalLayerMaskInfo(writer, psd.globalLayerMaskInfo);
 		writeAdditionalLayerInfo(writer, psd, psd, opt);
 	}, undefined, !!opt.psb);
@@ -318,14 +325,8 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	}
 }
 
-function writeLayerInfo(writer: PsdWriter, psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
+function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
 	writeSection(writer, 4, () => {
-		const layers: Layer[] = [];
-
-		addChildren(layers, psd.children);
-
-		if (!layers.length) layers.push({});
-
 		writeInt16(writer, globalAlpha ? -layers.length : layers.length);
 
 		const layersData = layers.map((l, i) => getChannels(writer.tempBuffer!, l, i === 0, options));
@@ -494,6 +495,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		}
 	}
 }
+
 function addChildren(layers: Layer[], children: Layer[] | undefined) {
 	if (!children) return;
 

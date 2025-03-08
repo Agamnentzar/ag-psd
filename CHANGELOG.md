@@ -1,5 +1,8 @@
 # Changelog
 
+## v28.0.0
+- **BREAKING CHANGE:** Removed `layersGroup` and `layerGroupsEnabledId` properties from `imageResources` and instead added `linkGroup` and `linkGroupEnabled` fields to layers.
+
 ## v27.0.0
 - Added support for read-only field `text.textPath` with text path information for text layers. This field is extracted from psd.engineData, which is not fully supported yet.
 

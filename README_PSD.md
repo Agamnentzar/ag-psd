@@ -467,6 +467,9 @@ Example layer structure:
   - `blendClippendElements` "Blend Clipped Layers as Group" value
   - `blendInteriorElements` "Blend Interior Effects as Group" value
   - `transparencyShapesLayer` "Transparency Shapes Layer" value
+  - `linkGroup` and `linkGroupEnabled` Layers with the same `linkGroup` value are linked together for moving/transforming. `0` value means no linking is active.
+  
+    ![](/files/linked-layers.png)
 
 - `engineData` internal text information
 

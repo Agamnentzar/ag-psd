@@ -48,24 +48,6 @@
       "printFlags": true
     },
     "layerState": 6,
-    "layersGroup": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
       "grid": {
@@ -232,7 +214,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -335,6 +319,8 @@
         "x": 10,
         "y": 0
       },
+      "linkGroup": 0,
+      "linkGroupEnabled": true,
       "opened": true,
       "children": [
         {
@@ -592,7 +578,9 @@
             "x": 102.00000000000006,
             "y": -3403
           },
-          "version": 130
+          "version": 130,
+          "linkGroup": 0,
+          "linkGroupEnabled": true
         },
         {
           "top": 1012,
@@ -848,7 +836,9 @@
           "referencePoint": {
             "x": 97,
             "y": -3622
-          }
+          },
+          "linkGroup": 0,
+          "linkGroupEnabled": true
         },
         {
           "top": 1034,
@@ -1104,7 +1094,9 @@
           "referencePoint": {
             "x": 51,
             "y": -3413
-          }
+          },
+          "linkGroup": 0,
+          "linkGroupEnabled": true
         },
         {
           "top": 1054,
@@ -1360,7 +1352,9 @@
           "referencePoint": {
             "x": 48,
             "y": -3412
-          }
+          },
+          "linkGroup": 0,
+          "linkGroupEnabled": true
         }
       ]
     }

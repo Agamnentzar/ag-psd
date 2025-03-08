@@ -49,32 +49,6 @@
       "printFlags": true
     },
     "layerState": 10,
-    "layersGroup": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
     "layerSelectionIds": [
       13
     ],
@@ -262,6 +236,8 @@
         "y": 0
       },
       "version": 160,
+      "linkGroup": 0,
+      "linkGroupEnabled": true,
       "opened": true,
       "children": [
         {
@@ -362,7 +338,9 @@
           "referencePoint": {
             "x": 0,
             "y": 0
-          }
+          },
+          "linkGroup": 0,
+          "linkGroupEnabled": true
         }
       ]
     },
@@ -483,6 +461,8 @@
         "y": 0
       },
       "version": 160,
+      "linkGroup": 0,
+      "linkGroupEnabled": true,
       "opened": true,
       "children": [
         {
@@ -587,6 +567,8 @@
             "y": 0
           },
           "version": 80,
+          "linkGroup": 0,
+          "linkGroupEnabled": true,
           "opened": true,
           "children": [
             {
@@ -687,7 +669,9 @@
               "referencePoint": {
                 "x": 0,
                 "y": 0
-              }
+              },
+              "linkGroup": 0,
+              "linkGroupEnabled": true
             },
             {
               "top": 365,
@@ -787,7 +771,9 @@
               "referencePoint": {
                 "x": 0,
                 "y": 0
-              }
+              },
+              "linkGroup": 0,
+              "linkGroupEnabled": true
             }
           ]
         }
@@ -910,6 +896,8 @@
         "y": 0
       },
       "version": 160,
+      "linkGroup": 0,
+      "linkGroupEnabled": true,
       "opened": true,
       "children": []
     }

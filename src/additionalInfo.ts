@@ -8,6 +8,7 @@ import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseU
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
 import { decodeEngineData2 } from './engineData2';
+import type { InternalImageResources } from './imageResources';
 
 export interface ExtendedWriteOptions extends WriteOptions {
 	layerIds: Set<number>;
@@ -15,7 +16,7 @@ export interface ExtendedWriteOptions extends WriteOptions {
 }
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
-type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd) => void;
+type ReadMethod = (reader: PsdReader, target: LayerAdditionalInfo, left: () => number, psd: Psd, imageResources: InternalImageResources) => void;
 type WriteMethod = (writer: PsdWriter, target: LayerAdditionalInfo, psd: Psd, options: ExtendedWriteOptions) => void;
 
 export interface InfoHandler {
@@ -3520,8 +3521,8 @@ addHandler(
 addHandler(
 	'Lr16',
 	() => false,
-	(reader, _target, _left, psd) => {
-		readLayerInfo(reader, psd);
+	(reader, _target, _left, psd, imageResources) => {
+		readLayerInfo(reader, psd, imageResources);
 	},
 	(_writer, _target) => {
 	},
@@ -3530,8 +3531,8 @@ addHandler(
 addHandler(
 	'Lr32',
 	() => false,
-	(reader, _target, _left, psd) => {
-		readLayerInfo(reader, psd);
+	(reader, _target, _left, psd, imageResources) => {
+		readLayerInfo(reader, psd, imageResources);
 	},
 	(_writer, _target) => {
 	},

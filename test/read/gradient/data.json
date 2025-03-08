@@ -44,14 +44,6 @@
       "printFlags": true
     },
     "layerState": 1,
-    "layersGroup": [
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1
-    ],
     "layerSelectionIds": [
       3
     ],
@@ -219,7 +211,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 54,
@@ -509,7 +503,9 @@
         "x": 0,
         "y": 0
       },
-      "version": 130
+      "version": 130,
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     }
   ],
   "filterMask": {

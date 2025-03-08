@@ -43,18 +43,6 @@
       "printFlags": true
     },
     "layerState": 3,
-    "layersGroup": [
-      0,
-      0,
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1,
-      1,
-      1
-    ],
     "layerSelectionIds": [
       4
     ],
@@ -291,7 +279,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 14,
@@ -432,7 +422,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 29,
@@ -571,7 +563,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 39,
@@ -730,7 +724,9 @@
       "referencePoint": {
         "x": 48,
         "y": 35
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     }
   ],
   "filterMask": {

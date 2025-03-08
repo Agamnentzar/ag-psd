@@ -43,54 +43,6 @@
       "printFlags": true
     },
     "layerState": 0,
-    "layersGroup": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
     "layerSelectionIds": [
       2
     ],
@@ -258,7 +210,9 @@
       "referencePoint": {
         "x": 0,
         "y": 0
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -360,6 +314,8 @@
         "x": 0,
         "y": 0
       },
+      "linkGroup": 0,
+      "linkGroupEnabled": true,
       "opened": true,
       "children": [
         {
@@ -463,6 +419,8 @@
             "y": 0
           },
           "version": 80,
+          "linkGroup": 0,
+          "linkGroupEnabled": true,
           "opened": true,
           "children": [
             {
@@ -565,6 +523,8 @@
                 "x": 0,
                 "y": 0
               },
+              "linkGroup": 0,
+              "linkGroupEnabled": true,
               "opened": true,
               "children": [
                 {
@@ -667,6 +627,8 @@
                     "x": 0,
                     "y": 0
                   },
+                  "linkGroup": 0,
+                  "linkGroupEnabled": true,
                   "opened": true,
                   "children": [
                     {
@@ -769,6 +731,8 @@
                         "x": 0,
                         "y": 0
                       },
+                      "linkGroup": 0,
+                      "linkGroupEnabled": true,
                       "opened": true,
                       "children": [
                         {
@@ -871,6 +835,8 @@
                             "x": 0,
                             "y": 0
                           },
+                          "linkGroup": 0,
+                          "linkGroupEnabled": true,
                           "opened": true,
                           "children": [
                             {
@@ -974,6 +940,8 @@
                                 "y": 0
                               },
                               "version": 120,
+                              "linkGroup": 0,
+                              "linkGroupEnabled": true,
                               "opened": true,
                               "children": [
                                 {
@@ -1077,6 +1045,8 @@
                                     "y": 0
                                   },
                                   "version": 120,
+                                  "linkGroup": 0,
+                                  "linkGroupEnabled": true,
                                   "opened": true,
                                   "children": [
                                     {
@@ -1180,6 +1150,8 @@
                                         "y": 0
                                       },
                                       "version": 120,
+                                      "linkGroup": 0,
+                                      "linkGroupEnabled": true,
                                       "opened": true,
                                       "children": [
                                         {
@@ -1283,6 +1255,8 @@
                                             "y": 0
                                           },
                                           "version": 120,
+                                          "linkGroup": 0,
+                                          "linkGroupEnabled": true,
                                           "opened": true,
                                           "children": [
                                             {
@@ -1382,7 +1356,9 @@
                                               "referencePoint": {
                                                 "x": 0,
                                                 "y": 0
-                                              }
+                                              },
+                                              "linkGroup": 0,
+                                              "linkGroupEnabled": true
                                             }
                                           ]
                                         }

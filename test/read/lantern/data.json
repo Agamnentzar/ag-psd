@@ -43,26 +43,6 @@
       "printFlags": true
     },
     "layerState": 7,
-    "layersGroup": [
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0
-    ],
-    "layerGroupsEnabledId": [
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1,
-      1
-    ],
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
       "grid": {
@@ -336,7 +316,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -487,7 +469,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -638,7 +622,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -789,7 +775,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -940,7 +928,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -1091,7 +1081,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -1238,7 +1230,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     },
     {
       "top": 0,
@@ -1385,7 +1379,9 @@
       "referencePoint": {
         "x": -27,
         "y": -41
-      }
+      },
+      "linkGroup": 0,
+      "linkGroupEnabled": true
     }
   ],
   "filterMask": {
