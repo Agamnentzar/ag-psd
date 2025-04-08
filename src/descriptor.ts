@@ -1932,7 +1932,7 @@ export const stdTrackID = createEnum<TimelineTrackType>('stdTrackID', 'opacity',
 
 export const gradientInterpolationMethodType = createEnum<InterpolationMethod>('gradientInterpolationMethodType', 'perceptual', {
 	perceptual: 'Perc',
-	linear: 'Lnr',
+	linear: 'Lnr ',
 	classic: 'Gcls',
 	smooth: 'Smoo',
 });
