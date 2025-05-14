@@ -1115,6 +1115,8 @@ export interface EffectDescriptor extends Partial<DescriptorGradientContent>, Pa
 	present?: boolean;
 	showInDialog?: boolean;
 	overprint?: boolean;
+	uglg?: boolean; // useGlobalLight
+	// more fields here used in parseEffectObject
 }
 
 export interface Lfx2Descriptor {
@@ -1145,7 +1147,7 @@ export interface LmfxDescriptor {
 	IrGl?: EffectDescriptor;
 	ebbl?: EffectDescriptor;
 	ChFX?: EffectDescriptor;
-	numModifyingFX?: number;
+	numModifyingFX?: number; // number of effects with enabled = true
 }
 
 function parseFxObject(fx: EffectDescriptor) {
@@ -1238,23 +1240,25 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 
 export function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean) {
 	const effects: LayerEffectsInfo = {};
-	if (!info.masterFXSwitch) effects.disabled = true;
+	const { masterFXSwitch, DrSh, dropShadowMulti, IrSh, innerShadowMulti, OrGl, IrGl, ebbl, SoFi, solidFillMulti, patternFill, GrFl, gradientFillMulti, ChFX, FrFX, frameFXMulti, numModifyingFX, ...rest } = info;
+	if (!masterFXSwitch) effects.disabled = true;
 	if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
-	if (info.DrSh) effects.dropShadow = [parseEffectObject(info.DrSh, log)];
-	if (info.dropShadowMulti) effects.dropShadow = info.dropShadowMulti.map(i => parseEffectObject(i, log));
-	if (info.IrSh) effects.innerShadow = [parseEffectObject(info.IrSh, log)];
-	if (info.innerShadowMulti) effects.innerShadow = info.innerShadowMulti.map(i => parseEffectObject(i, log));
-	if (info.OrGl) effects.outerGlow = parseEffectObject(info.OrGl, log);
-	if (info.IrGl) effects.innerGlow = parseEffectObject(info.IrGl, log);
-	if (info.ebbl) effects.bevel = parseEffectObject(info.ebbl, log);
-	if (info.SoFi) effects.solidFill = [parseEffectObject(info.SoFi, log)];
-	if (info.solidFillMulti) effects.solidFill = info.solidFillMulti.map(i => parseEffectObject(i, log));
-	if (info.patternFill) effects.patternOverlay = parseEffectObject(info.patternFill, log);
-	if (info.GrFl) effects.gradientOverlay = [parseEffectObject(info.GrFl, log)];
-	if (info.gradientFillMulti) effects.gradientOverlay = info.gradientFillMulti.map(i => parseEffectObject(i, log));
-	if (info.ChFX) effects.satin = parseEffectObject(info.ChFX, log);
-	if (info.FrFX) effects.stroke = [parseFxObject(info.FrFX)];
-	if (info.frameFXMulti) effects.stroke = info.frameFXMulti.map(i => parseFxObject(i));
+	if (DrSh) effects.dropShadow = [parseEffectObject(DrSh, log)];
+	if (dropShadowMulti) effects.dropShadow = dropShadowMulti.map(i => parseEffectObject(i, log));
+	if (IrSh) effects.innerShadow = [parseEffectObject(IrSh, log)];
+	if (innerShadowMulti) effects.innerShadow = innerShadowMulti.map(i => parseEffectObject(i, log));
+	if (OrGl) effects.outerGlow = parseEffectObject(OrGl, log);
+	if (IrGl) effects.innerGlow = parseEffectObject(IrGl, log);
+	if (ebbl) effects.bevel = parseEffectObject(ebbl, log);
+	if (SoFi) effects.solidFill = [parseEffectObject(SoFi, log)];
+	if (solidFillMulti) effects.solidFill = solidFillMulti.map(i => parseEffectObject(i, log));
+	if (patternFill) effects.patternOverlay = parseEffectObject(patternFill, log);
+	if (GrFl) effects.gradientOverlay = [parseEffectObject(GrFl, log)];
+	if (gradientFillMulti) effects.gradientOverlay = gradientFillMulti.map(i => parseEffectObject(i, log));
+	if (ChFX) effects.satin = parseEffectObject(ChFX, log);
+	if (FrFX) effects.stroke = [parseFxObject(FrFX)];
+	if (frameFXMulti) effects.stroke = frameFXMulti.map(i => parseFxObject(i));
+	if (log && Object.keys(rest).length > 1) console.log('Unhandled effect keys:', rest);
 	return effects;
 }
 

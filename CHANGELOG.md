@@ -1,5 +1,8 @@
 # Changelog
 
+## v28.1.0
+- Added support for reading and writing `choke` parameter for layer effects
+
 ## v28.0.0
 - **BREAKING CHANGE:** Removed `layersGroup` and `layerGroupsEnabledId` properties from `imageResources` and instead added `linkGroup` and `linkGroupEnabled` fields to layers.
 

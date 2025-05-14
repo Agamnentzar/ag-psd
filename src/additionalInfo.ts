@@ -3988,6 +3988,32 @@ addHandler(
 	(writer, target) => writeUint32(writer, target.version!),
 );
 
+addHandler(
+	'lfxs',
+	() => false, // TODO: not sure when we actually need to write this section
+	// NOTE: this might be insufficient
+	// target => target.effects !== undefined && (
+	// 	!!target.effects.dropShadow?.some(e => e.choke) ||
+	// 	!!target.effects.innerShadow?.some(e => e.choke) ||
+	// 	!!target.effects.outerGlow?.choke ||
+	// 	!!target.effects.innerGlow?.choke
+	// ),
+	(reader, target, left) => {
+		const version = readUint32(reader);
+		if (version !== 0) throw new Error(`Invalid lfxs version`);
+
+		const desc: Lfx2Descriptor & LmfxDescriptor = readVersionAndDescriptor(reader);
+		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
+
+		skipBytes(reader, left());
+	},
+	(writer, target, _, options) => {
+		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+		writeUint32(writer, 0); // version
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+);
+
 function adjustmentType(type: string) {
 	return (target: LayerAdditionalInfo) => !!target.adjustment && target.adjustment.type === type;
 }

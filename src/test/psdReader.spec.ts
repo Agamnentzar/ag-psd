@@ -67,6 +67,17 @@ describe('PsdReader', () => {
 		console.log(psd2.width);
 	});
 
+	// it.only('test', () => {
+	// 	const psd = readPsdFromFile('D:\\Downloads\\temp.psd');
+
+	// 	psd.children![2]!.text!.text = "NEW TEXT HERE";
+	// 	psd.children![2]!.name = "NEW NAME";
+	// 	psd.children![2]!.canvas = undefined;
+
+	// 	const buffer = writePsdBuffer(psd, { invalidateTextLayers: true });
+	// 	fs.writeFileSync('output.psd', buffer);
+	// });
+
 	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
 	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk/.test(f)).forEach(f => {
