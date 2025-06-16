@@ -1939,6 +1939,7 @@ export const gradientInterpolationMethodType = createEnum<InterpolationMethod>('
 	linear: 'Lnr ',
 	classic: 'Gcls',
 	smooth: 'Smoo',
+	// TODO: stripes
 });
 
 export const ClrS = createEnum<'rgb' | 'hsb' | 'lab'>('ClrS', 'rgb', {

@@ -680,6 +680,7 @@ export interface GradientMapAdjustment {
 	gradientType: 'solid' | 'noise';
 	dither?: boolean;
 	reverse?: boolean;
+	method?: InterpolationMethod;
 	// solid
 	smoothness?: number;
 	colorStops?: ColorStop[];
