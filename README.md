@@ -164,18 +164,13 @@ Browser has to support `OffscreenCanvas` and `bitmaprenderer` context.
 importScripts('bundle.js');
 
 const createCanvas = (width, height) => {
-  const canvas = new OffscreenCanvas(width, height);
-  canvas.width = width;
-  canvas.height = height;
-  return canvas;
+  return new OffscreenCanvas(width, height);
 };
 
 const createCanvasFromData = (data) => {
   const image = new Image();
   image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
   const canvas = new OffscreenCanvas(image.width, image.height);
-  canvas.width = image.width;
-  canvas.height = image.height;
   canvas.getContext('2d').drawImage(image, 0, 0);
   return canvas;
 };
@@ -227,18 +222,13 @@ xhr.send();
 importScripts('bundle.js');
 
 const createCanvas = (width, height) => {
-  const canvas = new OffscreenCanvas(width, height);
-  canvas.width = width;
-  canvas.height = height;
-  return canvas;
+  return OffscreenCanvas(width, height);
 };
 
 const createCanvasFromData = (data) => {
   const image = new Image();
   image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
   const canvas = new OffscreenCanvas(image.width, image.height);
-  canvas.width = image.width;
-  canvas.height = image.height;
   canvas.getContext('2d').drawImage(image, 0, 0);
   return canvas;
 };
