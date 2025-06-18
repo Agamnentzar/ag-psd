@@ -1169,6 +1169,15 @@ type FilterVariant = {
 			values: number[];
 		})[];
 	};
+} | {
+	type: 'invert';
+} | {
+	type: 'brightness/contrast';
+	filter: {
+		brightness: number;
+		contrast: number;
+		useLegacy: boolean;
+	};
 };
 
 /*

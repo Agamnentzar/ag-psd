@@ -1947,6 +1947,17 @@ type SoLdDescriptorFilterItem = {
 			Mpng?: number[];
 		}[];
 	};
+} | {
+	filterID: 1231976050;
+} | {
+	filterID: 1114793795;
+	Fltr: {
+		_name: 'Brightness/Contrast';
+		_classID: 'BrgC';
+		Brgh: number;
+		Cntr: number;
+		useLegacy: boolean;
+	};
 });
 
 interface FilterCurvesCurvePoint {
@@ -2575,8 +2586,20 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					},
 				};
 			};
+			case 'BrgC': {
+				return {
+					...base,
+					type: 'brightness/contrast',
+					filter: {
+						brightness: f.Fltr.Brgh,
+						contrast: f.Fltr.Cntr,
+						useLegacy: !!f.Fltr.useLegacy,
+					},
+				};
+			};
 			default:
 				if (options.throwForMissingFeatures) {
+					console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
 				}
 				return undefined;
@@ -2595,9 +2618,10 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 			case 1181639749: return { ...base, type: 'find edges' };
 			case 1399616122: return { ...base, type: 'solarize' };
 			case 1314149187: return { ...base, type: 'ntsc colors' };
+			case 1231976050: return { ...base, type: 'invert' }
 			default:
 				if (options.throwForMissingFeatures) {
-					// console.log('FILTER', require('util').inspect(f, false, 99, true));
+					console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filterID: ${(f as any).filterID}`);
 				}
 		}
@@ -3095,6 +3119,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			filterID: 1148089458,
 		};
 		case 'ntsc colors': return { ...base, filterID: 1314149187 };
+		case 'invert': return { ...base, filterID: 1231976050 };
 		case 'custom': return {
 			...base,
 			Fltr: {
@@ -3291,6 +3316,17 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 				}),
 			},
 			filterID: 1131574899,
+		};
+		case 'brightness/contrast': return {
+			...base,
+			Fltr: {
+				_name: 'Brightness/Contrast',
+				_classID: 'BrgC',
+				Brgh: f.filter.brightness,
+				Cntr: f.filter.contrast,
+				useLegacy: !!f.filter.useLegacy,
+			},
+			filterID: 1114793795,
 		};
 		// case 'hsb/hsl': return {
 		// TODO: ...
