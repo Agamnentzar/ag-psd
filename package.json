@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "28.2.0",
+  "version": "28.2.1",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",

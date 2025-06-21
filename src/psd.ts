@@ -1161,7 +1161,7 @@ type FilterVariant = {
 	type: 'curves';
 	filter: {
 		presetKind: 'custom' | 'default';
-		adjustments: ({
+		adjustments?: ({
 			channels: ('composite' | 'red' | 'green' | 'blue')[];
 			curve: { x: number; y: number; curved?: boolean; }[];
 		} | {

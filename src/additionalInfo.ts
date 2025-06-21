@@ -1939,7 +1939,7 @@ type SoLdDescriptorFilterItem = {
 		_name: 'Curves';
 		_classID: 'Crvs';
 		presetKind: string; // 'presetKindType.presetKindCustom';
-		Adjs: {
+		Adjs?: {
 			_name: '';
 			_classID: 'CrvA';
 			Chnl: string[]; // 'Chnl.Cmps' | 'Chnl.Rd  ' | 'Chnl.Grn ' | 'Chnl.Bl  '
@@ -2216,7 +2216,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					reduceColorNoise: parsePercent(f.Fltr.ClNs),
 					sharpenDetails: parsePercent(f.Fltr.Shrp),
 					channelDenoise: f.Fltr.channelDenoise.map(c => ({
-						channels: c.Chnl.map(i => Chnl.decode(i)),
+						channels: c.Chnl.map(Chnl.decode),
 						amount: c.Amnt,
 						...(c.EdgF ? { preserveDetails: c.EdgF } : {}),
 					})),
@@ -2565,24 +2565,25 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					type: 'curves',
 					filter: {
 						presetKind: presetKindType.decode(f.Fltr.presetKind),
-						adjustments: f.Fltr.Adjs.map(a => {
-							const channels = a.Chnl.map(c => Chnl.decode(c));
-
-							if (a['Crv ']) {
-								return {
-									channels,
-									curve: a['Crv '].map(c => {
-										const point: { x: number; y: number; curved?: boolean; } = { x: c.Hrzn, y: c.Vrtc };
-										if (c.Cnty) point.curved = true;
-										return point;
-									}),
-								};
-							} else if (a.Mpng) {
-								return { channels, values: a.Mpng };
-							} else {
-								throw new Error(`Unknown curve adjustment`);
-							}
-						}),
+						...(f.Fltr.Adjs ? {
+							adjustments: f.Fltr.Adjs.map(a => {
+								const channels = a.Chnl.map(Chnl.decode);
+								if (a['Crv ']) {
+									return {
+										channels,
+										curve: a['Crv '].map(c => {
+											const point: { x: number; y: number; curved?: boolean; } = { x: c.Hrzn, y: c.Vrtc };
+											if (c.Cnty) point.curved = true;
+											return point;
+										}),
+									};
+								} else if (a.Mpng) {
+									return { channels, values: a.Mpng };
+								} else {
+									throw new Error(`Unknown curve adjustment`);
+								}
+							})
+						} : {}),
 					},
 				};
 			};
@@ -3297,23 +3298,25 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 				_name: 'Curves',
 				_classID: 'Crvs',
 				presetKind: presetKindType.encode(f.filter.presetKind),
-				Adjs: f.filter.adjustments.map(a => 'curve' in a ? {
-					_name: '',
-					_classID: 'CrvA',
-					Chnl: a.channels.map(c => Chnl.encode(c)),
-					'Crv ': a.curve.map(c => ({
+				...(f.filter.adjustments ? {
+					Adjs: f.filter.adjustments.map(a => 'curve' in a ? {
 						_name: '',
-						_classID: 'Pnt ',
-						Hrzn: c.x,
-						Vrtc: c.y,
-						...(c.curved ? { Cnty: true } : {}),
-					}) as FilterCurvesCurvePoint),
-				} : {
-					_name: '',
-					_classID: 'CrvA',
-					Chnl: a.channels.map(c => Chnl.encode(c)),
-					Mpng: a.values,
-				}),
+						_classID: 'CrvA',
+						Chnl: a.channels.map(Chnl.encode),
+						'Crv ': a.curve.map(c => ({
+							_name: '',
+							_classID: 'Pnt ',
+							Hrzn: c.x,
+							Vrtc: c.y,
+							...(c.curved ? { Cnty: true } : {}),
+						}) as FilterCurvesCurvePoint),
+					} : {
+						_name: '',
+						_classID: 'CrvA',
+						Chnl: a.channels.map(Chnl.encode),
+						Mpng: a.values,
+					})
+				} : {}),
 			},
 			filterID: 1131574899,
 		};
