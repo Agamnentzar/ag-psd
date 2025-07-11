@@ -2600,7 +2600,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 			};
 			default:
 				if (options.throwForMissingFeatures) {
-					console.log('FILTER', require('util').inspect(f, false, 99, true));
+					// console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
 				}
 				return undefined;
@@ -2622,7 +2622,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 			case 1231976050: return { ...base, type: 'invert' }
 			default:
 				if (options.throwForMissingFeatures) {
-					console.log('FILTER', require('util').inspect(f, false, 99, true));
+					// console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filterID: ${(f as any).filterID}`);
 				}
 		}
