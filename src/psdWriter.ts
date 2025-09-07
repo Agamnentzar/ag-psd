@@ -174,12 +174,12 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 	let length = writer.offset - offset - 4;
 	let len = length;
 
-	while ((len % round) !== 0) {
+	while (len % round) {
 		writeUint8(writer, 0);
 		len++;
 	}
 
-	// while ((writer.offset % round) !== 0) {
+	// while (writer.offset % round) {
 	// 	writeUint8(writer, 0);
 	// 	len++;
 	// }
@@ -641,7 +641,10 @@ function getChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, 
 }
 
 function getLayerDimentions({ canvas, imageData }: Layer): { width: number; height: number; } {
-	return imageData || canvas || { width: 0, height: 0 };
+	// this way in case canvas/imageData are incorrect objects without width/height properties
+	const width = imageData?.width ?? canvas?.width ?? 0;
+	const height = imageData?.height ?? canvas?.height ?? 0;
+	return { width, height };
 }
 
 function cropImageData(data: PixelData, left: number, top: number, width: number, height: number) {

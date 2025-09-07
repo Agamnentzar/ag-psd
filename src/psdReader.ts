@@ -234,8 +234,6 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	reader.large = version === 2;
 	reader.globalAlpha = false;
 
-	const fixOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
-
 	// color mode data
 	readSection(reader, 1, left => {
 		if (!left()) return;
@@ -262,22 +260,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 
 	readSection(reader, 1, left => {
 		while (left() > 0) {
-			const sigOffset = reader.offset;
-			let sig = '';
-
-			// attempt to fix broken document by realigning with the signature
-			for (const offset of fixOffsets) {
-				try {
-					reader.offset = sigOffset + offset;
-					sig = readSignature(reader);
-				} catch { }
-				if (isValidSignature(sig)) break;
-			}
-
-			if (!isValidSignature(sig)) {
-				throw new Error(`Invalid signature: '${sig}' at 0x${(sigOffset).toString(16)}`);
-			}
-
+			realignWithSignature(reader, isValidSignature);
 			const id = readUint16(reader);
 			readPascalString(reader, 2); // name
 
@@ -685,9 +668,34 @@ export function readGlobalLayerMaskInfo(reader: PsdReader) {
 	});
 }
 
+const fixOffsets = [0, 1, -1, 2, -2, 3, -3, 4, -4];
+
+function realignWithSignature(reader: PsdReader, isValid: (sig: string) => boolean) {
+	const sigOffset = reader.offset;
+	let sig = '';
+
+	// attempt to fix broken document by realigning with the signature
+	for (const offset of fixOffsets) {
+		try {
+			reader.offset = sigOffset + offset;
+			sig = readSignature(reader);
+		} catch { }
+		if (isValid(sig)) break;
+	}
+
+	if (!isValid(sig)) {
+		throw new Error(`Invalid signature: '${sig}' at 0x${(sigOffset).toString(16)}`);
+	}
+
+	return sig;
+}
+
+function isValidAdditionalInfoSignature(sig: string) {
+	return sig === '8BIM' || sig === '8B64';
+}
+
 export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAdditionalInfo, psd: Psd, imageResources: InternalImageResources) {
-	const sig = readSignature(reader);
-	if (sig !== '8BIM' && sig !== '8B64') throw new Error(`Invalid signature: '${sig}' at 0x${(reader.offset - 4).toString(16)}`);
+	const sig = realignWithSignature(reader, isValidAdditionalInfoSignature);
 	const key = readSignature(reader);
 
 	// `largeAdditionalInfoKeys` fallback, because some keys don't have 8B64 signature even when they are 64bit
@@ -1110,7 +1118,9 @@ export function readSection<T>(
 		}
 	}
 
-	while (end % round) end++;
+	while (length % round) { length++; end++; }
+	// while (end % round) end++;
+
 	reader.offset = end;
 
 	return result;
