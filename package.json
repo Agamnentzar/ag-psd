@@ -1,6 +1,6 @@
 {
   "name": "ag-psd",
-  "version": "28.2.3",
+  "version": "28.3.0",
   "description": "Library for reading and writing PSD files",
   "main": "dist/index.js",
   "module": "dist-es/index.js",
@@ -35,7 +35,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "^18.11.18",
+    "@types/node": "^24.3.3",
     "@types/pako": "^2.0.3",
     "browserify": "^17.0.1",
     "canvas": "^3.1.0",

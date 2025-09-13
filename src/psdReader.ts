@@ -29,7 +29,7 @@ export interface PsdReader extends ReadOptions {
 	log(...args: any[]): void;
 }
 
-export function createReader(buffer: ArrayBuffer, offset?: number, length?: number): PsdReader {
+export function createReader(buffer: ArrayBufferLike, offset?: number, length?: number): PsdReader {
 	const view = new DataView(buffer, offset, length);
 	return { view, offset: 0, strict: false, debug: false, large: false, globalAlpha: false, log: console.log };
 }

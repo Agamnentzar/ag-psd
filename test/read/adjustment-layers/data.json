@@ -49,6 +49,8 @@
       "caption": false,
       "printFlags": true
     },
+    "copyrighted": true,
+    "url": "http://example.com",
     "layerState": 16,
     "layerSelectionIds": [
       78

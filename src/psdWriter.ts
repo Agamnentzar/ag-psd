@@ -103,6 +103,12 @@ export function writeSignature(writer: PsdWriter, signature: string) {
 	}
 }
 
+export function writeAsciiString(writer: PsdWriter, text: string) {
+	for (let i = 0; i < text.length; i++) {
+		writeUint8(writer, text.charCodeAt(i));
+	}
+}
+
 export function writePascalString(writer: PsdWriter, text: string, padTo: number) {
 	let length = text.length;
 	if (length > 255) throw new Error(`String too long`);
@@ -485,7 +491,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 			const writeTotalLength = key !== 'Txt2' && key !== 'cinf' && key !== 'extn' && key !== 'CAI ' && key !== 'OCIO';
 			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
-				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno' || key === 'CAI ' || key === 'OCIO' || key === 'GenI' || key === 'FEid';
+				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno' || key === 'CAI ' || key === 'OCIO' || key === 'GenI' || key === 'FEid' || key === 'curv' || key === 'CgEd' || key === 'vibA' || key === 'blwh' || key === 'grdm';
 
 			writeSignature(writer, large ? '8B64' : '8BIM');
 			writeSignature(writer, key);
@@ -605,30 +611,31 @@ function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, la
 		imageData = mask.canvas.getContext('2d')!.getImageData(0, 0, width, height);
 	}
 
-	if (width && height && imageData) {
-		right = left + width;
-		bottom = top + height;
-
-		if (imageData.width !== width || imageData.height !== height) {
-			throw new Error('Invalid imageData dimentions');
-		}
-
-		let buffer: Uint8Array;
-		let compression: Compression;
-
-		if (RAW_IMAGE_DATA && (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw']) {
-			buffer = (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw'];
-			compression = (layer as any)[realMask ? 'realMaskDataRawCompression' : 'maskDataRawCompression'];
-		} else if (options.compress) {
-			buffer = writeDataZipWithoutPrediction(imageData, [0]);
-			compression = Compression.ZipWithoutPrediction;
-		} else {
-			buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb)!;
-			compression = Compression.RleCompressed;
-		}
-
-		layerData.channels.push({ channelId: realMask ? ChannelID.RealUserMask : ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
+	if (imageData && (imageData.width !== width || imageData.height !== height)) {
+		throw new Error('Invalid imageData dimentions');
 	}
+
+	right = left + width;
+	bottom = top + height;
+
+	let buffer: Uint8Array;
+	let compression: Compression;
+
+	if (RAW_IMAGE_DATA && (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw']) {
+		buffer = (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw'];
+		compression = (layer as any)[realMask ? 'realMaskDataRawCompression' : 'maskDataRawCompression'];
+	} else if (!imageData) {
+		buffer = new Uint8Array(0);
+		compression = Compression.RleCompressed;
+	} else if (options.compress) {
+		buffer = writeDataZipWithoutPrediction(imageData, [0]);
+		compression = Compression.ZipWithoutPrediction;
+	} else {
+		buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb)!;
+		compression = Compression.RleCompressed;
+	}
+
+	layerData.channels.push({ channelId: realMask ? ChannelID.RealUserMask : ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
 
 	layerData[realMask ? 'realMask' : 'mask'] = { top, left, right, bottom };
 }

@@ -1465,7 +1465,13 @@ function parseEffectObject(obj: any, reportErrors: boolean) {
 }
 
 function serializeEffectObject(obj: any, objName: string, reportErrors: boolean) {
-	const result: any = {};
+	const result: any = {
+		enab: false,
+	};
+
+	if (objName === 'dropShadow') {
+		result.TrnS = { 'Nm  ': '', 'Crv ': [] };
+	}
 
 	for (const objKey of Object.keys(obj)) {
 		const key: keyof AllEffects = objKey as any;

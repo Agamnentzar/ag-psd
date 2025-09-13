@@ -4228,8 +4228,6 @@ addHandler(
 		if (red && red.length) { writeUint16(writer, 1); writeCurveChannel(writer, red); }
 		if (green && green.length) { writeUint16(writer, 2); writeCurveChannel(writer, green); }
 		if (blue && blue.length) { writeUint16(writer, 3); writeCurveChannel(writer, blue); }
-
-		writeZeros(writer, 2);
 	},
 );
 

@@ -1,7 +1,7 @@
 import { toByteArray } from 'base64-js';
 import { BlendMode, ImageResources, RenderingIntent } from './psd';
-import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32 } from './psdReader';
-import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, } from './psdWriter';
+import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString } from './psdReader';
+import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
 import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
@@ -156,6 +156,17 @@ interface PrintInformationDescriptor {
 		paperWhite: boolean;
 	};
 }
+
+MOCK_HANDLERS && addHandler(
+	1085, // Windows DEVMODE. Variable OS specific info for Windows.
+	target => (target as any)._ir1085 !== undefined,
+	(reader, target, left) => {
+		(target as any)._ir1085 = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, (target as any)._ir1085);
+	}
+);
 
 addHandler(
 	1082,
@@ -412,6 +423,28 @@ addHandler(
 		writeUint8(writer, flags.interpolate ? 1 : 0);
 		writeUint8(writer, flags.caption ? 1 : 0);
 		writeUint8(writer, flags.printFlags ? 1 : 0);
+	},
+);
+
+addHandler(
+	1034, // Copyright flag
+	target => target.copyrighted !== undefined,
+	(reader, target) => {
+		target.copyrighted = !!readUint8(reader);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.copyrighted ? 1 : 0);
+	},
+);
+
+addHandler(
+	1035, // URL
+	target => target.url !== undefined,
+	(reader, target, left) => {
+		target.url = readAsciiString(reader, left());
+	},
+	(writer, target) => {
+		writeAsciiString(writer, target.url!);
 	},
 );
 
@@ -1244,13 +1277,13 @@ addHandler(
 		if (target.thumbnailRaw) {
 			width = target.thumbnailRaw.width;
 			height = target.thumbnailRaw.height;
-			data = target.thumbnailRaw.data;
+			data = target.thumbnailRaw.data as any;
 		} else {
 			try {
 				const dataUrl = target.thumbnail!.toDataURL('image/jpeg', 1)?.substring('data:image/jpeg;base64,'.length);
 
 				if (dataUrl) {
-					data = toByteArray(dataUrl); // this sometimes fails for some reason, maybe some browser bugs
+					data = toByteArray(dataUrl) as any; // this sometimes fails for some reason, maybe some browser bugs
 					width = target.thumbnail!.width;
 					height = target.thumbnail!.height;
 				}

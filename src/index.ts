@@ -10,7 +10,7 @@ export * from './psd';
 export type { PsdReader, PsdWriter };
 
 interface BufferLike {
-	buffer: ArrayBuffer;
+	buffer: ArrayBufferLike;
 	byteOffset: number;
 	byteLength: number;
 }

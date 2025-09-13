@@ -1681,6 +1681,8 @@ export interface ImageResources {
 		}[];
 		lastApplied?: number;
 	};
+	copyrighted?: boolean;
+	url?: string;
 }
 
 export interface GlobalLayerMaskInfo {
