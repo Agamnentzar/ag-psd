@@ -331,11 +331,9 @@ addHandler(
 			writeZeros(writer, 4);
 		}
 
-		if (vectorMask.fillStartsWithAllPixels !== undefined) {
-			writeUint16(writer, 8);
-			writeUint16(writer, vectorMask.fillStartsWithAllPixels ? 1 : 0);
-			writeZeros(writer, 22);
-		}
+		writeUint16(writer, 8);
+		writeUint16(writer, vectorMask.fillStartsWithAllPixels ? 1 : 0);
+		writeZeros(writer, 22);
 
 		for (const path of vectorMask.paths) {
 			writeUint16(writer, path.open ? 3 : 0);
