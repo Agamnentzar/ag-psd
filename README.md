@@ -1,6 +1,5 @@
 # ag-psd
 
-[![Build Status](https://travis-ci.org/Agamnentzar/ag-psd.svg)](https://travis-ci.org/Agamnentzar/ag-psd)
 [![npm version](https://img.shields.io/npm/v/ag-psd)](https://www.npmjs.com/package/ag-psd)
 
 JavaScript library for reading and writing PSD files (Photoshop Document files)
