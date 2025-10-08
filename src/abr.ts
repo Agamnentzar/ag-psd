@@ -549,9 +549,18 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 				case 'phry': {
 					// TODO: what is this ?
 					const desc: PhryDescriptor = readVersionAndDescriptor(reader);
+					// example:
+					// hierarchy: [
+					// 	{
+					// 		'Nm  ': 'PRE_EXPORT ',
+					// 		zuid: '965209f2-6f35-9a40-aa43-485684382172'
+					// 	},
+					// 	{},
+					//  ...
+					// ]
 					if (options.logMissingFeatures) {
 						if (desc.hierarchy?.length) {
-							console.log('unhandled phry section', desc);
+							// console.log('unhandled phry section', desc);
 						}
 					}
 					break;

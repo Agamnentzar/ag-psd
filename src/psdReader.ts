@@ -16,8 +16,9 @@ function setupGrayscale(data: PixelData) {
 	const size = data.width * data.height * 4;
 
 	for (let i = 0; i < size; i += 4) {
-		data.data[i + 1] = data.data[i];
-		data.data[i + 2] = data.data[i];
+		const c = data.data[i];
+		data.data[i + 1] = c;
+		data.data[i + 2] = c;
 	}
 }
 
@@ -1229,7 +1230,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 		const cbottom = readUint32(reader);
 		const cright = readUint32(reader);
 		const pixelDepth2 = readUint16(reader);
-		const compressionMode = readUint8(reader); // 0 - raw, 1 - zip
+		const compressionMode = readUint8(reader); // 0 - raw, 1 - rle
 		const dataLength = length - (4 + 16 + 2 + 1);
 		const cdata = readBytes(reader, dataLength);
 
@@ -1271,15 +1272,25 @@ export function readPattern(reader: PsdReader): PatternInfo {
 				throw new Error('Indexed pattern color mode not implemented');
 			}
 		} else if (compressionMode === 1) {
-			// console.log({ colorMode });
-			// require('fs').writeFileSync('zip.bin', Buffer.from(cdata));
-			// const data = require('zlib').inflateRawSync(cdata);
-			// const data = require('zlib').unzipSync(cdata);
-			// console.log(data);
-			// throw new Error('Zip compression not supported for pattern');
-			// throw new Error('Unsupported pattern compression');
-			reader.log('Unsupported pattern compression');
-			name += ' (failed to decode)';
+			const pixelData: PixelData = { data, width, height };
+			const tempData: PixelData = { data: new Uint8Array(width * height), width, height };
+			const cdataReader = createReader(cdata.buffer, cdata.byteOffset, cdata.byteLength);
+
+			if (colorMode === ColorMode.RGB && ch < 3) {
+				readDataRLE(cdataReader, tempData, width, height, 8, 1, [0], false);
+				copyChannelToRGBA(tempData, pixelData, ox, oy, ch);
+			}
+
+			if (colorMode === ColorMode.Grayscale && ch < 1) {
+				readDataRLE(cdataReader, tempData, width, height, 8, 1, [0], false);
+				copyChannelToRGBA(tempData, pixelData, ox, oy, 0);
+				setupGrayscale(pixelData);
+			}
+
+			if (colorMode === ColorMode.Indexed) {
+				// TODO:
+				throw new Error('Indexed pattern color mode not implemented');
+			}
 		} else {
 			throw new Error('Invalid pattern compression mode');
 		}
@@ -1290,4 +1301,19 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	// TODO: use canvas instead of data ?
 
 	return { id, name, x, y, bounds: { x: left, y: top, w: width, h: height }, data };
+}
+
+function copyChannelToRGBA(srcData: PixelData, dstData: PixelData, ox: number, oy: number, offset: number) {
+	const w = srcData.width;
+	const h = srcData.height;
+	const width = dstData.width;
+
+	for (let y = 0; y < h; y++) {
+		for (let x = 0; x < w; x++) {
+			const src = x + y * w;
+			const dst = (ox + x + (y + oy) * width) * 4;
+			const value = srcData.data[src];
+			dstData.data[dst + offset] = value;
+		}
+	}
 }

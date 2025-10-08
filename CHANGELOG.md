@@ -1,5 +1,8 @@
 # Changelog
 
+## v28.4.0
+- Added support for reading compressed patterns in ABR files
+
 ## v28.1.0
 - Added support for reading and writing `choke` parameter for layer effects
 
