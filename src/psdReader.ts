@@ -1273,16 +1273,16 @@ export function readPattern(reader: PsdReader): PatternInfo {
 			}
 		} else if (compressionMode === 1) {
 			const pixelData: PixelData = { data, width, height };
-			const tempData: PixelData = { data: new Uint8Array(width * height), width, height };
+			const tempData: PixelData = { data: new Uint8Array(w * h), width: w, height: h };
 			const cdataReader = createReader(cdata.buffer, cdata.byteOffset, cdata.byteLength);
 
 			if (colorMode === ColorMode.RGB && ch < 3) {
-				readDataRLE(cdataReader, tempData, width, height, 8, 1, [0], false);
+				readDataRLE(cdataReader, tempData, w, h, 8, 1, [0], false);
 				copyChannelToRGBA(tempData, pixelData, ox, oy, ch);
 			}
 
 			if (colorMode === ColorMode.Grayscale && ch < 1) {
-				readDataRLE(cdataReader, tempData, width, height, 8, 1, [0], false);
+				readDataRLE(cdataReader, tempData, w, h, 8, 1, [0], false);
 				copyChannelToRGBA(tempData, pixelData, ox, oy, 0);
 				setupGrayscale(pixelData);
 			}
