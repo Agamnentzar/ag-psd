@@ -1,9 +1,6 @@
 import { BlnM, DescriptorUnitsValue, parseAngle, parsePercent, parseUnitsToNumber, readVersionAndDescriptor } from './descriptor';
 import { BlendMode, PatternInfo } from './psd';
-import {
-	checkSignature, createReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPattern,
-	readSignature, readUint16, readUint32, readUint8, skipBytes
-} from './psdReader';
+import { checkSignature, createReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPattern, readSignature, readUint16, readUint32, readUint8, skipBytes } from './psdReader';
 
 export interface Abr {
 	brushes: Brush[];
@@ -26,17 +23,78 @@ export interface BrushDynamics {
 
 const dynamicsControl = ['off', 'fade', 'pen pressure', 'pen tilt', 'stylus wheel', 'initial direction', 'direction', 'initial rotation', 'rotation'];
 
-export interface BrushShape {
-	name?: string;
+type DynamicBrushShapeShape = 'round point' | 'round blunt' | 'round curve' | 'round angle' | 'round fan' | 'flat point' | 'flat blunt' | 'flat curve' | 'flat angle' | 'flat fan';
+
+const dynamicBrushShapeShapes: DynamicBrushShapeShape[] = ['round point', 'round blunt', 'round curve', 'round angle', 'round fan', 'flat point', 'flat blunt', 'flat curve', 'flat angle', 'flat fan'];
+
+type TipsBrushShapeShape = 'erodible point' | 'erodible flat' | 'erodible round' | 'erodible square' | 'erodible triangle' | 'custom';
+
+const tipsBrushShapeShapes: TipsBrushShapeShape[] = ['erodible point', 'erodible flat', 'erodible round', 'erodible square', 'erodible triangle', 'custom'];
+
+export type BrushShape = ComputedBrushShape | SampledBrushShape | TipsBrushShape | DynamicBrushShape;
+
+interface ComputedBrushShape {
+	type: 'computed';
 	size: number;
 	angle: number;
 	roundness: number;
-	hardness?: number;
+	hardness: number;
 	spacingOn: boolean;
 	spacing: number;
 	flipX: boolean;
 	flipY: boolean;
-	sampledData?: string;
+}
+
+interface SampledBrushShape {
+	type: 'sampled';
+	name: string;
+	size: number;
+	angle: number;
+	roundness: number;
+	spacingOn: boolean;
+	spacing: number;
+	flipX: boolean;
+	flipY: boolean;
+	sampledData: string;
+}
+
+interface TipsBrushShape {
+	type: 'tips';
+	angle: number;
+	size: number;
+	shape: DynamicBrushShapeShape;
+	physics: boolean;
+	spacing: number,
+	spacingOn: boolean;
+	flipX: boolean;
+	flipY: boolean;
+	tipsType: TipsBrushShapeShape;
+	tipsLengthRatio: number;
+	tipsHardness: number;
+	tipsGridSize?: number;
+	tipsErodibleTipHeightMap?: number[];
+	tipsAirbrushCutoffAngle: number;
+	tipsAirbrushGranularity: number;
+	tipsAirbrushStreakiness: number;
+	tipsAirbrushSplatSize: number;
+	tipsAirbrushSplatCount: number;
+}
+
+interface DynamicBrushShape {
+	type: 'dynamic';
+	size: number;
+	angle: number;
+	shape: DynamicBrushShapeShape;
+	density: number;
+	length: number;
+	clumping: number; // bristles
+	thickness: number;
+	stiffness: number;
+	physics: boolean;
+	spacing: number;
+	spacingOn: boolean;
+	flipX: boolean;
+	flipY: boolean;
 }
 
 export interface Brush {
@@ -164,17 +222,74 @@ interface DynamicsDescriptor {
 	'Mnm ': DescriptorUnitsValue;
 }
 
-interface BrushShapeDescriptor {
+type BrushShapeDescriptor = ComputedBrushDescriptor | SampledBrushDescriptor | TipsBrushDescriptor | DynamicBrushDescriptor;
+
+interface ComputedBrushDescriptor {
+	_name: '';
+	_classID: 'computedBrush',
+	Dmtr: DescriptorUnitsValue,
+	Hrdn: DescriptorUnitsValue,
+	Angl: DescriptorUnitsValue,
+	Rndn: DescriptorUnitsValue,
+	Spcn: DescriptorUnitsValue,
+	Intr: boolean,
+	flipX: boolean,
+	flipY: boolean,
+}
+
+interface SampledBrushDescriptor {
+	_name: '';
+	_classID: 'sampledBrush';
 	Dmtr: DescriptorUnitsValue;
 	Angl: DescriptorUnitsValue;
 	Rndn: DescriptorUnitsValue;
-	'Nm  '?: string;
+	'Nm  ': string;
 	Spcn: DescriptorUnitsValue;
 	Intr: boolean;
-	Hrdn?: DescriptorUnitsValue;
 	flipX: boolean;
 	flipY: boolean;
-	sampledData?: string;
+	sampledData: string;
+}
+
+interface TipsBrushDescriptor {
+	_name: '';
+	_classID: 'dTips';
+	Angl: DescriptorUnitsValue;
+	Dmtr: DescriptorUnitsValue;
+	dtipsType: number;
+	'Shp ': number;
+	dtipsLengthRatio: DescriptorUnitsValue;
+	dtipsHardness: DescriptorUnitsValue;
+	dtipsGridSize: number;
+	dtipsErodibleTipHeightMap?: Uint8Array;
+	physics: boolean;
+	dtipsAirbrushCutoffAngle: number;
+	dtipsAirbrushGranularity: DescriptorUnitsValue;
+	dtipsAirbrushStreakiness: DescriptorUnitsValue;
+	dtipsAirbrushSplatSize: DescriptorUnitsValue;
+	dtipsAirbrushSplatCount: number;
+	Spcn: DescriptorUnitsValue,
+	Intr: boolean;
+	flipX: boolean;
+	flipY: boolean;
+}
+
+interface DynamicBrushDescriptor {
+	_name: '';
+	_classID: 'dBrush';
+	'Shp ': number;
+	Angl: DescriptorUnitsValue;
+	Dmtr: DescriptorUnitsValue;
+	Dnst: DescriptorUnitsValue;
+	Lngt: DescriptorUnitsValue;
+	clumping: DescriptorUnitsValue;
+	thickness: DescriptorUnitsValue;
+	stiffness: DescriptorUnitsValue;
+	physics: boolean;
+	Spcn: DescriptorUnitsValue;
+	Intr: boolean;
+	flipX: boolean;
+	flipY: boolean;
 }
 
 interface DescDescriptor {
@@ -305,21 +420,96 @@ function parseDynamics(desc: DynamicsDescriptor): BrushDynamics {
 }
 
 function parseBrushShape(desc: BrushShapeDescriptor): BrushShape {
-	const shape: BrushShape = {
-		size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
-		angle: parseAngle(desc.Angl),
-		roundness: parsePercent(desc.Rndn),
-		spacingOn: desc.Intr,
-		spacing: parsePercent(desc.Spcn),
-		flipX: desc.flipX,
-		flipY: desc.flipY,
-	};
+	switch (desc._classID) {
+		case 'computedBrush': {
+			return {
+				type: 'computed',
+				size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
+				angle: parseAngle(desc.Angl),
+				roundness: parsePercent(desc.Rndn),
+				spacingOn: desc.Intr,
+				spacing: parsePercent(desc.Spcn),
+				flipX: desc.flipX,
+				flipY: desc.flipY,
+				hardness: parsePercent(desc.Hrdn),
+			};
+		}
+		case 'sampledBrush': {
+			return {
+				type: 'sampled',
+				size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
+				angle: parseAngle(desc.Angl),
+				roundness: parsePercent(desc.Rndn),
+				spacingOn: desc.Intr,
+				spacing: parsePercent(desc.Spcn),
+				flipX: desc.flipX,
+				flipY: desc.flipY,
+				name: desc['Nm  '],
+				sampledData: desc.sampledData,
+			};
+		}
+		case 'dBrush':
+			return {
+				type: 'dynamic',
+				shape: dynamicBrushShapeShapes[desc['Shp ']],
+				angle: parseAngle(desc.Angl),
+				size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
+				density: parsePercent(desc.Dnst),
+				length: parsePercent(desc.Lngt),
+				clumping: parsePercent(desc.clumping),
+				thickness: parsePercent(desc.thickness),
+				stiffness: parsePercent(desc.stiffness),
+				physics: desc.physics,
+				spacing: parsePercent(desc.Spcn),
+				spacingOn: desc.Intr,
+				flipX: desc.flipX,
+				flipY: desc.flipY,
+			};
+		case 'dTips': {
+			return {
+				type: 'tips',
+				angle: parseAngle(desc.Angl),
+				size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
+				shape: dynamicBrushShapeShapes[desc['Shp ']],
+				physics: desc.physics,
+				spacing: parsePercent(desc.Spcn),
+				spacingOn: desc.Intr,
+				flipX: desc.flipX,
+				flipY: desc.flipY,
+				// tips:
+				tipsType: tipsBrushShapeShapes[desc.dtipsType],
+				tipsLengthRatio: parsePercent(desc.dtipsLengthRatio),
+				tipsHardness: parsePercent(desc.dtipsHardness),
+				...(desc.dtipsGridSize && desc.dtipsErodibleTipHeightMap ? {
+					tipsGridSize: desc.dtipsGridSize,
+					tipsErodibleTipHeightMap: parseHeightmap(desc.dtipsErodibleTipHeightMap),
+				} : {}),
+				// airbrush
+				tipsAirbrushCutoffAngle: desc.dtipsAirbrushCutoffAngle,
+				tipsAirbrushGranularity: parsePercent(desc.dtipsAirbrushGranularity),
+				tipsAirbrushStreakiness: parsePercent(desc.dtipsAirbrushStreakiness),
+				tipsAirbrushSplatSize: parsePercent(desc.dtipsAirbrushSplatSize),
+				tipsAirbrushSplatCount: desc.dtipsAirbrushSplatCount,
+			};
+		}
+		default:
+			console.log(require('util').inspect(desc, false, 99, true));
+			throw new Error(`Unknown brush classId: ${(desc as any)._classID}`);
+	}
+}
 
-	if (desc['Nm  ']) shape.name = desc['Nm  '];
-	if (desc.Hrdn) shape.hardness = parsePercent(desc.Hrdn);
-	if (desc.sampledData) shape.sampledData = desc.sampledData;
-
-	return shape;
+function parseHeightmap(array: Uint8Array) {
+	const result: number[] = [];
+	for (let i = 0; i < array.byteLength; i++) {
+		result.push(array[i]);
+	}
+	return result;
+	// const view = new DataView(array.buffer, array.byteOffset, array.byteLength);
+	// const result: number[] = [];
+	// for (let i = 0, len = (array.byteLength / 4) | 0; i < len; i++) {
+	// 	result.push(view.getInt32(i * 4)); ????
+	// }
+	// return result;
 }
 
 export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?: boolean; } = {}): Abr {

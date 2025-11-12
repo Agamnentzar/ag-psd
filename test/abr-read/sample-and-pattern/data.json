@@ -28,6 +28,7 @@
     {
       "name": "Bobbys Brush 743",
       "shape": {
+        "type": "sampled",
         "size": 112,
         "angle": 0,
         "roundness": 1,

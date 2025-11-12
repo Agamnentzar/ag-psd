@@ -1014,6 +1014,39 @@ export interface FrameListDescriptor {
 	LaSt: FrameDescriptor[];
 }
 
+export interface PxScDescriptor {
+	_name: '';
+	_classID: 'PixelSource';
+	pixelSourceType: 1986285651; // vdPS
+	descVersion: 1;
+	origin: { Hrzn: number; Vrtc: number; };
+	interpretation: {
+		_name: '';
+		_classID: 'footageInterpretation';
+		Vrsn: 1;
+		interpretAlpha: 'alphaInterpretation.straight';
+		profile: Uint8Array;
+	};
+	frameReader: {
+		_name: '';
+		_classID: 'FrameReader';
+		frameReaderType: 1364477522; // QTFR
+		descVersion: 1;
+		'Lnk ': {
+			_name: '';
+			_classID: 'ExternalFileLink';
+			descVersion: 2;
+			'Nm  ': string;
+			fullPath: string;
+			originalPath: string;
+			alis: string;
+			relPath: string;
+		};
+		mediaDescriptor: string;
+	};
+	showAlteredVideo: boolean;
+}
+
 export function horzVrtcToXY(hv: HrznVrtcDescriptor): { x: number; y: number; } {
 	return { x: hv.Hrzn, y: hv.Vrtc };
 }

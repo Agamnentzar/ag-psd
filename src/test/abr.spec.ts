@@ -11,7 +11,7 @@ const resultsFilesPath = path.join(__dirname, '..', '..', 'results');
 
 describe('ABR', () => {
 	fs.readdirSync(readFilesPath).forEach(f => {
-		// fs.readdirSync(readFilesPath).filter(f => /s/.test(f)).forEach(f => {
+		// fs.readdirSync(readFilesPath).filter(f => /special/.test(f)).forEach(f => {
 		it(`reads ABR file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
 			const fileName = path.join(basePath, 'src.abr');
@@ -47,12 +47,6 @@ describe('ABR', () => {
 			expect(abr).eql(expected, f);
 			compare.forEach(i => compareCanvases(images[i.name], i.canvas, `${f}/${i.name}`));
 		});
-	});
-
-	it.skip('test', () => {
-		const fileName = `E:\\Downloads\\Fire_Brushes_-_Pixivu.abr`;
-		const abr = readAbr(fs.readFileSync(fileName), { logMissingFeatures: true });
-		console.log(require('util').inspect(abr, false, 99, true));
 	});
 
 	it.skip('test', function () {
@@ -93,7 +87,7 @@ describe('ABR', () => {
 				}
 			}
 		}
-	})
+	});
 });
 
 function alphaToCanvas(alpha: Uint8Array, width: number, height: number) {

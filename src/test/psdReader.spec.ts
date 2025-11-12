@@ -159,6 +159,10 @@ describe('PsdReader', () => {
 						}
 					}
 
+					if (layer.pixelSource) {
+						layer.pixelSource.interpretation.profile = byteArrayToBase64(layer.pixelSource.interpretation.profile) as any;
+					}
+
 					if (layer.children) {
 						convertUint8ArraysToBase64(layer.children);
 					}

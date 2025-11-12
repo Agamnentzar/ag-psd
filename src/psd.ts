@@ -1488,6 +1488,26 @@ export interface LayerAdditionalInfo {
 		ranges: { sourceRange: number[]; destRange: number[]; }[];
 	};
 	vowv?: number; // ???
+	pixelSource?: {
+		type: 'vdPS';
+		origin: { x: number; y: number; };
+		interpretation: {
+			interpretAlpha: string; // 'straight' | ...;
+			profile: Uint8Array;
+		};
+		frameReader: {
+			type: 'QTFR';
+			link: {
+				name: string;
+				fullPath: string;
+				originalPath: string;
+				relativePath: string;
+				alias: string;
+			};
+			mediaDescriptor: string;
+		};
+		showAlteredVideo: boolean;
+	};
 
 	// Base64 encoded raw EngineData, currently just kept in original state to support
 	// loading and modifying PSD file without breaking text layers.

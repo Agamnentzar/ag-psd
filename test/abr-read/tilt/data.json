@@ -5,6 +5,7 @@
     {
       "name": "test2",
       "shape": {
+        "type": "computed",
         "size": 30,
         "angle": 0,
         "roundness": 1,

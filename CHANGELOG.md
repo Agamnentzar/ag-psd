@@ -1,5 +1,9 @@
 # Changelog
 
+## v28.5.0
+- Added partial support for `pixelSource` section
+- Reworked ABR brush types
+
 ## v28.4.0
 - Added support for reading compressed patterns in ABR files
 
