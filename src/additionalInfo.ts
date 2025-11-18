@@ -442,7 +442,7 @@ addHandler(
 			}
 			const trnf = i.Trnf;
 			if (trnf) {
-				item.transform = [trnf.xx, trnf.xy, trnf.xy, trnf.yy, trnf.tx, trnf.ty];
+				item.transform = [trnf.xx, trnf.xy, trnf.yx, trnf.yy, trnf.tx, trnf.ty];
 			}
 
 			target.vectorOrigination.keyDescriptorList.push(item);
