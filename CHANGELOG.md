@@ -1,5 +1,8 @@
 # Changelog
 
+## v28.5.1
+- Fixed handling for `transform` property in `vectorOrigination` section
+
 ## v28.5.0
 - Added partial support for `pixelSource` section
 - Reworked ABR brush types
