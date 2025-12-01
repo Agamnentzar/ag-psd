@@ -166,15 +166,7 @@ const createCanvas = (width, height) => {
   return new OffscreenCanvas(width, height);
 };
 
-const createCanvasFromData = (data) => {
-  const image = new Image();
-  image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
-  const canvas = new OffscreenCanvas(image.width, image.height);
-  canvas.getContext('2d').drawImage(image, 0, 0);
-  return canvas;
-};
-
-agPsd.initializeCanvas(createCanvas, createCanvasFromData);
+agPsd.initializeCanvas(createCanvas);
 
 onmessage = message => {
   // skipping thumbnail and layer images here so we don't have to clear and convert them all
@@ -224,15 +216,7 @@ const createCanvas = (width, height) => {
   return OffscreenCanvas(width, height);
 };
 
-const createCanvasFromData = (data) => {
-  const image = new Image();
-  image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
-  const canvas = new OffscreenCanvas(image.width, image.height);
-  canvas.getContext('2d').drawImage(image, 0, 0);
-  return canvas;
-};
-
-agPsd.initializeCanvas(createCanvas, createCanvasFromData);
+agPsd.initializeCanvas(createCanvas);
 
 onmessage = message => {
   const psd = message.data.psd;

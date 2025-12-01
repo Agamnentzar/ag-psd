@@ -1,6 +1,6 @@
-import { fromByteArray } from 'base64-js';
 import { deflate as deflateSync } from 'pako';
 import { Layer, BlendMode, LayerColor, PixelData, PixelArray } from './psd';
+import { decodeJpeg } from './jpeg';
 
 export const MOCK_HANDLERS = false;
 export const RAW_IMAGE_DATA = false;
@@ -370,12 +370,24 @@ export function writeDataZipWithoutPrediction({ data, width, height }: PixelData
 	}
 }
 
+export function createCanvasFromData(data: Uint8Array): HTMLCanvasElement {
+	const canvas = createCanvas(100, 100);
+
+	try {
+		const context = canvas.getContext('2d')!;
+		const imageData = decodeJpeg(data, (w, h) => context.createImageData(w, h) as any);
+		canvas.width = imageData.width;
+		canvas.height = imageData.height;
+		context.putImageData(imageData, 0, 0);
+	} catch (e: any) {
+		console.error('JPEG decompression error', e.message);
+	}
+
+	return canvas;
+}
+
 export let createCanvas: (width: number, height: number) => HTMLCanvasElement = () => {
 	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvas method');
-};
-
-export let createCanvasFromData: (data: Uint8Array) => HTMLCanvasElement = () => {
-	throw new Error('Canvas not initialized, use initializeCanvas method to set up createCanvasFromData method');
 };
 
 let tempCanvas: HTMLCanvasElement | undefined = undefined;
@@ -392,24 +404,12 @@ if (typeof document !== 'undefined') {
 		canvas.height = height;
 		return canvas;
 	};
-
-	createCanvasFromData = (data) => {
-		const image = new Image();
-		image.src = 'data:image/jpeg;base64,' + fromByteArray(data);
-		const canvas = document.createElement('canvas');
-		canvas.width = image.width;
-		canvas.height = image.height;
-		canvas.getContext('2d')!.drawImage(image, 0, 0);
-		return canvas;
-	};
 }
 
 export function initializeCanvas(
 	createCanvasMethod: (width: number, height: number) => HTMLCanvasElement,
-	createCanvasFromDataMethod?: (data: Uint8Array) => HTMLCanvasElement,
 	createImageDataMethod?: (width: number, height: number) => ImageData
 ) {
 	createCanvas = createCanvasMethod;
-	createCanvasFromData = createCanvasFromDataMethod || createCanvasFromData;
 	createImageData = createImageDataMethod || createImageData;
 }

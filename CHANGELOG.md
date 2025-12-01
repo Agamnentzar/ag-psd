@@ -1,5 +1,8 @@
 # Changelog
 
+## v29.0.0
+- Remove `createCanvasFromData` parameter from `initializeCanvas` function, simplifying handling of custom canvas classes
+
 ## v28.5.1
 - Fixed handling for `transform` property in `vectorOrigination` section
 
