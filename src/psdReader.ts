@@ -1172,7 +1172,9 @@ export function readColor(reader: PsdReader): Color {
 }
 
 export function readPattern(reader: PsdReader): PatternInfo {
-	readUint32(reader); // length
+	let length = readUint32(reader);
+	while (length % 4) length++;
+	const end = reader.offset + length;
 	const version = readUint32(reader);
 	if (version !== 1) throw new Error(`Invalid pattern version: ${version}`);
 
@@ -1298,7 +1300,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 		ch++;
 	}
 
-	// TODO: use canvas instead of data ?
+	reader.offset = end;
 
 	return { id, name, x, y, bounds: { x: left, y: top, w: width, h: height }, data };
 }

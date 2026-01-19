@@ -1,5 +1,8 @@
 # Changelog
 
+## v29.1.0
+- Fixes for importing ABR files
+
 ## v29.0.0
 - Remove `createCanvasFromData` parameter from `initializeCanvas` function, simplifying handling of custom canvas classes
 

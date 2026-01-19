@@ -3995,11 +3995,10 @@ function createLnkHandler(tag: string) {
 				if ((tag === 'lnkE') !== !!file.linkedFile) continue;
 
 				let version = 2;
-
 				if (file.assetLockedState != null) version = 7;
 				else if (file.assetModTime != null) version = 6;
 				else if (file.childDocumentID != null) version = 5;
-				else if (tag == 'lnkE') version = 3;
+				else if (tag === 'lnkE') version = 3;
 
 				writeLength64(writer, 0);
 

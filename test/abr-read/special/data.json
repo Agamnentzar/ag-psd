@@ -22,6 +22,18 @@
         "w": 128,
         "h": 128
       }
+    },
+    {
+      "id": "c02fddff-f05a-1172-9a0f-f7bad69dd4b0",
+      "name": "$$$/Presets/Patterns/Patterns_pat/FineGrain=Fine Grain",
+      "x": 256,
+      "y": 256,
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 256
+      }
     }
   ],
   "brushes": [
@@ -599,7 +611,8 @@
         "scale": 0.62,
         "invert": false,
         "brightness": 6,
-        "contrast": -20
+        "contrast": -20,
+        "textureEachTip": true
       },
       "transfer": {
         "flowDynamics": {
@@ -685,7 +698,8 @@
         "scale": 0.62,
         "invert": false,
         "brightness": 6,
-        "contrast": -20
+        "contrast": -20,
+        "textureEachTip": true
       },
       "dualBrush": {
         "flip": true,
@@ -794,7 +808,8 @@
         "scale": 0.62,
         "invert": false,
         "brightness": 6,
-        "contrast": -20
+        "contrast": -20,
+        "textureEachTip": true
       },
       "dualBrush": {
         "flip": true,
@@ -999,7 +1014,8 @@
         "scale": 0.61,
         "invert": false,
         "brightness": -7,
-        "contrast": 14
+        "contrast": 14,
+        "textureEachTip": true
       },
       "transfer": {
         "flowDynamics": {

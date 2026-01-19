@@ -128,6 +128,7 @@ export interface Brush {
 		depth: number;
 		depthMinimum: number;
 		depthDynamics: BrushDynamics;
+		textureEachTip: boolean;
 	};
 	dualBrush?: {
 		flip: boolean;
@@ -584,6 +585,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 				case 'desc': {
 					const desc: DescDescriptor = readVersionAndDescriptor(reader, true);
 					// console.log(require('util').inspect(desc, false, 99, true));
+					// require('fs').writeFileSync('test.log', require('util').inspect(desc, false, 99, false), 'utf8');
 
 					for (const brush of desc.Brsh) {
 						const b: Brush = {
@@ -636,6 +638,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 								invert: brush.InvT,
 								brightness: brush.textureBrightness,
 								contrast: brush.textureContrast,
+								textureEachTip: !!brush.TxtC,
 							};
 						}
 
@@ -730,10 +733,10 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 					break;
 				}
 				case 'patt': {
-					if (reader.offset < end) { // TODO: check multiple patterns
+					while (reader.offset < end) {
 						patterns.push(readPattern(reader));
-						reader.offset = end;
 					}
+					reader.offset = end;
 					break;
 				}
 				case 'phry': {
