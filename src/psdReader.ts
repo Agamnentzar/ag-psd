@@ -560,6 +560,17 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 	}
 }
 
+function resetAlpha({ data }: PixelData, cmyk: boolean) {
+	const alpha = (data instanceof Float32Array) ? 1.0 : ((data instanceof Uint16Array) ? 0xffff : 0xff);
+	const offset = (cmyk ? 4 : 3) | 0;
+	const length = data.length | 0;
+	const step = (cmyk ? 5 : 4) | 0;
+
+	for (let p = offset; p < length; p = (p + step) | 0) {
+		data[p] = alpha;
+	}
+}
+
 export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throwForMissingFeatures?: boolean) {
 	if (!layer.rawData) return;
 
@@ -569,19 +580,18 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 	const cmyk = colorMode === ColorMode.CMYK;
 
 	let imageData: PixelData | undefined;
+	let initializedAlpha = false;
 
 	if (layerWidth && layerHeight) {
 		if (cmyk) {
 			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) } as any as ImageData;
-			for (let p = 4; p < imageData.data.byteLength; p += 5) imageData.data[p] = 255;
 		} else {
 			imageData = createImageDataBitDepth(layerWidth, layerHeight, bitsPerChannel);
-			resetImageData(imageData);
 		}
 	}
 
-	if (RAW_IMAGE_DATA) {
+	if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
 		(layer as any).imageDataRaw = [];
 		(layer as any).imageDataRawCompression = [];
 	}
@@ -601,11 +611,10 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 
 			if (maskWidth && maskHeight) {
 				const maskData = createImageDataBitDepth(maskWidth, maskHeight, bitsPerChannel);
-				resetImageData(maskData);
 
 				readData(dataReader, data.byteLength, maskData, compression, maskWidth, maskHeight, bitsPerChannel, 0, large, 4);
 
-				if (RAW_IMAGE_DATA) {
+				if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
 					if (id === ChannelID.UserMask) {
 						(layer as any).maskDataRawCompression = compression;
 						(layer as any).maskDataRaw = data;
@@ -616,6 +625,7 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 				}
 
 				setupGrayscale(maskData);
+				resetAlpha(maskData, false);
 
 				if (useImageData) {
 					mask.imageData = maskData;
@@ -637,7 +647,7 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 
 			readData(dataReader, data.byteLength, targetData, compression, layerWidth, layerHeight, bitsPerChannel, offset, large, cmyk ? 5 : 4);
 
-			if (RAW_IMAGE_DATA) {
+			if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
 				(layer as any).imageDataRawCompression[id] = compression;
 				(layer as any).imageDataRaw[id] = data;
 			}
@@ -646,9 +656,15 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 				setupGrayscale(targetData);
 			}
 		}
+
+		if (id === ChannelID.Transparency) {
+			initializedAlpha = true;
+		}
 	}
 
 	if (imageData) {
+		if (!initializedAlpha) resetAlpha(imageData, cmyk);
+
 		if (cmyk) {
 			const cmykData = imageData;
 			imageData = createImageData(cmykData.width, cmykData.height);
