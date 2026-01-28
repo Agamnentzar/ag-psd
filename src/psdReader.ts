@@ -1,6 +1,6 @@
 import { inflate as inflateSync } from 'pako';
-import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray } from './psd';
-import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, ChannelID, Compression, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
+import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression } from './psd';
+import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { InternalImageResources, resourceHandlersMap } from './imageResources';
 
@@ -358,10 +358,8 @@ export function readLayerInfo(reader: PsdReader, psd: Psd, imageResources: Inter
 		layerChannels.push(channels);
 	}
 
-	if (!reader.skipLayerImageData) {
-		for (let i = 0; i < layerCount; i++) {
-			readLayerChannelImageData(reader, psd, layers[i], layerChannels[i]);
-		}
+	for (let i = 0; i < layerCount; i++) {
+		readLayerChannelImageData(reader, psd, layers[i], layerChannels[i]);
 	}
 
 	if (!psd.children) psd.children = [];
@@ -520,19 +518,65 @@ function readLayerBlendingRanges(reader: PsdReader) {
 }
 
 function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, channels: ChannelInfo[]) {
+	if (reader.skipLayerImageData) return;
+
+	const { colorMode = ColorMode.RGB, bitsPerChannel = 8 } = psd;
+	layer.rawData = { colorMode, bitsPerChannel, channels: [], large: reader.large };
+
+	for (const channel of channels) {
+		const start = reader.offset;
+
+		let compression = Compression.RawData;
+		let data: Uint8Array | undefined = undefined;
+
+		if (channel.length === 1) throw new Error('Invalid channel length');
+		if (channel.length) {
+			compression = readUint16(reader) as Compression;
+			// try to fix broken files where there's 1 byte shift of channel
+			if (compression > 3) {
+				reader.offset -= 1;
+				compression = readUint16(reader) as Compression;
+			}
+
+			// try to fix broken files where there's 1 byte shift of channel
+			if (compression > 3) {
+				reader.offset -= 3;
+				compression = readUint16(reader) as Compression;
+			}
+
+			if (compression > 3) throw new Error(`Invalid compression: ${compression}`);
+
+			if (channel.length > 2) {
+				data = readBytes(reader, channel.length - 2);
+			}
+		}
+
+		reader.offset = start + channel.length;
+		layer.rawData.channels.push({ id: channel.id, compression, data });
+	}
+
+	if (!reader.useRawData) {
+		decodeLayerImageData(layer, !!reader.useImageData, !!reader.throwForMissingFeatures);
+	}
+}
+
+export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throwForMissingFeatures?: boolean) {
+	if (!layer.rawData) return;
+
+	const { colorMode, bitsPerChannel, channels, large } = layer.rawData;
 	const layerWidth = (layer.right || 0) - (layer.left || 0);
 	const layerHeight = (layer.bottom || 0) - (layer.top || 0);
-	const cmyk = psd.colorMode === ColorMode.CMYK;
+	const cmyk = colorMode === ColorMode.CMYK;
 
 	let imageData: PixelData | undefined;
 
 	if (layerWidth && layerHeight) {
 		if (cmyk) {
-			if (psd.bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
+			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) } as any as ImageData;
 			for (let p = 4; p < imageData.data.byteLength; p += 5) imageData.data[p] = 255;
 		} else {
-			imageData = createImageDataBitDepth(layerWidth, layerHeight, psd.bitsPerChannel ?? 8);
+			imageData = createImageDataBitDepth(layerWidth, layerHeight, bitsPerChannel);
 			resetImageData(imageData);
 		}
 	}
@@ -542,83 +586,63 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		(layer as any).imageDataRawCompression = [];
 	}
 
-	for (const channel of channels) {
-		if (channel.length === 0) continue;
-		if (channel.length < 2) throw new Error('Invalid channel length');
+	for (const { id, compression, data } of channels) {
+		if (!data) continue;
 
-		const start = reader.offset;
+		const dataReader = createReader(data.buffer, data.byteOffset, data.byteLength);
 
-		let compression = readUint16(reader) as Compression;
-
-		// try to fix broken files where there's 1 byte shift of channel
-		if (compression > 3) {
-			reader.offset -= 1;
-			compression = readUint16(reader) as Compression;
-		}
-
-		// try to fix broken files where there's 1 byte shift of channel
-		if (compression > 3) {
-			reader.offset -= 3;
-			compression = readUint16(reader) as Compression;
-		}
-
-		if (compression > 3) throw new Error(`Invalid compression: ${compression}`);
-
-		if (channel.id === ChannelID.UserMask || channel.id === ChannelID.RealUserMask) {
-			const mask = channel.id === ChannelID.UserMask ? layer.mask : layer.realMask;
-			if (!mask) throw new Error(`Missing layer ${channel.id === ChannelID.UserMask ? 'mask' : 'real mask'} data`);
+		if (id === ChannelID.UserMask || id === ChannelID.RealUserMask) {
+			const mask = id === ChannelID.UserMask ? layer.mask : layer.realMask;
+			if (!mask) throw new Error(`Missing layer ${id === ChannelID.UserMask ? 'mask' : 'real mask'} data`);
 
 			const maskWidth = (mask.right || 0) - (mask.left || 0);
 			const maskHeight = (mask.bottom || 0) - (mask.top || 0);
 			if (maskWidth < 0 || maskHeight < 0 || maskWidth > 30000 || maskHeight > 30000) throw new Error('Invalid mask size');
 
 			if (maskWidth && maskHeight) {
-				const maskData = createImageDataBitDepth(maskWidth, maskHeight, psd.bitsPerChannel ?? 8);
+				const maskData = createImageDataBitDepth(maskWidth, maskHeight, bitsPerChannel);
 				resetImageData(maskData);
 
-				const start = reader.offset;
-				readData(reader, channel.length, maskData, compression, maskWidth, maskHeight, psd.bitsPerChannel ?? 8, 0, reader.large, 4);
+				readData(dataReader, data.byteLength, maskData, compression, maskWidth, maskHeight, bitsPerChannel, 0, large, 4);
 
 				if (RAW_IMAGE_DATA) {
-					if (channel.id === ChannelID.UserMask) {
+					if (id === ChannelID.UserMask) {
 						(layer as any).maskDataRawCompression = compression;
-						(layer as any).maskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+						(layer as any).maskDataRaw = data;
 					} else {
 						(layer as any).realMaskDataRawCompression = compression;
-						(layer as any).realMaskDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+						(layer as any).realMaskDataRaw = data;
 					}
 				}
 
 				setupGrayscale(maskData);
 
-				if (reader.useImageData) {
+				if (useImageData) {
 					mask.imageData = maskData;
 				} else {
 					mask.canvas = imageDataToCanvas(maskData);
 				}
 			}
 		} else {
-			const offset = offsetForChannel(channel.id, cmyk);
+			const offset = offsetForChannel(id, cmyk);
 			let targetData = imageData;
 
 			if (offset < 0) {
 				targetData = undefined;
 
-				if (reader.throwForMissingFeatures) {
-					throw new Error(`Channel not supported: ${channel.id}`);
+				if (throwForMissingFeatures) {
+					throw new Error(`Channel not supported: ${id}`);
 				}
 			}
 
-			readData(reader, channel.length, targetData, compression, layerWidth, layerHeight, psd.bitsPerChannel ?? 8, offset, reader.large, cmyk ? 5 : 4);
+			readData(dataReader, data.byteLength, targetData, compression, layerWidth, layerHeight, bitsPerChannel, offset, large, cmyk ? 5 : 4);
 
 			if (RAW_IMAGE_DATA) {
-				(layer as any).imageDataRawCompression[channel.id] = compression;
-				(layer as any).imageDataRaw[channel.id] = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start + 2, channel.length - 2);
+				(layer as any).imageDataRawCompression[id] = compression;
+				(layer as any).imageDataRaw[id] = data;
 			}
 
-			reader.offset = start + channel.length;
-
-			if (targetData && psd.colorMode === ColorMode.Grayscale) {
+			if (targetData && colorMode === ColorMode.Grayscale) {
 				setupGrayscale(targetData);
 			}
 		}
@@ -631,23 +655,34 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 			cmykToRgb(cmykData, imageData, false);
 		}
 
-		if (reader.useImageData) {
+		if (useImageData) {
 			layer.imageData = imageData;
 		} else {
 			layer.canvas = imageDataToCanvas(imageData);
 		}
 	}
+
+	delete layer.rawData;
 }
 
-export function readData(reader: PsdReader, length: number, data: PixelData | undefined, compression: Compression, width: number, height: number, bitDepth: number, offset: number, large: boolean, step: number) {
+function readData(reader: PsdReader, length: number, pixels: PixelData | undefined, compression: Compression, width: number, height: number, bitDepth: number, offset: number, large: boolean, step: number) {
+	if (!length) return;
+
 	if (compression === Compression.RawData) {
-		readDataRaw(reader, data, width, height, bitDepth, step, offset);
+		if (length !== (width * height * Math.floor(bitDepth / 8))) {
+			reader.log(`Invalid length (${length}, ${width * height * Math.floor(bitDepth / 8)})`);
+		}
+		const data = readBytes(reader, length);
+		readDataRaw(data, pixels, bitDepth, step, offset);
 	} else if (compression === Compression.RleCompressed) {
-		readDataRLE(reader, data, width, height, bitDepth, step, [offset], large);
+		// const reader = createReader(data.buffer, data.byteOffset, data.byteLength);
+		readDataRLE(reader, pixels, width, height, bitDepth, step, [offset], large);
 	} else if (compression === Compression.ZipWithoutPrediction) {
-		readDataZip(reader, length, data, width, height, bitDepth, step, offset, false);
+		const data = readBytes(reader, length);
+		readDataZip(data, pixels, width, height, bitDepth, step, offset, false);
 	} else if (compression === Compression.ZipWithPrediction) {
-		readDataZip(reader, length, data, width, height, bitDepth, step, offset, true);
+		const data = readBytes(reader, length);
+		readDataZip(data, pixels, width, height, bitDepth, step, offset, true);
 	} else {
 		throw new Error(`Invalid Compression type: ${compression}`);
 	}
@@ -785,7 +820,8 @@ function readImageData(reader: PsdReader, psd: Psd) {
 
 			if (compression === Compression.RawData) {
 				for (let i = 0; i < channels.length; i++) {
-					readDataRaw(reader, imageData, psd.width, psd.height, bitsPerChannel, 4, channels[i]);
+					const data = readBytes(reader, psd.width * psd.height * Math.floor(bitsPerChannel / 8));
+					readDataRaw(data, imageData, bitsPerChannel, 4, channels[i]);
 				}
 			} else if (compression === Compression.RleCompressed) {
 				const start = reader.offset;
@@ -959,9 +995,7 @@ function copyChannelToPixelData(pixelData: PixelData, channel: PixelArray, offse
 	}
 }
 
-function readDataRaw(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number) {
-	const buffer = readBytes(reader, width * height * Math.floor(bitDepth / 8));
-
+function readDataRaw(buffer: Uint8Array, pixelData: PixelData | undefined, bitDepth: number, step: number, offset: number) {
 	if (bitDepth == 32) {
 		for (let i = 0; i < buffer.byteLength; i += 4) {
 			const a = buffer[i + 0];
@@ -992,8 +1026,7 @@ function decodePredicted(data: Uint8Array | Uint16Array, width: number, height: 
 	}
 }
 
-export function readDataZip(reader: PsdReader, length: number, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number, prediction: boolean) {
-	const compressed = readBytes(reader, length);
+export function readDataZip(compressed: Uint8Array, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offset: number, prediction: boolean) {
 	const decompressed = inflateSync(compressed);
 
 	if (pixelData && offset < step) {

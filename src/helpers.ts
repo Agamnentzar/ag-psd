@@ -1,5 +1,5 @@
 import { deflate as deflateSync } from 'pako';
-import { Layer, BlendMode, LayerColor, PixelData, PixelArray } from './psd';
+import { Layer, BlendMode, LayerColor, PixelData, PixelArray, ChannelID, Compression } from './psd';
 import { decodeJpeg } from './jpeg';
 
 export const MOCK_HANDLERS = false;
@@ -95,23 +95,6 @@ export const enum MaskParams {
 	UserMaskFeather = 2,
 	VectorMaskDensity = 4,
 	VectorMaskFeather = 8,
-}
-
-export const enum ChannelID {
-	Color0 = 0, // red (rgb) / cyan (cmyk)
-	Color1 = 1, // green (rgb) / magenta (cmyk)
-	Color2 = 2, // blue (rgb) / yellow (cmyk)
-	Color3 = 3, // - (rgb) / black (cmyk)
-	Transparency = -1,
-	UserMask = -2,
-	RealUserMask = -3,
-}
-
-export const enum Compression {
-	RawData = 0,
-	RleCompressed = 1,
-	ZipWithoutPrediction = 2,
-	ZipWithPrediction = 3,
 }
 
 export interface ChannelData {

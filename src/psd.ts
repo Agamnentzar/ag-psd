@@ -1727,6 +1727,36 @@ export interface Annotation {
 	data: string | Uint8Array;
 }
 
+export const enum ChannelID {
+	Color0 = 0, // red (rgb) / cyan (cmyk)
+	Color1 = 1, // green (rgb) / magenta (cmyk)
+	Color2 = 2, // blue (rgb) / yellow (cmyk)
+	Color3 = 3, // - (rgb) / black (cmyk)
+	Transparency = -1,
+	UserMask = -2,
+	RealUserMask = -3,
+}
+
+export const enum Compression {
+	RawData = 0,
+	RleCompressed = 1,
+	ZipWithoutPrediction = 2,
+	ZipWithPrediction = 3,
+}
+
+export interface LayerRawDataChannel {
+	id: ChannelID;
+	compression: Compression;
+	data: Uint8Array | undefined;
+}
+
+export interface LayerRawData {
+	colorMode: ColorMode;
+	bitsPerChannel: number;
+	channels: LayerRawDataChannel[];
+	large: boolean;
+}
+
 export interface Layer extends LayerAdditionalInfo {
 	top?: number;
 	left?: number;
@@ -1740,6 +1770,7 @@ export interface Layer extends LayerAdditionalInfo {
 	clipping?: boolean;
 	canvas?: HTMLCanvasElement;
 	imageData?: PixelData;
+	rawData?: LayerRawData;
 	children?: Layer[];
 	/** Applies only for layer groups. */
 	opened?: boolean;
@@ -1791,6 +1822,7 @@ export interface ReadOptions {
 	 * (image data will appear in `imageData` fields instead of `canvas` fields)
 	 * This avoids issues with canvas premultiplied alpha corrupting image data. */
 	useImageData?: boolean;
+	useRawData?: boolean;
 	/** Loads thumbnail raw data instead of decoding it's content into canvas.
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;

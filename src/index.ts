@@ -1,6 +1,6 @@
-import { Psd, ReadOptions, WriteOptions } from './psd';
+import { Layer, Psd, ReadOptions, WriteOptions } from './psd';
 import { PsdWriter, writePsd as writePsdInternal, getWriterBuffer, createWriter, getWriterBufferNoCopy } from './psdWriter';
-import { PsdReader, readPsd as readPsdInternal, createReader } from './psdReader';
+import { PsdReader, readPsd as readPsdInternal, createReader, decodeLayerImageData } from './psdReader';
 import { fromByteArray } from 'base64-js';
 
 export * from './abr';
@@ -42,4 +42,8 @@ export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
 	}
 
 	return Buffer.from(writePsdUint8Array(psd, options));
+}
+
+export function decodeLayerPixels(layer: Layer, useImageData?: boolean) {
+	decodeLayerImageData(layer, useImageData);
 }

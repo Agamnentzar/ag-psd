@@ -1,5 +1,8 @@
 # Changelog
 
+## v30.0.0
+- Added `useRawData` property to read options, if it's set to `true` the layer and mask image data will not be decompressed by `readPsd` function. Instead it can be decompressed for individual layers using `decodeLayerPixels` function.
+
 ## v29.1.0
 - Fixes for importing ABR files
 
