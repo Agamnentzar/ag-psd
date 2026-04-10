@@ -982,6 +982,13 @@ function bytesToArray(bytes: Uint8Array, bitDepth: number) {
 	if (bitDepth === 8) {
 		return bytes;
 	} else if (bitDepth === 16) {
+		// PSD files store 16-bit channel data in big-endian byte order.
+		// Swap each pair of bytes so that Uint16Array (native-endian) reads the correct values.
+		for (let i = 0; i < bytes.byteLength; i += 2) {
+			const tmp = bytes[i];
+			bytes[i] = bytes[i + 1];
+			bytes[i + 1] = tmp;
+		}
 		if (bytes.byteOffset % 2) {
 			const result = new Uint16Array(bytes.byteLength / 2);
 			new Uint8Array(result.buffer, result.byteOffset, result.byteLength).set(bytes);
