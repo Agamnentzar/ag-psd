@@ -1,11 +1,11 @@
 {
-  "width": 2048,
-  "height": 1150,
+  "width": 500,
+  "height": 500,
   "channels": 3,
   "bitsPerChannel": 16,
   "colorMode": 3,
   "imageResources": {
-    "captionDigest": "cdcffa7da8c7be09057076aeaf05c34e",
+    "captionDigest": "00000000000000000000000000000000",
     "printInformation": {
       "printerName": "",
       "renderingIntent": "relative colorimetric",
@@ -29,7 +29,7 @@
       "y": 0,
       "scale": 1
     },
-    "globalAngle": 90,
+    "globalAngle": 120,
     "globalAltitude": 30,
     "printFlags": {
       "labels": false,
@@ -44,7 +44,7 @@
     },
     "layerState": 0,
     "layerSelectionIds": [
-      76
+      2
     ],
     "gridAndGuidesInformation": {
       "grid": {
@@ -59,10 +59,10 @@
         "bounds": {
           "top": 0,
           "left": 0,
-          "bottom": 1150,
-          "right": 2048
+          "bottom": 500,
+          "right": 500
         },
-        "groupName": "no_layers_read",
+        "groupName": "",
         "slices": [
           {
             "id": 0,
@@ -82,8 +82,8 @@
             "bounds": {
               "top": 0,
               "left": 0,
-              "bottom": 1150,
-              "right": 2048
+              "bottom": 500,
+              "right": 500
             },
             "backgroundColorType": "none",
             "backgroundColor": {
@@ -103,21 +103,20 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
-    "iccUntaggedProfile": true,
-    "idsSeedNumber": 78,
+    "idsSeedNumber": 5,
     "versionInfo": {
-      "hasRealMergedData": true,
+      "hasRealMergedData": false,
       "writerName": "Adobe Photoshop",
-      "readerName": "Adobe Photoshop 2024",
+      "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
     }
   },
   "children": [
     {
-      "top": 0,
-      "left": 0,
-      "bottom": 1150,
-      "right": 2048,
+      "top": -34,
+      "left": -36,
+      "bottom": 557,
+      "right": 533,
       "blendMode": "normal",
       "opacity": 1,
       "clipping": false,
@@ -197,229 +196,7 @@
       },
       "name": "Layer 1",
       "nameSource": "layr",
-      "id": 76,
-      "blendClippendElements": true,
-      "blendInteriorElements": false,
-      "knockout": false,
-      "protected": {
-        "transparency": false,
-        "composite": false,
-        "position": false
-      },
-      "layerColor": "green",
-      "timestamp": 1712736517.028993,
-      "referencePoint": {
-        "x": 0,
-        "y": 0
-      },
-      "linkGroup": 0,
-      "linkGroupEnabled": true
-    },
-    {
-      "top": 0,
-      "left": 0,
-      "bottom": 0,
-      "right": 0,
-      "blendMode": "normal",
-      "opacity": 1,
-      "clipping": false,
-      "transparencyProtected": false,
-      "hidden": false,
-      "blendingRanges": {
-        "compositeGrayBlendSource": [
-          0,
-          0,
-          255,
-          255
-        ],
-        "compositeGraphBlendDestinationRange": [
-          0,
-          0,
-          255,
-          255
-        ],
-        "ranges": [
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          },
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          },
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          },
-          {
-            "sourceRange": [
-              0,
-              0,
-              255,
-              255
-            ],
-            "destRange": [
-              0,
-              0,
-              255,
-              255
-            ]
-          }
-        ]
-      },
-      "name": "Ellipse 1",
-      "vectorFill": {
-        "type": "color",
-        "color": {
-          "r": 131.00000739097595,
-          "g": 131.00000739097595,
-          "b": 131.00000739097595
-        }
-      },
-      "vectorMask": {
-        "paths": [
-          {
-            "open": false,
-            "knots": [
-              {
-                "linked": true,
-                "points": [
-                  285.9373779296875,
-                  186.99998557567596,
-                  500.5,
-                  186.99998557567596,
-                  715.0626220703125,
-                  186.99998557567596
-                ]
-              },
-              {
-                "linked": true,
-                "points": [
-                  889,
-                  360.9374225139618,
-                  889,
-                  575.4999697208405,
-                  889,
-                  790.0625854730606
-                ]
-              },
-              {
-                "linked": true,
-                "points": [
-                  715.0626220703125,
-                  964.0000224113464,
-                  500.5,
-                  964.0000224113464,
-                  285.9373779296875,
-                  964.0000224113464
-                ]
-              },
-              {
-                "linked": true,
-                "points": [
-                  112,
-                  790.0625854730606,
-                  112,
-                  575.4999697208405,
-                  112,
-                  360.9374225139618
-                ]
-              }
-            ],
-            "fillRule": "even-odd",
-            "operation": "combine"
-          }
-        ],
-        "invert": false,
-        "notLink": false,
-        "disable": false,
-        "fillStartsWithAllPixels": false
-      },
-      "vowv": 2,
-      "vectorOrigination": {
-        "keyDescriptorList": [
-          {
-            "keyOriginType": 5,
-            "keyOriginResolution": 72,
-            "keyOriginShapeBoundingBox": {
-              "top": {
-                "value": 187,
-                "units": "Pixels"
-              },
-              "left": {
-                "value": 112,
-                "units": "Pixels"
-              },
-              "bottom": {
-                "value": 964,
-                "units": "Pixels"
-              },
-              "right": {
-                "value": 889,
-                "units": "Pixels"
-              }
-            },
-            "keyOriginBoxCorners": [
-              {
-                "x": 112,
-                "y": 187
-              },
-              {
-                "x": 889,
-                "y": 187
-              },
-              {
-                "x": 889,
-                "y": 964
-              },
-              {
-                "x": 112,
-                "y": 964
-              }
-            ],
-            "transform": [
-              1,
-              0,
-              0,
-              1,
-              -473,
-              -20
-            ]
-          }
-        ]
-      },
-      "nameSource": "shap",
-      "id": 78,
+      "id": 2,
       "blendClippendElements": true,
       "blendInteriorElements": false,
       "knockout": false,
@@ -429,52 +206,20 @@
         "position": false
       },
       "layerColor": "none",
-      "timestamp": 1712736517.029006,
-      "vectorStroke": {
-        "strokeEnabled": true,
-        "fillEnabled": true,
-        "lineWidth": {
-          "value": 1,
-          "units": "Pixels"
-        },
-        "lineDashOffset": {
-          "value": 0,
-          "units": "Points"
-        },
-        "miterLimit": 100,
-        "lineCapType": "butt",
-        "lineJoinType": "miter",
-        "lineAlignment": "center",
-        "scaleLock": false,
-        "strokeAdjust": false,
-        "lineDashSet": [],
-        "blendMode": "normal",
-        "opacity": 1,
-        "content": {
-          "type": "color",
-          "color": {
-            "r": 0,
-            "g": 0,
-            "b": 0
-          }
-        },
-        "resolution": 72
-      },
-      "usingAlignedRendering": true,
+      "timestamp": 1775864772.6046536,
       "referencePoint": {
-        "x": -473,
-        "y": -20
+        "x": -35.86617369630909,
+        "y": 141.75600955469247
       },
-      "version": 130,
       "linkGroup": 0,
       "linkGroupEnabled": true
     }
   ],
   "userMask": {
     "colorSpace": {
-      "r": 255,
-      "g": 0,
-      "b": 0
+      "h": 0.3137254901960784,
+      "s": 1,
+      "b": 1
     },
     "opacity": 0.19607843137254902
   },
@@ -485,23 +230,5 @@
       "b": 0
     },
     "opacity": 0.19607843137254902
-  },
-  "compositorUsed": {
-    "description": "",
-    "reason": "",
-    "engine": "compCore",
-    "version": {
-      "major": 1,
-      "minor": 3,
-      "fix": 0
-    },
-    "photoshopVersion": {
-      "major": 25,
-      "minor": 1,
-      "fix": 0
-    },
-    "enableCompCoreGPU": "feature",
-    "enableCompCoreThreads": "feature",
-    "compCoreGPUSupport": "supported"
   }
 }

@@ -1083,7 +1083,7 @@ export function readDataZip(compressed: Uint8Array, pixelData: PixelData | undef
 	}
 }
 
-export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, bitDepth: number, step: number, offsets: number[], large: boolean) {
+export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined, width: number, height: number, _bitDepth: number, step: number, offsets: number[], large: boolean) {
 	const data = pixelData && pixelData.data;
 	let lengths: Uint16Array | Uint32Array;
 
@@ -1105,7 +1105,7 @@ export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined,
 		}
 	}
 
-	if (bitDepth !== 1 && bitDepth !== 8) throw new Error(`Invalid bit depth (${bitDepth})`);
+	// if (bitDepth !== 1 && bitDepth !== 8) throw new Error(`Invalid bit depth (${bitDepth})`);
 
 	const extraLimit = (step - 1) | 0; // 3 for rgb, 4 for cmyk
 
