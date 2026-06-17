@@ -1,5 +1,8 @@
 # Changelog
 
+## v30.2.0
+- Added partial support for loading and saving document-level patterns
+
 ## v30.0.1
 - Fixed handling files with 16bit color format
 

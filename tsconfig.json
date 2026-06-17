@@ -1,8 +1,8 @@
 {
 	"compilerOptions": {
-		"moduleResolution": "node",
-		"target": "es5",
-		"module": "commonjs",
+		"moduleResolution": "node16",
+		"target": "es2016",
+		"module": "node16",
 		"lib": ["es2016", "dom"],
 		"noUnusedLocals": true,
 		"noUnusedParameters": true,
@@ -12,6 +12,7 @@
 		"strict": true,
 		"sourceMap": true,
 		"sourceRoot": "../src",
+		"rootDir": "src",
 		"outDir": "dist"
 	},
 	"include": [
