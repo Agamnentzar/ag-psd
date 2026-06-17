@@ -3,7 +3,7 @@ import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
 import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo } from './psdReader';
-import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32 } from './psdWriter';
+import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
@@ -3679,21 +3679,25 @@ if (MOCK_HANDLERS) {
 } else {
 	addHandler(
 		'Patt', // TODO: handle also Pat2 & Pat3
-		target => !target,
+		target => !!(target.patterns && target.patterns.length > 0),
 		(reader, target, left) => {
-			if (!left()) return;
-
-			skipBytes(reader, left()); return; // not supported yet
-			target; readPattern;
-
-			// if (!target.patterns) target.patterns = [];
-			// target.patterns.push(readPattern(reader));
-			// skipBytes(reader, left());
+			while (left() > 0) {
+				const pattern = readPattern(reader);
+				if (target.patterns === undefined) target.patterns = [];
+				target.patterns.push(pattern);
+			}
 		},
-		(_writer, _target) => {
+		(writer, target, _, _options) => {
+			const patterns = target.patterns || [];
+			for (const pattern of patterns) {
+				writePattern(writer, pattern);
+			}
 		},
 	);
 }
+
+addHandlerAlias('Pat2', 'Patt');
+addHandlerAlias('Pat3', 'Patt');
 
 /*
 interface CAIDesc {
