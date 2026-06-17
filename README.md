@@ -15,7 +15,7 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 * Does not support The Large Document Format (8BPB/PSB) 
 * Does not support color palettes
 * Does not support animations
-* Does not support patterns (or "Pattern Overlay" layer effect)
+* Limited pattern support: reads and writes document-level pattern blocks (`Patt`/`Pat2`/`Pat3`) for raw/RLE-compressed, RGB/Grayscale patterns. Does not support zip-compressed patterns (used by most real Photoshop files), Indexed or 16-bit patterns, or the "Pattern Overlay" layer effect (only its name/id reference is read/written)
 * Does not support some metadata fields
 * Does not support 3d effects
 * Does not support some new features from latest versions of Photoshop

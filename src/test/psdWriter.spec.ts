@@ -2,9 +2,9 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from 'chai';
 import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
-import { Psd, WriteOptions, ReadOptions, } from '../psd';
-import { writePsd, writeSignature, getWriterBuffer, createWriter } from '../psdWriter';
-import { readPsd, createReader } from '../psdReader';
+import { Psd, WriteOptions, ReadOptions, PatternInfo } from '../psd';
+import { writePsd, writeSignature, getWriterBuffer, createWriter, writePattern } from '../psdWriter';
+import { readPsd, createReader, readPattern } from '../psdReader';
 import { writePsdBuffer, readPsd as readPsdBuffer } from '../index';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
@@ -96,6 +96,30 @@ describe('PsdWriter', () => {
 		};
 
 		expect(() => writePsd(writer, psd)).throw(`Invalid document size`);
+	});
+
+	it('round-trips a pattern through writePattern/readPattern', () => {
+		const w = 5, h = 3;
+		const data = new Uint8Array(w * h * 4);
+		for (let i = 0; i < w * h; i++) {
+			data[i * 4 + 0] = i * 10;
+			data[i * 4 + 1] = i * 5;
+			data[i * 4 + 2] = i * 2;
+			data[i * 4 + 3] = 255;
+		}
+		const pattern: PatternInfo = { id: 'abc123', name: 'mypat', x: 1, y: 2, bounds: { x: 0, y: 0, w, h }, data };
+
+		const writer = createWriter();
+		writePattern(writer, pattern);
+		const buffer = getWriterBuffer(writer);
+		const result = readPattern(createReader(buffer));
+
+		expect(result.id).equal(pattern.id);
+		expect(result.name).equal(pattern.name);
+		expect(result.x).equal(pattern.x);
+		expect(result.y).equal(pattern.y);
+		expect(result.bounds).eql(pattern.bounds);
+		expect(Array.from(result.data)).eql(Array.from(data));
 	});
 
 	const fullImage = loadCanvasFromFile(path.join(layerImagesPath, 'full.png'));

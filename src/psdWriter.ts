@@ -1,4 +1,4 @@
-import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData, Compression, ChannelID } from './psd';
+import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData, Compression, ChannelID, PatternInfo } from './psd';
 import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas } from './helpers';
 import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { InternalImageResources, resourceHandlers } from './imageResources';
@@ -834,4 +834,79 @@ export function writeColor(writer: PsdWriter, color: Color | undefined) {
 		writeUint16(writer, Math.round(color.k * 10000 / 255));
 		writeZeros(writer, 6);
 	}
+}
+
+// ponytail: only round-trips RGB 8-bit patterns; source colorMode (16-bit/Indexed) is not preserved,
+// since readPattern already converted everything to RGBA. Upgrade if pattern colorMode must survive write.
+export function writePattern(writer: PsdWriter, pattern: PatternInfo) {
+	const width = pattern.bounds.w;
+	const height = pattern.bounds.h;
+	const pixelData: PixelData = { width, height, data: pattern.data };
+
+	writeUint32(writer, 0); // length, fixed up below
+	const pattsOffset = writer.offset;
+
+	writeUint32(writer, 1); // version
+	writeUint32(writer, ColorMode.RGB); // color mode - rgb only
+
+	writeInt16(writer, pattern.x);
+	writeInt16(writer, pattern.y);
+
+	writeUnicodeString(writer, pattern.name + '\0'); // name
+	writePascalString(writer, pattern.id, 1); // id
+
+	// virtual memory array list
+	writeUint32(writer, 3); // version
+	writeUint32(writer, 0); // length, fixed up below
+	const vlOffset = writer.offset;
+
+	const top = pattern.bounds.y;
+	const left = pattern.bounds.x;
+	const bottom = top + height;
+	const right = left + width;
+
+	writeUint32(writer, top);
+	writeUint32(writer, left);
+	writeUint32(writer, bottom);
+	writeUint32(writer, right);
+
+	writeUint32(writer, 24); // channels count
+
+	// channels: RGB at indices 0,1,2 and alpha at index 25
+	for (let i = 0; i < 24 + 2; i++) {
+		const offset = i < 3 ? i : (i === 25 ? 3 : -1);
+
+		if (offset < 0) {
+			writeUint32(writer, 0); // has
+			continue;
+		}
+
+		// worst-case RLE size for a single channel: width + 1 per scanline, plus scanline length headers
+		const buffer = new Uint8Array(width * height + 2 * height + 2 * width + 16);
+		// ponytail: pattern channels always use small (2-byte) RLE scanline headers, matching
+		// readPattern which reads them as non-large; `large` here only affects the header width.
+		const data = writeDataRLE(buffer, pixelData, [offset], false)!;
+
+		writeUint32(writer, 1); // has
+		writeUint32(writer, data.length + 4 + 16 + 2 + 1); // length
+		writeUint32(writer, 8); // pixelDepth
+		writeUint32(writer, top);
+		writeUint32(writer, left);
+		writeUint32(writer, bottom);
+		writeUint32(writer, right);
+		writeUint16(writer, 8); // pixelDepth2
+		writeUint8(writer, 1); // compressionMode - rle
+		writeBytes(writer, data);
+	}
+
+	const vlLength = writer.offset - vlOffset;
+	let pattsLength = writer.offset - pattsOffset;
+
+	while (pattsLength % 4) {
+		writeZeros(writer, 1);
+		pattsLength++;
+	}
+
+	writer.view.setUint32(vlOffset - 4, vlLength, false);
+	writer.view.setUint32(pattsOffset - 4, pattsLength, false);
 }
