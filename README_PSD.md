@@ -365,7 +365,7 @@ Example layer structure:
 
   _TODO_
 
-- `patterns` _not supported yet_
+- `patterns` Document-level pattern resources (`Patt`/`Pat2`/`Pat3` blocks). Each entry is a `PatternInfo` with RGBA pixel `data` and `bounds`. Reading and writing support raw and RLE compression in RGB/Grayscale color modes; zip-compressed, Indexed and 16-bit patterns are not supported. Layer-effect pattern references (Pattern Overlay, stroke/vector fill) still only carry a `name`/`id` and are not linked to these resources.
 
 - `vectorFill` Fill color, gradient or pattern for the vector mask. Use `type` field to distinguish between different vector fill types, like this:
 
