@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { writeDataRaw, offsetForChannel, writeDataRLE } from '../helpers';
+import { writeDataRaw, offsetForChannel, writeDataRLE, createEnum } from '../helpers';
 import { createReader, readDataRLE } from '../psdReader';
 import { range, repeat } from './common';
 import { ChannelID, PixelArray, PixelData } from '../psd';
@@ -25,6 +25,28 @@ function fromData(data: PixelArray) {
 }
 
 describe('helpers', () => {
+	describe('createEnum()', () => {
+		const e = createEnum<string>('BlnM', 'normal', { 'normal': 'Nrml', 'multiply': 'Mltp' });
+
+		it('decodes the classic 4-char code', () => {
+			expect(e.decode('BlnM.Nrml')).equal('normal');
+			expect(e.decode('BlnM.Mltp')).equal('multiply');
+		});
+
+		it('decodes the long-form value Photoshop 2026 writes', () => {
+			expect(e.decode('BlnM.normal')).equal('normal');
+			expect(e.decode('BlnM.multiply')).equal('multiply');
+		});
+
+		it('still throws on a genuinely unknown value', () => {
+			expect(() => e.decode('BlnM.bogus')).throw(`Unrecognized value for enum: 'BlnM.bogus'`);
+		});
+
+		it('round-trips: encode(decode(long-form)) === the 4-char code', () => {
+			expect(e.encode(e.decode('BlnM.normal'))).equal('BlnM.Nrml');
+		});
+	});
+
 	describe('writeDataRaw()', () => {
 		it('returns undefined for 0 size', () => {
 			expect(writeDataRaw({} as any, 0, 0, 0)).undefined;

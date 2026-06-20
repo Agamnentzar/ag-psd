@@ -64,7 +64,12 @@ export function createEnum<T>(prefix: string, def: string, map: Dict) {
 	const rev = revMap(map);
 	const decode = (val: string): T => {
 		const value = val.split('.')[1];
-		if (value && !rev[value]) throw new Error(`Unrecognized value for enum: '${val}'`);
+		if (value && !rev[value]) {
+			// Photoshop 2026 writes the long-form enum value (the map KEY, e.g. 'BlnM.normal')
+			// instead of the historical 4-char code (the map VALUE, e.g. 'BlnM.Nrml'). Accept it.
+			if (Object.prototype.hasOwnProperty.call(map, value)) return value as any;
+			throw new Error(`Unrecognized value for enum: '${val}'`);
+		}
 		return (rev[value] as any) || def;
 	};
 	const encode = (val: T | undefined): string => {
