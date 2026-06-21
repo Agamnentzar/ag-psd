@@ -18,6 +18,35 @@ const opts: ReadOptions = {
 	debug: true,
 };
 
+describe('Photoshop 2026 blend modes', () => {
+	// Real file saved by Photoshop 2026 (test/ps2026-blend-modes.psd): one layer per blend mode,
+	// each named after its mode and carrying a Color Overlay (solidFill) effect set to that same mode.
+	// PS 2026 writes long-form enum values ('BlnM.colorBurn') instead of the historical 4-char code
+	// ('BlnM.CBrn'); decoding the Color Overlay blend mode used to throw and silently drop the effects.
+	const modes = [
+		'normal', 'dissolve', 'darken', 'multiply', 'color burn', 'linear burn', 'darker color',
+		'lighten', 'screen', 'color dodge', 'linear dodge', 'lighter color', 'overlay', 'soft light',
+		'hard light', 'vivid light', 'linear light', 'pin light', 'hard mix', 'difference', 'exclusion',
+		'subtract', 'divide', 'hue', 'saturation', 'color', 'luminosity',
+	];
+
+	it('decodes every layer and Color Overlay blend mode', () => {
+		const psd = readPsdFromFile(path.join(testFilesPath, 'ps2026-blend-modes.psd'),
+			{ ...opts, skipLayerImageData: true, skipCompositeImageData: true });
+		const byName: { [key: string]: Layer } = {};
+		for (const layer of psd.children!) byName[layer.name!] = layer;
+
+		for (const mode of modes) {
+			const layer = byName[mode];
+			expect(layer, `missing layer '${mode}'`).ok;
+			expect(layer.blendMode, `layer '${mode}' blendMode`).equal(mode);
+			const overlay = layer.effects && layer.effects.solidFill && layer.effects.solidFill[0];
+			expect(overlay, `missing Color Overlay on '${mode}'`).ok;
+			expect(overlay!.blendMode, `Color Overlay blendMode on '${mode}'`).equal(mode);
+		}
+	});
+});
+
 describe('PsdReader', () => {
 	it('reads width and height properly', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'blend-mode', 'src.psd'), { ...opts });
