@@ -64,7 +64,17 @@ export function createEnum<T>(prefix: string, def: string, map: Dict) {
 	const rev = revMap(map);
 	const decode = (val: string): T => {
 		const value = val.split('.')[1];
-		if (value && !rev[value]) throw new Error(`Unrecognized value for enum: '${val}'`);
+		if (value && !rev[value]) {
+			// Photoshop 2026 writes the long-form enum value instead of the historical 4-char code
+			// (the map VALUE, e.g. 'BlnM.Nrml'). Two long-form shapes occur:
+			//  - single-word modes use the map KEY verbatim:        'BlnM.normal'
+			//  - multi-word modes use a camelCase id whose map key is space-separated:
+			//    'BlnM.colorBurn' -> 'color burn'; normalize camelCase before giving up.
+			if (Object.prototype.hasOwnProperty.call(map, value)) return value as any;
+			const spaced = value.replace(/([A-Z])/g, ' $1').toLowerCase();
+			if (Object.prototype.hasOwnProperty.call(map, spaced)) return spaced as any;
+			throw new Error(`Unrecognized value for enum: '${val}'`);
+		}
 		return (rev[value] as any) || def;
 	};
 	const encode = (val: T | undefined): string => {
