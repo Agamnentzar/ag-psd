@@ -486,10 +486,9 @@ Writing or updating layer orientation to vertical can end up creating broken PSD
 
 ## Use in production environments and handling unsafe user-provided data
 
-Size limit of PSD canvas can go up to 300000x300000 pixels with no reasonable limits on layer count, additionally maliciously formatted files can declare large layer sizes without having to encode any data inside the file. As such even valid PSD files could require terabytes of memory to be decompressed into bitmaps. In order to handle this correctly in production with unknown PSD files provided from 
-users follow these steps in order to prevent your application from crashing or geting DoS attack:
+Size limit of PSD canvas can go up to 300000x300000 pixels with no reasonable limits on layer count, additionally maliciously formatted files can declare large layer sizes without having to encode any data inside the file. As such even valid PSD files could require terabytes of memory to be decompressed into bitmaps. In order to handle this correctly in production with unknown PSD files, provided from users, please follow these steps in order to prevent your application from crashing or geting DoS attack:
 
-1. Do not use default options when reading the psd files, this is method works only for trusted files and testing. Instead structure your code as follows:
+1. Do not use default options when reading the psd files, the default method works only for trusted files and testing. Instead structure your code as follows:
 
 ```ts
 // read only structure of the psd file, without decoding any bitmaps
@@ -513,6 +512,7 @@ function processLayer(layer) {
 
   // layer sizes are independent of document size and can exceed it
   if (layerWidth > 10000 || layerHeight > 10000) throw new Error('Layer too large');
+  // etc...
 
   const layerImageData = getLayerImageData(layer);
   if (layerImageData) {
@@ -526,9 +526,9 @@ function processLayer(layer) {
 psd.children?.forEach(processLayer);
 ```
 
-2. Make sure you queue processing of multiple PSD documents, processing can still take significant amount of memory and time and decoding many documents in parallel can exhaust your memory limit.
+2. Make sure you queue processing of multiple PSD documents. Processing can still take significant amount of memory and time, decoding many documents in parallel can exhaust your memory limit.
 
-3. Decoding documents is synchronous and can take some time, especially decoding the bitmaps, if your application is processing everything in single thread make sure you run decoding in separate process or you risk stalling entire application.
+3. Decoding document is synchronous and can take significant amount of time, especially decoding the bitmaps. If your application is processing everything in single main thread make sure you run decoding in separate process/thread or you risk stalling entire application.
 
 ## Development
 
