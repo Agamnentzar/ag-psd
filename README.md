@@ -39,8 +39,22 @@ Description of the structure of Psd object used by `readPsd` and `writePsd` func
 ### Functions
 
 ```ts
+// Reading
+
 // read PSD from ArrayBuffer, typed array or Node.js Buffer object
 export function readPsd(buffer: Buffer | ArrayBuffer | BufferLike, options?: ReadOptions): Psd;
+
+// functions for reading composite, layer and mask bitmaps when using `useRawData` option
+export function getLayerImageData(layer: Layer): PixelData | undefined;
+export function getLayerMaskImageData(layer: Layer): PixelData | undefined;
+export function getLayerRealMaskImageData(layer: Layer): PixelData | undefined;
+export function getLayerCanvas(layer: Layer): Canvas | undefined;
+export function getLayerMaskCanvas(layer: Layer): Canvas | undefined;
+export function getLayerRealMaskCanvas(layer: Layer): Canvas | undefined;
+export function getCompositeImageData(psd: Psd): PixelData | undefined;
+export function getCompositeCanvas(psd: Psd): Canvas | undefined;
+
+// Writing
 
 // write PSD to ArrayBuffer
 export function writePsd(psd: Psd, options?: WriteOptions): ArrayBuffer;
@@ -290,9 +304,13 @@ interface ReadOptions {
    * (image data will appear in `imageData` fields instead of `canvas` fields)
    * This avoids issues with canvas premultiplied alpha corrupting image data. */
   useImageData?: boolean;
+	/** Skips decoding layer and composite bitmaps, they can be later decoded using helper functions */
+	useRawData?: boolean;
   /** Loads thumbnail raw data instead of decoding it's content into canvas.
    * `thumnailRaw` field is used instead of `thumbnail` field. */
   useRawThumbnail?: boolean;
+	/** Total memory limit to use when decoding bitmaps (default: 2GB). */
+	totalMemoryLimit?: number;
   /** Usend only for development */
   logDevFeatures?: boolean;
 }
@@ -465,6 +483,52 @@ When you add text layer to PSD file it is missing image data and additional text
 ### Text layer issues
 
 Writing or updating layer orientation to vertical can end up creating broken PSD file that will crash Photoshop on opening. This is result of incomplete text layer implementation.
+
+## Use in production environments and handling unsafe user-provided data
+
+Size limit of PSD canvas can go up to 300000x300000 pixels with no reasonable limits on layer count, additionally maliciously formatted files can declare large layer sizes without having to encode any data inside the file. As such even valid PSD files could require terabytes of memory to be decompressed into bitmaps. In order to handle this correctly in production with unknown PSD files provided from 
+users follow these steps in order to prevent your application from crashing or geting DoS attack:
+
+1. Do not use default options when reading the psd files, this is method works only for trusted files and testing. Instead structure your code as follows:
+
+```ts
+// read only structure of the psd file, without decoding any bitmaps
+const psd = readPsd(buffer, { useRawData: true, useRawThumbnail: true });
+
+// check psd size and format according to your environment limitations
+if (psd.width > 10000 || psd.height > 10000) throw new Error('Too large');
+if (psd.bitsPerChannel > 8) throw new Error('Only 8-bit color data is supported');
+// etc...
+
+let totalLayers = 0;
+
+function processLayer(layer) {
+  totalLayers++;
+
+  // if needed limit layer count
+  if (totalLayers > 100) throw new Error('Too many layers');
+
+  const layerWidth = layer.right - layer.left;  
+  const layerHeight = layer.bottom - layer.top;
+
+  // layer sizes are independent of document size and can exceed it
+  if (layerWidth > 10000 || layerHeight > 10000) throw new Error('Layer too large');
+
+  const layerImageData = getLayerImageData(layer);
+  if (layerImageData) {
+    // process the layer image data however you want
+    // then let the memory get freed so you only need to keep single layer bitmap in memory at a time
+  }
+
+  layer.children?.forEach(processLayer);
+}
+
+psd.children?.forEach(processLayer);
+```
+
+2. Make sure you queue processing of multiple PSD documents, processing can still take significant amount of memory and time and decoding many documents in parallel can exhaust your memory limit.
+
+3. Decoding documents is synchronous and can take some time, especially decoding the bitmaps, if your application is processing everything in single thread make sure you run decoding in separate process or you risk stalling entire application.
 
 ## Development
 

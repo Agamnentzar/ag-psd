@@ -108,9 +108,9 @@ export const enum MaskParams {
 }
 
 export interface ChannelData {
-	channelId: ChannelID;
+	id: ChannelID;
 	compression: Compression;
-	buffer: Uint8Array | undefined;
+	data: Uint8Array | undefined;
 	length: number;
 }
 

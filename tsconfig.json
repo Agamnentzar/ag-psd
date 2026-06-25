@@ -9,6 +9,7 @@
 		"preserveConstEnums": true,
 		"declaration": true,
 		"useUnknownInCatchVariables": false,
+		"types": ["node", "mocha"],
 		"strict": true,
 		"sourceMap": true,
 		"sourceRoot": "../src",

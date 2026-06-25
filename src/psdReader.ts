@@ -234,6 +234,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	Object.assign(reader, readOptions);
 	reader.large = version === 2;
 	reader.globalAlpha = false;
+	if (!reader.totalMemoryLimit) reader.totalMemoryLimit = 2 * 1024 * 1024 * 1024; // default 2GB memory limit
 
 	// color mode data
 	readSection(reader, 1, left => {
@@ -327,7 +328,16 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	const skipComposite = reader.skipCompositeImageData && (reader.skipLayerImageData || hasChildren);
 
 	if (!skipComposite) {
-		readImageData(reader, psd);
+		if (reader.useRawData) {
+			psd.rawCompositeData = new Uint8Array(reader.view.buffer, reader.view.byteOffset + reader.offset);
+		} else {
+			const imageData = readImageData(reader, psd);
+			if (reader.useImageData) {
+				psd.imageData = imageData;
+			} else {
+				psd.canvas = imageDataToCanvas(imageData);
+			}
+		}
 	}
 
 	// TODO: show converted color mode instead of original PSD file color mode
@@ -556,7 +566,7 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 	}
 
 	if (!reader.useRawData) {
-		decodeLayerImageData(layer, !!reader.useImageData, !!reader.throwForMissingFeatures);
+		decodeLayerImageData(layer, reader);
 	}
 }
 
@@ -571,8 +581,91 @@ function resetAlpha({ data }: PixelData, cmyk: boolean) {
 	}
 }
 
-export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throwForMissingFeatures?: boolean) {
-	if (!layer.rawData) return;
+export function getCompositeImageData(psd: Psd) {
+	const data = psd.rawCompositeData;
+	if (!data) return undefined;
+
+	const reader = createReader(data.buffer, data.byteOffset, data.byteLength);
+	const imageData = readImageData(reader, psd);
+	return imageData;
+}
+
+export function getCompositeCanvas(psd: Psd) {
+	return imageDataToCanvasSafe(getCompositeImageData(psd));
+}
+
+export function getLayerImageData(layer: Layer) {
+	return getDataFromLayer(layer, LayerDataType.Layer, false, undefined);
+}
+
+export function getLayerMaskImageData(layer: Layer) {
+	return getDataFromLayer(layer, LayerDataType.Mask, false, undefined);
+}
+
+export function getLayerRealMaskImageData(layer: Layer) {
+	return getDataFromLayer(layer, LayerDataType.RealMask, false, undefined);
+}
+
+export function getLayerCanvas(layer: Layer) {
+	return imageDataToCanvasSafe(getLayerImageData(layer));
+}
+
+export function getLayerMaskCanvas(layer: Layer) {
+	return imageDataToCanvasSafe(getLayerMaskImageData(layer));
+}
+
+export function getLayerRealMaskCanvas(layer: Layer) {
+	return imageDataToCanvasSafe(getLayerRealMaskImageData(layer));
+}
+
+function imageDataToCanvasSafe(imageData: PixelData | undefined) {
+	return imageData && imageDataToCanvas(imageData);
+}
+
+function setImageDataOrCanvas(obj: Layer | LayerMaskData, imageData: PixelData | undefined, useImageData: boolean | undefined) {
+	if (!imageData) return;
+
+	if (useImageData) {
+		obj.imageData = imageData;
+	} else {
+		obj.canvas = imageDataToCanvas(imageData);
+	}
+}
+
+export function decodeLayerPixels(layer: Layer, useImageData?: boolean) {
+	decodeLayerImageData(layer, { useImageData });
+}
+
+function decodeLayerImageData(layer: Layer, options: { useImageData?: boolean, throwForMissingFeatures?: boolean, memoryLimit?: number }) {
+	let { throwForMissingFeatures, useImageData } = options;
+
+	const imageData = getDataFromLayer(layer, LayerDataType.Layer, throwForMissingFeatures, options.memoryLimit);
+	setImageDataOrCanvas(layer, imageData, useImageData);
+	if (options.memoryLimit !== undefined) options.memoryLimit -= imageData?.data.byteLength ?? 0;
+
+	if (layer.mask) {
+		const maskData = getDataFromLayer(layer, LayerDataType.Mask, throwForMissingFeatures, options.memoryLimit);
+		setImageDataOrCanvas(layer.mask, maskData, useImageData);
+		if (options.memoryLimit !== undefined) options.memoryLimit -= maskData?.data.byteLength ?? 0;
+	}
+
+	if (layer.realMask) {
+		const maskData = getDataFromLayer(layer, LayerDataType.RealMask, throwForMissingFeatures, options.memoryLimit);
+		setImageDataOrCanvas(layer.realMask, maskData, useImageData);
+		if (options.memoryLimit !== undefined) options.memoryLimit -= maskData?.data.byteLength ?? 0;
+	}
+
+	delete layer.rawData;
+}
+
+enum LayerDataType {
+	Layer,
+	Mask,
+	RealMask,
+}
+
+function getDataFromLayer(layer: Layer, read: LayerDataType, throwForMissingFeatures?: boolean, memoryLimit?: number) {
+	if (!layer.rawData) return undefined;
 
 	const { colorMode, bitsPerChannel, channels, large } = layer.rawData;
 	const layerWidth = (layer.right || 0) - (layer.left || 0);
@@ -580,14 +673,15 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 	const cmyk = colorMode === ColorMode.CMYK;
 
 	let imageData: PixelData | undefined;
+	let maskData: PixelData | undefined;
 	let initializedAlpha = false;
 
-	if (layerWidth && layerHeight) {
+	if (layerWidth && layerHeight && read === LayerDataType.Layer) {
 		if (cmyk) {
 			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel Not supproted');
 			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) } as any as ImageData;
 		} else {
-			imageData = createImageDataBitDepth(layerWidth, layerHeight, bitsPerChannel);
+			imageData = createImageDataBitDepth(layerWidth, layerHeight, bitsPerChannel, 4, memoryLimit);
 		}
 	}
 
@@ -602,6 +696,9 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 		const dataReader = createReader(data.buffer, data.byteOffset, data.byteLength);
 
 		if (id === ChannelID.UserMask || id === ChannelID.RealUserMask) {
+			if (id === ChannelID.UserMask && read !== LayerDataType.Mask) continue;
+			if (id === ChannelID.RealUserMask && read !== LayerDataType.RealMask) continue;
+
 			const mask = id === ChannelID.UserMask ? layer.mask : layer.realMask;
 			if (!mask) throw new Error(`Missing layer ${id === ChannelID.UserMask ? 'mask' : 'real mask'} data`);
 
@@ -610,10 +707,8 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 			if (maskWidth < 0 || maskHeight < 0 || maskWidth > 30000 || maskHeight > 30000) throw new Error('Invalid mask size');
 
 			if (maskWidth && maskHeight) {
-				const maskData = createImageDataBitDepth(maskWidth, maskHeight, bitsPerChannel);
-
+				maskData = createImageDataBitDepth(maskWidth, maskHeight, bitsPerChannel, 4, memoryLimit);
 				readData(dataReader, data.byteLength, maskData, compression, maskWidth, maskHeight, bitsPerChannel, 0, large, 4);
-
 				if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
 					if (id === ChannelID.UserMask) {
 						(layer as any).maskDataRawCompression = compression;
@@ -623,17 +718,12 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 						(layer as any).realMaskDataRaw = data;
 					}
 				}
-
 				setupGrayscale(maskData);
 				resetAlpha(maskData, false);
-
-				if (useImageData) {
-					mask.imageData = maskData;
-				} else {
-					mask.canvas = imageDataToCanvas(maskData);
-				}
 			}
 		} else {
+			if (read !== LayerDataType.Layer) continue;
+
 			const offset = offsetForChannel(id, cmyk);
 			let targetData = imageData;
 
@@ -670,15 +760,9 @@ export function decodeLayerImageData(layer: Layer, useImageData?: boolean, throw
 			imageData = createImageData(cmykData.width, cmykData.height);
 			cmykToRgb(cmykData, imageData, false);
 		}
-
-		if (useImageData) {
-			layer.imageData = imageData;
-		} else {
-			layer.canvas = imageDataToCanvas(imageData);
-		}
 	}
 
-	delete layer.rawData;
+	return read === LayerDataType.Layer ? imageData : maskData;
 }
 
 function readData(reader: PsdReader, length: number, pixels: PixelData | undefined, compression: Compression, width: number, height: number, bitDepth: number, offset: number, large: boolean, step: number) {
@@ -774,7 +858,10 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 	}, false, u64);
 }
 
-export function createImageDataBitDepth(width: number, height: number, bitDepth: number, channels = 4): PixelData {
+function createImageDataBitDepth(width: number, height: number, bitDepth: number, channels: number, memoryLimit: number | undefined): PixelData {
+	const sizeInBytes = width * height * channels * Math.max(1, bitDepth / 8);
+	if (memoryLimit !== undefined && sizeInBytes > memoryLimit) throw new Error('Exceeded memory limit');
+
 	if (bitDepth === 1 || bitDepth === 8) {
 		if (channels === 4) {
 			return createImageData(width, height);
@@ -800,7 +887,8 @@ function readImageData(reader: PsdReader, psd: Psd) {
 	if (compression !== Compression.RawData && compression !== Compression.RleCompressed)
 		throw new Error(`Compression type not supported: ${compression}`);
 
-	const imageData = createImageDataBitDepth(psd.width, psd.height, bitsPerChannel);
+	const imageData = createImageDataBitDepth(psd.width, psd.height, bitsPerChannel, 4, reader.totalMemoryLimit);
+	if (reader.totalMemoryLimit !== undefined) reader.totalMemoryLimit -= imageData.data.byteLength;
 	resetImageData(imageData);
 
 	switch (psd.colorMode) {
@@ -815,7 +903,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 				bytes = new Uint8Array(psd.width * psd.height);
 				readDataRLE(reader, { data: bytes, width: psd.width, height: psd.height }, psd.width, psd.height, 8, 1, [0], reader.large);
 			} else {
-				throw new Error(`Bitmap compression not supported: ${compression}`);
+				throw new Error(`Compression not supported: ${compression}`);
 			}
 
 			decodeBitmap(bytes, imageData.data, psd.width, psd.height);
@@ -843,6 +931,8 @@ function readImageData(reader: PsdReader, psd: Psd) {
 				const start = reader.offset;
 				readDataRLE(reader, imageData, psd.width, psd.height, bitsPerChannel, 4, channels, reader.large);
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
+			} else {
+				throw new Error(`Compression not supported: ${compression}`);
 			}
 
 			if (psd.colorMode === ColorMode.Grayscale) {
@@ -856,7 +946,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 			if (!psd.palette) throw new Error('Missing color palette');
 
 			if (compression === Compression.RawData) {
-				throw new Error(`Not implemented`);
+				throw new Error(`Compression not supported: ${compression}`);
 			} else if (compression === Compression.RleCompressed) {
 				const indexedImageData: PixelData = {
 					width: imageData.width,
@@ -866,7 +956,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 				readDataRLE(reader, indexedImageData, psd.width, psd.height, bitsPerChannel, 1, [0], reader.large);
 				indexedToRgb(indexedImageData, imageData, psd.palette);
 			} else {
-				throw new Error(`Not implemented`);
+				throw new Error(`Compression not supported: ${compression}`);
 			}
 
 			break;
@@ -879,7 +969,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 			if (reader.globalAlpha) channels.push(4);
 
 			if (compression === Compression.RawData) {
-				throw new Error(`Not implemented`);
+				throw new Error(`Compression not supported: ${compression}`);
 				// TODO: ...
 				// for (let i = 0; i < channels.length; i++) {
 				// 	readDataRaw(reader, imageData, channels[i], psd.width, psd.height);
@@ -897,7 +987,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 
 				if (RAW_IMAGE_DATA) (psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
 			} else {
-				throw new Error(`Not implemented`);
+				throw new Error(`Compression not supported: ${compression}`);
 			}
 
 			break;
@@ -923,11 +1013,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 		}
 	}
 
-	if (reader.useImageData) {
-		psd.imageData = imageData;
-	} else {
-		psd.canvas = imageDataToCanvas(imageData);
-	}
+	return imageData;
 }
 
 function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
@@ -1310,9 +1396,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 						data[dst + ch] = cdata[src];
 					}
 				}
-			}
-
-			if (colorMode === ColorMode.Grayscale && ch < 1) {
+			} else if (colorMode === ColorMode.Grayscale && ch < 1) {
 				for (let y = 0; y < h; y++) {
 					for (let x = 0; x < w; x++) {
 						const src = x + y * w;
@@ -1323,11 +1407,20 @@ export function readPattern(reader: PsdReader): PatternInfo {
 						data[dst + 2] = value;
 					}
 				}
-			}
-
-			if (colorMode === ColorMode.Indexed) {
-				// TODO:
-				throw new Error('Indexed pattern color mode not implemented');
+			} else if (colorMode === ColorMode.Indexed) {
+				for (let y = 0; y < h; y++) {
+					for (let x = 0; x < w; x++) {
+						const src = x + y * w;
+						const dst = (ox + x + (y + oy) * width) * 4;
+						const index = cdata[src];
+						const color = palette[index];
+						data[dst + 0] = color.r;
+						data[dst + 1] = color.g;
+						data[dst + 2] = color.b;
+					}
+				}
+			} else {
+				if (reader.throwForMissingFeatures) throw new Error('Invalid color pattern');
 			}
 		} else if (compressionMode === 1) {
 			const pixelData: PixelData = { data, width, height };

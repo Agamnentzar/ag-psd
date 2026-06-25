@@ -1788,6 +1788,7 @@ export interface Psd extends LayerAdditionalInfo {
 	children?: Layer[];
 	canvas?: HTMLCanvasElement;
 	imageData?: PixelData;
+	rawCompositeData?: Uint8Array;
 	imageResources?: ImageResources;
 	linkedFiles?: LinkedFile[]; // used in smart objects
 	artboards?: {
@@ -1814,6 +1815,8 @@ export interface ReadOptions {
 	skipThumbnail?: boolean;
 	/** Does not load linked files (used in smart-objects). */
 	skipLinkedFilesData?: boolean;
+	/** Total memory limit to use when decoding bitmaps (default: 2GB). */
+	totalMemoryLimit?: number;
 	/** Throws exception if features are missing. */
 	throwForMissingFeatures?: boolean;
 	/** Logs if features are missing. */
@@ -1822,6 +1825,7 @@ export interface ReadOptions {
 	 * (image data will appear in `imageData` fields instead of `canvas` fields)
 	 * This avoids issues with canvas premultiplied alpha corrupting image data. */
 	useImageData?: boolean;
+	/** Skips decoding layer and composite bitmaps, they can be later decoded using helper functions */
 	useRawData?: boolean;
 	/** Loads thumbnail raw data instead of decoding it's content into canvas.
 	 * `thumnailRaw` field is used instead. */

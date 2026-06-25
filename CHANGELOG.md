@@ -1,5 +1,11 @@
 # Changelog
 
+## v31.0.0
+- **BREAKING CHANGE:** Added default memory limit when decoding PSD files of 2GB, pass larger `totalMemoryLimit` in read options if you need to decode larger files, or use new api detailed in [Use in production section](/README.md#use-in-production-environments-and-handling-unsafe-user-provided-data)
+- Added `totalMemoryLimit` field to read options
+- Added new function for easier safe handling of large or unsafe files
+- Fixed decoding indexed patterns
+
 ## v30.2.0
 - Added partial support for loading and saving document-level patterns
 

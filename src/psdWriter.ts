@@ -348,7 +348,7 @@ function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlph
 			writeUint16(writer, channels.length);
 
 			for (const c of channels) {
-				writeInt16(writer, c.channelId);
+				writeInt16(writer, c.id);
 				if (options.psb) writeUint32(writer, 0);
 				writeUint32(writer, c.length);
 			}
@@ -381,8 +381,8 @@ function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlph
 			for (const channel of layerData.channels) {
 				writeUint16(writer, channel.compression);
 
-				if (channel.buffer) {
-					writeBytes(writer, channel.buffer);
+				if (channel.data) {
+					writeBytes(writer, channel.data);
 				}
 			}
 		}
@@ -635,12 +635,31 @@ function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, la
 		compression = Compression.RleCompressed;
 	}
 
-	layerData.channels.push({ channelId: realMask ? ChannelID.RealUserMask : ChannelID.UserMask, compression, buffer, length: 2 + buffer.length });
+	layerData.channels.push({ id: realMask ? ChannelID.RealUserMask : ChannelID.UserMask, compression, data: buffer, length: 2 + buffer.length });
 
 	layerData[realMask ? 'realMask' : 'mask'] = { top, left, right, bottom };
 }
 
+function bounds(obj: { top?: number; left?: number; bottom?: number; right?: number; } | undefined) {
+	return obj ? {
+		top: obj.top || 0,
+		left: obj.left || 0,
+		right: obj.right || 0,
+		bottom: obj.bottom || 0,
+	} : undefined;
+}
+
 function getChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions): LayerChannelData {
+	if (layer.rawData) {
+		return {
+			layer,
+			channels: layer.rawData.channels.map(c => ({ ...c, length: 2 + (c.data?.byteLength ?? 0) })),
+			...bounds(layer)!,
+			mask: bounds(layer.mask),
+			realMask: bounds(layer.realMask),
+		};
+	}
+
 	const layerData = getLayerChannels(tempBuffer, layer, background, options);
 	if (layer.mask) getMaskChannels(tempBuffer, layerData, layer, layer.mask, options, false);
 	if (layer.realMask) getMaskChannels(tempBuffer, layerData, layer, layer.realMask, options, true);
@@ -683,10 +702,10 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 	let right = (layer.right as any) | 0;
 	let bottom = (layer.bottom as any) | 0;
 	let channels: ChannelData[] = [
-		{ channelId: ChannelID.Transparency, compression: Compression.RawData, buffer: undefined, length: 2 },
-		{ channelId: ChannelID.Color0, compression: Compression.RawData, buffer: undefined, length: 2 },
-		{ channelId: ChannelID.Color1, compression: Compression.RawData, buffer: undefined, length: 2 },
-		{ channelId: ChannelID.Color2, compression: Compression.RawData, buffer: undefined, length: 2 },
+		{ id: ChannelID.Transparency, compression: Compression.RawData, data: undefined, length: 2 },
+		{ id: ChannelID.Color0, compression: Compression.RawData, data: undefined, length: 2 },
+		{ id: ChannelID.Color1, compression: Compression.RawData, data: undefined, length: 2 },
+		{ id: ChannelID.Color2, compression: Compression.RawData, data: undefined, length: 2 },
 	];
 	let { width, height } = getLayerDimentions(layer);
 
@@ -699,22 +718,22 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 	right = left + width;
 	bottom = top + height;
 
-	let data = layer.imageData || layer.canvas!.getContext('2d')!.getImageData(0, 0, width, height);
+	let imageData = layer.imageData || layer.canvas!.getContext('2d')!.getImageData(0, 0, width, height);
 
 	if (options.trimImageData) {
-		const trimmed = trimData(data);
+		const trimmed = trimData(imageData);
 
-		if (trimmed.left !== 0 || trimmed.top !== 0 || trimmed.right !== data.width || trimmed.bottom !== data.height) {
+		if (trimmed.left !== 0 || trimmed.top !== 0 || trimmed.right !== imageData.width || trimmed.bottom !== imageData.height) {
 			left += trimmed.left;
 			top += trimmed.top;
-			right -= (data.width - trimmed.right);
-			bottom -= (data.height - trimmed.bottom);
+			right -= (imageData.width - trimmed.right);
+			bottom -= (imageData.height - trimmed.bottom);
 			width = right - left;
 			height = bottom - top;
 
 			if (!width || !height) return { layer, top, left, right, bottom, channels };
 
-			data = cropImageData(data, trimmed.left, trimmed.top, width, height);
+			imageData = cropImageData(imageData, trimmed.left, trimmed.top, width, height);
 		}
 	}
 
@@ -724,28 +743,28 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 		ChannelID.Color2,
 	];
 
-	if (!background || options.noBackground || layer.mask || hasAlpha(data) || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
+	if (!background || options.noBackground || layer.mask || hasAlpha(imageData) || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
 		channelIds.unshift(ChannelID.Transparency);
 	}
 
-	channels = channelIds.map(channelId => {
-		const offset = offsetForChannel(channelId, false); // TODO: psd.colorMode === ColorMode.CMYK);
-		let buffer: Uint8Array;
+	channels = channelIds.map(id => {
+		const offset = offsetForChannel(id, false); // TODO: psd.colorMode === ColorMode.CMYK);
+		let data: Uint8Array;
 		let compression: Compression;
 
 		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
 			// console.log('written raw layer image data');
-			buffer = (layer as any).imageDataRaw[channelId];
-			compression = (layer as any).imageDataRawCompression[channelId];
+			data = (layer as any).imageDataRaw[id];
+			compression = (layer as any).imageDataRawCompression[id];
 		} else if (options.compress) {
-			buffer = writeDataZipWithoutPrediction(data, [offset]);
+			data = writeDataZipWithoutPrediction(imageData, [offset]);
 			compression = Compression.ZipWithoutPrediction;
 		} else {
-			buffer = writeDataRLE(tempBuffer, data, [offset], !!options.psb)!;
+			data = writeDataRLE(tempBuffer, imageData, [offset], !!options.psb)!;
 			compression = Compression.RleCompressed;
 		}
 
-		return { channelId, compression, buffer, length: 2 + buffer.length };
+		return { id, compression, data, length: 2 + data.length };
 	});
 
 	return { layer, top, left, right, bottom, channels };

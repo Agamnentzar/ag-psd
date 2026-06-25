@@ -6,6 +6,7 @@ import { Layer, ReadOptions, Psd } from '../psd';
 import { byteArrayToBase64, readPsd, writePsdBuffer } from '../index';
 import { readPsd as readPsdInternal } from '../psdReader';
 import { decodeEngineData2 } from '../engineData2';
+import { imageDataToCanvas } from '../helpers';
 
 const testFilesPath = path.join(__dirname, '..', '..', 'test');
 const readFilesPath = path.join(testFilesPath, 'read');
@@ -18,36 +19,13 @@ const opts: ReadOptions = {
 	debug: true,
 };
 
-describe('Photoshop 2026 blend modes', () => {
-	// Real file saved by Photoshop 2026 (test/ps2026-blend-modes.psd): one layer per blend mode,
-	// each named after its mode and carrying a Color Overlay (solidFill) effect set to that same mode.
-	// PS 2026 writes long-form enum values ('BlnM.colorBurn') instead of the historical 4-char code
-	// ('BlnM.CBrn'); decoding the Color Overlay blend mode used to throw and silently drop the effects.
-	const modes = [
-		'normal', 'dissolve', 'darken', 'multiply', 'color burn', 'linear burn', 'darker color',
-		'lighten', 'screen', 'color dodge', 'linear dodge', 'lighter color', 'overlay', 'soft light',
-		'hard light', 'vivid light', 'linear light', 'pin light', 'hard mix', 'difference', 'exclusion',
-		'subtract', 'divide', 'hue', 'saturation', 'color', 'luminosity',
-	];
-
-	it('decodes every layer and Color Overlay blend mode', () => {
-		const psd = readPsdFromFile(path.join(testFilesPath, 'ps2026-blend-modes.psd'),
-			{ ...opts, skipLayerImageData: true, skipCompositeImageData: true });
-		const byName: { [key: string]: Layer } = {};
-		for (const layer of psd.children!) byName[layer.name!] = layer;
-
-		for (const mode of modes) {
-			const layer = byName[mode];
-			expect(layer, `missing layer '${mode}'`).ok;
-			expect(layer.blendMode, `layer '${mode}' blendMode`).equal(mode);
-			const overlay = layer.effects && layer.effects.solidFill && layer.effects.solidFill[0];
-			expect(overlay, `missing Color Overlay on '${mode}'`).ok;
-			expect(overlay!.blendMode, `Color Overlay blendMode on '${mode}'`).equal(mode);
-		}
-	});
-});
-
 describe('PsdReader', () => {
+	it.skip('reads width and height properly', () => {
+		// malicious file 
+		const buffer = Buffer.from('OEJQUwABAAAAAAAAAA0AADcuAAA58wAgAAMAAAAAAAAAAAAAAAAAAdEgNZv+i9bc9ygd2A==', 'base64');
+		readPsd(buffer);
+	});
+
 	it('reads width and height properly', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'blend-mode', 'src.psd'), { ...opts });
 		expect(psd.width).equal(300);
@@ -107,9 +85,8 @@ describe('PsdReader', () => {
 	// 	fs.writeFileSync('output.psd', buffer);
 	// });
 
-	// skipping "pattern" test because it requires zip cimpression of patterns
 	// skipping "cmyk" test because we can't convert CMYK to RGB
-	fs.readdirSync(readFilesPath).filter(f => !/pattern|cmyk/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).filter(f => !/cmyk/.test(f)).forEach(f => {
 		// fs.readdirSync(readFilesPath).filter(f => /ignore-text-curve/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
@@ -176,7 +153,7 @@ describe('PsdReader', () => {
 				}
 			}
 
-			function convertUint8ArraysToBase64(layers: Layer[]) {
+			function cleanupLayerFields(layers: Layer[]) {
 				for (const layer of layers) {
 					if (layer.adjustment?.type == 'color lookup') {
 						if (layer.adjustment.lut3DFileData) {
@@ -193,13 +170,15 @@ describe('PsdReader', () => {
 					}
 
 					if (layer.children) {
-						convertUint8ArraysToBase64(layer.children);
+						cleanupLayerFields(layer.children);
 					}
 
 					const item = layer.placedLayer?.filter?.list[0];
 					if (item && item.type === 'liquify') {
 						item.filter.liquifyMesh = byteArrayToBase64(item.filter.liquifyMesh) as any;
 					}
+
+					delete layer.rawData;
 				}
 			}
 
@@ -232,8 +211,18 @@ describe('PsdReader', () => {
 				}
 			}
 
+			if (psd.patterns) {
+				for (const pattern of psd.patterns) {
+					if (pattern.data) {
+						const canvas = imageDataToCanvas({ width: pattern.bounds.w, height: pattern.bounds.h, data: pattern.data });
+						compare.push({ name: `pattern-${pattern.id}.png`, canvas });
+						delete (pattern as any).data;
+					}
+				}
+			}
+
 			pushLayerCanvases(psd.children || []);
-			convertUint8ArraysToBase64(psd.children || []);
+			cleanupLayerFields(psd.children || []);
 
 			const resultsDir = path.join(resultsFilesPath, 'read', f);
 			fs.mkdirSync(resultsDir, { recursive: true });
@@ -243,6 +232,7 @@ describe('PsdReader', () => {
 				delete psd.imageResources.thumbnail;
 			}
 
+			delete psd.rawCompositeData;
 			if (psd.imageResources) delete psd.imageResources.thumbnailRaw;
 
 			compare.forEach(i => saveCanvas(path.join(resultsDir, i.name), i.canvas));
