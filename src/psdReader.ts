@@ -636,23 +636,23 @@ export function decodeLayerPixels(layer: Layer, useImageData?: boolean) {
 	decodeLayerImageData(layer, { useImageData });
 }
 
-function decodeLayerImageData(layer: Layer, options: { useImageData?: boolean, throwForMissingFeatures?: boolean, memoryLimit?: number }) {
+function decodeLayerImageData(layer: Layer, options: Pick<ReadOptions, 'useImageData' | 'throwForMissingFeatures' | 'totalMemoryLimit'>) {
 	let { throwForMissingFeatures, useImageData } = options;
 
-	const imageData = getDataFromLayer(layer, LayerDataType.Layer, throwForMissingFeatures, options.memoryLimit);
+	const imageData = getDataFromLayer(layer, LayerDataType.Layer, throwForMissingFeatures, options.totalMemoryLimit);
 	setImageDataOrCanvas(layer, imageData, useImageData);
-	if (options.memoryLimit !== undefined) options.memoryLimit -= imageData?.data.byteLength ?? 0;
+	if (options.totalMemoryLimit !== undefined) options.totalMemoryLimit -= imageData?.data.byteLength ?? 0;
 
 	if (layer.mask) {
-		const maskData = getDataFromLayer(layer, LayerDataType.Mask, throwForMissingFeatures, options.memoryLimit);
+		const maskData = getDataFromLayer(layer, LayerDataType.Mask, throwForMissingFeatures, options.totalMemoryLimit);
 		setImageDataOrCanvas(layer.mask, maskData, useImageData);
-		if (options.memoryLimit !== undefined) options.memoryLimit -= maskData?.data.byteLength ?? 0;
+		if (options.totalMemoryLimit !== undefined) options.totalMemoryLimit -= maskData?.data.byteLength ?? 0;
 	}
 
 	if (layer.realMask) {
-		const maskData = getDataFromLayer(layer, LayerDataType.RealMask, throwForMissingFeatures, options.memoryLimit);
+		const maskData = getDataFromLayer(layer, LayerDataType.RealMask, throwForMissingFeatures, options.totalMemoryLimit);
 		setImageDataOrCanvas(layer.realMask, maskData, useImageData);
-		if (options.memoryLimit !== undefined) options.memoryLimit -= maskData?.data.byteLength ?? 0;
+		if (options.totalMemoryLimit !== undefined) options.totalMemoryLimit -= maskData?.data.byteLength ?? 0;
 	}
 
 	delete layer.rawData;
