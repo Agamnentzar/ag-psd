@@ -3708,7 +3708,7 @@ interface CAIDesc {
 }
 
 addHandler(
-	'CAI ', // content credentials ? something to do with generative tech
+	'CAI ', // Content Authenticity Initiative
 	() => false,
 	(reader, _target, left) => {
 		const version = readUint32(reader); // 3
@@ -3724,7 +3724,7 @@ addHandler(
 
 if (MOCK_HANDLERS) {
 	addHandler(
-		'CAI ',
+		'CAI ', // Content Authenticity Initiative / C2PA provenance metadata
 		target => (target as any)._CAI_ !== undefined,
 		(reader, target, left) => {
 			(target as any)._CAI_ = readBytes(reader, left());
@@ -3749,7 +3749,7 @@ if (MOCK_HANDLERS) {
 
 if (MOCK_HANDLERS) {
 	addHandler(
-		'OCIO', // document color management info
+		'OCIO', // Document color management info
 		target => (target as any)._OCIO !== undefined,
 		(reader, target, left) => {
 			// const desc = readVersionAndDescriptor(reader, true) as OCIODescriptor;
@@ -3771,7 +3771,7 @@ if (MOCK_HANDLERS) {
 
 if (MOCK_HANDLERS) {
 	addHandler(
-		'GenI', // generative tech
+		'GenI', // Generative Fill / generative AI (Firefly) features
 		target => (target as any)._GenI !== undefined,
 		(reader, target, left) => {
 			// const desc = readVersionAndDescriptor(reader, true); // as GenIDescriptor;
@@ -4197,14 +4197,33 @@ addHandler(
 	(reader, target, left) => {
 		if (readUint16(reader) !== 2) throw new Error('Invalid levl version');
 
+		const levels: LevelsAdjustmentChannel[] = [];
+
+		for (let i = 0; i < 29 && left(); i++) {
+			levels.push(readLevelsChannel(reader));
+		}
+
+		const [rgb, red, green, blue] = levels;
+
 		target.adjustment = {
 			...target.adjustment as PresetInfo,
 			type: 'levels',
-			rgb: readLevelsChannel(reader),
-			red: readLevelsChannel(reader),
-			green: readLevelsChannel(reader),
-			blue: readLevelsChannel(reader),
+			rgb,
+			red,
+			green,
+			blue,
 		};
+
+		if (left()) {
+			if (readSignature(reader) !== 'Lvls') throw new Error(`Invalid levl signature`);
+			if (readUint16(reader) !== 3) throw new Error(`Invalid levl version`);
+
+			const totalChannelRecords = readUint16(reader);
+
+			for (let i = 0; i < (totalChannelRecords - levels.length) && left(); i++) {
+				levels.push(readLevelsChannel(reader));
+			}
+		}
 
 		skipBytes(reader, left());
 	},
@@ -4223,7 +4242,18 @@ addHandler(
 		writeLevelsChannel(writer, info.red || defaultChannel);
 		writeLevelsChannel(writer, info.green || defaultChannel);
 		writeLevelsChannel(writer, info.blue || defaultChannel);
-		for (let i = 0; i < 59; i++) writeLevelsChannel(writer, defaultChannel);
+
+		for (let i = 0; i < (29 - 4); i++) {
+			writeLevelsChannel(writer, defaultChannel);
+		}
+
+		writeSignature(writer, 'Lvls');
+		writeUint16(writer, 3); // version
+		writeUint16(writer, 62); // total count
+
+		for (let i = 0; i < (62 - 29); i++) {
+			writeLevelsChannel(writer, defaultChannel);
+		}
 	},
 );
 

@@ -1,5 +1,8 @@
 # Changelog
 
+## v31.0.3
+- Fixed crash when string doesn't contain utf-16 BOM
+
 ## v31.0.1
 - Fixed incorrect handling of memory limit
 

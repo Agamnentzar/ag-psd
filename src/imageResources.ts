@@ -403,7 +403,7 @@ addHandler(
 addHandler(
 	1011,
 	target => target.printFlags !== undefined,
-	(reader, target) => {
+	(reader, target, left) => {
 		target.printFlags = {
 			labels: !!readUint8(reader),
 			cropMarks: !!readUint8(reader),
@@ -413,7 +413,7 @@ addHandler(
 			flip: !!readUint8(reader),
 			interpolate: !!readUint8(reader),
 			caption: !!readUint8(reader),
-			printFlags: !!readUint8(reader),
+			printFlags: left() ? !!readUint8(reader) : false,
 		};
 	},
 	(writer, target) => {
@@ -1024,7 +1024,7 @@ const sliceAlignments: ('default')[] = ['default'];
 addHandler(
 	1050, // Slices
 	target => target.slices ? target.slices.length : 0,
-	(reader, target) => {
+	(reader, target, leftBytes) => {
 		const version = readUint32(reader);
 
 		if (version === 6) {
@@ -1070,16 +1070,18 @@ addHandler(
 					backgroundColorType, backgroundColor: { r, g, b, a },
 				});
 			}
-			const desc = readVersionAndDescriptor(reader) as SlicesDesc;
-			desc.slices.forEach(d => {
-				const slice = slices.find(s => d.sliceID == s.id);
-				if (slice) {
-					slice.topOutset = d.topOutset;
-					slice.leftOutset = d.leftOutset;
-					slice.bottomOutset = d.bottomOutset;
-					slice.rightOutset = d.rightOutset;
-				}
-			});
+			if (leftBytes()) {
+				const desc = readVersionAndDescriptor(reader) as SlicesDesc;
+				desc.slices.forEach(d => {
+					const slice = slices.find(s => d.sliceID == s.id);
+					if (slice) {
+						slice.topOutset = d.topOutset;
+						slice.leftOutset = d.leftOutset;
+						slice.bottomOutset = d.bottomOutset;
+						slice.rightOutset = d.rightOutset;
+					}
+				});
+			}
 		} else if (version === 7 || version === 8) {
 			const desc = readVersionAndDescriptor(reader) as SlicesDesc7;
 

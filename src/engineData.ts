@@ -37,9 +37,14 @@ export function parseEngineData(data: number[] | Uint8Array) {
 			return result;
 		}
 
-		// Strings start with utf-16 BOM
+		// Strings usually start with utf-16 BOM, strings without it are single-byte (e.g. "(01110)" in Txt2)
 		if (data[index] !== 0xFE || data[index + 1] !== 0xFF) {
-			throw new Error('Invalid utf-16 BOM');
+			while (index < data.length && data[index] !== 41) { // )
+				result += String.fromCharCode(getTextByte());
+			}
+
+			index++;
+			return result;
 		}
 
 		index += 2;

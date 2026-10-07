@@ -497,7 +497,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		if (handler.has(target)) {
 			const large = options.psb && largeAdditionalInfoKeys.indexOf(key) !== -1;
 			const writeTotalLength = key !== 'Txt2' && key !== 'cinf' && key !== 'extn' && key !== 'CAI ' && key !== 'OCIO';
-			const fourBytes = key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
+			const fourBytes = key === 'levl' || key === 'Txt2' || key === 'luni' || key === 'vmsk' || key === 'artb' || key === 'artd' ||
 				key === 'vogk' || key === 'SoLd' || key === 'lnk2' || key === 'vscg' || key === 'vsms' || key === 'GdFl' ||
 				key === 'lmfx' || key === 'lrFX' || key === 'cinf' || key === 'PlLd' || key === 'Anno' || key === 'CAI ' || key === 'OCIO' || key === 'GenI' || key === 'FEid' || key === 'curv' || key === 'CgEd' || key === 'vibA' || key === 'blwh' || key === 'grdm';
 

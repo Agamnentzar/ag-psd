@@ -538,6 +538,7 @@ export interface PresetInfo {
 
 export interface LevelsAdjustment extends PresetInfo {
 	type: 'levels';
+	// TODO: change to generic array of channels (because of other document type CMYK, Lab, etc)
 	rgb?: LevelsAdjustmentChannel;
 	red?: LevelsAdjustmentChannel;
 	green?: LevelsAdjustmentChannel;
@@ -548,6 +549,7 @@ export type CurvesAdjustmentChannel = { input: number; output: number; }[];
 
 export interface CurvesAdjustment extends PresetInfo {
 	type: 'curves';
+	// TODO: change to generic array of channels (because of other document type CMYK, Lab, etc)
 	rgb?: CurvesAdjustmentChannel;
 	red?: CurvesAdjustmentChannel;
 	green?: CurvesAdjustmentChannel;
