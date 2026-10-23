@@ -4,7 +4,7 @@ import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFl
 import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
 import { decodeString, encodeString } from './utf8';
-import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, pathSelectionStateToReference, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface InternalImageResources extends ImageResources {
 	layersGroup?: number[];
@@ -57,6 +57,20 @@ function writeUtf8String(writer: PsdWriter, value: string) {
 	writeBytes(writer, buffer);
 }
 
+let gbkDecoder: TextDecoder | null | undefined;
+
+function getGbkDecoder() {
+	if (gbkDecoder === undefined) {
+		try {
+			gbkDecoder = new TextDecoder('gbk');
+		} catch {
+			gbkDecoder = null;
+		}
+	}
+
+	return gbkDecoder;
+}
+
 function readEncodedString(reader: PsdReader) {
 	const length = readUint8(reader);
 	const buffer = readBytes(reader, length);
@@ -70,10 +84,13 @@ function readEncodedString(reader: PsdReader) {
 	}
 
 	if (notAscii) {
-		try {
-			const decoder = new TextDecoder('gbk');
-			return decoder.decode(buffer)
-		} catch { }
+		const decoder = getGbkDecoder();
+
+		if (decoder) {
+			try {
+				return decoder.decode(buffer);
+			} catch { }
+		}
 	}
 
 	return decodeString(buffer);
@@ -82,9 +99,14 @@ function readEncodedString(reader: PsdReader) {
 function writeEncodedString(writer: PsdWriter, value: string) {
 	let ascii = '';
 
-	for (let i = 0, code = value.codePointAt(i++); code !== undefined; code = value.codePointAt(i++)) {
-		ascii += code > 0x7f ? '?' : String.fromCodePoint(code);
+	for (let i = 0; i < value.length;) {
+		const code = value.codePointAt(i)!;
+		ascii += code > 0x7f ? '?' : String.fromCharCode(code);
+		i += code > 0xffff ? 2 : 1; // skip low surrogate of astral characters
 	}
+
+	// length is stored in a single byte
+	if (ascii.length > 255) ascii = ascii.substring(0, 255);
 
 	const buffer = encodeString(ascii);
 	writeUint8(writer, buffer.byteLength);
@@ -616,7 +638,7 @@ addHandler(
 
 		for (let i = 0; i < count; i++) {
 			target.gridAndGuidesInformation.guides!.push({
-				location: readUint32(reader) / 32,
+				location: readInt32(reader) / 32,
 				direction: readUint8(reader) ? 'horizontal' : 'vertical'
 			});
 		}
@@ -627,12 +649,12 @@ addHandler(
 		const guides = info.guides || [];
 
 		writeUint32(writer, 1);
-		writeUint32(writer, grid.horizontal);
-		writeUint32(writer, grid.vertical);
+		writeUint32(writer, Math.round(grid.horizontal));
+		writeUint32(writer, Math.round(grid.vertical));
 		writeUint32(writer, guides.length);
 
 		for (const g of guides) {
-			writeUint32(writer, g.location * 32);
+			writeInt32(writer, Math.round(g.location * 32));
 			writeUint8(writer, g.direction === 'horizontal' ? 1 : 0);
 		}
 	},
@@ -665,10 +687,10 @@ addHandler(
 				capturedInfo: item.capturedInfo,
 			});
 
-			if ('comment' in item) target.layerComps.list[target.layerComps.list.length - 1].comment = item.comment;
+			if (item.comment !== undefined) target.layerComps.list[target.layerComps.list.length - 1].comment = item.comment;
 		}
 
-		if ('lastAppliedComp' in desc) target.layerComps.lastApplied = desc.lastAppliedComp;
+		if (desc.lastAppliedComp !== undefined) target.layerComps.lastApplied = desc.lastAppliedComp;
 	},
 	(writer, target) => {
 		const layerComps = target.layerComps!;
@@ -678,13 +700,13 @@ addHandler(
 			const t: LayerCompsDescriptor['list'][0] = {} as any;
 			t._classID = 'Comp';
 			t['Nm  '] = item.name;
-			if ('comment' in item) t.comment = item.comment;
+			if (item.comment !== undefined) t.comment = item.comment;
 			t.compID = item.id;
 			t.capturedInfo = item.capturedInfo;
 			desc.list.push(t);
 		}
 
-		if ('lastApplied' in layerComps) desc.lastAppliedComp = layerComps.lastApplied;
+		if (layerComps.lastApplied !== undefined) desc.lastAppliedComp = layerComps.lastApplied;
 
 		// console.log('CompList', require('util').inspect(desc, false, 99, true));
 		writeVersionAndDescriptor(writer, '', 'CompList', desc);
@@ -747,8 +769,8 @@ addHandler(
 			numBefore: onionSkins.framesBefore,
 			numAfter: onionSkins.framesAfter,
 			Spcn: onionSkins.frameSpacing,
-			minOpacity: (onionSkins.minOpacity * 100) | 0,
-			maxOpacity: (onionSkins.maxOpacity * 100) | 0,
+			minOpacity: Math.round(onionSkins.minOpacity * 100),
+			maxOpacity: Math.round(onionSkins.maxOpacity * 100),
 			BlnM: Math.max(0, onionSkinsBlendModes.indexOf(onionSkins.blendMode)),
 		};
 
@@ -855,7 +877,7 @@ addHandler(
 			LCnt: timeline.repeats,
 			globalTrackList: serializeTrackList(timeline.globalTracks),
 			audioClipGroupList: {
-				audioClipGroupList: timeline.audioClipGroups?.map(a => ({
+				audioClipGroupList: (timeline.audioClipGroups ?? []).map(a => ({
 					groupID: a.id,
 					muted: a.muted,
 					audioClipList: a.audioClips.map<TimelineAudioClipDescriptor>(c => ({
@@ -1072,8 +1094,13 @@ addHandler(
 			}
 			if (leftBytes()) {
 				const desc = readVersionAndDescriptor(reader) as SlicesDesc;
+				const slicesById = new Map<number, typeof slices[0]>();
+				for (const s of slices) {
+					if (!slicesById.has(s.id)) slicesById.set(s.id, s);
+				}
+
 				desc.slices.forEach(d => {
-					const slice = slices.find(s => d.sliceID == s.id);
+					const slice = slicesById.get(d.sliceID);
 					if (slice) {
 						slice.topOutset = d.topOutset;
 						slice.leftOutset = d.leftOutset;
@@ -1272,7 +1299,7 @@ addHandler(
 		if (reader.useRawThumbnail) {
 			target.thumbnailRaw = { width, height, data };
 		} else if (data.byteLength) {
-			target.thumbnail = createCanvasFromData(data);
+			target.thumbnail = createCanvasFromData(data, reader);
 		}
 	},
 	(writer, target) => {
@@ -1386,7 +1413,7 @@ addHandler(
 		target.pathSelectionState = desc['null'];
 	},
 	(writer, target) => {
-		const desc: Descriptor1088 = { 'null': target.pathSelectionState! };
+		const desc: Descriptor1088 = { 'null': pathSelectionStateToReference(target.pathSelectionState!) };
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );
@@ -1498,7 +1525,7 @@ addHandler(
 						const frame: AnimationFrameDescriptor = {
 							FrID: f.id,
 						} as any;
-						if (f.delay) frame.FrDl = (f.delay * 100) | 0;
+						if (f.delay) frame.FrDl = Math.round(f.delay * 100);
 						frame.FrDs = FrmD.encode(f.dispose);
 						// if (i === 0) frame.FrGA = 30; // ???
 						desc.FrIn.push(frame);

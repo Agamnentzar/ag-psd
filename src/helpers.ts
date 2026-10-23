@@ -1,6 +1,7 @@
 import { deflate as deflateSync } from 'pako';
 import { Layer, BlendMode, LayerColor, PixelData, PixelArray, ChannelID, Compression } from './psd';
 import { decodeJpeg } from './jpeg';
+import { PsdReader } from './psdReader';
 
 export const MOCK_HANDLERS = false;
 export const RAW_IMAGE_DATA = false;
@@ -146,6 +147,15 @@ export function offsetForChannel(channelId: ChannelID, cmyk: boolean) {
 	}
 }
 
+// Lab a/b components are stored in -128..127 range (multiplied by scale), normalized values are in -1..1 range
+export function normalizeLabAB(value: number, scale = 1) {
+	return value < 0 ? (value / (128 * scale)) : (value / (127 * scale));
+}
+
+export function denormalizeLabAB(value: number, scale = 1) {
+	return value < 0 ? (value * (128 * scale)) : (value * (127 * scale));
+}
+
 export function clamp(value: number, min: number, max: number) {
 	return value < min ? min : (value > max ? max : value);
 }
@@ -236,8 +246,9 @@ export function writeDataRaw(data: PixelData, offset: number, width: number, hei
 	return array;
 }
 
+// returns view into the buffer, the buffer has to fit worst case size (see getRLEChannelBound), throws if it doesn't
 export function writeDataRLE(buffer: Uint8Array, { data, width, height }: PixelData, offsets: number[], large: boolean) {
-	if (!width || !height) return undefined;
+	if (!width || !height) return buffer.subarray(0, 0);
 
 	const stride = (4 * width) | 0;
 
@@ -320,6 +331,9 @@ export function writeDataRLE(buffer: Uint8Array, { data, width, height }: PixelD
 				}
 			}
 
+			// writes past the end of typed array are ignored, so it's enough to check the size after each row
+			if (o > buffer.length) throw new Error(`RLE buffer too small (${buffer.length})`);
+
 			const length = o - startOffset;
 
 			if (large) {
@@ -332,7 +346,8 @@ export function writeDataRLE(buffer: Uint8Array, { data, width, height }: PixelD
 		}
 	}
 
-	return buffer.slice(0, o);
+	// returns view of the buffer, copy the data if the buffer is going to be reused
+	return buffer.subarray(0, o);
 }
 
 export function writeDataZipWithoutPrediction({ data, width, height }: PixelData, offsets: number[]) {
@@ -366,7 +381,7 @@ export function writeDataZipWithoutPrediction({ data, width, height }: PixelData
 	}
 }
 
-export function createCanvasFromData(data: Uint8Array): HTMLCanvasElement {
+export function createCanvasFromData(data: Uint8Array, reader: Pick<PsdReader, 'log'>): HTMLCanvasElement {
 	const canvas = createCanvas(100, 100);
 
 	try {
@@ -376,7 +391,7 @@ export function createCanvasFromData(data: Uint8Array): HTMLCanvasElement {
 		canvas.height = imageData.height;
 		context.putImageData(imageData, 0, 0);
 	} catch (e: any) {
-		console.error('JPEG decompression error', e.message);
+		reader.log('JPEG decompression error', e.message);
 	}
 
 	return canvas;

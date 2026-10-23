@@ -459,9 +459,9 @@
                 "b": 0
               },
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -476,9 +476,9 @@
                 "b": 0
               },
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -510,9 +510,9 @@
                 "b": 0
               },
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -529,9 +529,9 @@
               },
               "yUnderline": 0,
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -549,9 +549,9 @@
               },
               "yUnderline": 1,
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -568,9 +568,9 @@
               },
               "yUnderline": 1,
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -606,9 +606,9 @@
               },
               "yUnderline": 1,
               "font": {
-                "name": "ArialMT",
+                "name": "MyriadPro-Regular",
                 "script": 0,
-                "type": 1,
+                "type": 0,
                 "synthetic": 0
               }
             }
@@ -654,6 +654,6 @@
       "g": 0,
       "b": 0
     },
-    "opacity": 0.19607843137254902
+    "opacity": 0.5
   }
 }

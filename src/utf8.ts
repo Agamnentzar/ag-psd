@@ -10,36 +10,48 @@ function charLengthInBytes(code: number): number {
 	}
 }
 
-// Reads a scalar value at index `i`, replacing unpaired surrogates with U+FFFD,
+// Returns scalar value at index `i` (combining surrogate pairs), replacing unpaired surrogates with U+FFFD,
 // matching how TextEncoder converts a string to a sequence of Unicode scalar values.
-function codePointAt(value: string, i: number): { code: number; size: number } {
+// Values above 0xffff always take 2 UTF-16 code units.
+function codePointAt(value: string, i: number): number {
 	const code = value.charCodeAt(i);
 
+	if (code < 0xd800 || code > 0xdfff) return code;
+
 	// high surrogate
-	if (code >= 0xd800 && code <= 0xdbff && (i + 1) < value.length) {
+	if (code <= 0xdbff && (i + 1) < value.length) {
 		const extra = value.charCodeAt(i + 1);
 
 		// low surrogate
 		if (extra >= 0xdc00 && extra <= 0xdfff) {
-			return { code: ((code & 0x3ff) << 10) + (extra & 0x3ff) + 0x10000, size: 2 };
+			return ((code & 0x3ff) << 10) + (extra & 0x3ff) + 0x10000;
 		}
 	}
 
 	// unpaired surrogate (lone high or lone low)
-	if (code >= 0xd800 && code <= 0xdfff) {
-		return { code: 0xfffd, size: 1 };
-	}
-
-	return { code, size: 1 };
+	return 0xfffd;
 }
 
 export function stringLengthInBytes(value: string): number {
 	let result = 0;
 
-	for (let i = 0; i < value.length;) {
-		const { code, size } = codePointAt(value, i);
-		result += charLengthInBytes(code);
-		i += size;
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i);
+
+		if (code < 0x80) {
+			result += 1;
+		} else if (code < 0x800) {
+			result += 2;
+		} else {
+			const scalar = codePointAt(value, i);
+
+			if (scalar > 0xffff) {
+				result += 4;
+				i++;
+			} else {
+				result += 3;
+			}
+		}
 	}
 
 	return result;
@@ -73,10 +85,16 @@ function writeCharacter(buffer: Uint8Array | Buffer, offset: number, code: numbe
 }
 
 export function encodeStringTo(buffer: Uint8Array | Buffer, offset: number, value: string): number {
-	for (let i = 0; i < value.length;) {
-		const { code, size } = codePointAt(value, i);
-		offset += writeCharacter(buffer, offset, code);
-		i += size;
+	for (let i = 0; i < value.length; i++) {
+		const code = value.charCodeAt(i);
+
+		if (code < 0x80) {
+			buffer[offset++] = code;
+		} else {
+			const scalar = codePointAt(value, i);
+			if (scalar > 0xffff) i++;
+			offset += writeCharacter(buffer, offset, scalar);
+		}
 	}
 
 	return offset;

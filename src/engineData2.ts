@@ -2,6 +2,7 @@
 // /test/engineData2.json:1109 is character codes
 
 import type { GlobalEngineData } from './text';
+import { setProperty } from './engineData';
 
 interface KeysDict {
 	[key: string]: {
@@ -401,32 +402,67 @@ const keysRoot: KeysDict = {
 	},
 };
 
-function decodeObj(obj: any, keys: KeysDict): any {
-	if (obj === null) return obj;
-	if (Array.isArray(obj)) return obj.map(x => decodeObj(x, keys));
+const MAX_DEPTH = 256;
+
+function getKey(keys: KeysDict, key: string) {
+	return Object.prototype.hasOwnProperty.call(keys, key) ? keys[key] : undefined;
+}
+
+function decodeObj(obj: any, keys: KeysDict, depth: number): any {
+	if (depth > MAX_DEPTH) throw new Error(`Engine data is nested too deeply (more than ${MAX_DEPTH} levels)`);
+	if (obj === null || obj === undefined) return obj;
+	if (Array.isArray(obj)) return obj.map(x => decodeObj(x, keys, depth + 1));
 	if (typeof obj !== 'object') return obj;
 
-	let result: any = {};
+	const objKeys = Object.keys(obj);
+	const uprootKey = objKeys.find(key => key !== '99' && getKey(keys, key)?.uproot);
+	let result: any;
 
-	for (const key of Object.keys(obj)) {
-		if (keys[key]) {
-			if (keys[key].uproot) {
-				if (key !== '99') result = decodeObj(obj[key], keys[key].children ?? {});
-				if (obj['99']) result._type = obj['99'];
-				break;
-			} else {
-				result[keys[key].name || key] = decodeObj(obj[key], keys[key].children ?? {});
-			}
-		} else if (key === '99') {
-			result._type = obj[key];
+	if (uprootKey !== undefined) {
+		// replace the object with the value of the uprooted key
+		result = decodeObj(obj[uprootKey], getKey(keys, uprootKey)!.children ?? {}, depth + 1);
+
+		// primitive values can't hold extra properties (type and sibling keys are dropped)
+		if (result === null || typeof result !== 'object') return result;
+		if (obj['99']) result._type = obj['99'];
+		if (Array.isArray(result)) return result;
+	} else {
+		result = {};
+	}
+
+	for (const key of objKeys) {
+		if (key === uprootKey) continue;
+
+		const info = getKey(keys, key);
+
+		if (key === '99') {
+			if (uprootKey === undefined) result._type = obj[key];
 		} else {
-			result[key] = decodeObj(obj[key], {});
+			const name = info?.name || key;
+			// don't overwrite fields of uprooted object with sibling keys
+			if (uprootKey === undefined || !(name in result)) {
+				setProperty(result, name, decodeObj(obj[key], info?.children ?? {}, depth + 1));
+			}
 		}
 	}
 
 	return result;
 }
 
+function emptyResourceDict(): GlobalEngineData['ResourceDict'] {
+	return { FontSet: [], StyleSheetSet: [], ParagraphSheetSet: [] };
+}
+
 export function decodeEngineData2(data: any): GlobalEngineData {
-	return decodeObj(data, keysRoot);
+	const result = decodeObj(data, keysRoot, 0);
+
+	if (!result || typeof result !== 'object' || Array.isArray(result)) {
+		return { ResourceDict: emptyResourceDict(), EngineDict: {} };
+	}
+
+	if (!result.ResourceDict || typeof result.ResourceDict !== 'object') {
+		result.ResourceDict = emptyResourceDict();
+	}
+
+	return result;
 }

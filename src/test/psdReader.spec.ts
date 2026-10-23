@@ -1,10 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { expect } from 'chai';
+import { deflate } from 'pako';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas, createReaderFromBuffer, compareBuffers, compareTwoFiles } from './common';
-import { Layer, ReadOptions, Psd } from '../psd';
-import { byteArrayToBase64, readPsd, writePsdBuffer } from '../index';
-import { readPsd as readPsdInternal, readPattern, readDataRLE } from '../psdReader';
+import { Layer, ReadOptions, Psd, ColorMode, PixelData } from '../psd';
+import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData } from '../index';
+import { readPsd as readPsdInternal, readPattern, readDataRLE, createReader, readBytes, readDataZip } from '../psdReader';
 import { decodeEngineData2 } from '../engineData2';
 import { imageDataToCanvas } from '../helpers';
 
@@ -18,6 +19,97 @@ const opts: ReadOptions = {
 	strict: false,
 	debug: true,
 };
+
+function u8(...values: number[]) { return Buffer.from(values); }
+function u16(value: number) { const b = Buffer.alloc(2); b.writeUInt16BE(value, 0); return b; }
+function i16(value: number) { const b = Buffer.alloc(2); b.writeInt16BE(value, 0); return b; }
+function u32(value: number) { const b = Buffer.alloc(4); b.writeUInt32BE(value, 0); return b; }
+function f32(value: number) { const b = Buffer.alloc(4); b.writeFloatBE(value, 0); return b; }
+function ascii(value: string) { return Buffer.from(value, 'ascii'); }
+
+interface TestLayer {
+	sectionDividerType?: number;
+	maskData?: Buffer;
+}
+
+function layerRecord({ sectionDividerType, maskData }: TestLayer) {
+	const extra: Buffer[] = [
+		maskData ? Buffer.concat([u32(maskData.length), maskData]) : u32(0), // mask data
+		u32(0), // blending ranges
+		u8(0, 0, 0, 0), // name (padded to 4)
+	];
+
+	if (sectionDividerType !== undefined) {
+		extra.push(ascii('8BIMlsct'), u32(4), u32(sectionDividerType));
+	}
+
+	const extraData = Buffer.concat(extra);
+
+	return Buffer.concat([
+		u32(0), u32(0), u32(0), u32(0), // top, left, bottom, right
+		u16(0), // channel count
+		ascii('8BIMnorm'),
+		u8(255, 0, 0, 0), // opacity, clipping, flags, filler
+		u32(extraData.length),
+		extraData,
+	]);
+}
+
+function layerSection(layers: TestLayer[], globalAlpha: boolean, large: boolean) {
+	const len = (value: number) => large ? Buffer.concat([u32(0), u32(value)]) : u32(value);
+	if (!layers.length) return len(0);
+	let layerInfo = Buffer.concat([i16(globalAlpha ? -layers.length : layers.length), ...layers.map(layerRecord)]);
+	if (layerInfo.length % 2) layerInfo = Buffer.concat([layerInfo, u8(0)]);
+	const layerInfoSection = Buffer.concat([len(layerInfo.length), layerInfo]);
+	return Buffer.concat([len(layerInfoSection.length), layerInfoSection]);
+}
+
+function alphaNamesResource(names: string[]) {
+	const data = Buffer.concat(names.map(name => Buffer.concat([u32(name.length), Buffer.from(name, 'utf16le').swap16()])));
+	return Buffer.concat([ascii('8BIM'), u16(1045), u8(0, 0), u32(data.length), data, u8(...(data.length % 2 ? [0] : []))]);
+}
+
+interface TestPsd {
+	width: number;
+	height: number;
+	channels: number;
+	bits?: number;
+	colorMode?: ColorMode;
+	version?: number;
+	colorModeData?: Buffer;
+	resources?: Buffer;
+	layers?: TestLayer[];
+	globalAlpha?: boolean;
+	composite: Buffer; // including compression
+}
+
+function buildPsd({ width, height, channels, bits = 8, colorMode = ColorMode.RGB, version = 1, colorModeData, resources, layers, globalAlpha = false, composite }: TestPsd) {
+	if (globalAlpha && !layers?.length) layers = [{}];
+
+	return Buffer.concat([
+		ascii('8BPS'), u16(version), Buffer.alloc(6), u16(channels), u32(height), u32(width), u16(bits), u16(colorMode),
+		u32(colorModeData?.length ?? 0), colorModeData ?? Buffer.alloc(0),
+		u32(resources?.length ?? 0), resources ?? Buffer.alloc(0),
+		layerSection(layers ?? [], globalAlpha, version === 2),
+		composite,
+	]);
+}
+
+// encodes every row as literal runs, rows: [channel][row] -> bytes
+function rleComposite(rows: number[][][], large = false) {
+	const encoded = rows.map(channel => channel.map(row => {
+		const parts: number[] = [];
+		for (let i = 0; i < row.length; i += 128) {
+			const chunk = row.slice(i, i + 128);
+			parts.push(chunk.length - 1, ...chunk);
+		}
+		return Buffer.from(parts);
+	}));
+	const lengths = encoded.map(channel => channel.map(row => large ? u32(row.length) : u16(row.length)));
+	return Buffer.concat([u16(1), ...([] as Buffer[]).concat(...lengths), ...([] as Buffer[]).concat(...encoded)]);
+}
+
+const strictOpts = { useImageData: true, strict: true };
 
 describe('PsdReader', () => {
 	it.skip('reads width and height properly', () => {
@@ -569,6 +661,386 @@ describe('PsdReader', () => {
 
 			expect(() => readDataRLE(reader, undefined, 0, 2_000_000_000, 8, 4, [0], false))
 				.to.throw('Exceeded memory limit');
+		});
+	});
+
+	describe('16/32-bit RLE', () => {
+		it('decodes 16-bit RLE composite with correct values (white = 65535)', () => {
+			const psd = readPsd(fs.readFileSync(path.join(readFilesPath, '16bits', 'src.psd')), { useImageData: true });
+			const data = psd.imageData!.data;
+			expect(data).instanceOf(Uint16Array);
+			expect(Array.from(data.slice(0, 4))).eql([65535, 65535, 65535, 65535]);
+		});
+
+		it('decodes 16-bit big-endian values', () => {
+			// 2x1 image, one channel: literal run of 4 bytes
+			const buffer = Buffer.concat([u16(5), u8(3, 0x12, 0x34, 0xff, 0xfe)]);
+			const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			const pixels: PixelData = { width: 2, height: 1, data: new Uint16Array(8) };
+			readDataRLE(reader, pixels, 2, 1, 16, 4, [1], false);
+			expect(Array.from(pixels.data)).eql([0, 0x1234, 0, 0, 0, 0xfffe, 0, 0]);
+			expect(reader.offset).equal(buffer.byteLength);
+		});
+
+		it('decodes 32-bit big-endian float values', () => {
+			const values = Buffer.concat([f32(1), f32(0.25)]);
+			const buffer = Buffer.concat([u16(9), u8(7), values]);
+			const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			const pixels: PixelData = { width: 2, height: 1, data: new Float32Array(8) };
+			readDataRLE(reader, pixels, 2, 1, 32, 4, [0], false);
+			expect(Array.from(pixels.data)).eql([1, 0, 0, 0, 0.25, 0, 0, 0]);
+		});
+
+		it('starts every RLE row at the start of image row', () => {
+			// 3x2 image, first row is short (only 1 value)
+			const buffer = Buffer.concat([u16(2), u16(4), u8(0, 7), u8(2, 1, 2, 3)]);
+			const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			const pixels: PixelData = { width: 3, height: 2, data: new Uint8Array(6) };
+			readDataRLE(reader, pixels, 3, 2, 8, 1, [0], false);
+			expect(Array.from(pixels.data)).eql([7, 0, 0, 1, 2, 3]);
+		});
+	});
+
+	describe('input buffer', () => {
+		const file = fs.readFileSync(path.join(readFilesPath, '32bits', 'src.psd'));
+
+		it('is not mutated by reading and repeated parse gives identical results', () => {
+			const buffer = Buffer.from(file);
+			const psd1 = readPsd(buffer, { useImageData: true });
+			expect(buffer.equals(file)).true;
+			const psd2 = readPsd(buffer, { useImageData: true });
+			expect(buffer.equals(file)).true;
+
+			expect(psd1.imageData!.data).instanceOf(Float32Array);
+			expect(Array.from(psd2.imageData!.data)).eql(Array.from(psd1.imageData!.data));
+			expect(psd1.children!.length).greaterThan(0);
+
+			for (let i = 0; i < psd1.children!.length; i++) {
+				const a = psd1.children![i].imageData, b = psd2.children![i].imageData;
+				expect(!!a).equal(!!b);
+				if (a && b) expect(Buffer.from(b.data.buffer).equals(Buffer.from(a.data.buffer))).true;
+			}
+		});
+
+		it('is not mutated when decoding raw data multiple times', () => {
+			const buffer = Buffer.from(file);
+			const psd = readPsd(buffer, { useImageData: true, useRawData: true });
+
+			const layers: Layer[] = [];
+			(function collect(list: Layer[]) { for (const l of list) { layers.push(l); if (l.children) collect(l.children); } })(psd.children!);
+
+			for (const layer of layers) {
+				const a = getLayerImageData(layer);
+				const b = getLayerImageData(layer);
+				expect(!!a).equal(!!b);
+				if (a && b) expect(Array.from(b.data)).eql(Array.from(a.data));
+			}
+
+			const c1 = getCompositeImageData(psd)!;
+			const c2 = getCompositeImageData(psd)!;
+			expect(Array.from(c2.data)).eql(Array.from(c1.data));
+			expect(buffer.equals(file)).true;
+		});
+
+		it('reads raw 16-bit data from unaligned offsets', () => {
+			const composite = Buffer.concat([u16(0), u16(0x1234), u16(0x5678), u16(0x9abc)]);
+			const data = buildPsd({ width: 1, height: 1, channels: 3, bits: 16, composite });
+			const outer = Buffer.alloc(data.length + 1);
+			data.copy(outer, 1);
+			const psd = readPsd(Buffer.from(outer.buffer, outer.byteOffset + 1, data.length), strictOpts);
+			expect(Array.from(psd.imageData!.data)).eql([0x1234, 0x5678, 0x9abc, 0xffff]);
+			expect(outer.subarray(1).equals(data)).true;
+		});
+	});
+
+	describe('layer groups', () => {
+		it('does not crash on unmatched group end divider', () => {
+			const data = buildPsd({
+				width: 1, height: 1, channels: 3, layers: [{}, { sectionDividerType: 3 }],
+				composite: Buffer.concat([u16(0), u8(1, 2, 3)]),
+			});
+			const psd = readPsd(data, strictOpts);
+			expect(psd.children!.length).equal(1);
+		});
+	});
+
+	describe('readBytes()', () => {
+		it('checks bounds against view instead of whole buffer', () => {
+			const buffer = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+
+			const reader = createReader(buffer.buffer, 2, 6); // 3..8
+			reader.offset = 2;
+			const bytes = readBytes(reader, 6);
+			expect(Array.from(bytes)).eql([5, 6, 7, 8, 0, 0]);
+			expect(reader.offset).equal(8);
+
+			const strictReader = createReader(buffer.buffer, 2, 6);
+			strictReader.strict = true;
+			strictReader.offset = 2;
+			expect(() => readBytes(strictReader, 6)).throw('Reading bytes exceeding buffer length');
+
+			const okReader = createReader(buffer.buffer, 2, 6);
+			okReader.strict = true;
+			okReader.offset = 1;
+			expect(Array.from(readBytes(okReader, 5))).eql([4, 5, 6, 7, 8]);
+		});
+
+		it('limits raw composite data to the view', () => {
+			const data = buildPsd({ width: 1, height: 1, channels: 3, composite: Buffer.concat([u16(0), u8(10, 20, 30)]) });
+			const outer = Buffer.concat([data, Buffer.alloc(100, 0xff)]);
+			const psd = readPsd(Buffer.from(outer.buffer, outer.byteOffset, data.length), { useRawData: true });
+			expect(psd.rawCompositeData!.byteLength).equal(5);
+			expect(Array.from(getCompositeImageData(psd)!.data)).eql([10, 20, 30, 255]);
+		});
+	});
+
+	describe('channel count', () => {
+		it('accepts up to 56 channels', () => {
+			const channels = Array.from({ length: 56 }, (_, i) => i < 3 ? (i + 1) * 10 : 255);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 56, composite: Buffer.concat([u16(0), u8(...channels)]) }), strictOpts);
+			expect(psd.channels).equal(56);
+			expect(Array.from(psd.imageData!.data)).eql([10, 20, 30, 255]);
+		});
+
+		it('rejects more than 56 channels', () => {
+			expect(() => readPsd(buildPsd({ width: 1, height: 1, channels: 57, composite: u16(0) }), strictOpts)).throw('Invalid channel count');
+		});
+	});
+
+	describe('global alpha', () => {
+		it('removes white matte from 16-bit composite', () => {
+			const composite = Buffer.concat([u16(0), u16(0xffff), u16(0x8000), u16(0), u16(0x8000)]);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 4, bits: 16, globalAlpha: true, composite }), strictOpts);
+			const data = Array.from(psd.imageData!.data);
+			expect(data[0]).equal(0xffff);
+			expect(data[1]).within(0, 4);
+			expect(data[2]).equal(0);
+			expect(data[3]).equal(0x8000);
+		});
+
+		it('removes white matte from 32-bit composite', () => {
+			const composite = Buffer.concat([u16(0), f32(1), f32(0.75), f32(0.25), f32(0.5)]);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 4, bits: 32, globalAlpha: true, composite }), strictOpts);
+			expect(Array.from(psd.imageData!.data)).eql([1, 0.5, 0, 0.5]);
+		});
+	});
+
+	describe('composite channels', () => {
+		it('uses first extra channel as transparency for global alpha', () => {
+			const composite = Buffer.concat([u16(0), u8(10, 20, 30, 0, 99)]);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 5, globalAlpha: true, composite }), strictOpts);
+			expect(Array.from(psd.imageData!.data)).eql([10, 20, 30, 0]);
+		});
+
+		it('does not use named alpha channel as transparency without global alpha', () => {
+			const composite = Buffer.concat([u16(0), u8(10, 20, 30, 0)]);
+			const resources = alphaNamesResource(['Alpha 1']);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 4, resources, layers: [{}], composite }), strictOpts);
+			expect(psd.imageResources!.alphaChannelNames).eql(['Alpha 1']);
+			expect(Array.from(psd.imageData!.data)).eql([10, 20, 30, 255]);
+		});
+
+		it('reads RLE lengths for all grayscale channels', () => {
+			const composite = rleComposite([[[10, 20]], [[255, 0]], [[1, 2]]]);
+			const resources = alphaNamesResource(['Transparency', 'Alpha 1']);
+			const psd = readPsd(buildPsd({ width: 2, height: 1, channels: 3, colorMode: ColorMode.Grayscale, globalAlpha: true, resources, composite }), strictOpts);
+			expect(Array.from(psd.imageData!.data)).eql([10, 10, 10, 255, 20, 20, 20, 0]);
+		});
+
+		it('reads indexed composite with raw compression', () => {
+			const palette = Buffer.alloc(768);
+			palette[1] = 100; palette[256 + 1] = 150; palette[512 + 1] = 200;
+			const psd = readPsd(buildPsd({
+				width: 2, height: 1, channels: 1, colorMode: ColorMode.Indexed, colorModeData: palette,
+				composite: Buffer.concat([u16(0), u8(1, 0)]),
+			}), strictOpts);
+			expect(Array.from(psd.imageData!.data)).eql([100, 150, 200, 255, 0, 0, 0, 255]);
+		});
+
+		it('reads bitmap RLE composite', () => {
+			// 10x2 bitmap, 2 bytes per row
+			const composite = rleComposite([[[0b10100000, 0b01000000], [0xff, 0x00]]]);
+			const psd = readPsd(buildPsd({ width: 10, height: 2, channels: 1, bits: 1, colorMode: ColorMode.Bitmap, composite }), strictOpts);
+			const values = [];
+			for (let i = 0; i < 20; i++) values.push(psd.imageData!.data[i * 4]);
+			expect(values).eql([
+				0, 255, 0, 255, 255, 255, 255, 255, 255, 0,
+				0, 0, 0, 0, 0, 0, 0, 0, 255, 255,
+			]);
+		});
+	});
+
+	describe('getCompositeImageData()', () => {
+		it('uses global alpha and large flags of the document', () => {
+			const composite = rleComposite([[[10]], [[20]], [[30]], [[0]]], true);
+			const data = buildPsd({ width: 1, height: 1, channels: 4, version: 2, globalAlpha: true, composite });
+			const expected = readPsd(data, strictOpts).imageData!;
+			expect(Array.from(expected.data)).eql([10, 20, 30, 0]);
+			const psd = readPsd(data, { ...strictOpts, useRawData: true });
+			expect(Array.from(getCompositeImageData(psd)!.data)).eql(Array.from(expected.data));
+
+			// works with copy of the document and its data
+			const copy: Psd = { ...psd, rawCompositeData: psd.rawCompositeData!.slice() };
+			expect(Array.from(getCompositeImageData(copy)!.data)).eql(Array.from(expected.data));
+		});
+	});
+
+	describe('layer mask', () => {
+		it('does not detect real mask when all mask parameters are present', () => {
+			const psd: Psd = {
+				width: 4, height: 4,
+				children: [{
+					name: 'layer',
+					imageData: { width: 4, height: 4, data: new Uint8ClampedArray(4 * 4 * 4).fill(255) },
+					top: 0, left: 0,
+					mask: {
+						top: 0, left: 0, bottom: 4, right: 4, defaultColor: 0,
+						imageData: { width: 4, height: 4, data: new Uint8ClampedArray(4 * 4 * 4).fill(255) },
+						userMaskDensity: 0.5, userMaskFeather: 5, vectorMaskDensity: 0.25, vectorMaskFeather: 2,
+					},
+				}],
+			};
+			const result = readPsd(writePsdBuffer(psd), { useImageData: true, skipCompositeImageData: true });
+			const layer = result.children![0];
+			expect(layer.realMask).undefined;
+			expect(layer.mask!.userMaskFeather).equal(5);
+			expect(layer.mask!.vectorMaskFeather).equal(2);
+			expect(layer.mask!.userMaskDensity).closeTo(0.5, 0.01);
+			expect(layer.mask!.vectorMaskDensity).closeTo(0.25, 0.01);
+		});
+
+		const maskBase = Buffer.concat([u32(0), u32(0), u32(2), u32(2), u8(0), u8(0x10)]); // rect, default color, flags (has params)
+		const allParams = Buffer.concat([u8(0x0f), u8(128), Buffer.alloc(8), u8(64), Buffer.alloc(8)]); // 19 bytes
+		const realMaskData = Buffer.concat([u8(0x02), u8(255), u32(0), u32(0), u32(1), u32(1)]); // 18 bytes
+
+		function readMask(maskData: Buffer) {
+			const data = buildPsd({ width: 1, height: 1, channels: 3, layers: [{ maskData }], composite: Buffer.concat([u16(0), u8(1, 2, 3)]) });
+			return readPsd(data, strictOpts).children![0];
+		}
+
+		it('reads mask parameters without real mask (with and without padding)', () => {
+			for (const padding of [Buffer.alloc(0), Buffer.alloc(2)]) {
+				const layer = readMask(Buffer.concat([maskBase, allParams, padding]));
+				expect(layer.realMask).undefined;
+				expect(layer.mask!.userMaskDensity).closeTo(128 / 255, 0.001);
+				expect(layer.mask!.vectorMaskDensity).closeTo(64 / 255, 0.001);
+			}
+		});
+
+		it('reads real mask followed by mask parameters', () => {
+			for (const params of [Buffer.concat([u8(0x01), u8(128)]), allParams]) {
+				const layer = readMask(Buffer.concat([maskBase, realMaskData, params, Buffer.alloc(2)]));
+				expect(layer.realMask).not.undefined;
+				expect(layer.realMask!.disabled).true;
+				expect(layer.realMask!.bottom).equal(1);
+				expect(layer.mask!.userMaskDensity).closeTo(128 / 255, 0.001);
+			}
+		});
+
+		it('reads all mask parameters without real mask when last parameter byte is not 0', () => {
+			const feather = Buffer.alloc(8);
+			feather.writeDoubleBE(1 / 3); // last byte is 0x55
+			const params = Buffer.concat([u8(0x0f), u8(128), Buffer.alloc(8), u8(64), feather]);
+			const layer = readMask(Buffer.concat([maskBase, params, Buffer.alloc(3)]));
+			expect(layer.realMask).undefined;
+			expect(layer.mask!.vectorMaskFeather).equal(1 / 3);
+			expect(layer.mask!.vectorMaskDensity).closeTo(64 / 255, 0.001);
+		});
+
+		it('round-trips mask parameters with any feather values', () => {
+			for (const feather of [1 / 3, 0.1, 2.2]) {
+				const psd: Psd = {
+					width: 2, height: 2,
+					children: [{
+						imageData: { width: 2, height: 2, data: new Uint8ClampedArray(2 * 2 * 4).fill(255) },
+						mask: {
+							top: 0, left: 0, imageData: { width: 2, height: 2, data: new Uint8ClampedArray(2 * 2 * 4).fill(255) },
+							userMaskDensity: 0.5, userMaskFeather: feather, vectorMaskDensity: 0.5, vectorMaskFeather: feather,
+						},
+					}],
+				};
+				const layer = readPsd(writePsdBuffer(psd), strictOpts).children![0];
+				expect(layer.realMask).undefined;
+				expect(layer.mask!.userMaskFeather).equal(feather);
+				expect(layer.mask!.vectorMaskFeather).equal(feather);
+			}
+		});
+
+		it('reads real mask with flags that look like mask parameters', () => {
+			// real mask flags 0x0f read as mask parameters flags would match size of all mask parameters
+			const realMask = Buffer.concat([u8(0x0f), u8(255), u32(0), u32(0), u32(1), u32(1)]);
+			const layer = readMask(Buffer.concat([maskBase, realMask, u8(0x01), u8(128), Buffer.alloc(2)]));
+			expect(layer.realMask).not.undefined;
+			expect(layer.realMask!.disabled).true;
+			expect(layer.realMask!.bottom).equal(1);
+			expect(layer.mask!.userMaskDensity).closeTo(128 / 255, 0.001);
+		});
+
+		it('reads global layer mask opacity in 0-100 range', () => {
+			const psd = readPsd(fs.readFileSync(path.join(readFilesPath, 'layer-mask', 'src.psd')), { skipLayerImageData: true, skipCompositeImageData: true, skipThumbnail: true });
+			expect(psd.globalLayerMaskInfo!.opacity).equal(0.5);
+		});
+	});
+
+	describe('malformed data', () => {
+		it('handles RLE row lengths past end of data quickly', () => {
+			const height = 30000;
+			const buffer = Buffer.concat([Buffer.alloc(height * 2, 0xff), u8(0, 1)]);
+			const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			const pixels: PixelData = { width: 30000, height, data: new Uint8Array(1) };
+			const start = Date.now();
+			readDataRLE(reader, pixels, 30000, height, 8, 1, [0], false);
+			expect(Date.now() - start).lessThan(1000);
+
+			const strictReader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			strictReader.strict = true;
+			expect(() => readDataRLE(strictReader, pixels, 30000, height, 8, 1, [0], false)).throw('RLE data exceeds buffer length');
+		});
+
+		it('ignores RLE data past row width', () => {
+			const row = [0x7f, ...Array.from({ length: 128 }, (_, i) => i), 0x81, 5];
+			const buffer = Buffer.concat([u16(row.length), u16(2), Buffer.from(row), u8(0, 9)]);
+			const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+			const pixels: PixelData = { width: 2, height: 2, data: new Uint8Array(4) };
+			readDataRLE(reader, pixels, 2, 2, 8, 1, [0], false);
+			expect(Array.from(pixels.data)).eql([0, 1, 9, 0]);
+			expect(reader.offset).equal(buffer.byteLength);
+		});
+
+		it('throws on corrupted zip data', () => {
+			const data = new Uint8Array(400);
+			for (let i = 0; i < data.length; i++) data[i] = (i * 7) & 0xff;
+			const compressed = deflate(data);
+			for (let i = 4; i < 12; i++) compressed[i] = 0xff;
+			const pixels: PixelData = { width: 10, height: 10, data: new Uint8Array(400) };
+
+			expect(() => readDataZip(compressed, pixels, 10, 10, 8, 4, 0, false)).throw(/Invalid zip data/);
+		});
+
+		it('limits size of decompressed zip data', () => {
+			const compressed = deflate(new Uint8Array(10 * 1024 * 1024));
+			const pixels: PixelData = { width: 10, height: 10, data: new Uint8Array(400).fill(1) };
+
+			const reader = createReader(new ArrayBuffer(0));
+			reader.strict = true;
+			expect(() => readDataZip(compressed, pixels, 10, 10, 8, 4, 0, false, reader)).throw('Decompressed data exceeds expected size');
+
+			const lenient = createReader(new ArrayBuffer(0));
+			readDataZip(compressed, pixels, 10, 10, 8, 4, 0, false, lenient);
+			expect(pixels.data[0]).equal(0);
+			expect(pixels.data[1]).equal(1);
+
+			const limited = createReader(new ArrayBuffer(0));
+			limited.totalMemoryLimit = 50;
+			expect(() => readDataZip(compressed, pixels, 10, 10, 8, 4, 0, false, limited)).throw('Exceeded memory limit');
+		});
+
+		it('decodes zip with prediction for 16-bit data', () => {
+			const raw = Buffer.concat([u16(1000), u16(65535), u16(2)]); // deltas: 1000, -1 (wraps), +2 -> 1000, 999, 1001
+			const compressed = deflate(raw);
+			const pixels: PixelData = { width: 3, height: 1, data: new Uint16Array(12) };
+			readDataZip(compressed, pixels, 3, 1, 16, 4, 0, true);
+			expect([pixels.data[0], pixels.data[4], pixels.data[8]]).eql([1000, 999, 1001]);
 		});
 	});
 });

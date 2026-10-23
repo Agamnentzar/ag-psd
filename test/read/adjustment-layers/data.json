@@ -2367,7 +2367,7 @@
     "colorSpace2": 0,
     "colorSpace3": 0,
     "colorSpace4": 0,
-    "opacity": 0.19607843137254902,
+    "opacity": 0.5,
     "kind": 128
   },
   "filterMask": {
@@ -2376,6 +2376,6 @@
       "g": 0,
       "b": 0
     },
-    "opacity": 0.19607843137254902
+    "opacity": 0.5
   }
 }

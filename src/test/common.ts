@@ -9,9 +9,12 @@ import * as path from 'path';
 import { createCanvas, Image } from 'canvas';
 import '../initializeCanvas';
 import { Psd, ReadOptions } from '../index';
-import { readPsd, createReader } from '../psdReader';
-import { setLogErrors } from '../descriptor';
+import { readPsd, createReader, PsdReader } from '../psdReader';
+import { PsdWriter, writeSignature } from '../psdWriter';
+import { setLogErrors, writeAsciiStringOrClassId } from '../descriptor';
 export { createCanvas };
+// descriptor building helpers (to create descriptors with types that ag-psd does not normally write)
+export { writeAsciiStringOrClassId as writeDescriptorId, writeClassStructure as writeDescriptorClass } from '../descriptor';
 
 setLogErrors(true);
 
@@ -196,4 +199,13 @@ export function expectBuffersEqual(actual: Uint8Array, expected: Uint8Array, nam
 			throw new Error(`Different byte at 0x${i.toString(16)} in (${name})`);
 		}
 	}
+}
+
+export function toReader(buffer: Uint8Array): PsdReader {
+	return createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+}
+
+export function writeDescriptorKey(writer: PsdWriter, key: string, type: string) {
+	writeAsciiStringOrClassId(writer, key);
+	writeSignature(writer, type);
 }

@@ -411,7 +411,7 @@ export interface TextPath {
 		textRange: number[];
 		rowGutter?: number;
 		columnGutter?: number;
-		BaselineAlignment?: {
+		baselineAlignment?: {
 			flag?: number;
 			min?: number;
 		};
@@ -1793,6 +1793,8 @@ export interface Psd extends LayerAdditionalInfo {
 	canvas?: HTMLCanvasElement;
 	imageData?: PixelData;
 	rawCompositeData?: Uint8Array;
+	/** Information needed to decode `rawCompositeData` (see `getCompositeImageData`) */
+	rawCompositeDataInfo?: { large: boolean; globalAlpha: boolean; };
 	imageResources?: ImageResources;
 	linkedFiles?: LinkedFile[]; // used in smart objects
 	artboards?: {

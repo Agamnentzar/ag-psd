@@ -1,3 +1,5 @@
+import { PsdReader } from "./psdReader";
+
 function isWhitespace(char: number) {
 	// ' ', '\n', '\r', '\t'
 	return char === 32 || char === 10 || char === 13 || char === 9;
@@ -8,7 +10,15 @@ function isNumber(char: number) {
 	return (char >= 48 && char <= 57) || char === 46 || char === 45;
 }
 
-export function parseEngineData(data: number[] | Uint8Array) {
+export function setProperty(target: any, key: string, value: any) {
+	if (key === '__proto__') { // avoid changing prototype of the object
+		Object.defineProperty(target, key, { value, enumerable: true, configurable: true, writable: true });
+	} else {
+		target[key] = value;
+	}
+}
+
+export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdReader, 'log'>) {
 	let index = 0;
 
 	function skipWhitespace() {
@@ -81,7 +91,10 @@ export function parseEngineData(data: number[] | Uint8Array) {
 		const top = stack[stack.length - 1];
 
 		if (typeof top === 'string') {
-			stack[stack.length - 2][top] = value;
+			const target = stack[stack.length - 2];
+
+			setProperty(target, top, value);
+
 			pop();
 		} else if (Array.isArray(top)) {
 			top.push(value);
@@ -95,7 +108,8 @@ export function parseEngineData(data: number[] | Uint8Array) {
 
 		const top = stack[stack.length - 1];
 
-		if (top && typeof top === 'string') {
+		if (typeof top === 'string' || Array.isArray(top)) {
+			// name used as a value (either property value or array item)
 			if (name === 'nil') {
 				pushValue(null);
 			} else {
@@ -116,6 +130,8 @@ export function parseEngineData(data: number[] | Uint8Array) {
 	skipWhitespace();
 
 	let dataLength = data.length;
+	let invalidTokens = 0;
+	let firstInvalidToken = '';
 
 	while (dataLength > 0 && data[dataLength - 1] === 0) dataLength--; // trim 0 bytes from end
 
@@ -173,14 +189,16 @@ export function parseEngineData(data: number[] | Uint8Array) {
 			pushValue(parseFloat(value));
 		} else {
 			index += 1;
-			console.log(`Invalid token '${String.fromCharCode(char)}' (${char}) at ${index}`
-				// + ` near '${String.fromCharCode.apply(null, data.slice(index - 10, index + 20) as any)}'`
-				// + ` data [${Array.from(data.slice(index - 10, index + 20)).join(', ')}]`
-			);
+			if (!invalidTokens) firstInvalidToken = `'${String.fromCharCode(char)}' (${char}) at ${index}`;
+			invalidTokens++;
 			// throw new Error(`Invalid token ${String.fromCharCode(char)} at ${index}`);
 		}
 
 		skipWhitespace();
+	}
+
+	if (invalidTokens) {
+		reader.log(`Invalid tokens in engine data (${invalidTokens} in total, first: ${firstInvalidToken})`);
 	}
 
 	return root;
@@ -195,7 +213,6 @@ const floatKeys = [
 
 const intArrays = ['RunLengthArray'];
 
-// TODO: handle /nil
 export function serializeEngineData(data: any, condensed = false) {
 	let buffer = new Uint8Array(1024);
 	let offset = 0;
@@ -235,18 +252,24 @@ export function serializeEngineData(data: any, condensed = false) {
 		if (!condensed) writeString('\n');
 	}
 
+	// NaN and Infinity can't be represented in engine data, write them as 0
+	function finite(value: number) {
+		return Number.isFinite(value) ? value : 0;
+	}
+
 	function serializeInt(value: number) {
-		return value.toString();
+		return finite(value).toString();
 	}
 
 	function serializeFloat(value: number) {
-		return value.toFixed(5)
+		return finite(value).toFixed(5)
 			.replace(/(\d)0+$/g, '$1')
 			.replace(/^0+\.([1-9])/g, '.$1')
 			.replace(/^-0+\.0(\d)/g, '-.0$1');
 	}
 
 	function serializeNumber(value: number, key?: string) {
+		value = finite(value);
 		const isFloat = (key && floatKeys.indexOf(key) !== -1) || (value | 0) !== value;
 		return isFloat ? serializeFloat(value) : serializeInt(value);
 	}
@@ -280,7 +303,7 @@ export function serializeEngineData(data: any, condensed = false) {
 			}
 		}
 
-		if (value === null) {
+		if (value === null || value === undefined) { // undefined is only written for array items, properties are skipped
 			writePrefix();
 			writeString(condensed ? '/nil' : 'null');
 		} else if (typeof value === 'number') {
@@ -344,7 +367,7 @@ export function serializeEngineData(data: any, condensed = false) {
 			indent++;
 
 			for (const key of getKeys(value)) {
-				writeProperty(key, value[key]);
+				if (value[key] !== undefined) writeProperty(key, value[key]);
 			}
 
 			indent--;
@@ -358,7 +381,7 @@ export function serializeEngineData(data: any, condensed = false) {
 	if (condensed) {
 		if (typeof data === 'object') {
 			for (const key of getKeys(data)) {
-				writeProperty(key, data[key]);
+				if (data[key] !== undefined) writeProperty(key, data[key]);
 			}
 		}
 	} else {

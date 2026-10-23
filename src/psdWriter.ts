@@ -1,5 +1,5 @@
 import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData, Compression, ChannelID, PatternInfo } from './psd';
-import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas } from './helpers';
+import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas, denormalizeLabAB } from './helpers';
 import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { InternalImageResources, resourceHandlers } from './imageResources';
 
@@ -153,39 +153,45 @@ export function writeUnicodeStringWithPadding(writer: PsdWriter, text: string) {
 	writeUint16(writer, 0);
 }
 
-function getLargestLayerSize(layers: Layer[] = []): number {
+// Worst-case size of writeDataRLE output for a single channel: per row the byte count (2 bytes, 4 for PSB)
+// plus PackBits data, which in the worst case is all literal runs of up to 128 bytes, each with 1 header byte.
+export function getRLEChannelBound(width: number, height: number, large: boolean) {
+	return height * ((large ? 4 : 2) + width + Math.ceil(width / 128));
+}
+
+function getLargestLayerSize(layers: Layer[] = [], large: boolean): number {
 	let max = 0;
 
 	for (const layer of layers) {
-		const { width, height } = getLayerDimentions(layer);
-		max = Math.max(max, 2 * height + 2 * width * height);
-
-		if (layer.mask) {
-			const { width, height } = getLayerDimentions(layer.mask);
-			max = Math.max(max, 2 * height + 2 * width * height);
-		}
-
-		if (layer.realMask) {
-			const { width, height } = getLayerDimentions(layer.realMask);
-			max = Math.max(max, 2 * height + 2 * width * height);
+		for (const target of [layer, layer.mask, layer.realMask]) {
+			if (target) {
+				const { width, height } = getLayerDimentions(target);
+				max = Math.max(max, getRLEChannelBound(width, height, large));
+			}
 		}
 
 		if (layer.children) {
-			max = Math.max(max, getLargestLayerSize(layer.children));
+			max = Math.max(max, getLargestLayerSize(layer.children, large));
 		}
 	}
 
 	return max;
 }
 
+export function writeUint64(writer: PsdWriter, value: number) {
+	writeUint32(writer, Math.floor(value / 0x100000000));
+	writeUint32(writer, value >>> 0);
+}
+
 export function writeSection(writer: PsdWriter, round: number, func: () => void, writeTotalLength = false, large = false) {
-	if (large) writeUint32(writer, 0);
 	const offset = writer.offset;
+	if (large) writeUint32(writer, 0);
 	writeUint32(writer, 0);
+	const start = writer.offset;
 
 	func();
 
-	let length = writer.offset - offset - 4;
+	let length = writer.offset - start;
 	let len = length;
 
 	while (len % round) {
@@ -193,32 +199,34 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 		len++;
 	}
 
-	// while (writer.offset % round) {
-	// 	writeUint8(writer, 0);
-	// 	len++;
-	// }
-
 	if (writeTotalLength) {
 		length = len;
 	}
 
-	writer.view.setUint32(offset, length, false);
+	if (large) {
+		writer.view.setUint32(offset, Math.floor(length / 0x100000000), false);
+		writer.view.setUint32(offset + 4, length >>> 0, false);
+	} else {
+		if (length > 0xffffffff) throw new Error('Section too large, use PSB format instead');
+		writer.view.setUint32(offset, length, false);
+	}
+}
+
+function verifyPixelData(data: PixelData | undefined, name: string) {
+	// check element size instead of instanceof, so arrays from other realms (iframes, workers, vm) are accepted
+	const bytesPerElement = data && (data.data as any).BYTES_PER_ELEMENT;
+	if (bytesPerElement !== undefined && bytesPerElement !== 1) {
+		throw new Error(`${name} has incorrect bitDepth (only 8-bit Uint8Array or Uint8ClampedArray data is supported for writing)`);
+	}
 }
 
 function verifyBitCount(target: Psd | Layer) {
 	target.children?.forEach(verifyBitCount);
 
-	const data = target.imageData;
-	if (data && (data.data instanceof Uint32Array || data.data instanceof Uint16Array)) {
-		throw new Error('imageData has incorrect bitDepth');
-	}
+	verifyPixelData(target.imageData, 'imageData');
 
-	if ('mask' in target && target.mask) {
-		const data = target.mask.imageData;
-		if (data && (data.data instanceof Uint32Array || data.data instanceof Uint16Array)) {
-			throw new Error('mask imageData has incorrect bitDepth');
-		}
-	}
+	if ('mask' in target) verifyPixelData(target.mask?.imageData, 'mask imageData');
+	if ('realMask' in target) verifyPixelData(target.realMask?.imageData, 'realMask imageData');
 }
 
 export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}) {
@@ -232,6 +240,10 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	if (bitsPerChannel !== 8)
 		throw new Error('bitsPerChannel other than 8 are not supported for writing');
+
+	const layers: Layer[] = [];
+	addChildren(layers, psd.children);
+	if (!layers.length) layers.push({});
 
 	verifyBitCount(psd);
 
@@ -252,8 +264,8 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		throw new Error('Document canvas must have the same size as document');
 
 	const globalAlpha = !!imageData && hasAlpha(imageData);
-	const maxBufferSize = Math.max(getLargestLayerSize(psd.children), 4 * 2 * psd.width * psd.height + 2 * psd.height);
-	writer.tempBuffer = new Uint8Array(maxBufferSize);
+	// only used for encoding a single layer channel at a time, composite image is encoded directly into the writer buffer
+	writer.tempBuffer = new Uint8Array(getLargestLayerSize(psd.children, !!options.psb));
 
 	// header
 	writeSignature(writer, '8BPS');
@@ -275,10 +287,6 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 		// TODO: other data?
 	});
-
-	const layers: Layer[] = [];
-	addChildren(layers, psd.children);
-	if (!layers.length) layers.push({});
 
 	// image resources
 
@@ -305,38 +313,49 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		writeAdditionalLayerInfo(writer, psd, psd, opt);
 	}, undefined, !!opt.psb);
 
-	// image data
-	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
-	const width = imageData ? imageData.width : psd.width;
-	const height = imageData ? imageData.height : psd.height;
-	const data: PixelData = { data: new Uint8Array(width * height * 4), width, height };
+	writer.tempBuffer = undefined;
 
+	// image data
 	writeUint16(writer, Compression.RleCompressed); // Photoshop doesn't support zip compression of composite image data
 
 	if (RAW_IMAGE_DATA && (psd as any).imageDataRaw) {
 		console.log('writing raw image data');
 		writeBytes(writer, (psd as any).imageDataRaw);
 	} else {
-		if (imageData) data.data.set(new Uint8Array(imageData.data.buffer, imageData.data.byteOffset, imageData.data.byteLength));
+		const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
+		const data = getCompositeData(imageData, psd.width, psd.height, globalAlpha);
 
-		// add weird white matte
-		if (globalAlpha) {
-			const size = data.width * data.height * 4;
-			const p = data.data;
-			for (let i = 0; i < size; i += 4) {
-				const pa = p[i + 3];
-				if (pa != 0 && pa != 255) {
-					const a = pa / 255;
-					const ra = 255 * (1 - a);
-					p[i + 0] = p[i + 0] * a + ra;
-					p[i + 1] = p[i + 1] * a + ra;
-					p[i + 2] = p[i + 2] * a + ra;
-				}
+		// encode directly into the writer buffer
+		const maxSize = channels.length * getRLEChannelBound(data.width, data.height, !!options.psb);
+		ensureSize(writer, writer.offset + maxSize);
+		const buffer = new Uint8Array(writer.buffer, writer.offset, maxSize);
+		writer.offset += writeDataRLE(buffer, data, channels, !!options.psb).length;
+	}
+}
+
+function getCompositeData(imageData: PixelData | undefined, width: number, height: number, globalAlpha: boolean): PixelData {
+	if (!imageData) return { data: new Uint8Array(width * height * 4), width, height };
+
+	const size = width * height * 4;
+	const src = imageData.data;
+	let dst: Uint8Array | undefined = undefined;
+
+	// add weird white matte (copy the data only if there are semi-transparent pixels)
+	if (globalAlpha) {
+		for (let i = 0; i < size; i += 4) {
+			const pa = src[i + 3];
+			if (pa != 0 && pa != 255) {
+				if (!dst) dst = new Uint8Array(src.buffer, src.byteOffset, size).slice();
+				const a = pa / 255;
+				const ra = 255 * (1 - a);
+				dst[i + 0] = src[i + 0] * a + ra;
+				dst[i + 1] = src[i + 1] * a + ra;
+				dst[i + 2] = src[i + 2] * a + ra;
 			}
 		}
-
-		writeBytes(writer, writeDataRLE(writer.tempBuffer, data, channels, !!options.psb));
 	}
+
+	return dst ? { data: dst, width, height } : imageData;
 }
 
 function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
@@ -357,8 +376,11 @@ function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlph
 
 			for (const c of channels) {
 				writeInt16(writer, c.id);
-				if (options.psb) writeUint32(writer, 0);
-				writeUint32(writer, c.length);
+				if (options.psb) {
+					writeUint64(writer, c.length);
+				} else {
+					writeUint32(writer, c.length);
+				}
 			}
 
 			writeSignature(writer, '8BIM');
@@ -398,7 +420,7 @@ function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlph
 }
 
 function writeLayerMaskData(writer: PsdWriter, { mask, realMask }: Layer, layerData: LayerChannelData) {
-	writeSection(writer, 1, () => {
+	writeSection(writer, 4, () => {
 		if (!mask && !realMask) return;
 
 		let params = 0, flags = 0, realFlags = 0;
@@ -444,9 +466,7 @@ function writeLayerMaskData(writer: PsdWriter, { mask, realMask }: Layer, layerD
 			if (mask.vectorMaskDensity !== undefined) writeUint8(writer, Math.round(mask.vectorMaskDensity * 0xff));
 			if (mask.vectorMaskFeather !== undefined) writeFloat64(writer, mask.vectorMaskFeather);
 		}
-
-		writeZeros(writer, 2);
-	});
+	}, true); // photoshop pads mask data to multiple of 4 bytes and includes padding in the length
 }
 
 function writerBlendingRange(writer: PsdWriter, range: number[]) {
@@ -480,7 +500,7 @@ function writeGlobalLayerMaskInfo(writer: PsdWriter, info: GlobalLayerMaskInfo |
 			writeUint16(writer, info.colorSpace2);
 			writeUint16(writer, info.colorSpace3);
 			writeUint16(writer, info.colorSpace4);
-			writeUint16(writer, Math.round(info.opacity * 0xff));
+			writeUint16(writer, Math.round(clamp(info.opacity, 0, 1) * 100)); // 0-100
 			writeUint8(writer, info.kind);
 			writeZeros(writer, 3);
 		}
@@ -555,11 +575,8 @@ function addChildren(layers: Layer[], children: Layer[] | undefined) {
 }
 
 function resizeBuffer(writer: PsdWriter, size: number) {
-	let newLength = writer.buffer.byteLength;
-
-	do {
-		newLength *= 2;
-	} while (size > newLength);
+	// grow at least 2x to keep small writes fast, but don't overshoot large reservations (like composite image data)
+	const newLength = Math.max(writer.buffer.byteLength * 2, size);
 
 	const newBuffer = new ArrayBuffer(newLength);
 	const newBytes = new Uint8Array(newBuffer);
@@ -587,11 +604,11 @@ function createThumbnail(psd: Psd) {
 
 	if (psd.width > psd.height) {
 		canvas.width = 160;
-		canvas.height = Math.floor(psd.height * (canvas.width / psd.width));
+		canvas.height = Math.max(1, Math.floor(psd.height * (canvas.width / psd.width)));
 		scale = canvas.width / psd.width;
 	} else {
 		canvas.height = 160;
-		canvas.width = Math.floor(psd.width * (canvas.height / psd.height));
+		canvas.width = Math.max(1, Math.floor(psd.width * (canvas.height / psd.height)));
 		scale = canvas.height / psd.height;
 	}
 
@@ -639,7 +656,7 @@ function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, la
 		buffer = writeDataZipWithoutPrediction(imageData, [0]);
 		compression = Compression.ZipWithoutPrediction;
 	} else {
-		buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb)!;
+		buffer = writeDataRLE(tempBuffer, imageData, [0], !!options.psb).slice(); // copy, temp buffer is reused
 		compression = Compression.RleCompressed;
 	}
 
@@ -768,7 +785,7 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 			data = writeDataZipWithoutPrediction(imageData, [offset]);
 			compression = Compression.ZipWithoutPrediction;
 		} else {
-			data = writeDataRLE(tempBuffer, imageData, [offset], !!options.psb)!;
+			data = writeDataRLE(tempBuffer, imageData, [offset], !!options.psb).slice(); // copy, temp buffer is reused
 			compression = Compression.RleCompressed;
 		}
 
@@ -841,8 +858,8 @@ export function writeColor(writer: PsdWriter, color: Color | undefined) {
 	} else if ('l' in color) {
 		writeUint16(writer, ColorSpace.Lab);
 		writeInt16(writer, Math.round(color.l * 10000));
-		writeInt16(writer, Math.round(color.a < 0 ? (color.a * 12800) : (color.a * 12700)));
-		writeInt16(writer, Math.round(color.b < 0 ? (color.b * 12800) : (color.b * 12700)));
+		writeInt16(writer, Math.round(denormalizeLabAB(color.a, 100)));
+		writeInt16(writer, Math.round(denormalizeLabAB(color.b, 100)));
 		writeUint16(writer, 0);
 	} else if ('h' in color) {
 		writeUint16(writer, ColorSpace.HSB);
@@ -899,6 +916,10 @@ export function writePattern(writer: PsdWriter, pattern: PatternInfo) {
 
 	writeUint32(writer, 24); // channels count
 
+	// ponytail: pattern channels always use small (2-byte) RLE scanline headers, matching
+	// readPattern which reads them as non-large
+	const buffer = new Uint8Array(getRLEChannelBound(width, height, false));
+
 	// channels: RGB at indices 0,1,2 and alpha at index 25
 	for (let i = 0; i < 24 + 2; i++) {
 		const offset = i < 3 ? i : (i === 25 ? 3 : -1);
@@ -908,11 +929,7 @@ export function writePattern(writer: PsdWriter, pattern: PatternInfo) {
 			continue;
 		}
 
-		// worst-case RLE size for a single channel: width + 1 per scanline, plus scanline length headers
-		const buffer = new Uint8Array(width * height + 2 * height + 2 * width + 16);
-		// ponytail: pattern channels always use small (2-byte) RLE scanline headers, matching
-		// readPattern which reads them as non-large; `large` here only affects the header width.
-		const data = writeDataRLE(buffer, pixelData, [offset], false)!;
+		const data = writeDataRLE(buffer, pixelData, [offset], false);
 
 		writeUint32(writer, 1); // has
 		writeUint32(writer, data.length + 4 + 16 + 2 + 1); // length

@@ -1,4 +1,4 @@
-import { createEnum } from './helpers';
+import { createEnum, normalizeLabAB, denormalizeLabAB } from './helpers';
 import {
 	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, Color, EffectContour,
 	EffectNoiseGradient, EffectPattern, EffectSolidGradient, ExtraGradientInfo, ExtraPatternInfo,
@@ -15,7 +15,7 @@ import {
 } from './psdReader';
 import {
 	PsdWriter, writeSignature, writeBytes, writeUint32, writeFloat64, writeUint8,
-	writeUnicodeStringWithPadding, writeInt32, writeFloat32, writeUnicodeString, writeInt32LE,
+	writeUnicodeStringWithPadding, writeInt32, writeFloat32, writeInt32LE,
 	writeUnicodeStringWithoutLengthLE
 } from './psdWriter';
 
@@ -140,6 +140,8 @@ const fieldToExtType: ExtTypeDict = {
 	origFXRefPoint: nullType,
 	FXRefPoint: nullType,
 	ClMg: makeType('', 'ClMg'),
+	interpretation: makeType('', 'footageInterpretation'),
+	bgColor: makeType('', 'NativeQuad'),
 };
 
 const fieldToArrayExtType: ExtTypeDict = {
@@ -174,6 +176,9 @@ const fieldToArrayExtType: ExtTypeDict = {
 	layerSettings: nullType,
 	list: nullType,
 	Adjs: makeType('', 'CrvA'),
+	vertices: makeType('', 'Pnt '),
+	warpedVertices: makeType('', 'Pnt '),
+	quads: makeType('', 'quadIndices'),
 };
 
 const typeToField: { [key: string]: string[]; } = {
@@ -200,6 +205,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN', 'NmbG', 'WLMn', 'WLMx', 'AmMn', 'AmMx', 'SclH', 'SclV',
 		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'FlRs', 'Vrnc', 'Strg', 'ExtS', 'ExtD',
 		'HrzS', 'VrtS', 'NmbR', 'EdgF', 'Ang1', 'Ang2', 'Ang3', 'Ang4', 'lastAppliedComp', 'capturedInfo',
+		'pixelSourceType',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS', 'BlrQ',
@@ -210,6 +216,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
 		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
 		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion', 'gradientsInterpolationMethod',
+		'interpretAlpha',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -222,14 +229,15 @@ const typeToField: { [key: string]: string[]; } = {
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
 		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch', 'ExtF', 'ExtM',
-		'moreAccurate', 'GpuY', 'LIWy', 'Cnty',
+		'moreAccurate', 'GpuY', 'LIWy', 'Cnty', 'Lnkd', 'showAlteredVideo', 'lightingOn',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
 		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
 		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat', 'imageResolution',
-		'PuX0', 'PuX1', 'PuX2', 'PuX3', 'PuY0', 'PuY1', 'PuY2', 'PuY3'
+		'PuX0', 'PuX1', 'PuX2', 'PuX3', 'PuY0', 'PuY1', 'PuY2', 'PuY3',
+		'stylization', 'cleanliness', 'brushScale', 'microBrush', 'specularity',
 	],
 	'UntF': [
 		'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -245,15 +253,59 @@ const typeToField: { [key: string]: string[]; } = {
 		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
 		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList', 'ShrP',
 		'channelDenoise', 'Mtrx', 'layerSettings', 'list', 'compList', 'Adjs',
+		'vertices', 'warpedVertices', 'quads', 'indices', 'Mpng',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null', 'Chnl'],
 	'Pth ': ['DspF'],
+	'alis': ['alis'],
 };
 
 const channels = [
 	'Rd  ', 'Grn ', 'Bl  ', 'Yllw', 'Ylw ', 'Cyn ', 'Mgnt', 'Blck', 'Gry ', 'Lmnc', 'A   ', 'B   ',
 ];
+
+// color classes whose channel values are written as doubles ('GRYC' and 'LABC' are kept for backwards compatibility)
+const doubleColorClasses = ['Grsc', 'LbCl', 'GRYC', 'LABC'];
+
+// Hidden (non-enumerable) markers used to remember how values were stored in the file, so they can be
+// written back the same way. They don't change the shape of the objects returned by the reader.
+const osTypeKey = typeof Symbol !== 'undefined' ? Symbol('agPsdOSType') : '__agPsdOSType';
+const obArInfoKey = typeof Symbol !== 'undefined' ? Symbol('agPsdObAr') : '__agPsdObAr';
+const referenceInfoKey = typeof Symbol !== 'undefined' ? Symbol('agPsdReference') : '__agPsdReference';
+
+function setHidden<T extends object>(target: T, key: symbol | string, value: any): T {
+	Object.defineProperty(target, key, { value, enumerable: false, configurable: true, writable: true });
+	return target;
+}
+
+function getHidden(target: any, key: symbol | string): any {
+	return (target && typeof target === 'object') ? target[key] : undefined;
+}
+
+const osTypeFamilies: { [key: string]: string; } = {
+	UntF: 'UntF', UnFl: 'UntF',
+	Objc: 'Objc', GlbO: 'Objc',
+	type: 'type', GlbC: 'type',
+	comp: 'comp',
+};
+
+// returns the OS type the value was originally read with, if it's compatible with the type we'd write it as
+// fallback for unknown keys, based on the type of the value
+function guessOSType(value: any): string | undefined {
+	if (typeof value === 'boolean') return 'bool';
+	if (typeof value === 'number' && !Number.isInteger(value)) return 'doub';
+	if (Array.isArray(value)) return 'VlLs';
+	if (value && typeof value === 'object' && typeof value._classID === 'string') return 'Objc';
+	return undefined;
+}
+
+function getRecordedOSType(value: any, type: string | undefined): string | undefined {
+	const recorded: string | undefined = getHidden(value, osTypeKey);
+	if (!recorded) return type;
+	if (!type || recorded === 'comp' || recorded === 'type' || recorded === 'GlbC') return recorded;
+	return osTypeFamilies[recorded] === osTypeFamilies[type] ? recorded : type;
+}
 
 const fieldToArrayType: Dict = {
 	'Mnm ': 'long',
@@ -294,6 +346,8 @@ const fieldToArrayType: Dict = {
 	Mtrx: 'long',
 	compList: 'long',
 	Chnl: 'enum',
+	indices: 'long',
+	Mpng: 'long',
 };
 
 const fieldToType: Dict = {};
@@ -312,6 +366,8 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 	fieldToArrayType[field] = 'Objc';
 }
 
+const pixelSourceOriginRoot = 'PixelSource.origin';
+
 function getTypeByKey(key: string, value: any, root: string, parent: any) {
 	if (key === 'presetKind') {
 		return typeof value === 'string' ? 'enum' : 'long';
@@ -325,7 +381,7 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 		return typeof value === 'string' ? 'enum' : 'long';
 	} else if (key === 'AntA') {
 		return typeof value === 'string' ? 'enum' : 'bool';
-	} else if ((key === 'Hrzn' || key === 'Vrtc') && (parent.Type === 'keyType.Pstn' || parent._classID === 'Ofst')) {
+	} else if ((key === 'Hrzn' || key === 'Vrtc') && (parent.Type === 'keyType.Pstn' || parent._classID === 'Ofst' || root === pixelSourceOriginRoot)) {
 		return 'long';
 	} else if (key === 'Hrzn' || key === 'Vrtc' || key === 'Top ' || key === 'Left' || key === 'Btom' || key === 'Rght') {
 		if (root === 'slices') return 'long';
@@ -336,6 +392,12 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 		return root === 'artd' ? 'long' : 'doub';
 	} else if (key === 'Trnf') {
 		return Array.isArray(value) ? 'VlLs' : 'Objc';
+	} else if (key === 'alpha' && root === 'slices') {
+		return 'long';
+	} else if ((key === 'Inpt' || key === 'Otpt') && parent._classID === 'HsbP') {
+		return 'enum';
+	} else if (key === 'LghD' && parent._classID === 'oilPaint') {
+		return 'long';
 	} else {
 		return fieldToType[key];
 	}
@@ -346,7 +408,7 @@ export function readAsciiStringOrClassId(reader: PsdReader) {
 	return readAsciiString(reader, length || 4);
 }
 
-function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
+export function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 	if (value.length === 4 && value !== 'warp' && value !== 'time' && value !== 'hold' && value !== 'list') {
 		// write classId
 		writeInt32(writer, 0);
@@ -386,23 +448,25 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	writeUnicodeStringWithPadding(writer, name);
 	writeAsciiStringOrClassId(writer, classId);
 
-	const keys = Object.keys(value);
-	let keyCount = keys.length;
-	if ('_name' in value) keyCount--;
-	if ('_classID' in value) keyCount--;
+	const allKeys = Object.keys(value);
+	const keys = allKeys.filter(key => key !== '_name' && key !== '_classID' && value[key] !== undefined);
 
-	writeUint32(writer, keyCount);
+	writeUint32(writer, keys.length);
 
 	for (const key of keys) {
-		if (key === '_name' || key === '_classID') continue;
-
-		let type = getTypeByKey(key, value[key], root, value);
+		let type: string | undefined = getTypeByKey(key, value[key], root, value);
+		let childRoot = root;
 		let extType = fieldToExtType[key];
 
 		if (key === 'bounds' && root === 'text') {
 			extType = makeType('', 'bounds');
 		} else if (key === 'origin') {
 			type = root === 'slices' ? 'enum' : 'Objc';
+
+			if (classId === 'PixelSource') {
+				extType = nullType; // stored as 'null' class with integer Hrzn/Vrtc
+				childRoot = pixelSourceOriginRoot;
+			}
 		} else if ((key === 'Cyn ' || key === 'Mgnt' || key === 'Ylw ' || key === 'Blck') && value._classID === 'CMYC') {
 			type = 'doub';
 		} else if (/^PN[a-z][a-z]$/.test(key)) {
@@ -449,9 +513,12 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			type = 'Objc';
 			extType = nullType;
 		} else if (channels.indexOf(key) !== -1) {
-			type = (classId === 'RGBC' && root !== 'artd') ? 'doub' : 'long';
+			type = ((classId === 'RGBC' && root !== 'artd') || doubleColorClasses.indexOf(classId) !== -1) ? 'doub' : 'long';
 		} else if (key === 'profile') {
-			type = classId === 'printOutput' ? 'TEXT' : 'tdta';
+			type = (classId === 'printOutput' || classId === 'proofSetup') ? 'TEXT' : 'tdta';
+		} else if (key === 'alis' && typeof value[key] === 'string') {
+			// 'alis' is read as a binary string (one char per byte), strings with wider chars can only be stored as TEXT
+			type = /[^\x00-\xff]/.test(value[key]) ? 'TEXT' : 'alis';
 		} else if (key === 'strokeStyleContent') {
 			if (value[key]['Clr ']) {
 				extType = makeType('', 'solidColorLayer');
@@ -471,9 +538,12 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			// TODO: other color spaces
 		}
 
+		type = getRecordedOSType(value[key], type);
+		if (!type) type = guessOSType(value[key]);
+
 		writeAsciiStringOrClassId(writer, key);
 		writeSignature(writer, type || 'long');
-		writeOSType(writer, type || 'long', value[key], key, extType, root);
+		writeOSType(writer, type || 'long', value[key], key, extType, childRoot);
 		if (logErrors && !type) console.log(`Missing descriptor field type for: '${key}' in`, value);
 	}
 }
@@ -483,8 +553,9 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		case 'obj ': // Reference
 			return readReferenceStructure(reader);
 		case 'Objc': // Descriptor
-		case 'GlbO': // GlobalObject same as Descriptor
 			return readDescriptorStructure(reader, includeClass);
+		case 'GlbO': // GlobalObject same as Descriptor
+			return setHidden(readDescriptorStructure(reader, includeClass), osTypeKey, type);
 		case 'VlLs': { // List
 			const length = readInt32(reader);
 			const items: any[] = [];
@@ -509,7 +580,7 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 			const units = readSignature(reader);
 			const value = readFloat32(reader);
 			if (!unitsMap[units]) throw new Error(`Invalid units: ${units}`);
-			return { units: unitsMap[units], value };
+			return setHidden({ units: unitsMap[units], value }, osTypeKey, type);
 		}
 		case 'TEXT': // String
 			return readUnicodeString(reader);
@@ -523,13 +594,13 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		case 'comp': { // Large Integer
 			const low = readUint32(reader);
 			const high = readUint32(reader);
-			return { low, high };
+			return setHidden({ low, high }, osTypeKey, type);
 		}
 		case 'bool': // Boolean
 			return !!readUint8(reader);
 		case 'type': // Class
 		case 'GlbC': // Class
-			return readClassStructure(reader);
+			return setHidden(readClassStructure(reader), osTypeKey, type);
 		case 'alis': { // Alias
 			const length = readInt32(reader);
 			return readAsciiString(reader, length);
@@ -541,25 +612,24 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		case 'ObAr': { // Object array
 			readInt32(reader); // version: 16
 			readUnicodeString(reader); // name: ''
-			readAsciiStringOrClassId(reader); // 'rationalPoint'
+			const classID = readAsciiStringOrClassId(reader); // 'rationalPoint'
 			const length = readInt32(reader);
 			const items: any[] = [];
 
 			for (let i = 0; i < length; i++) {
 				const type1 = readAsciiStringOrClassId(reader); // type Hrzn | Vrtc
-				readSignature(reader); // UnFl
-
-				readSignature(reader); // units ? '#Pxl'
+				const valueType = readSignature(reader); // UnFl
+				const units = readSignature(reader); // units ? '#Pxl'
 				const valuesCount = readInt32(reader);
 				const values: number[] = [];
 				for (let j = 0; j < valuesCount; j++) {
 					values.push(readFloat64(reader));
 				}
 
-				items.push({ type: type1, values });
+				items.push(setHidden({ type: type1, values }, obArInfoKey, { valueType, units }));
 			}
 
-			return items;
+			return setHidden(items, obArInfoKey, { classID });
 		}
 		case 'Pth ': { // File path
 			/*const length =*/ readInt32(reader); // total size of all fields below
@@ -588,9 +658,9 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 		case 'Objc': // Descriptor
 		case 'GlbO': { // GlobalObject same as Descriptor
 			if (typeof value !== 'object') throw new Error(`Invalid struct value: ${JSON.stringify(value)}, key: ${key}`);
-			if (!extType) throw new Error(`Missing ext type for: '${key}' (${JSON.stringify(value)})`);
-			const name = value._name || extType.name;
-			const classID = value._classID || extType.classID;
+			if (!extType && !value._classID) throw new Error(`Missing ext type for: '${key}' (${JSON.stringify(value)})`);
+			const name = value._name || extType?.name || '';
+			const classID = value._classID || extType!.classID;
 			writeDescriptorStructure(writer, name, classID, value, root);
 			break;
 		}
@@ -599,7 +669,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeInt32(writer, value.length);
 
 			for (let i = 0; i < value.length; i++) {
-				const type = fieldToArrayType[key];
+				const type = getRecordedOSType(value[i], fieldToArrayType[key]) ?? guessOSType(value[i]);
 				writeSignature(writer, type || 'long');
 				writeOSType(writer, type || 'long', value[i], `${key}[]`, fieldToArrayExtType[key], root);
 				if (logErrors && !type) console.log(`Missing descriptor array type for: '${key}' in`, value);
@@ -631,19 +701,31 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 		}
 		case 'long': // Integer
 			if (typeof value !== 'number') throw new Error(`Invalid integer value: ${JSON.stringify(value)}, key: ${key}`);
-			writeInt32(writer, value);
+			writeInt32(writer, Math.round(value)); // round instead of truncating fractional values
 			break;
-		// case 'comp': // Large Integer
-		// 	writeLargeInteger(reader);
+		case 'comp': // Large Integer
+			if (!value || typeof value !== 'object') throw new Error(`Invalid large integer value: ${JSON.stringify(value)}, key: ${key}`);
+			writeUint32(writer, value.low >>> 0);
+			writeUint32(writer, value.high >>> 0);
+			break;
 		case 'bool': // Boolean
 			if (typeof value !== 'boolean') throw new Error(`Invalid boolean value: ${JSON.stringify(value)}, key: ${key}`);
 			writeUint8(writer, value ? 1 : 0);
 			break;
-		// case 'type': // Class
-		// case 'GlbC': // Class
-		// 	writeClassStructure(reader);
-		// case 'alis': // Alias
-		// 	writeAliasStructure(reader);
+		case 'type': // Class
+		case 'GlbC': // Class
+			if (!value || typeof value !== 'object') throw new Error(`Invalid class value: ${JSON.stringify(value)}, key: ${key}`);
+			writeUnicodeStringWithPadding(writer, value.name || '');
+			writeAsciiStringOrClassId(writer, value.classID);
+			break;
+		case 'alis': { // Alias (read as a binary string, one char per byte)
+			if (typeof value !== 'string') throw new Error(`Invalid alias value: ${JSON.stringify(value)}, key: ${key}`);
+			writeInt32(writer, value.length);
+			for (let i = 0; i < value.length; i++) {
+				writeUint8(writer, value.charCodeAt(i) & 0xff);
+			}
+			break;
+		}
 		case 'tdta': // Raw Data
 			writeInt32(writer, value.byteLength);
 			writeBytes(writer, value);
@@ -651,15 +733,16 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 		case 'ObAr': { // Object array
 			writeInt32(writer, 16); // version
 			writeUnicodeStringWithPadding(writer, ''); // name
-			const type = ObArTypes[key];
+			const type = getHidden(value, obArInfoKey)?.classID ?? ObArTypes[key];
 			if (!type) throw new Error(`Not implemented ObArType for: ${key}`);
 			writeAsciiStringOrClassId(writer, type);
 			writeInt32(writer, value.length);
 
 			for (let i = 0; i < value.length; i++) {
+				const info = getHidden(value[i], obArInfoKey);
 				writeAsciiStringOrClassId(writer, value[i].type); // Hrzn | Vrtc
-				writeSignature(writer, 'UnFl');
-				writeSignature(writer, '#Pxl');
+				writeSignature(writer, info?.valueType ?? 'UnFl');
+				writeSignature(writer, info?.units ?? '#Pxl');
 				writeInt32(writer, value[i].values.length);
 
 				for (let j = 0; j < value[i].values.length; j++) {
@@ -682,45 +765,78 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 	}
 }
 
+export interface DescriptorReferenceItem {
+	type: 'prop' | 'Clss' | 'Enmr' | 'rele' | 'Idnt' | 'indx' | 'name';
+	name?: string; // class name
+	classID?: string;
+	keyID?: string; // prop
+	typeID?: string; // Enmr
+	enumValue?: string; // Enmr
+	value?: string | number; // rele, Idnt, indx, name
+}
+
+function referenceItemToValue(item: DescriptorReferenceItem): any {
+	switch (item.type) {
+		case 'prop': return item.keyID;
+		case 'Clss': return { name: item.name || '', classID: item.classID };
+		case 'Enmr': return `${item.typeID}.${item.enumValue}`;
+		default: return item.value;
+	}
+}
+
+function referenceItemMatches(item: DescriptorReferenceItem | undefined, value: any) {
+	if (!item) return false;
+	const expected = referenceItemToValue(item);
+	if (expected && typeof expected === 'object') {
+		return !!value && typeof value === 'object' && value.name === expected.name && value.classID === expected.classID;
+	}
+	return expected === value;
+}
+
+// Attaches information about how each item of reference should be written (class IDs, reference types),
+// the public value of the array stays the same (array of strings/numbers/class objects)
+export function createDescriptorReference(items: DescriptorReferenceItem[]): any[] {
+	return setHidden(items.map(referenceItemToValue), referenceInfoKey, items);
+}
+
 function readReferenceStructure(reader: PsdReader) {
 	const itemsCount = readInt32(reader);
-	const items: any[] = [];
+	const infos: DescriptorReferenceItem[] = [];
 
 	for (let i = 0; i < itemsCount; i++) {
 		const type = readSignature(reader);
 
 		switch (type) {
 			case 'prop': { // Property
-				readClassStructure(reader);
+				const { name, classID } = readClassStructure(reader);
 				const keyID = readAsciiStringOrClassId(reader);
-				items.push(keyID);
+				infos.push({ type, name, classID, keyID });
 				break;
 			}
-			case 'Clss': // Class
-				items.push(readClassStructure(reader));
+			case 'Clss': { // Class
+				const { name, classID } = readClassStructure(reader);
+				infos.push({ type, name, classID });
 				break;
+			}
 			case 'Enmr': { // Enumerated Reference
-				readClassStructure(reader);
+				const { name, classID } = readClassStructure(reader);
 				const typeID = readAsciiStringOrClassId(reader);
-				const value = readAsciiStringOrClassId(reader);
-				items.push(`${typeID}.${value}`);
+				const enumValue = readAsciiStringOrClassId(reader);
+				infos.push({ type, name, classID, typeID, enumValue });
 				break;
 			}
 			case 'rele': { // Offset
-				// const { name, classID } =
-				readClassStructure(reader);
-				items.push(readUint32(reader));
+				const { name, classID } = readClassStructure(reader);
+				infos.push({ type, name, classID, value: readUint32(reader) });
 				break;
 			}
 			case 'Idnt': // Identifier
-				items.push(readInt32(reader));
-				break;
 			case 'indx': // Index
-				items.push(readInt32(reader));
+				infos.push({ type, value: readInt32(reader) });
 				break;
 			case 'name': { // Name
-				readClassStructure(reader);
-				items.push(readUnicodeString(reader));
+				const { name, classID } = readClassStructure(reader);
+				infos.push({ type, name, classID, value: readUnicodeString(reader) });
 				break;
 			}
 			default:
@@ -728,46 +844,83 @@ function readReferenceStructure(reader: PsdReader) {
 		}
 	}
 
-	return items;
+	return createDescriptorReference(infos);
+}
+
+function guessReferenceItem(value: any): DescriptorReferenceItem {
+	if (typeof value === 'string') {
+		// enumerated references are read as `${typeID}.${enumValue}` where typeID is a 4 character ID or a string ID
+		// (values like 'My.Path' or 'Logo.v2' can't be typeID/enum value, so they are written as name references)
+		const match = /^([a-z ]{4}|[a-z]{5,})\.([a-z ]+)$/i.exec(value);
+
+		if (match) {
+			return { type: 'Enmr', name: '', classID: match[1], typeID: match[1], enumValue: match[2] };
+		} else {
+			return { type: 'name', name: '', classID: 'Lyr ', value };
+		}
+	} else if (typeof value === 'number') {
+		return { type: 'Idnt', value };
+	} else if (value && typeof value === 'object' && typeof value.classID === 'string') {
+		return { type: 'Clss', name: value.name || '', classID: value.classID };
+	} else {
+		throw new Error(`Invalid descriptor reference value: ${JSON.stringify(value)}`);
+	}
+}
+
+// path selection state (image resource 1088) is a reference to paths, enumerated references there use 'Path' class
+// (name references use 'Lyr ' class, they reference layer of the vector mask)
+export function pathSelectionStateToReference(items: string[]): any[] {
+	const infos: DescriptorReferenceItem[] | undefined = getHidden(items, referenceInfoKey);
+
+	return createDescriptorReference(items.map((value, i) => {
+		if (referenceItemMatches(infos?.[i], value)) return infos![i]; // keep information read from the file
+
+		const item = guessReferenceItem(value);
+		if (item.type === 'Enmr') item.classID = 'Path';
+		return item;
+	}));
 }
 
 function writeReferenceStructure(writer: PsdWriter, _key: string, items: any[]) {
+	if (!Array.isArray(items)) throw new Error(`Invalid reference value: ${JSON.stringify(items)}, key: ${_key}`);
+
+	const infos: DescriptorReferenceItem[] | undefined = getHidden(items, referenceInfoKey);
 	writeInt32(writer, items.length);
 
 	for (let i = 0; i < items.length; i++) {
 		const value = items[i];
-		let type = 'unknown';
+		const recorded = infos?.[i];
+		const item = referenceItemMatches(recorded, value) ? recorded! : guessReferenceItem(value);
 
-		if (typeof value === 'string') {
-			if (/^[a-z ]+\.[a-z ]+$/i.test(value)) {
-				type = 'Enmr';
-			} else {
-				type = 'name';
-			}
-		}
+		writeSignature(writer, item.type);
 
-		writeSignature(writer, type);
-
-		switch (type) {
-			// case 'prop': // Property
-			// case 'Clss': // Class
-			case 'Enmr': { // Enumerated Reference
-				const [typeID, enumValue] = value.split('.');
-				writeClassStructure(writer, '\0', typeID);
-				writeAsciiStringOrClassId(writer, typeID);
-				writeAsciiStringOrClassId(writer, enumValue);
+		switch (item.type) {
+			case 'prop': // Property
+				writeClassStructure(writer, item.name || '', item.classID!);
+				writeAsciiStringOrClassId(writer, item.keyID!);
 				break;
-			}
-			// case 'rele': // Offset
-			// case 'Idnt': // Identifier
-			// case 'indx': // Index
-			case 'name': { // Name
-				writeClassStructure(writer, '\0', 'Lyr ');
-				writeUnicodeString(writer, value + '\0');
+			case 'Clss': // Class
+				writeClassStructure(writer, item.name || '', item.classID!);
 				break;
-			}
+			case 'Enmr': // Enumerated Reference
+				writeClassStructure(writer, item.name || '', item.classID!);
+				writeAsciiStringOrClassId(writer, item.typeID!);
+				writeAsciiStringOrClassId(writer, item.enumValue!);
+				break;
+			case 'rele': // Offset
+				writeClassStructure(writer, item.name || '', item.classID!);
+				writeUint32(writer, item.value as number);
+				break;
+			case 'Idnt': // Identifier
+			case 'indx': // Index
+				writeInt32(writer, item.value as number);
+				break;
+			case 'name': // Name
+				writeClassStructure(writer, item.name || '', item.classID!);
+				writeUnicodeStringWithPadding(writer, `${item.value}`);
+				break;
 			default:
-				throw new Error(`Invalid descriptor reference type: ${type}`);
+				throw new Error(`Invalid descriptor reference type: ${item.type}`);
 		}
 	}
 
@@ -780,8 +933,8 @@ function readClassStructure(reader: PsdReader) {
 	return { name, classID };
 }
 
-function writeClassStructure(writer: PsdWriter, name: string, classID: string) {
-	writeUnicodeString(writer, name);
+export function writeClassStructure(writer: PsdWriter, name: string, classID: string) {
+	writeUnicodeStringWithPadding(writer, name);
 	writeAsciiStringOrClassId(writer, classID);
 }
 
@@ -827,11 +980,11 @@ export type DescriptorColor = {
 	Blck: number;
 } | {
 	_name: '';
-	_classID: 'GRYC'; // ???
+	_classID: 'Grsc' | 'GRYC'; // 'GRYC' was written by older versions of ag-psd
 	'Gry ': number;
 } | {
 	_name: '';
-	_classID: 'LABC'; // ???
+	_classID: 'LbCl' | 'LABC'; // 'LABC' was written by older versions of ag-psd
 	Lmnc: number;
 	'A   ': number;
 	'B   ': number;
@@ -1258,9 +1411,11 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 
 		for (const key of Object.keys(e)) {
 			const value = (e as any)[key];
+			if (value == null || typeof value !== 'object') continue;
+
 			if (Array.isArray(value)) {
 				for (const effect of value) {
-					if (effect.enabled) info.numModifyingFX++;
+					if (effect?.enabled) info.numModifyingFX++;
 				}
 			} else if (value.enabled) {
 				info.numModifyingFX++;
@@ -1410,7 +1565,7 @@ export function serializeTrackList(tracks: TimelineTrack[]): TimelineTrackDescri
 			Effc: !!t.effectParams,
 			...(t.effectParams ? {
 				effectParams: {
-					keyList: serializeKeyList(t.keys),
+					keyList: serializeKeyList(t.effectParams.keys),
 					fillCanvas: t.effectParams.fillCanvas,
 					zoomOrigin: t.effectParams.zoomOrigin,
 				}
@@ -1541,7 +1696,7 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 			case 'highlightOpacity': result.hglO = unitsPercent(val); break;
 			case 'shadowOpacity': result.sdwO = unitsPercent(val); break;
 			case 'angle':
-				if (objName === 'gradientOverlay' || objName === 'patternFill') {
+				if (objName === 'gradientOverlay' || objName === 'patternOverlay') {
 					result.Angl = unitsAngle(val);
 				} else {
 					result.lagl = unitsAngle(val);
@@ -1586,7 +1741,8 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 
 function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoiseGradient {
 	if (grad.GrdF === 'GrdF.CstS') {
-		const samples: number = grad.Intr || 4096;
+		// stop locations are always in 0..4096 range, independent of smoothness (Intr)
+		const samples = 4096;
 
 		return {
 			type: 'solid',
@@ -1620,11 +1776,12 @@ function parseGradient(grad: DesciptorGradient): EffectSolidGradient | EffectNoi
 
 function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): DesciptorGradient {
 	if (grad.type === 'solid') {
-		const samples = Math.round((grad.smoothness ?? 1) * 4096);
+		// stop locations are always in 0..4096 range, independent of smoothness (Intr)
+		const samples = 4096;
 		return {
 			'Nm  ': grad.name || '',
 			GrdF: 'GrdF.CstS',
-			Intr: samples,
+			Intr: Math.round((grad.smoothness ?? 1) * 4096),
 			Clrs: grad.colorStops.map(s => ({
 				'Clr ': serializeColor(s.color),
 				Type: 'Clry.UsrS',
@@ -1646,8 +1803,8 @@ function serializeGradient(grad: EffectSolidGradient | EffectNoiseGradient): Des
 			ClrS: ClrS.encode(grad.colorModel),
 			RndS: grad.randomSeed || 0,
 			Smth: Math.round((grad.roughness ?? 1) * 4096),
-			'Mnm ': (grad.min || [0, 0, 0, 0]).map(x => x * 100),
-			'Mxm ': (grad.max || [1, 1, 1, 1]).map(x => x * 100),
+			'Mnm ': (grad.min || [0, 0, 0, 0]).map(x => Math.round(x * 100)),
+			'Mxm ': (grad.max || [1, 1, 1, 1]).map(x => Math.round(x * 100)),
 		};
 	}
 }
@@ -1734,25 +1891,76 @@ export function serializeVectorContent(content: VectorContent): { descriptor: De
 	}
 }
 
+// Descriptor color values: HSB saturation/brightness 0..100, CMYK 0..100, Gray 0..100, Lab L 0..100, a/b -128..127
+// Color values (see psd.ts): HSB 0..1, CMYK 0..255, Gray 0..255, Lab L 0..1, a/b -1..1 (same as readColor/writeColor)
+
+const colorSourceKey = typeof Symbol !== 'undefined' ? Symbol('agPsdColorSource') : '__agPsdColorSource';
+
+const colorConversions: { [key: string]: ((x: number) => number)[] | undefined; } = {
+	// key: [descriptor -> color, color -> descriptor]
+	Strt: [x => x / 100, x => x * 100],
+	Brgh: [x => x / 100, x => x * 100],
+	'Cyn ': [x => x * 255 / 100, x => x * 100 / 255],
+	Mgnt: [x => x * 255 / 100, x => x * 100 / 255],
+	'Ylw ': [x => x * 255 / 100, x => x * 100 / 255],
+	Blck: [x => x * 255 / 100, x => x * 100 / 255],
+	'Gry ': [x => x * 255 / 100, x => x * 100 / 255],
+	Lmnc: [x => x / 100, x => x * 100],
+	'A   ': [normalizeLabAB, denormalizeLabAB],
+	'B   ': [normalizeLabAB, denormalizeLabAB],
+};
+
+function colorToDescriptorValue(key: string, value: number) {
+	const conversion = colorConversions[key];
+	if (!conversion) return value;
+	const [from, to] = conversion;
+	const result = to(value);
+	if (!isFinite(result)) return result;
+
+	// prefer shortest number that converts back to the same value (avoids values like 30.200000000000003)
+	for (let precision = 1; precision < 17; precision++) {
+		const candidate = +result.toPrecision(precision);
+		if (from(candidate) === value) return candidate;
+	}
+
+	return result;
+}
+
+function shallowEqual(a: any, b: any) {
+	const keys = Object.keys(a);
+	if (keys.length !== Object.keys(b).length) return false;
+	return keys.every(key => a[key] === b[key]);
+}
+
 export function parseColor(color: DescriptorColor): Color {
+	let result: Color;
+
 	if ('H   ' in color) {
-		return { h: parsePercentOrAngle(color['H   ']), s: color.Strt, b: color.Brgh };
+		result = { h: parsePercentOrAngle(color['H   ']), s: color.Strt / 100, b: color.Brgh / 100 };
 	} else if ('Rd  ' in color) {
 		return { r: color['Rd  '], g: color['Grn '], b: color['Bl  '] };
 	} else if ('Cyn ' in color) {
-		return { c: color['Cyn '], m: color.Mgnt, y: color['Ylw '], k: color.Blck };
+		result = {
+			c: color['Cyn '] * 255 / 100,
+			m: color.Mgnt * 255 / 100,
+			y: color['Ylw '] * 255 / 100,
+			k: color.Blck * 255 / 100,
+		};
 	} else if ('Gry ' in color) {
-		return { k: color['Gry '] };
+		result = { k: color['Gry '] * 255 / 100 };
 	} else if ('Lmnc' in color) {
-		return { l: color.Lmnc, a: color['A   '], b: color['B   '] };
+		result = { l: color.Lmnc / 100, a: normalizeLabAB(color['A   ']), b: normalizeLabAB(color['B   ']) };
 	} else if ('redFloat' in color) {
 		return { fr: color.redFloat, fg: color.greenFloat, fb: color.blueFloat };
 	} else {
 		throw new Error('Unsupported color descriptor');
 	}
+
+	// remember original descriptor values, so unmodified colors can be written back without conversion errors
+	return setHidden(result, colorSourceKey, { color: { ...result }, descriptor: color });
 }
 
-export function serializeColor(color: Color | undefined): DescriptorColor {
+function serializeColorValues(color: Color | undefined): DescriptorColor {
 	if (!color) {
 		return { _name: '', _classID: 'RGBC', 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
 	} else if ('r' in color) {
@@ -1760,16 +1968,48 @@ export function serializeColor(color: Color | undefined): DescriptorColor {
 	} else if ('fr' in color) {
 		return { _name: '', _classID: 'RGBC', redFloat: color.fr, greenFloat: color.fg, blueFloat: color.fb };
 	} else if ('h' in color) {
-		return { _name: '', _classID: 'HSBC', 'H   ': unitsAngle(color.h * 360), Strt: color.s || 0, Brgh: color.b || 0 };
+		return {
+			_name: '', _classID: 'HSBC',
+			'H   ': unitsAngle((color.h || 0) * 360),
+			Strt: colorToDescriptorValue('Strt', color.s || 0),
+			Brgh: colorToDescriptorValue('Brgh', color.b || 0),
+		};
 	} else if ('c' in color) {
-		return { _name: '', _classID: 'CMYC', 'Cyn ': color.c || 0, Mgnt: color.m || 0, 'Ylw ': color.y || 0, Blck: color.k || 0 };
+		return {
+			_name: '', _classID: 'CMYC',
+			'Cyn ': colorToDescriptorValue('Cyn ', color.c || 0),
+			Mgnt: colorToDescriptorValue('Mgnt', color.m || 0),
+			'Ylw ': colorToDescriptorValue('Ylw ', color.y || 0),
+			Blck: colorToDescriptorValue('Blck', color.k || 0),
+		};
 	} else if ('l' in color) {
-		return { _name: '', _classID: 'LABC', Lmnc: color.l || 0, 'A   ': color.a || 0, 'B   ': color.b || 0 };
+		return {
+			_name: '', _classID: 'LbCl',
+			Lmnc: colorToDescriptorValue('Lmnc', color.l || 0),
+			'A   ': colorToDescriptorValue('A   ', color.a || 0),
+			'B   ': colorToDescriptorValue('B   ', color.b || 0),
+		};
 	} else if ('k' in color) {
-		return { _name: '', _classID: 'GRYC', 'Gry ': color.k };
+		return { _name: '', _classID: 'Grsc', 'Gry ': colorToDescriptorValue('Gry ', color.k || 0) };
 	} else {
 		throw new Error('Invalid color value');
 	}
+}
+
+export function serializeColor(color: Color | undefined): DescriptorColor {
+	const result: any = serializeColorValues(color);
+	const source = getHidden(color, colorSourceKey);
+
+	if (source && shallowEqual(source.color, color)) {
+		// color was not modified since it was read, use exact original values
+		for (const key of Object.keys(result)) {
+			if (colorConversions[key] && typeof source.descriptor[key] === 'number') {
+				result[key] = source.descriptor[key];
+			}
+		}
+	}
+
+	return result;
 }
 
 export function parseAngle(x: DescriptorUnitsValue) {

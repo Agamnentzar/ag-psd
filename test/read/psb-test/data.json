@@ -53,7 +53,7 @@
       },
       "guides": [
         {
-          "location": 134217573.78125,
+          "location": -154.21875,
           "direction": "vertical"
         },
         {
@@ -61,7 +61,7 @@
           "direction": "vertical"
         },
         {
-          "location": 134216090.71875,
+          "location": -1637.28125,
           "direction": "horizontal"
         },
         {
@@ -400,7 +400,7 @@
           "highlightOpacity": 0.5,
           "shadowBlendMode": "multiply",
           "shadowColor": {
-            "k": 99.99999776482582
+            "k": 254.99999430030584
           },
           "shadowOpacity": 0.5,
           "technique": "smooth",
@@ -439,7 +439,7 @@
           "enabled": false,
           "blendMode": "multiply",
           "color": {
-            "k": 99.99999776482582
+            "k": 254.99999430030584
           },
           "antialiased": true,
           "invert": true,
@@ -479,7 +479,7 @@
               "units": "Pixels"
             },
             "color": {
-              "k": 99.99999776482582
+              "k": 254.99999430030584
             }
           }
         ]
@@ -1724,6 +1724,6 @@
       "g": 0,
       "b": 0
     },
-    "opacity": 0.19607843137254902
+    "opacity": 0.5
   }
 }

@@ -48,7 +48,7 @@ describe('helpers', () => {
 	});
 
 	describe('writeDataRaw()', () => {
-		it('returns undefined for 0 size', () => {
+		it('returns empty array for 0 size', () => {
 			expect(writeDataRaw({} as any, 0, 0, 0)).undefined;
 			expect(writeDataRaw({} as any, 0, 0, 100)).undefined;
 			expect(writeDataRaw({} as any, 0, 100, 0)).undefined;
@@ -61,9 +61,9 @@ describe('helpers', () => {
 
 	describe('writeDataRLE()', () => {
 		it('returns undefined for 0 size', () => {
-			expect(writeDataRLE(new Uint8Array(1), { width: 0, height: 0, data: [] } as any, [0], false)).undefined;
-			expect(writeDataRLE(new Uint8Array(1), { width: 0, height: 100, data: [] } as any, [0], false)).undefined;
-			expect(writeDataRLE(new Uint8Array(1), { width: 100, height: 0, data: [] } as any, [0], false)).undefined;
+			expect(writeDataRLE(new Uint8Array(1), { width: 0, height: 0, data: [] } as any, [0], false).length).equal(0);
+			expect(writeDataRLE(new Uint8Array(1), { width: 0, height: 100, data: [] } as any, [0], false).length).equal(0);
+			expect(writeDataRLE(new Uint8Array(1), { width: 100, height: 0, data: [] } as any, [0], false).length).equal(0);
 		});
 
 		const rleTests: { name: string; width: number; height: number; data: number[]; }[] = [
@@ -129,7 +129,7 @@ describe('helpers', () => {
 					const output: PixelData = { width, height, data: new Uint8Array(width * height * 4) };
 
 					const buffer = new Uint8Array(16 * 1024 * 1024);
-					array = writeDataRLE(buffer, input, [0], false)!;
+					array = writeDataRLE(buffer, input, [0], false);
 
 					const reader = createReader(array!.buffer);
 					readDataRLE(reader, output, width, height, bitDepth, 4, [0], false);
@@ -140,6 +140,17 @@ describe('helpers', () => {
 
 				expect(result, `image: [${array}]`).eql(data);
 			});
+		});
+
+		it('throws when RLE output does not fit in the buffer', () => {
+			const pixels: PixelData = { width: 4, height: 2, data: new Uint8Array([1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0, 7, 0, 0, 0, 8, 0, 0, 0]) };
+			expect(() => writeDataRLE(new Uint8Array(8), pixels, [0], false)).throw('RLE buffer too small');
+			const encoded = writeDataRLE(new Uint8Array(14), pixels, [0], false);
+			expect(encoded.length).equal(14);
+			const reader = createReader(encoded.buffer, encoded.byteOffset, encoded.byteLength);
+			const output: PixelData = { width: 4, height: 2, data: new Uint8Array(8) };
+			readDataRLE(reader, output, 4, 2, 8, 1, [0], false);
+			expect(Array.from(output.data)).eql([1, 2, 3, 4, 5, 6, 7, 8]);
 		});
 	});
 

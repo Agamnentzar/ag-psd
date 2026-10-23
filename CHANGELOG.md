@@ -1,5 +1,34 @@
 # Changelog
 
+## v32.0.0
+- **BREAKING CHANGE:** Mask opacity (`filterMask.opacity`, `userMask.opacity` from `LMsk`, `globalLayerMaskInfo.opacity`) is now read and written using the correct 0-100 scale (Photoshop's default 50% now reads as `0.5` instead of `0.196`)
+- **BREAKING CHANGE:** HSB, CMYK, Lab and Grayscale colors in descriptors (effects, gradients, filters) are now converted to the ranges documented on the `Color` type (HSB `s`/`b` 0-1, CMYK and Gray 0-255, Lab `l` 0-1 and `a`/`b` -1..1)
+- **BREAKING CHANGE:** Gradient stop locations are no longer scaled by gradient smoothness
+- **BREAKING CHANGE:** Text style runs without a font now use the font of the normal style sheet instead of the first font in the font set (usually `AdobeInvisFont`)
+- **BREAKING CHANGE:** Only one trailing newline is removed from text layer text, empty last paragraphs are preserved
+- **BREAKING CHANGE:** Renamed `TextPath.BaselineAlignment` to `baselineAlignment` to match decoded data
+- Fixed decoding 16bit and 32bit RLE compressed image data
+- Fixed reading 16bit and 32bit files modifying input buffer
+- Fixed reading 16bit and 32bit files with transparent composite image
+- Fixed reading composite image with extra alpha/spot channels
+- Fixed reading files with more than 16 channels (up to 56)
+- Fixed reading indexed composite image with raw compression
+- Fixed `getCompositeImageData` for PSB files and files with transparency (added `rawCompositeDataInfo` field to `Psd`, set together with `rawCompositeData`)
+- Fixed writing composite image, layers and patterns with very narrow width (1-2 pixels)
+- Fixed writing masks with both feather parameters producing files that couldn't be read back
+- Fixed layer mask data padding to match Photoshop (padded to multiple of 4 bytes)
+- Layers with animation frames, timeline or layer comps now get generated layer id when writing if `id` field is missing
+- Fixed writing timeline without audio, pattern `linked` field, colored slices, pixel source (video) layers, print proof setup, and some smart filters (perspective warp, oil paint, curves, hsb/hsl)
+- Fixed writing linked files (`lnkE`) producing files that couldn't be read back
+- Fixed negative guide positions
+- Fixed lost or incorrect values on round-trip: channel blending restrictions, filter effect mask extra data, animation frame layer ids, timeline effect keys, pattern overlay angle, grid leading fill color, photo filter Lab color, and several values truncated instead of rounded
+- Fixed reading text annotations with empty or odd-length data
+- Fixed parsing and serializing engine data with `null` values inside arrays and `undefined`/`NaN` values
+- Fixed writing text layers with `FRGB` or `HSB` colors, empty `styleRuns`, CRLF line endings and missing bounds
+- Fixed crashes and infinite loops on malformed files (RLE data, zip data, JPEG thumbnails, layer groups, engine data, brushes)
+- Fixed memory limit not applying to zip-compressed data
+- Reduced memory usage and copying when reading and writing files
+
 ## v31.0.3
 - Fixed crash when string doesn't contain utf-16 BOM
 

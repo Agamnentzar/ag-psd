@@ -88,6 +88,8 @@ const maxMemoryUsageBytes = 64 * 1024 * 1024; // Don't decode if memory footprin
 let totalBytesAllocated = 0; // avoid unexpected OOMs from untrusted content.
 
 function requestMemoryAllocation(increaseAmount: number) {
+  if (!isFinite(increaseAmount) || increaseAmount < 0) throw new Error(`Invalid memory allocation size (${increaseAmount})`);
+
   const totalMemoryImpactBytes = totalBytesAllocated + increaseAmount;
   if (totalMemoryImpactBytes > maxMemoryUsageBytes) {
     const exceededAmount = Math.ceil((totalMemoryImpactBytes - maxMemoryUsageBytes) / 1024 / 1024);
@@ -169,7 +171,9 @@ function decodeScan(
     return bitsData >>> 7;
   }
 
-  function decodeHuffman(tree: number[] | number[][]) {
+  function decodeHuffman(tree: number[] | number[][] | undefined) {
+    if (!tree) throw new Error('Missing Huffman table');
+
     let node: number | number[] | number[][] = tree;
 
     while (true) {
@@ -359,6 +363,8 @@ function decodeScan(
     mcuExpected = mcusPerLine * frame.mcusPerColumn;
   }
 
+  if (!isFinite(mcuExpected) || mcuExpected < 0) throw new Error('Invalid number of MCUs');
+
   if (!resetInterval) resetInterval = mcuExpected;
 
   let h: number;
@@ -375,6 +381,9 @@ function decodeScan(
       for (let n = 0; n < resetInterval; n++) {
         decodeBlock(component, decodeFn, mcu);
         mcu++;
+
+        // If we've reached our expected MCU's, stop decoding
+        if (mcu === mcuExpected) break;
       }
     } else {
       for (let n = 0; n < resetInterval; n++) {
@@ -438,7 +447,8 @@ function buildComponentData(component: Component) {
   //   IEEE Intl. Conf. on Acoustics, Speech & Signal Processing, 1989,
   //   988-991.
   function quantizeAndInverse(zz: Int32Array, dataOut: Uint8Array, dataIn: Int32Array) {
-    const qt = component.quantizationTable!;
+    const qt = component.quantizationTable;
+    if (!qt) throw new Error('Missing quantization table');
     const p = dataIn;
 
     // dequant
@@ -823,11 +833,13 @@ function parse(data: Uint8Array) {
         }
 
         const componentsCount = data[offset++];
+        if (!componentsCount) throw new Error('SOF: no components in frame');
 
         for (let i = 0; i < componentsCount; i++) {
           const componentId = data[offset];
           const h = data[offset + 1] >> 4;
           const v = data[offset + 1] & 15;
+          if (h < 1 || h > 4 || v < 1 || v > 4) throw new Error(`SOF: invalid sampling factors (${h}x${v})`);
           const qId = data[offset + 2];
           frame!.componentsOrder.push(componentId);
           frame!.components[componentId] = {
@@ -881,11 +893,14 @@ function parse(data: Uint8Array) {
         readUint16() // Ignore this data since it represents the image height
         break;
       case 0xFFDA: { // SOS (Start of Scan)
+        if (!frame) throw new Error('SOS: scan before frame header (SOF)');
         readUint16(); // skip data length
         const selectorsCount = data[offset++];
         const components: Component[] = [];
         for (let i = 0; i < selectorsCount; i++) {
-          const component = frame!.components[data[offset++]];
+          const componentId = data[offset++];
+          const component = frame.components[componentId];
+          if (!component) throw new Error(`SOS: component ${componentId} not found in frame`);
           const tableSpec = data[offset++];
           component.huffmanTableDC = huffmanTablesDC[tableSpec >> 4];
           component.huffmanTableAC = huffmanTablesAC[tableSpec & 15];
@@ -895,7 +910,7 @@ function parse(data: Uint8Array) {
         const spectralEnd = data[offset++];
         const successiveApproximation = data[offset++];
         const processed = decodeScan(
-          data, offset, frame!, components, resetInterval, spectralStart, spectralEnd,
+          data, offset, frame, components, resetInterval, spectralStart, spectralEnd,
           successiveApproximation >> 4, successiveApproximation & 15);
         offset += processed;
         break;
@@ -938,7 +953,9 @@ function parse(data: Uint8Array) {
   for (let i = 0; i < frames.length; i++) {
     const cp = frames[i].components;
     for (let j in cp) { // TODO: don't use `in`
-      cp[j].quantizationTable = quantizationTables[cp[j].quantizationIdx!];
+      const table = quantizationTables[cp[j].quantizationIdx!];
+      if (!table) throw new Error(`Missing quantization table ${cp[j].quantizationIdx}`);
+      cp[j].quantizationTable = table;
       delete cp[j].quantizationIdx; // TODO: why ???
     }
   }
@@ -1004,10 +1021,8 @@ function getData(decoded: Decoded) {
       break;
     }
     case 3: {
-      // The default transform for three components is true
-      colorTransform = true;
-      // The adobe transform marker overrides any previous setting
-      if (decoded.adobe && decoded.adobe.transformCode) colorTransform = true;
+      // The default transform for three components is true, the adobe transform marker overrides it
+      colorTransform = decoded.adobe ? !!decoded.adobe.transformCode : true;
 
       const component1 = decoded.components[0];
       const component2 = decoded.components[1];

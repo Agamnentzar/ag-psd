@@ -43,5 +43,6 @@ export function writePsdBuffer(psd: Psd, options?: WriteOptions): Buffer {
 		throw new Error('Buffer not supported on this platform');
 	}
 
+	// copy, so the buffer doesn't hold on to the unused part of the writer's buffer
 	return Buffer.from(writePsdUint8Array(psd, options));
 }

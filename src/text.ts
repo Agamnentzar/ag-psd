@@ -1,4 +1,5 @@
 import type { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color, TextPath } from './psd';
+import { clamp } from './helpers';
 
 interface Adjustments {
 	Axis: number[];
@@ -300,13 +301,43 @@ function decodeColor(color: TypeValues): Color {
 	}
 }
 
+// h, s, b in 0..1 range, returns r, g, b in 0..1 range
+function hsbToRgb(h: number, s: number, v: number): [number, number, number] {
+	h = clamp(h || 0, 0, 1);
+	s = clamp(s || 0, 0, 1);
+	v = clamp(v || 0, 0, 1);
+
+	const h6 = (h * 6) % 6;
+	const i = Math.floor(h6);
+	const f = h6 - i;
+	const p = v * (1 - s);
+	const q = v * (1 - s * f);
+	const t = v * (1 - s * (1 - f));
+
+	switch (i) {
+		case 0: return [v, t, p];
+		case 1: return [q, v, p];
+		case 2: return [p, v, t];
+		case 3: return [p, q, v];
+		case 4: return [t, p, v];
+		default: return [v, p, q];
+	}
+}
+
 function encodeColor(color: Color | undefined): TypeValues {
 	if (!color) {
 		return { Type: 1, Values: [0, 0, 0, 0] };
 	} else if ('r' in color) {
 		return { Type: 1, Values: ['a' in color ? color.a / 255 : 1, color.r / 255, color.g / 255, color.b / 255] };
+	} else if ('fr' in color) {
+		return { Type: 1, Values: [1, clamp(color.fr || 0, 0, 1), clamp(color.fg || 0, 0, 1), clamp(color.fb || 0, 0, 1)] };
+	} else if ('h' in color) {
+		const [r, g, b] = hsbToRgb(color.h, color.s, color.b);
+		return { Type: 1, Values: [1, r, g, b] };
 	} else if ('c' in color) {
 		return { Type: 2, Values: [1, color.c / 255, color.m / 255, color.y / 255, color.k / 255] };
+	} else if ('l' in color) {
+		throw new Error('LAB colors are not supported in text layers, use RGB, CMYK or grayscale color instead');
 	} else if ('k' in color) {
 		return { Type: 0, Values: [1, color.k / 255] };
 	} else {
@@ -346,9 +377,10 @@ function decodeObject(obj: any, keys: string[], fonts: Font[]) {
 		if (obj[Key] === undefined) continue;
 
 		if (key === 'justification') {
-			result[key] = justification[obj[Key]];
+			result[key] = justification[obj[Key]] ?? 'left';
 		} else if (key === 'font') {
-			result[key] = fonts[obj[Key]];
+			const font = fonts[obj[Key]];
+			if (font) result[key] = font; // invalid font index, leave the font unset so it falls back to default
 		} else if (key === 'fillColor' || key === 'strokeColor') {
 			result[key] = decodeColor(obj[Key]);
 		} else {
@@ -368,7 +400,7 @@ function encodeObject(obj: any, keys: string[], fonts: Font[]) {
 		if (obj[key] === undefined) continue;
 
 		if (key === 'justification') {
-			result[Key] = justification.indexOf(obj[key] ?? 'left');
+			result[Key] = Math.max(0, justification.indexOf(obj[key] ?? 'left')); // default to 'left' for unknown values
 		} else if (key === 'font') {
 			result[Key] = findOrAddFont(fonts, obj[key]);
 		} else if (key === 'fillColor' || key === 'strokeColor') {
@@ -443,6 +475,39 @@ function deduplicateValues<T>(base: T, runs: { style: T; }[], keys: (keyof T)[])
 	}
 }
 
+function isDefaultGridColor(color: Color | undefined) {
+	// Photoshop writes default grid colors as blue with 0 alpha, ignore alpha when comparing
+	return !!color && 'r' in color && color.r === 0 && color.g === 0 && color.b === 255;
+}
+
+function decodeGridColor(color: TypeValues | undefined, defaultColor: Color): Color {
+	try {
+		return color ? decodeColor(color) : defaultColor;
+	} catch {
+		return defaultColor; // don't fail whole text layer because of invalid grid color
+	}
+}
+
+function decodeGridInfo(grid: EngineData['EngineDict']['GridInfo'] | undefined): TextGridInfo | undefined {
+	if (!grid || typeof grid !== 'object') return undefined;
+
+	const result: TextGridInfo = {
+		isOn: !!grid.GridIsOn,
+		show: !!grid.ShowGrid,
+		size: grid.GridSize ?? defaultGridInfo.size,
+		leading: grid.GridLeading ?? defaultGridInfo.leading,
+		color: decodeGridColor(grid.GridColor, defaultGridInfo.color!),
+		leadingFillColor: decodeGridColor(grid.GridLeadingFillColor, defaultGridInfo.leadingFillColor!),
+		alignLineHeightToGridFlags: !!grid.AlignLineHeightToGridFlags,
+	};
+
+	const isDefault = !result.isOn && !result.show && result.size === defaultGridInfo.size &&
+		result.leading === defaultGridInfo.leading && !result.alignLineHeightToGridFlags &&
+		isDefaultGridColor(result.color) && isDefaultGridColor(result.leadingFillColor);
+
+	return isDefault ? undefined : result;
+}
+
 export function decodeEngineData(engineData: EngineData) {
 	// console.log('engineData', require('util').inspect(engineData, false, 99, true));
 	const engineDict = engineData.EngineDict;
@@ -458,9 +523,11 @@ export function decodeEngineData(engineData: EngineData) {
 	let text = engineDict.Editor.Text.replace(/\r/g, '\n');
 	let removedCharacters = 0;
 
-	while (/\n$/.test(text)) {
+	// Photoshop always appends exactly one trailing \r (and encoder adds one back), any additional
+	// trailing new lines are empty paragraphs that are part of the text
+	if (/\n$/.test(text)) {
 		text = text.substring(0, text.length - 1);
-		removedCharacters++;
+		removedCharacters = 1;
 	}
 
 	const result: LayerTextData = {
@@ -483,6 +550,11 @@ export function decodeEngineData(engineData: EngineData) {
 		if (photoshop.PointBase) result.pointBase = photoshop.PointBase;
 		if (photoshop.BoxBounds) result.boxBounds = photoshop.BoxBounds;
 	}
+
+	// grid info (only included when it differs from defaults, to avoid noise in common case)
+
+	const gridInfo = decodeGridInfo(engineDict.GridInfo);
+	if (gridInfo) result.gridInfo = gridInfo;
 
 	// paragraph style
 
@@ -522,13 +594,18 @@ export function decodeEngineData(engineData: EngineData) {
 	// const styleSheetData = styleSheetSet[theNormalStyleSheet].StyleSheetData;
 	const styleRun = engineDict.StyleRun;
 
+	// style runs without a font use the font of the normal style sheet
+	const normalStyleSheet = resourceDict.StyleSheetSet?.[resourceDict.TheNormalStyleSheet ?? 0]?.StyleSheetData;
+	const normalFontIndex = normalStyleSheet?.Font;
+	const normalFont = (normalFontIndex !== undefined ? fonts[normalFontIndex] : undefined) ?? fonts[0];
+
 	result.style = {}; // decodeStyle(styleSheetData, fonts);
 	result.styleRuns = [];
 
 	for (let i = 0; i < styleRun.RunArray.length; i++) {
 		const length = styleRun.RunLengthArray[i];
 		const style = decodeStyle(styleRun.RunArray[i].StyleSheet.StyleSheetData, fonts);
-		if (!style.font) style.font = fonts[0];
+		if (!style.font && normalFont) style.font = normalFont;
 		result.styleRuns.push({ length, style });
 	}
 
@@ -545,8 +622,38 @@ export function decodeEngineData(engineData: EngineData) {
 	return result;
 }
 
+// Adjusts run lengths (specified in terms of the original text) for characters removed from the text
+// (\r characters of \r\n pairs that are collapsed into single \r)
+function adjustRunLengths<T extends { length: number; }>(runs: T[] | undefined, removed: number[]): T[] | undefined {
+	if (!runs || !removed.length) return runs;
+
+	let start = 0;
+	let removedIndex = 0;
+
+	return runs.map(run => {
+		const length = Math.max(0, run.length || 0);
+		const end = start + length;
+		let count = 0;
+
+		while (removedIndex < removed.length && removed[removedIndex] < end) {
+			if (removed[removedIndex] >= start) count++;
+			removedIndex++;
+		}
+
+		start = end;
+		return { ...run, length: length - count };
+	});
+}
+
 export function encodeEngineData(data: LayerTextData) {
-	const text = `${(data.text || '').replace(/\r?\n/g, '\r')}\r`;
+	const sourceText = data.text || '';
+	const removedIndices: number[] = []; // indices of \r characters removed from \r\n pairs
+
+	for (let i = 0; i < sourceText.length - 1; i++) {
+		if (sourceText.charCodeAt(i) === 13 && sourceText.charCodeAt(i + 1) === 10) removedIndices.push(i);
+	}
+
+	const text = `${sourceText.replace(/\r?\n/g, '\r')}\r`;
 
 	const fonts: Font[] = [
 		{ name: 'AdobeInvisFont', script: 0, type: 0, synthetic: 0 },
@@ -555,7 +662,7 @@ export function encodeEngineData(data: LayerTextData) {
 	const defFont = data.style?.font || data.styleRuns?.find(s => s.style.font)?.style.font || defaultFont;
 	const paragraphRunArray: ParagraphRun[] = [];
 	const paragraphRunLengthArray: number[] = [];
-	const paragraphRuns = data.paragraphStyleRuns;
+	const paragraphRuns = adjustRunLengths(data.paragraphStyleRuns, removedIndices);
 
 	if (paragraphRuns && paragraphRuns.length) {
 		let leftLength = text.length;
@@ -609,7 +716,9 @@ export function encodeEngineData(data: LayerTextData) {
 	}
 
 	const styleSheetData = encodeStyle({ ...defaultStyle, font: defFont }, fonts);
-	const styleRuns = data.styleRuns || [{ length: text.length, style: data.style || {} }];
+	const styleRuns = data.styleRuns?.length ?
+		adjustRunLengths(data.styleRuns, removedIndices)! :
+		[{ length: text.length, style: data.style || {} }];
 	const styleRunArray: StyleRun[] = [];
 	const styleRunLengthArray: number[] = [];
 
@@ -642,7 +751,7 @@ export function encodeEngineData(data: LayerTextData) {
 	}
 
 	// add extra run to the end if existing ones didn't fill it up
-	if (leftLength && styleRuns.length) {
+	if (leftLength) {
 		styleRunLengthArray.push(leftLength);
 		styleRunArray.push({
 			StyleSheet: {
@@ -657,6 +766,7 @@ export function encodeEngineData(data: LayerTextData) {
 	}
 
 	const gridInfo = { ...defaultGridInfo, ...data.gridInfo };
+	const antiAliasIndex = antialias.indexOf(data.antiAlias ?? 'sharp');
 	const WritingDirection = data.orientation === 'vertical' ? 2 : 0;
 	const Procession = data.orientation === 'vertical' ? 1 : 0;
 	const ShapeType = data.shapeType === 'box' ? 1 : 0;
@@ -753,10 +863,10 @@ export function encodeEngineData(data: LayerTextData) {
 				GridSize: gridInfo.size ?? 18,
 				GridLeading: gridInfo.leading ?? 22,
 				GridColor: encodeColor(gridInfo.color),
-				GridLeadingFillColor: encodeColor(gridInfo.color),
+				GridLeadingFillColor: encodeColor(gridInfo.leadingFillColor),
 				AlignLineHeightToGridFlags: !!gridInfo.alignLineHeightToGridFlags,
 			},
-			AntiAlias: antialias.indexOf(data.antiAlias ?? 'sharp'),
+			AntiAlias: antiAliasIndex === -1 ? antialias.indexOf('sharp') : antiAliasIndex,
 			UseFractionalGlyphWidths: data.useFractionalGlyphWidths ?? true,
 			Rendered: {
 				Version: 1,

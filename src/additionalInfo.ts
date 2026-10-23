@@ -1,9 +1,9 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
-import { clamp, createEnum, layerColors, MOCK_HANDLERS } from './helpers';
+import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
 import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo } from './psdReader';
-import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern } from './psdWriter';
+import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData } from './text';
@@ -13,6 +13,8 @@ import type { InternalImageResources } from './imageResources';
 export interface ExtendedWriteOptions extends WriteOptions {
 	layerIds: Set<number>;
 	layerToId: Map<any, number>;
+	explicitLayerIds?: Set<number>; // ids set on layers in the document (generated ids can't use them)
+	nextGeneratedLayerId?: number; // all ids below this one are already taken
 }
 
 type HasMethod = (target: LayerAdditionalInfo) => boolean;
@@ -47,11 +49,6 @@ function hasKey(key: keyof LayerAdditionalInfo) {
 function readLength64(reader: PsdReader) {
 	if (readUint32(reader)) throw new Error(`Resource size above 4 GB limit at ${reader.offset.toString(16)}`);
 	return readUint32(reader);
-}
-
-function writeLength64(writer: PsdWriter, length: number) {
-	writeUint32(writer, 0);
-	writeUint32(writer, length);
 }
 
 addHandler(
@@ -95,7 +92,7 @@ addHandler(
 		if (text.boundingBox) target.text.boundingBox = descBoundsToBounds(text.boundingBox);
 
 		if (text.EngineData) {
-			const engineData = parseEngineData(text.EngineData);
+			const engineData = parseEngineData(text.EngineData, reader);
 			const textData = decodeEngineData(engineData);
 			// console.log(require('util').inspect(engineData, false, 99, false), 'utf8');
 
@@ -140,10 +137,10 @@ addHandler(
 		writeInt16(writer, 1); // warp version
 		writeVersionAndDescriptor(writer, '', 'warp', encodeWarp(warp));
 
-		writeFloat32(writer, text.left!);
-		writeFloat32(writer, text.top!);
-		writeFloat32(writer, text.right!);
-		writeFloat32(writer, text.bottom!);
+		writeFloat32(writer, text.left ?? 0);
+		writeFloat32(writer, text.top ?? 0);
+		writeFloat32(writer, text.right ?? 0);
+		writeFloat32(writer, text.bottom ?? 0);
 
 		// writeZeros(writer, 2);
 	},
@@ -586,15 +583,53 @@ addHandler(
 	(writer, target) => writeSignature(writer, target.nameSource!),
 );
 
+// these sections reference layer id
+function layerNeedsId(target: LayerAdditionalInfo) {
+	return !!(target.animationFrames || target.timeline || target.comps);
+}
+
+function getExplicitLayerIds(psd: Psd, options: ExtendedWriteOptions) {
+	if (!options.explicitLayerIds) {
+		const ids = new Set<number>();
+		const addIds = (layers: Layer[] | undefined) => {
+			for (const layer of layers ?? []) {
+				if (layer.id !== undefined) ids.add(layer.id);
+				addIds(layer.children);
+			}
+		};
+		addIds(psd.children);
+		options.explicitLayerIds = ids;
+	}
+
+	return options.explicitLayerIds;
+}
+
+function getLayerId(target: LayerAdditionalInfo, options: ExtendedWriteOptions) {
+	const id = options.layerToId.get(target) ?? target.id;
+	if (id === undefined) throw new Error('Missing layer id');
+	return id;
+}
+
 addHandler(
 	'lyid',
-	hasKey('id'),
+	target => target.id !== undefined || layerNeedsId(target),
 	(reader, target) => {
 		target.id = readUint32(reader);
 	},
-	(writer, target, _psd, options) => {
-		let id = target.id!;
-		while (options.layerIds.has(id)) id += 100; // make sure we don't have duplicate layer ids
+	(writer, target, psd, options) => {
+		let id: number;
+
+		if (target.id !== undefined) {
+			id = target.id;
+			while (options.layerIds.has(id)) id += 100; // make sure we don't have duplicate layer ids
+		} else {
+			// generate id for layers that don't have it, if it's referenced by other sections
+			const explicitIds = getExplicitLayerIds(psd, options);
+			id = options.nextGeneratedLayerId ?? 1;
+			while (options.layerIds.has(id) || explicitIds.has(id)) id++;
+			options.nextGeneratedLayerId = id + 1;
+		}
+
 		writeUint32(writer, id);
 		options.layerIds.add(id);
 		options.layerToId.set(target, id);
@@ -864,7 +899,7 @@ addHandler(
 			writeZeros(writer, 3);
 			writeSection(writer, 2, () => {
 				const desc: FrameListDescriptor = {
-					LaID: target.id ?? 0,
+					LaID: getLayerId(target, options),
 					LaSt: [],
 				};
 
@@ -922,9 +957,7 @@ addHandler(
 					desc.trackList = serializeTrackList(timeline.tracks);
 				}
 
-				const id = options.layerToId.get(target) || target.id;
-				if (!id) throw new Error('You need to provide layer.id value whan writing document with animations');
-				desc.LyrI = id;
+				desc.LyrI = getLayerId(target, options);
 
 				// console.log('WRITE:tmln', target.name, target.id, require('util').inspect(desc, false, 99, true));
 				writeVersionAndDescriptor(writer, '', 'null', desc, 'anim');
@@ -950,16 +983,13 @@ addHandler(
 			writeUint8(writer, 0); // copy (always false)
 			writeZeros(writer, 3);
 			writeSection(writer, 2, () => {
-				const id = options.layerToId.get(target) || target.id;
-				if (!id) throw new Error('You need to provide layer.id value whan writing document with layer comps');
-
 				const desc: CmlsDescriptor = {} as any;
 
 				if (comps.originalEffectsReferencePoint) {
 					desc.origFXRefPoint = { Hrzn: comps.originalEffectsReferencePoint.x, Vrtc: comps.originalEffectsReferencePoint.y };
 				}
 
-				desc.LyrI = id;
+				desc.LyrI = getLayerId(target, options);
 				desc.layerSettings = [];
 
 				for (const item of comps.settings) {
@@ -980,7 +1010,7 @@ addHandler(
 
 addHandler(
 	'PxSc',
-	() => false,
+	hasKey('pixelSource'),
 	(reader, target) => {
 		const desc = readVersionAndDescriptor(reader, true) as PxScDescriptor;
 		// console.log('PxSc', require('util').inspect(desc, false, 99, true));
@@ -1017,7 +1047,7 @@ addHandler(
 			_classID: 'PixelSource',
 			pixelSourceType: 1986285651, // vdP
 			descVersion: 1,
-			origin: { Hrzn: source.origin.x, Vrtc: source.origin.y },
+			origin: { Hrzn: source.origin.x, Vrtc: source.origin.y }, // written as 'null' class with 'long' values (see writeDescriptorStructure)
 			interpretation: {
 				_name: '',
 				_classID: 'footageInterpretation',
@@ -1997,7 +2027,7 @@ type SoLdDescriptorFilterItem = {
 	Fltr: {
 		_name: 'Perspective Warp';
 		_classID: 'perspectiveWarpTransform';
-		quads: { indices: number[]; }[];
+		quads: { _name?: ''; _classID?: string; indices: number[]; }[];
 		vertices: HrznVrtcDescriptor[];
 		warpedVertices: HrznVrtcDescriptor[];
 	};
@@ -2048,11 +2078,13 @@ interface SoLdDescriptorFilter {
 }
 
 function uint8ToFloat32(array: Uint8Array) {
-	return new Float32Array(array.buffer.slice(array.byteOffset), 0, array.byteLength / 4);
+	const length = Math.floor(array.byteLength / 4);
+	return new Float32Array(array.buffer.slice(array.byteOffset, array.byteOffset + length * 4), 0, length);
 }
 
 function uint8ToUint32(array: Uint8Array) {
-	return new Uint32Array(array.buffer.slice(array.byteOffset), 0, array.byteLength / 4);
+	const length = Math.floor(array.byteLength / 4);
+	return new Uint32Array(array.buffer.slice(array.byteOffset, array.byteOffset + length * 4), 0, length);
 }
 
 function toUint8(array: Uint32Array | Float32Array) {
@@ -2510,7 +2542,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 						{ x: f.Fltr.PuX2, y: f.Fltr.PuY2, },
 						{ x: f.Fltr.PuX3, y: f.Fltr.PuY3, },
 					],
-					puppetShapeList: f.Fltr.puppetShapeList!.map(p => ({
+					puppetShapeList: (f.Fltr.puppetShapeList || []).map(p => ({
 						rigidType: p.rigidType,
 						// TODO: VrsM
 						// TODO: VrsN
@@ -3245,7 +3277,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 				_classID: 'rigidTransform',
 				'null': ['Ordn.Trgt'], // TODO: ???
 				rigidType: f.filter.rigidType,
-				puppetShapeList: f.filter.puppetShapeList.map(p => ({
+				puppetShapeList: (f.filter.puppetShapeList || []).map(p => ({
 					_name: '',
 					_classID: 'puppetShape',
 					rigidType: p.rigidType,
@@ -3356,7 +3388,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 				_classID: 'perspectiveWarpTransform',
 				vertices: f.filter.vertices.map(pointToHrznVrtc),
 				warpedVertices: f.filter.warpedVertices.map(pointToHrznVrtc),
-				quads: f.filter.quads.map(indices => ({ indices })),
+				quads: f.filter.quads.map(indices => ({ _name: '', _classID: 'quadIndices', indices })),
 			},
 			filterID: 442,
 		};
@@ -3399,10 +3431,17 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			},
 			filterID: 1114793795,
 		};
-		// case 'hsb/hsl': return {
-		// TODO: ...
-		// };
-		default: throw new Error(`Unknow filter type: ${(f as any).type}`);
+		case 'hsb/hsl': return {
+			...base,
+			Fltr: {
+				_name: 'HSB/HSL',
+				_classID: 'HsbP',
+				Inpt: ClrS.encode(f.filter.inputMode),
+				Otpt: ClrS.encode(f.filter.rowOrder),
+			},
+			filterID: 1215521360,
+		};
+		default: throw new Error(`Unknown filter type: ${(f as any).type}`);
 	}
 }
 
@@ -3531,6 +3570,9 @@ addHandler(
 			throw new Error('Placed layer ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
 		}
 
+		const placedType = placedLayerTypes.indexOf(placed.type);
+		if (placedType === -1) throw new Error('Invalid placedLayer type');
+
 		const desc: SoLdDescriptor = {
 			Idnt: placed.id,
 			placed: placed.placed ?? placed.id,
@@ -3541,7 +3583,7 @@ addHandler(
 			duration: placed.duration || { numerator: 0, denominator: 600 },
 			frameCount: placed.frameCount || 0,
 			Annt: 16,
-			Type: placedLayerTypes.indexOf(placed.type),
+			Type: placedType,
 			Trnf: placed.transform,
 			nonAffineTransform: placed.nonAffineTransform ?? placed.transform,
 			// quiltWarp: {} as any,
@@ -3651,7 +3693,7 @@ addHandler(
 	(reader, target) => {
 		target.userMask = {
 			colorSpace: readColor(reader),
-			opacity: readUint16(reader) / 0xff,
+			opacity: readUint16(reader) / 100,
 		};
 		const flag = readUint8(reader);
 		if (flag !== 128) throw new Error('Invalid flag value');
@@ -3660,7 +3702,7 @@ addHandler(
 	(writer, target) => {
 		const userMask = target.userMask!;
 		writeColor(writer, userMask.colorSpace);
-		writeUint16(writer, clamp(userMask.opacity, 0, 1) * 0xff);
+		writeUint16(writer, Math.round(clamp(userMask.opacity, 0, 1) * 100));
 		writeUint8(writer, 128);
 		writeZeros(writer, 1);
 	},
@@ -3810,7 +3852,8 @@ addHandler(
 		const annotations: Annotation[] = [];
 
 		for (let i = 0; i < count; i++) {
-			/*const length =*/ readUint32(reader);
+			const recordStart = reader.offset;
+			const length = readUint32(reader); // includes the length field itself
 			const type = readSignature(reader);
 			const open = !!readUint8(reader);
 			/*const flags =*/ readUint8(reader); // always 28
@@ -3827,10 +3870,12 @@ addHandler(
 			let data: string | Uint8Array;
 
 			if (type === 'txtA') {
+				const dataStart = reader.offset;
+
 				if (dataLength >= 2 && readUint16(reader) === 0xfeff) {
-					data = readUnicodeStringWithLength(reader, (dataLength - 2) / 2);
+					data = readUnicodeStringWithLength(reader, Math.floor((dataLength - 2) / 2));
 				} else {
-					reader.offset -= 2;
+					reader.offset = dataStart;
 					data = readAsciiString(reader, dataLength);
 				}
 
@@ -3844,6 +3889,8 @@ addHandler(
 			annotations.push({
 				type: type === 'txtA' ? 'text' : 'sound', open, iconLocation, popupLocation, color, author, name, date, data,
 			});
+
+			if (length >= (reader.offset - recordStart)) reader.offset = recordStart + length;
 		}
 
 		(target as Psd).annotations = annotations;
@@ -3998,16 +4045,19 @@ function createLnkHandler(tag: string) {
 			for (const file of psd.linkedFiles!) {
 				if ((tag === 'lnkE') !== !!file.linkedFile) continue;
 
+				const external = tag === 'lnkE';
 				let version = 2;
 				if (file.assetLockedState != null) version = 7;
 				else if (file.assetModTime != null) version = 6;
 				else if (file.childDocumentID != null) version = 5;
-				else if (tag === 'lnkE') version = 3;
+				// liFE version 2 is the only one with embedded data, it has no date and its file size is the size of the data,
+				// versions 5+ can't store the data, so it's not written in that case
+				else if (external && !file.data) version = 4;
 
-				writeLength64(writer, 0);
+				writeUint64(writer, 0);
 
 				const sizeOffset = writer.offset;
-				writeSignature(writer, (tag === 'lnkE') ? 'liFE' : (file.data ? 'liFD' : 'liFA'));
+				writeSignature(writer, external ? 'liFE' : (file.data ? 'liFD' : 'liFA'));
 				writeInt32(writer, version);
 				if (!file.id || typeof file.id !== 'string' || !/^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/.test(file.id)) {
 					throw new Error('Linked file ID must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)');
@@ -4016,7 +4066,7 @@ function createLnkHandler(tag: string) {
 				writeUnicodeStringWithPadding(writer, file.name || '');
 				writeSignature(writer, file.type ? `${file.type}    `.substring(0, 4) : '    ');
 				writeSignature(writer, file.creator ? `${file.creator}    `.substring(0, 4) : '\0\0\0\0');
-				writeLength64(writer, file.data ? file.data.byteLength : 0);
+				writeUint64(writer, (!external && file.data) ? file.data.byteLength : 0);
 
 				if (file.descriptor && file.descriptor.compInfo) {
 					const desc: FileOpenDescriptor = {
@@ -4032,7 +4082,7 @@ function createLnkHandler(tag: string) {
 					writeUint8(writer, 0);
 				}
 
-				if (tag === 'lnkE') {
+				if (external) {
 					const desc: LinkedFileDescriptor = {
 						descVersion: 2,
 						'Nm  ': file.linkedFile?.name ?? '',
@@ -4042,7 +4092,9 @@ function createLnkHandler(tag: string) {
 					};
 
 					writeVersionAndDescriptor(writer, '', 'ExternalFileLink', desc);
+				}
 
+				if (external && version > 3) {
 					const time = file.time ? new Date(file.time) : new Date();
 					writeInt32(writer, time.getUTCFullYear());
 					writeUint8(writer, time.getUTCMonth());
@@ -4052,15 +4104,18 @@ function createLnkHandler(tag: string) {
 					writeFloat64(writer, time.getUTCSeconds() + time.getUTCMilliseconds() / 1000);
 				}
 
-				if (file.data) {
-					writeBytes(writer, file.data);
+				if (external) {
+					writeUint64(writer, (version === 2 ? file.data?.byteLength : file.linkedFile?.fileSize) || 0); // file size
+				} else if (file.data) {
+					writeBytes(writer, file.data); // liFD
 				} else {
-					writeLength64(writer, file.linkedFile?.fileSize || 0);
+					writeZeros(writer, 8); // liFA
 				}
 
 				if (version >= 5) writeUnicodeStringWithPadding(writer, file.childDocumentID || '');
 				if (version >= 6) writeFloat64(writer, file.assetModTime || 0);
 				if (version >= 7) writeUint8(writer, file.assetLockedState || 0);
+				if (external && version === 2 && file.data) writeBytes(writer, file.data);
 
 				let size = writer.offset - sizeOffset;
 				writer.view.setUint32(sizeOffset - 4, size, false); // write size
@@ -4565,10 +4620,15 @@ addHandler(
 			color = readColor(reader);
 		} else { // version 3
 			// TODO: test this, this is probably wrong
+			// values are stored as L (0..100), a, b (-128..127) multiplied by 100,
+			// normalize them to the same scale as readColor() so they can be written back as version 2
+			const l = readInt32(reader) / 100;
+			const a = readInt32(reader) / 100;
+			const b = readInt32(reader) / 100;
 			color = {
-				l: readInt32(reader) / 100,
-				a: readInt32(reader) / 100,
-				b: readInt32(reader) / 100,
+				l: l / 100,
+				a: normalizeLabAB(a),
+				b: normalizeLabAB(b),
 			};
 		}
 
@@ -4585,7 +4645,7 @@ addHandler(
 		const info = target.adjustment as PhotoFilterAdjustment;
 		writeUint16(writer, 2); // version
 		writeColor(writer, info.color || { l: 0, a: 0, b: 0 });
-		writeUint32(writer, (info.density || 0) * 100);
+		writeUint32(writer, Math.round(Math.max(0, info.density || 0) * 100));
 		writeUint8(writer, info.preserveLuminosity ? 1 : 0);
 		writeZeros(writer, 3);
 	},
@@ -4844,8 +4904,9 @@ addHandler(
 
 		skipBytes(reader, left());
 
-		for (const s of info.colorStops) s.location /= interpolation;
-		for (const s of info.opacityStops) s.location /= interpolation;
+		// stop locations are always in 0..4096 range, independent of smoothness
+		for (const s of info.colorStops) s.location /= 4096;
+		for (const s of info.opacityStops) s.location /= 4096;
 
 		target.adjustment = info;
 	},
@@ -4862,10 +4923,10 @@ addHandler(
 		writeUnicodeStringWithPadding(writer, info.name || '');
 		writeUint16(writer, info.colorStops && info.colorStops.length || 0);
 
-		const interpolation = Math.round((info.smoothness ?? 1) * 4096);
+		const interpolation = Math.round(clamp(info.smoothness ?? 1, 0, 1) * 4096);
 
 		for (const s of info.colorStops || []) {
-			writeUint32(writer, Math.round(s.location * interpolation));
+			writeUint32(writer, Math.round(clamp(s.location, 0, 1) * 4096));
 			writeUint32(writer, Math.round(s.midpoint * 100));
 			writeColor(writer, s.color);
 			writeZeros(writer, 2);
@@ -4874,9 +4935,9 @@ addHandler(
 		writeUint16(writer, info.opacityStops && info.opacityStops.length || 0);
 
 		for (const s of info.opacityStops || []) {
-			writeUint32(writer, Math.round(s.location * interpolation));
+			writeUint32(writer, Math.round(clamp(s.location, 0, 1) * 4096));
 			writeUint32(writer, Math.round(s.midpoint * 100));
-			writeUint16(writer, Math.round(s.opacity * 0xff));
+			writeUint16(writer, Math.round(clamp(s.opacity, 0, 1) * 0xff));
 		}
 
 		writeUint16(writer, 2); // expansion count
@@ -5102,7 +5163,7 @@ addHandler(
 		target.engineData = fromByteArray(data);
 
 		const layersByIndex = getTextLayersSortedByIndex(psd);
-		const engineData = parseEngineData(data);
+		const engineData = parseEngineData(data, reader);
 		const engineData2 = decodeEngineData2(engineData);
 		const TextFrameSet = engineData2.ResourceDict.TextFrameSet;
 
@@ -5230,7 +5291,7 @@ addHandler(
 
 			writer.view.setUint32(length2Offset - 4, writer.offset - length2Offset, false);
 
-			const extra = target.filterEffectsMasks![target.filterEffectsMasks!.length - 1]?.extra;
+			const extra = mask.extra;
 			if (extra) {
 				writeUint8(writer, 1);
 				writeInt32(writer, extra.top);
@@ -5262,12 +5323,12 @@ addHandler(
 	(reader, target) => {
 		target.filterMask = {
 			colorSpace: readColor(reader),
-			opacity: readUint16(reader) / 0xff,
+			opacity: readUint16(reader) / 100,
 		};
 	},
 	(writer, target) => {
 		writeColor(writer, target.filterMask!.colorSpace);
-		writeUint16(writer, clamp(target.filterMask!.opacity ?? 1, 0, 1) * 0xff);
+		writeUint16(writer, Math.round(clamp(target.filterMask!.opacity ?? 1, 0, 1) * 100));
 	},
 );
 
@@ -5439,7 +5500,7 @@ addHandler(
 		skipBytes(reader, 3);
 	},
 	(writer, target) => {
-		writeUint8(writer, target.fillOpacity! * 0xff);
+		writeUint8(writer, Math.round(clamp(target.fillOpacity!, 0, 1) * 0xff));
 		writeZeros(writer, 3);
 	},
 );
@@ -5450,7 +5511,7 @@ addHandler(
 	(reader, target, left) => {
 		target.channelBlendingRestrictions = [];
 
-		while (left() > 4) {
+		while (left() >= 4) {
 			target.channelBlendingRestrictions.push(readInt32(reader));
 		}
 	},

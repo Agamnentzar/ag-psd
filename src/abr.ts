@@ -403,6 +403,9 @@ interface DescDescriptor {
 	}[];
 }
 
+// sanity limits for brush sample dimensions (Photoshop brushes are limited to 5000px)
+const MAX_BRUSH_SIZE = 10000;
+
 const toBrushType: { [key: string]: 'brush' | 'mixer brush' | 'smudge brush'; } = {
 	_: 'brush',
 	MixB: 'mixer brush',
@@ -529,7 +532,7 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 		while (reader.offset < reader.view.byteLength) {
 			checkSignature(reader, '8BIM');
 			const type = readSignature(reader) as 'samp' | 'desc' | 'patt' | 'phry';
-			let size = readUint32(reader);
+			const size = readUint32(reader);
 			const end = reader.offset + size;
 
 			switch (type) {
@@ -550,9 +553,16 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 						const h = readInt32(reader) - y;
 						const w = readInt32(reader) - x;
 						if (w <= 0 || h <= 0) throw new Error('Invalid bounds');
+						if (w > MAX_BRUSH_SIZE || h > MAX_BRUSH_SIZE) {
+							throw new Error(`Brush sample too large (${w}x${h})`);
+						}
 
 						const bithDepth = readInt16(reader);
 						const compression = readUint8(reader); // 0 - raw, 1 - RLE
+						if (compression === 0 && w * h * (bithDepth === 16 ? 2 : 1) > brushEnd - reader.offset) {
+							throw new Error('Brush sample data out of bounds');
+						}
+
 						const alpha = new Uint8Array(w * h);
 
 						if (bithDepth === 8) {
@@ -760,11 +770,9 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 					throw new Error(`Invalid brush type: ${type}`);
 			}
 
-			// align to 4 bytes
-			while (size % 4) {
-				reader.offset++;
-				size++;
-			}
+			// skip any unread data in the section and align to 4 bytes
+			reader.offset = end;
+			while (reader.offset % 4) reader.offset++;
 		}
 	} else {
 		throw new Error(`Unsupported ABR version (${version})`);

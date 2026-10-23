@@ -288,7 +288,7 @@
         ],
         "style": {
           "font": {
-            "name": "AdobeInvisFont",
+            "name": "MyriadPro-Regular",
             "script": 0,
             "type": 0,
             "synthetic": 0
@@ -391,6 +391,6 @@
       "g": 0,
       "b": 0
     },
-    "opacity": 0.19607843137254902
+    "opacity": 0.5
   }
 }
