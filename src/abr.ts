@@ -559,7 +559,10 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 
 						const bithDepth = readInt16(reader);
 						const compression = readUint8(reader); // 0 - raw, 1 - RLE
-						if (compression === 0 && w * h * (bithDepth === 16 ? 2 : 1) > brushEnd - reader.offset) {
+						const rowSize = w * (bithDepth === 16 ? 2 : 1);
+						// RLE needs at least 2 bytes for row length and 2 bytes per each 128 byte run
+						const minDataSize = compression === 0 ? h * rowSize : h * (2 + Math.ceil(rowSize / 128) * 2);
+						if (minDataSize > brushEnd - reader.offset) {
 							throw new Error('Brush sample data out of bounds');
 						}
 
@@ -579,7 +582,11 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 									alpha[i] = readUint16(reader) >> 8; // convert to 8bit values
 								}
 							} else if (compression === 1) {
-								throw new Error('not implemented (16bit RLE)'); // TODO: ...
+								const data = new Uint16Array(w * h);
+								readDataRLE(reader, { width: w, height: h, data }, w, h, bithDepth, 1, [0], false);
+								for (let i = 0; i < alpha.byteLength; i++) {
+									alpha[i] = data[i] >> 8; // convert to 8bit values
+								}
 							} else {
 								throw new Error('Invalid compression');
 							}

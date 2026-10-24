@@ -3,6 +3,7 @@ import { expect } from 'chai';
 import {
 	readDescriptorStructure, writeDescriptorStructure, readVersionAndDescriptor, writeVersionAndDescriptor,
 	parseColor, serializeColor, serializeEffects, parseEffects, serializeTrackList, parseTrackList,
+	parseVectorContent, serializeVectorContent, DescriptorReferenceItem,
 } from '../descriptor';
 import { createReader } from '../psdReader';
 import {
@@ -10,7 +11,7 @@ import {
 	writeUint32, writeUint8, writeUnicodeStringWithPadding,
 } from '../psdWriter';
 import { compareBuffers, toReader, writeDescriptorId, writeDescriptorClass, writeDescriptorKey } from './common';
-import { Color, LayerEffectsInfo, TimelineTrack } from '../psd';
+import { Color, EffectContour, LayerEffectsInfo, TimelineTrack, VectorContent } from '../psd';
 
 const tests = [
 	'AAAAAQAAAAAAAG51bGwAAAADAAAAAFNjbCBVbnRGI1ByY0BZAAAAAAAAAAAADm1hc3RlckZYU3dpdGNoYm9vbAEAAAAAR3JGbE9iamMAAAABAAAAAAAAR3JGbAAAAAsAAAAAZW5hYmJvb2wBAAAAAE1kICBlbnVtAAAAAEJsbk0AAAAATnJtbAAAAABPcGN0VW50RiNQcmNAVoAAAAAAAAAAAABHcmFkT2JqYwAAAAkARwByAGEAZABpAGUAbgB0AAAAAAAAR3JkbgAAAAUAAAAATm0gIFRFWFQAAAA0ACQAJAAkAC8ARABlAGYAYQB1AGwAdABHAHIAYQBkAGkAZQBuAHQALwBCAGwAdQBlAFIAZQBkAFkAZQBsAGwAbwB3AD0AQgBsAHUAZQAsACAAUgBlAGQALAAgAFkAZQBsAGwAbwB3AAAAAAAAR3JkRmVudW0AAAAAR3JkRgAAAABDc3RTAAAAAEludHJkb3ViQLAAAAAAAAAAAAAAQ2xyc1ZsTHMAAAADT2JqYwAAAAEAAAAAAABDbHJ0AAAABAAAAABDbHIgT2JqYwAAAAEAAAAAAABSR0JDAAAAAwAAAABSZCAgZG91YkAjJNsswAAAAAAAAEdybiBkb3ViAAAAAAAAAAAAAAAAQmwgIGRvdWJAZkAACaAAAAAAAABUeXBlZW51bQAAAABDbHJ5AAAAAFVzclMAAAAATGN0bmxvbmcAAAAAAAAAAE1kcG5sb25nAAAAMk9iamMAAAABAAAAAAAAQ2xydAAAAAQAAAAAQ2xyIE9iamMAAAABAAAAAAAAUkdCQwAAAAMAAAAAUmQgIGRvdWJAb+AAAAAAAAAAAABHcm4gZG91YgAAAAAAAAAAAAAAAEJsICBkb3ViP5foF+gAAAAAAAAAVHlwZWVudW0AAAAAQ2xyeQAAAABVc3JTAAAAAExjdG5sb25nAAAIAAAAAABNZHBubG9uZwAAADJPYmpjAAAAAQAAAAAAAENscnQAAAAEAAAAAENsciBPYmpjAAAAAQAAAAAAAFJHQkMAAAADAAAAAFJkICBkb3ViQG/gAAAAAAAAAAAAR3JuIGRvdWJAb4AAAGAAAAAAAABCbCAgZG91YgAAAAAAAAAAAAAAAFR5cGVlbnVtAAAAAENscnkAAAAAVXNyUwAAAABMY3RubG9uZwAAEAAAAAAATWRwbmxvbmcAAAAyAAAAAFRybnNWbExzAAAAAk9iamMAAAABAAAAAAAAVHJuUwAAAAMAAAAAT3BjdFVudEYjUHJjQFkAAAAAAAAAAAAATGN0bmxvbmcAAAAAAAAAAE1kcG5sb25nAAAAMk9iamMAAAABAAAAAAAAVHJuUwAAAAMAAAAAT3BjdFVudEYjUHJjQFkAAAAAAAAAAAAATGN0bmxvbmcAABAAAAAAAE1kcG5sb25nAAAAMgAAAABBbmdsVW50RiNBbmdAVoAAAAAAAAAAAABUeXBlZW51bQAAAABHcmRUAAAAAFJkbCAAAAAAUnZyc2Jvb2wAAAAAAER0aHJib29sAQAAAABBbGduYm9vbAEAAAAAU2NsIFVudEYjUHJjQFwAAAAAAAAAAAAAT2ZzdE9iamMAAAABAAAAAAAAUG50IAAAAAIAAAAASHJ6blVudEYjUHJjAAAAAAAAAAAAAAAAVnJ0Y1VudEYjUHJjAAAAAAAAAAA=',
@@ -42,13 +43,6 @@ function buildDesc(classID: string, count: number, body: (writer: PsdWriter) => 
 	writeUint32(writer, count);
 	body(writer);
 	return new Uint8Array(getWriterBuffer(writer));
-}
-
-function expectRewriteIdentical(bytes: Uint8Array, classID = 'null') {
-	const desc = readDesc(bytes);
-	const written = writeDesc(desc, classID);
-	expect(Array.from(written)).eql(Array.from(bytes));
-	return desc;
 }
 
 describe('descriptor', () => {
@@ -185,7 +179,7 @@ describe('descriptor types', () => {
 		expect(result).eql({ _name: '', _classID: 'null', 'Nm  ': 'a', Vrsn: 1 });
 	});
 
-	it('preserves comp, type, GlbC, alis, UnFl, GlbO and ObAr types', () => {
+	it('reads and writes comp, type, GlbC, alis, UnFl, GlbO and ObAr types', () => {
 		const bytes = buildDesc('null', 8, writer => {
 			writeDescriptorKey(writer, 'cmpx', 'comp'); writeUint32(writer, 1); writeUint32(writer, 0xffffffff);
 			writeDescriptorKey(writer, 'typx', 'type'); writeDescriptorClass(writer, 'name', 'Lyr ');
@@ -201,17 +195,21 @@ describe('descriptor types', () => {
 			writeDescriptorId(writer, 'Vrtc'); writeSignature(writer, 'UnFl'); writeSignature(writer, '#Pxl'); writeInt32(writer, 1); writeFloat64(writer, 2.5);
 		});
 
-		const desc = expectRewriteIdentical(bytes);
-
-		// public values have the same shape as before
+		const desc = readDesc(bytes);
 		expect(desc.cmpx).eql({ low: 1, high: 0xffffffff });
 		expect(desc.typx).eql({ name: 'name', classID: 'Lyr ' });
+		expect(desc.glbc).eql({ name: '', classID: 'Dcmn' });
+		expect(desc.alis).equal('\x00\xffA');
 		expect(desc.unfl).eql({ units: 'Percent', value: 12.5 });
 		expect(desc.glbo).eql({ _name: '', _classID: 'null', Vrsn: 3 });
+		expect(desc.lst2).eql([{ units: 'Pixels', value: 2 }]);
 		expect(desc.meshPoints).eql([{ type: 'Hrzn', values: [1.5] }, { type: 'Vrtc', values: [2.5] }]);
+
+		// written using types matching the values (GlbC as type, UnFl as UntF, GlbO as Objc)
+		expect(readDesc(writeDesc(desc))).eql(desc);
 	});
 
-	it('preserves all reference types', () => {
+	it('reads references as values', () => {
 		const bytes = buildDesc('null', 1, writer => {
 			writeDescriptorKey(writer, 'null', 'obj ');
 			writeInt32(writer, 8);
@@ -225,8 +223,33 @@ describe('descriptor types', () => {
 			writeSignature(writer, 'name'); writeDescriptorClass(writer, '', 'Lyr '); writeUnicodeStringWithPadding(writer, 'Layer 1');
 		});
 
-		const desc = expectRewriteIdentical(bytes);
+		const desc = readDesc(bytes);
 		expect(desc.null).eql(['Lefx', { name: '', classID: 'Dcmn' }, 'Ordn.Trgt', 3, 5, 6, 'My.Path', 'Layer 1']);
+		expect(roundTripDesc(desc).null).eql(desc.null);
+	});
+
+	it('writes references with explicit types and classes', () => {
+		const bytes = buildDesc('null', 1, writer => {
+			writeDescriptorKey(writer, 'null', 'obj ');
+			writeInt32(writer, 7);
+			writeSignature(writer, 'prop'); writeDescriptorClass(writer, '', 'Prpr'); writeDescriptorId(writer, 'Lefx');
+			writeSignature(writer, 'Clss'); writeDescriptorClass(writer, '', 'Dcmn');
+			writeSignature(writer, 'Enmr'); writeDescriptorClass(writer, '', 'Lyr '); writeDescriptorId(writer, 'Ordn'); writeDescriptorId(writer, 'Trgt');
+			writeSignature(writer, 'rele'); writeDescriptorClass(writer, '', 'Lyr '); writeUint32(writer, 3);
+			writeSignature(writer, 'indx'); writeInt32(writer, 6);
+			writeSignature(writer, 'name'); writeDescriptorClass(writer, '', 'Path'); writeUnicodeStringWithPadding(writer, 'My.Path');
+			writeSignature(writer, 'Idnt'); writeInt32(writer, 5);
+		});
+
+		const items: DescriptorReferenceItem[] = [
+			{ type: 'prop', _name: '', _classID: 'Prpr', keyID: 'Lefx' },
+			{ type: 'Clss', _name: '', _classID: 'Dcmn' },
+			{ type: 'Enmr', _name: '', _classID: 'Lyr ', typeID: 'Ordn', enumValue: 'Trgt' },
+			{ type: 'rele', _name: '', _classID: 'Lyr ', value: 3 },
+			{ type: 'indx', value: 6 },
+			{ type: 'name', _name: '', _classID: 'Path', value: 'My.Path' },
+		];
+		expect(Array.from(writeDesc({ null: [...items, 5] }))).eql(Array.from(bytes));
 	});
 
 	it('writes changed reference items', () => {
@@ -285,9 +308,83 @@ describe('colors', () => {
 		(color as any).c = 255;
 		expect((serializeColor(color) as any)['Cyn ']).equal(100);
 	});
+
+	it('writes hsb color without hue precision errors', () => {
+		const original = { _name: '', _classID: 'HSBC', 'H   ': { units: 'Angle', value: 1.9 }, Strt: 50, Brgh: 100 } as const;
+		expect(serializeColor(parseColor(original as any))).eql(original);
+	});
+
+	it('reads book colors as black', () => {
+		const original = { _name: '', _classID: 'BkCl', 'Bk  ': 'PANTONE+ Solid Coated', 'Nm  ': 'PANTONE 185 C', bookID: 3060, bookKey: new Uint8Array([1, 2]) };
+		const desc = readDesc(writeDesc({ 'Clr ': original }))['Clr '];
+		expect(desc).eql(original);
+		expect(parseColor(desc)).eql({ r: 0, g: 0, b: 0 });
+	});
 });
 
 describe('effects', () => {
+	it('round-trips both bevel contours', () => {
+		const contour = (name: string): EffectContour => ({ name, curve: [{ x: 0, y: 0 }, { x: 255, y: 255 }] });
+		const effects: LayerEffectsInfo = {
+			bevel: { enabled: true, useShape: true, contour: contour('gloss'), shapeContour: contour('shape') },
+		};
+		const info = serializeEffects(effects, false, false);
+		expect((info.ebbl as any).TrnS['Nm  ']).equal('gloss');
+		expect((info.ebbl as any).MpgS['Nm  ']).equal('shape');
+		const bevel = parseEffects(info, false).bevel!;
+		expect(bevel.contour!.name).equal('gloss');
+		expect(bevel.shapeContour!.name).equal('shape');
+	});
+
+	it('round-trips gradient color stop type', () => {
+		const effects: LayerEffectsInfo = {
+			gradientOverlay: [{
+				enabled: true,
+				gradient: {
+					type: 'solid', name: 'g',
+					colorStops: [
+						{ location: 0, midpoint: 0.5, color: { r: 0, g: 0, b: 0 }, type: 'foreground' },
+						{ location: 1, midpoint: 0.5, color: { r: 255, g: 255, b: 255 } },
+					],
+					opacityStops: [{ location: 0, midpoint: 0.5, opacity: 1 }],
+				},
+			}],
+		};
+		const info = serializeEffects(effects, false, false);
+		expect((info.GrFl as any).Grad.Clrs.map((s: any) => s.Type)).eql(['Clry.FrgC', 'Clry.UsrS']);
+		const gradient = parseEffects(info, false).gradientOverlay![0].gradient as any;
+		expect(gradient.colorStops[0].type).equal('foreground');
+		expect(gradient.colorStops[1].type).undefined;
+
+		// color stop without color
+		delete (info.GrFl as any).Grad.Clrs[0]['Clr '];
+		expect((parseEffects(info, false).gradientOverlay![0].gradient as any).colorStops[0].color).eql({ r: 0, g: 0, b: 0 });
+	});
+
+	it('reads unknown gradient color stop type as user color', () => {
+		const effects: LayerEffectsInfo = {
+			gradientOverlay: [{
+				enabled: true,
+				gradient: {
+					type: 'solid', name: 'g',
+					colorStops: [{ location: 0, midpoint: 0.5, color: { r: 0, g: 0, b: 0 } }],
+					opacityStops: [{ location: 0, midpoint: 0.5, opacity: 1 }],
+				},
+			}],
+		};
+		const info = serializeEffects(effects, false, false);
+		(info.GrFl as any).Grad.Clrs[0].Type = 'Clry.Xxxx';
+		const parsed = parseEffects(info, false);
+		expect((parsed.gradientOverlay![0].gradient as any).colorStops[0].type).undefined;
+		expect((serializeEffects(parsed, false, false).GrFl as any).Grad.Clrs[0].Type).equal('Clry.UsrS');
+	});
+
+	it('round-trips pattern fill scale and angle', () => {
+		const content: VectorContent = { type: 'pattern', name: 'p', id: 'id', scale: 0.47, angle: -171 };
+		const { descriptor } = serializeVectorContent(content);
+		expect(parseVectorContent(readDesc(writeDesc(descriptor)) as any)).eql(content);
+	});
+
 	it('writes pattern overlay angle as Angl', () => {
 		const effects: LayerEffectsInfo = {
 			patternOverlay: { enabled: true, angle: 45, pattern: { name: 'p', id: 'id' } } as any,

@@ -70,6 +70,7 @@ export interface LayerEffectsOuterGlow {
 	blendMode?: BlendMode;
 	opacity?: number;
 	source?: GlowSource;
+	technique?: GlowTechnique;
 	antialiased?: boolean;
 	noise?: number;
 	range?: number;
@@ -118,7 +119,10 @@ export interface LayerEffectBevel {
 	useTexture?: boolean;
 	useShape?: boolean;
 	antialiasGloss?: boolean;
-	contour?: EffectContour;
+	contour?: EffectContour; // gloss contour
+	shapeContour?: EffectContour; // contour of the bevel shape, used when `useShape` is enabled
+	range?: number;
+	antialiased?: boolean;
 }
 
 export interface LayerEffectSolidFill {
@@ -168,6 +172,7 @@ export interface LayerEffectPatternOverlay {
 	blendMode?: BlendMode;
 	opacity?: number;
 	scale?: number;
+	angle?: number;
 	pattern?: EffectPattern;
 	phase?: { x: number; y: number; };
 	align?: boolean;
@@ -222,7 +227,7 @@ export interface LayerEffectsInfo {
 	satin?: LayerEffectSatin;
 	stroke?: LayerEffectStroke[];
 	gradientOverlay?: LayerEffectGradientOverlay[];
-	patternOverlay?: LayerEffectPatternOverlay; // not supported yet because of `Patt` section not implemented
+	patternOverlay?: LayerEffectPatternOverlay; // pattern is referenced only by name/id
 }
 
 export type PixelArray = Uint8ClampedArray | Uint8Array | Uint16Array | Float32Array;
@@ -497,6 +502,8 @@ export interface ExtraGradientInfo {
 export interface ExtraPatternInfo {
 	linked?: boolean;
 	phase?: { x: number; y: number; };
+	scale?: number;
+	angle?: number;
 }
 
 export type VectorContent = { type: 'color'; color: Color; } |
@@ -670,6 +677,7 @@ export interface ColorStop {
 	color: Color;
 	location: number;
 	midpoint: number;
+	type?: 'foreground' | 'background'; // stop uses foreground/background color (`color` is the color at the time of saving)
 }
 
 export interface OpacityStop {
@@ -1376,6 +1384,7 @@ export interface LayerAdditionalInfo {
 		composite?: boolean;
 		position?: boolean;
 		artboards?: boolean;
+		all?: boolean;
 	};
 	layerColor?: LayerColor;
 	referencePoint?: {
@@ -1393,7 +1402,7 @@ export interface LayerAdditionalInfo {
 	};
 	effects?: LayerEffectsInfo;
 	text?: LayerTextData;
-	patterns?: PatternInfo[]; // not supported yet
+	patterns?: PatternInfo[];
 	vectorFill?: VectorContent;
 	vectorStroke?: {
 		strokeEnabled?: boolean;

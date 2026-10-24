@@ -103,7 +103,8 @@ addHandler(
 			// require('fs').writeFileSync('after.txt', require('util').inspect(after, false, 99, false), 'utf8');
 
 			// console.log(require('util').inspect(parseEngineData(text.EngineData), false, 99, true));
-			target.text = { ...target.text, ...textData };
+			// descriptor anti-alias value is more reliable than the one from engine data
+			target.text = { ...target.text, ...textData, antiAlias: target.text!.antiAlias ?? textData.antiAlias };
 			// console.log(require('util').inspect(target.text, false, 99, true));
 		}
 
@@ -621,7 +622,12 @@ addHandler(
 
 		if (target.id !== undefined) {
 			id = target.id;
-			while (options.layerIds.has(id)) id += 100; // make sure we don't have duplicate layer ids
+
+			if (options.layerIds.has(id)) {
+				// make sure we don't have duplicate layer ids (and don't take id explicitly set on another layer)
+				const explicitIds = getExplicitLayerIds(psd, options);
+				while (options.layerIds.has(id) || explicitIds.has(id)) id += 100;
+			}
 		} else {
 			// generate id for layers that don't have it, if it's referenced by other sections
 			const explicitIds = getExplicitLayerIds(psd, options);
@@ -733,15 +739,17 @@ addHandler(
 		};
 
 		if (flags & 0x08) target.protected.artboards = true;
+		if (flags & 0x80000000) target.protected.all = true;
 	},
 	(writer, target) => {
 		const flags =
 			(target.protected!.transparency ? 0x01 : 0) |
 			(target.protected!.composite ? 0x02 : 0) |
 			(target.protected!.position ? 0x04 : 0) |
-			(target.protected!.artboards ? 0x08 : 0);
+			(target.protected!.artboards ? 0x08 : 0) |
+			(target.protected!.all ? 0x80000000 : 0);
 
-		writeUint32(writer, flags);
+		writeUint32(writer, flags >>> 0);
 	},
 );
 
@@ -910,8 +918,8 @@ addHandler(
 					frame.FrLs = f.frames;
 					if (f.offset) frame.Ofst = xyToHorzVrtc(f.offset);
 					if (f.referencePoint) frame.FXRf = xyToHorzVrtc(f.referencePoint);
-					if (f.effects) frame.Lefx = serializeEffects(f.effects, false, false);
-					if (f.opacity !== undefined) frame.blendOptions = { Opct: unitsPercent(f.opacity) };
+					if (f.effects) frame.Lefx = serializeEffects(f.effects, false, hasMultiEffects(f.effects));
+					if (f.opacity !== undefined) frame.blendOptions = { Opct: unitsPercentF(f.opacity) };
 					desc.LaSt.push(frame);
 				}
 
@@ -1135,8 +1143,8 @@ interface ArtbDescriptor {
 	artboardRect: { 'Top ': number; Left: number; Btom: number; Rght: number; };
 	guideIndeces: any[];
 	artboardPresetName: string;
-	'Clr ': DescriptorColor;
-	artboardBackgroundType: number;
+	'Clr '?: DescriptorColor;
+	artboardBackgroundType?: number;
 }
 
 addHandler(
@@ -1149,9 +1157,10 @@ addHandler(
 			rect: { top: rect['Top '], left: rect.Left, bottom: rect.Btom, right: rect.Rght },
 			guideIndices: desc.guideIndeces,
 			presetName: desc.artboardPresetName,
-			color: parseColor(desc['Clr ']),
-			backgroundType: desc.artboardBackgroundType,
 		};
+
+		if (desc['Clr ']) target.artboard.color = parseColor(desc['Clr ']);
+		if (desc.artboardBackgroundType !== undefined) target.artboard.backgroundType = desc.artboardBackgroundType;
 
 		skipBytes(reader, left());
 	},
@@ -3954,6 +3963,11 @@ interface LinkedFileDescriptor {
 	relPath: string;
 }
 
+function readFileTypeSignature(reader: PsdReader) {
+	const value = readSignature(reader);
+	return /^[\0 ]*$/.test(value) ? '' : value.trim(); // empty value is stored as spaces or zeros
+}
+
 function createLnkHandler(tag: string) {
 	addHandler(
 		tag,
@@ -3978,8 +3992,8 @@ function createLnkHandler(tag: string) {
 				const id = readPascalString(reader, 1);
 				const name = readUnicodeString(reader);
 
-				const fileType = readSignature(reader).trim(); // '    ' if empty
-				const fileCreator = readSignature(reader).trim(); // '    ' or '\0\0\0\0' if empty
+				const fileType = readFileTypeSignature(reader); // '    ' if empty
+				const fileCreator = readFileTypeSignature(reader); // '    ' or '\0\0\0\0' if empty
 				const dataSize = readLength64(reader);
 				const hasFileOpenDescriptor = readUint8(reader);
 				const fileOpenDescriptor = hasFileOpenDescriptor ? readVersionAndDescriptor(reader) as FileOpenDescriptor : undefined;
@@ -4844,7 +4858,7 @@ addHandler(
 		const hasMethod = !!readUint8(reader); reader.offset--;
 		if (hasMethod) {
 			const method = readSignature(reader);
-			info.method = gradientInterpolationMethodType.decode(method);
+			info.method = gradientInterpolationMethodType.decode(`gradientInterpolationMethodType.${method}`);
 		}
 
 		info.name = readUnicodeString(reader);
@@ -4917,7 +4931,7 @@ addHandler(
 		writeUint8(writer, info.dither ? 1 : 0);
 
 		if (info.method !== undefined) {
-			writeSignature(writer, gradientInterpolationMethodType.encode(info.method));
+			writeSignature(writer, gradientInterpolationMethodType.encode(info.method).split('.')[1]);
 		}
 
 		writeUnicodeStringWithPadding(writer, info.name || '');
@@ -5334,14 +5348,14 @@ addHandler(
 
 interface ArtdDescriptor {
 	'Cnt ': number;
-	autoExpandOffset: { Hrzn: number; Vrtc: number; };
-	origin: { Hrzn: number; Vrtc: number; };
-	autoExpandEnabled: boolean;
-	autoNestEnabled: boolean;
-	autoPositionEnabled: boolean;
+	autoExpandOffset?: { Hrzn: number; Vrtc: number; };
+	origin?: { Hrzn: number; Vrtc: number; };
+	autoExpandEnabled?: boolean;
+	autoNestEnabled?: boolean;
+	autoPositionEnabled?: boolean;
 	shrinkwrapOnSaveEnabled?: boolean;
-	docDefaultNewArtboardBackgroundColor: DescriptorColor;
-	docDefaultNewArtboardBackgroundType: number;
+	docDefaultNewArtboardBackgroundColor?: DescriptorColor;
+	docDefaultNewArtboardBackgroundType?: number;
 }
 
 addHandler(
@@ -5349,17 +5363,15 @@ addHandler(
 	target => (target as Psd).artboards !== undefined,
 	(reader, target, left) => {
 		const desc = readVersionAndDescriptor(reader) as ArtdDescriptor;
-		(target as Psd).artboards = {
-			count: desc['Cnt '],
-			autoExpandOffset: { horizontal: desc.autoExpandOffset.Hrzn, vertical: desc.autoExpandOffset.Vrtc },
-			origin: { horizontal: desc.origin.Hrzn, vertical: desc.origin.Vrtc },
-			autoExpandEnabled: desc.autoExpandEnabled,
-			autoNestEnabled: desc.autoNestEnabled,
-			autoPositionEnabled: desc.autoPositionEnabled,
-			shrinkwrapOnSaveEnabled: !!desc.shrinkwrapOnSaveEnabled,
-			docDefaultNewArtboardBackgroundColor: parseColor(desc.docDefaultNewArtboardBackgroundColor),
-			docDefaultNewArtboardBackgroundType: desc.docDefaultNewArtboardBackgroundType,
-		};
+		const artboards: Psd['artboards'] = (target as Psd).artboards = { count: desc['Cnt '] };
+		if (desc.autoExpandOffset) artboards.autoExpandOffset = { horizontal: desc.autoExpandOffset.Hrzn, vertical: desc.autoExpandOffset.Vrtc };
+		if (desc.origin) artboards.origin = { horizontal: desc.origin.Hrzn, vertical: desc.origin.Vrtc };
+		if (desc.autoExpandEnabled !== undefined) artboards.autoExpandEnabled = desc.autoExpandEnabled;
+		if (desc.autoNestEnabled !== undefined) artboards.autoNestEnabled = desc.autoNestEnabled;
+		if (desc.autoPositionEnabled !== undefined) artboards.autoPositionEnabled = desc.autoPositionEnabled;
+		artboards.shrinkwrapOnSaveEnabled = !!desc.shrinkwrapOnSaveEnabled;
+		if (desc.docDefaultNewArtboardBackgroundColor) artboards.docDefaultNewArtboardBackgroundColor = parseColor(desc.docDefaultNewArtboardBackgroundColor);
+		if (desc.docDefaultNewArtboardBackgroundType !== undefined) artboards.docDefaultNewArtboardBackgroundType = desc.docDefaultNewArtboardBackgroundType;
 
 		skipBytes(reader, left());
 	},

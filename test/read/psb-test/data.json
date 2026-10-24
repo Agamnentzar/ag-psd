@@ -225,7 +225,8 @@
       "protected": {
         "transparency": false,
         "composite": false,
-        "position": false
+        "position": false,
+        "all": true
       },
       "layerColor": "none",
       "timestamp": 1563097343.0355046,

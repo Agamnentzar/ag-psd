@@ -2,6 +2,7 @@ import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOp
 import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas, denormalizeLabAB } from './helpers';
 import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
 import { InternalImageResources, resourceHandlers } from './imageResources';
+import { getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData } from './psdReader';
 
 export interface PsdWriter {
 	offset: number;
@@ -362,7 +363,7 @@ function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlph
 	writeSection(writer, 4, () => {
 		writeInt16(writer, globalAlpha ? -layers.length : layers.length);
 
-		const layersData = layers.map((l, i) => getChannels(writer.tempBuffer!, l, i === 0, options));
+		const layersData = layers.map((l, i) => getChannels(writer, l, i === 0, options));
 
 		// layer records
 		for (const layerData of layersData) {
@@ -419,7 +420,14 @@ function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlph
 	}, true, options.psb);
 }
 
-function writeLayerMaskData(writer: PsdWriter, { mask, realMask }: Layer, layerData: LayerChannelData) {
+// real mask is only stored separately if layer has both vector and pixel masks, otherwise it's stored as the main mask
+function getMasks(layer: Layer) {
+	return layer.mask ? { mask: layer.mask, realMask: layer.realMask } : { mask: layer.realMask, realMask: undefined };
+}
+
+function writeLayerMaskData(writer: PsdWriter, layer: Layer, layerData: LayerChannelData) {
+	const { mask, realMask } = getMasks(layer);
+
 	writeSection(writer, 4, () => {
 		if (!mask && !realMask) return;
 
@@ -674,20 +682,47 @@ function bounds(obj: { top?: number; left?: number; bottom?: number; right?: num
 	} : undefined;
 }
 
-function getChannels(tempBuffer: Uint8Array, layer: Layer, background: boolean, options: WriteOptions): LayerChannelData {
+function getChannels(writer: PsdWriter, layer: Layer, background: boolean, options: WriteOptions): LayerChannelData {
+	let source = layer;
+
 	if (layer.rawData) {
-		return {
-			layer,
-			channels: layer.rawData.channels.map(c => ({ ...c, length: 2 + (c.data?.byteLength ?? 0) })),
-			...bounds(layer)!,
-			mask: bounds(layer.mask),
-			realMask: bounds(layer.realMask),
+		const { colorMode, bitsPerChannel, large } = layer.rawData;
+
+		if (large === !!options.psb && colorMode === ColorMode.RGB && bitsPerChannel === 8) {
+			// same mask mapping as in writeLayerMaskData
+			const { mask, realMask } = getMasks(layer);
+			return {
+				layer,
+				channels: layer.rawData.channels.map(c => ({ ...c, length: 2 + (c.data?.byteLength ?? 0) })),
+				...bounds(layer)!,
+				mask: bounds(mask),
+				realMask: bounds(realMask),
+			};
+		}
+
+		if (bitsPerChannel !== 8) throw new Error('Layer raw data with bitsPerChannel other than 8 is not supported for writing');
+
+		// raw data is in different format than the one we're writing, decode it so it can be re-encoded
+		source = {
+			...layer,
+			rawData: undefined,
+			canvas: undefined,
+			imageData: getLayerImageData(layer),
+			mask: layer.mask && { ...layer.mask, canvas: undefined, imageData: getLayerMaskImageData(layer) },
+			realMask: layer.realMask && { ...layer.realMask, canvas: undefined, imageData: getLayerRealMaskImageData(layer) },
 		};
+
+		// temp buffer is sized only for layers with image data, grow it and keep it for following layers
+		const size = getLargestLayerSize([{ ...source, children: undefined }], !!options.psb);
+		if (writer.tempBuffer!.byteLength < size) writer.tempBuffer = new Uint8Array(size);
 	}
 
-	const layerData = getLayerChannels(tempBuffer, layer, background, options);
-	if (layer.mask) getMaskChannels(tempBuffer, layerData, layer, layer.mask, options, false);
-	if (layer.realMask) getMaskChannels(tempBuffer, layerData, layer, layer.realMask, options, true);
+	const tempBuffer = writer.tempBuffer!;
+	const { mask, realMask } = getMasks(source);
+	const layerData = getLayerChannels(tempBuffer, source, background, options);
+	if (mask) getMaskChannels(tempBuffer, layerData, source, mask, options, false);
+	if (realMask) getMaskChannels(tempBuffer, layerData, source, realMask, options, true);
+	layerData.layer = layer;
 	return layerData;
 }
 
@@ -868,11 +903,12 @@ export function writeColor(writer: PsdWriter, color: Color | undefined) {
 		writeUint16(writer, Math.round(color.b * 0xffff));
 		writeUint16(writer, 0);
 	} else if ('c' in color) {
+		// 0 = 100% ink
 		writeUint16(writer, ColorSpace.CMYK);
-		writeUint16(writer, Math.round(color.c * 257));
-		writeUint16(writer, Math.round(color.m * 257));
-		writeUint16(writer, Math.round(color.y * 257));
-		writeUint16(writer, Math.round(color.k * 257));
+		writeUint16(writer, 0xffff - Math.round(clamp(color.c, 0, 255) * 257));
+		writeUint16(writer, 0xffff - Math.round(clamp(color.m, 0, 255) * 257));
+		writeUint16(writer, 0xffff - Math.round(clamp(color.y, 0, 255) * 257));
+		writeUint16(writer, 0xffff - Math.round(clamp(color.k, 0, 255) * 257));
 	} else {
 		writeUint16(writer, ColorSpace.Grayscale);
 		writeUint16(writer, Math.round(color.k * 10000 / 255));

@@ -1,5 +1,6 @@
 import { expect } from 'chai';
 import { encodeString, encodeStringTo, decodeString, stringLengthInBytes } from '../utf8';
+import { createReader, decodeUtf8 } from '../psdReader';
 
 function bytes(...values: number[]) {
 	return new Uint8Array(values);
@@ -168,5 +169,17 @@ describe('utf8', () => {
 
 			expect(decodeString(encodeString(value))).equal(nativeRoundTrip);
 		});
+	});
+
+	it('keeps leading BOM regardless of string length', () => {
+		const reader = createReader(new ArrayBuffer(0));
+		const short = new Uint8Array([0xef, 0xbb, 0xbf, 0x41]);
+		const long = new Uint8Array(2000).fill(0x41);
+		long.set([0xef, 0xbb, 0xbf]);
+
+		expect(decodeString(short)).equal('﻿A');
+		expect(decodeUtf8(reader, short)).equal('﻿A');
+		expect(decodeUtf8(reader, long)).equal('﻿' + 'A'.repeat(1997));
+		expect(reader.utf8Decoder).not.undefined; // created lazily for long strings
 	});
 });

@@ -113,10 +113,6 @@ export function encodeString(value: string): Uint8Array {
 // UTF-8 decoder implementing the WHATWG Encoding Standard's non-fatal error handling,
 // so malformed byte sequences are replaced with U+FFFD instead of throwing, matching TextDecoder.
 export function decodeString(value: Uint8Array): string {
-	if (value.byteLength > 1000 && typeof TextDecoder !== 'undefined') {
-		return (new TextDecoder()).decode(value);
-	}
-
 	const result: string[] = [];
 
 	function pushCodePoint(code: number) {

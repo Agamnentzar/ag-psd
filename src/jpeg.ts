@@ -1021,8 +1021,8 @@ function getData(decoded: Decoded) {
       break;
     }
     case 3: {
-      // The default transform for three components is true, the adobe transform marker overrides it
-      colorTransform = decoded.adobe ? !!decoded.adobe.transformCode : true;
+      // The default transform for three components is true, JFIF marker implies YCbCr, otherwise the adobe transform marker overrides it
+      colorTransform = decoded.jfif ? true : decoded.adobe ? !!decoded.adobe.transformCode : true;
 
       const component1 = decoded.components[0];
       const component2 = decoded.components[1];

@@ -314,7 +314,7 @@
         "text": "Windows",
         "index": 0,
         "gridding": "none",
-        "antiAlias": "smooth",
+        "antiAlias": "platform",
         "orientation": "horizontal",
         "warp": {
           "style": "none",
@@ -619,7 +619,7 @@
         "text": "Windows LCD",
         "index": 1,
         "gridding": "none",
-        "antiAlias": "smooth",
+        "antiAlias": "platformLCD",
         "orientation": "horizontal",
         "warp": {
           "style": "none",

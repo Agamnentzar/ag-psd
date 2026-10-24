@@ -127,4 +127,19 @@ describe('text', () => {
 		expect(decoded.paragraphStyle!.justification).equal('left');
 		expect(decoded.style!.font!.name).equal('MyriadPro-Regular');
 	});
+
+	it('keeps style of empty last paragraph', () => {
+		const { encoded, decoded } = roundTrip({
+			text: 'a\nb\n',
+			paragraphStyleRuns: [
+				{ length: 2, style: { justification: 'left' } },
+				{ length: 2, style: { justification: 'center' } },
+				{ length: 0, style: { justification: 'right' } },
+			],
+		});
+
+		expect(encoded.EngineDict.ParagraphRun.RunLengthArray).eql([2, 2, 1]);
+		expect(decoded.paragraphStyleRuns!.map(r => r.length)).eql([2, 2, 0]);
+		expect(decoded.paragraphStyleRuns!.map(r => r.style.justification)).eql(['left', 'center', 'right']);
+	});
 });

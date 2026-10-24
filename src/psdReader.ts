@@ -2,6 +2,7 @@ import { Inflate } from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression } from './psd';
 import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas, normalizeLabAB } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
+import { decodeString } from './utf8';
 import { InternalImageResources, resourceHandlersMap } from './imageResources';
 
 interface ChannelInfo {
@@ -28,6 +29,42 @@ export interface PsdReader extends ReadOptions {
 	large: boolean;
 	globalAlpha: boolean;
 	log(...args: any[]): void;
+	// text decoders, created lazily (null if not supported)
+	utf8Decoder?: TextDecoder | null;
+	utf8StrictDecoder?: TextDecoder | null;
+	gbkDecoder?: TextDecoder | null;
+}
+
+function createTextDecoder(label: string, options?: TextDecoderOptions) {
+	try {
+		return typeof TextDecoder !== 'undefined' ? new TextDecoder(label, options) : null;
+	} catch {
+		return null; // encoding not supported
+	}
+}
+
+// non-fatal UTF-8 decoder, malformed byte sequences are replaced with U+FFFD
+export function getUtf8Decoder(reader: PsdReader) {
+	if (reader.utf8Decoder === undefined) reader.utf8Decoder = createTextDecoder('utf-8', { ignoreBOM: true });
+	return reader.utf8Decoder;
+}
+
+// UTF-8 decoder that throws on malformed byte sequences
+export function getUtf8StrictDecoder(reader: PsdReader) {
+	if (reader.utf8StrictDecoder === undefined) reader.utf8StrictDecoder = createTextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+	return reader.utf8StrictDecoder;
+}
+
+// GBK decoder that throws on malformed byte sequences
+export function getGbkStrictDecoder(reader: PsdReader) {
+	if (reader.gbkDecoder === undefined) reader.gbkDecoder = createTextDecoder('gbk', { fatal: true });
+	return reader.gbkDecoder;
+}
+
+export function decodeUtf8(reader: PsdReader, buffer: Uint8Array) {
+	// native decoder is faster only for longer strings
+	const decoder = buffer.byteLength > 1000 ? getUtf8Decoder(reader) : null;
+	return decoder ? decoder.decode(buffer) : decodeString(buffer);
 }
 
 export function createReader(buffer: ArrayBufferLike, offset?: number, length?: number): PsdReader {
@@ -622,9 +659,9 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 				compression = readUint16(reader) as Compression;
 			}
 
-			// try to fix broken files where there's 1 byte shift of channel
+			// try to fix broken files where there's 1 byte shift of channel (in the other direction)
 			if (compression > 3) {
-				reader.offset -= 3;
+				reader.offset -= 4;
 				compression = readUint16(reader) as Compression;
 			}
 
@@ -930,7 +967,7 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 				if (reader.throwForMissingFeatures) throw e;
 			}
 		} else {
-			reader.logMissingFeatures && reader.log(`Unhandled additional info: ${key}`);
+			reader.logMissingFeatures && key !== 'GenI' && key !== 'OCIO' && reader.log(`Unhandled additional info: ${key}`);
 			skipBytes(reader, left());
 		}
 
@@ -1520,11 +1557,11 @@ export function readColor(reader: PsdReader): Color {
 			skipBytes(reader, 2);
 			return { h, s, b };
 		}
-		case ColorSpace.CMYK: {
-			const c = readUint16(reader) / 257;
-			const m = readUint16(reader) / 257;
-			const y = readUint16(reader) / 257;
-			const k = readUint16(reader) / 257;
+		case ColorSpace.CMYK: { // 0 = 100% ink
+			const c = (0xffff - readUint16(reader)) / 257;
+			const m = (0xffff - readUint16(reader)) / 257;
+			const y = (0xffff - readUint16(reader)) / 257;
+			const k = (0xffff - readUint16(reader)) / 257;
 			return { c, m, y, k };
 		}
 		case ColorSpace.Lab: {
@@ -1590,6 +1627,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	const channelsCount = readUint32(reader);
 	const width = right - left;
 	const height = bottom - top;
+	if (width < 0 || height < 0) throw new Error('Invalid pattern bounds');
 	const size = width * height * 4;
 	consumeMemory(reader, size);
 	const data = new Uint8Array(size);
@@ -1619,6 +1657,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 
 		const w = cright - cleft;
 		const h = cbottom - ctop;
+		if (w < 0 || h < 0) throw new Error('Invalid pattern channel bounds');
 		const ox = cleft - left;
 		const oy = ctop - top;
 
@@ -1709,6 +1748,8 @@ function copyChannelToRGBA(srcData: PixelData, dstData: PixelData, ox: number, o
 }
 
 function consumeMemory(reader: PsdReader, size: number) {
+	if (!(size >= 0)) throw new Error('Invalid size');
+
 	if (reader.totalMemoryLimit !== undefined) {
 		if (reader.totalMemoryLimit < size) throw new Error('Exceeded memory limit');
 		reader.totalMemoryLimit -= size;

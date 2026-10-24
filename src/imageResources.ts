@@ -1,10 +1,10 @@
 import { toByteArray } from 'base64-js';
 import { BlendMode, ImageResources, RenderingIntent } from './psd';
-import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString } from './psdReader';
+import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString, decodeUtf8, getUtf8StrictDecoder, getGbkStrictDecoder } from './psdReader';
 import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, } from './psdWriter';
 import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
-import { decodeString, encodeString } from './utf8';
-import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, pathSelectionStateToReference, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { encodeString } from './utf8';
+import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, pathSelectionStateToReference, DescriptorReferenceItem, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
 
 export interface InternalImageResources extends ImageResources {
 	layersGroup?: number[];
@@ -49,26 +49,12 @@ function byteAt(value: string, index: number) {
 
 function readUtf8String(reader: PsdReader, length: number) {
 	const buffer = readBytes(reader, length);
-	return decodeString(buffer);
+	return decodeUtf8(reader, buffer);
 }
 
 function writeUtf8String(writer: PsdWriter, value: string) {
 	const buffer = encodeString(value);
 	writeBytes(writer, buffer);
-}
-
-let gbkDecoder: TextDecoder | null | undefined;
-
-function getGbkDecoder() {
-	if (gbkDecoder === undefined) {
-		try {
-			gbkDecoder = new TextDecoder('gbk');
-		} catch {
-			gbkDecoder = null;
-		}
-	}
-
-	return gbkDecoder;
 }
 
 function readEncodedString(reader: PsdReader) {
@@ -84,16 +70,18 @@ function readEncodedString(reader: PsdReader) {
 	}
 
 	if (notAscii) {
-		const decoder = getGbkDecoder();
-
-		if (decoder) {
-			try {
-				return decoder.decode(buffer);
-			} catch { }
+		// encoding is ambiguous, many GBK strings are also valid UTF-8 and vice versa, GBK is preferred,
+		// UTF-8 is only used if the string is not valid GBK
+		for (const decoder of [getGbkStrictDecoder(reader), getUtf8StrictDecoder(reader)]) {
+			if (decoder) {
+				try {
+					return decoder.decode(buffer);
+				} catch { }
+			}
 		}
 	}
 
-	return decodeString(buffer);
+	return decodeUtf8(reader, buffer);
 }
 
 function writeEncodedString(writer: PsdWriter, value: string) {
@@ -1401,19 +1389,23 @@ addHandler(
 	},
 );
 
-interface Descriptor1088 {
+interface Descriptor1088Read {
 	'null': string[];
+}
+
+interface Descriptor1088Write {
+	'null': DescriptorReferenceItem[];
 }
 
 addHandler(
 	1088,
 	target => target.pathSelectionState !== undefined,
 	(reader, target, _left) => {
-		const desc: Descriptor1088 = readVersionAndDescriptor(reader);
+		const desc: Descriptor1088Read = readVersionAndDescriptor(reader);
 		target.pathSelectionState = desc['null'];
 	},
 	(writer, target) => {
-		const desc: Descriptor1088 = { 'null': pathSelectionStateToReference(target.pathSelectionState!) };
+		const desc: Descriptor1088Write = { 'null': pathSelectionStateToReference(target.pathSelectionState!) };
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
 );

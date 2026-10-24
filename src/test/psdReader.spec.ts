@@ -112,6 +112,26 @@ function rleComposite(rows: number[][][], large = false) {
 const strictOpts = { useImageData: true, strict: true };
 
 describe('PsdReader', () => {
+	it('throws for pattern with negative size without changing memory limit', () => {
+		const words = [0, 1, ColorMode.RGB, 0, 0, 3, 0, 0, 1000000, 0, 0, 0]; // length, version, color mode, x/y, name, VMAL version, length, bounds, channels
+		const buffer = new Uint8Array(words.length * 4 + 1);
+		const view = new DataView(buffer.buffer);
+		let offset = 0;
+		for (const [index, word] of words.entries()) {
+			if (index === 3) { // x, y
+				offset += 4;
+			} else {
+				view.setUint32(offset, word); offset += 4;
+			}
+			if (index === 4) offset++; // empty pascal string id
+		}
+
+		const reader = createReader(buffer.buffer);
+		reader.totalMemoryLimit = 100;
+		expect(() => readPattern(reader)).throw('Invalid pattern bounds');
+		expect(reader.totalMemoryLimit).equal(100);
+	});
+
 	it.skip('reads width and height properly', () => {
 		// malicious file 
 		const buffer = Buffer.from('OEJQUwABAAAAAAAAAA0AADcuAAA58wAgAAMAAAAAAAAAAAAAAAAAAdEgNZv+i9bc9ygd2A==', 'base64');

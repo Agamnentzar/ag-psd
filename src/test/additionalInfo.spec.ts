@@ -5,7 +5,7 @@ import { readPsd, writePsdBuffer } from '../index';
 import { infoHandlersMap, ExtendedWriteOptions } from '../additionalInfo';
 import { createWriter, getWriterBuffer, writeUint16, writeUint32, writeUint8, writeSignature, writeInt32, writePascalString, writeColor, writeZeros } from '../psdWriter';
 import { createReader, readUint32, readSignature, readUint8, skipBytes } from '../psdReader';
-import { readVersionAndDescriptor } from '../descriptor';
+import { readVersionAndDescriptor, writeVersionAndDescriptor } from '../descriptor';
 
 const readOpts: ReadOptions = { skipLayerImageData: true, skipCompositeImageData: true, skipThumbnail: true };
 
@@ -429,5 +429,80 @@ describe('additionalInfo', () => {
 			placedLayer: { id: guid1, type: 'foo' as any, transform: [0, 0, 10, 0, 10, 10, 0, 10], width: 10, height: 10 },
 		};
 		expect(() => writeHandler('SoLd', layer, { width: 10, height: 10 })).throw('Invalid placedLayer type');
+	});
+
+	it('round-trips gradient map interpolation method', () => {
+		const adjustment: GradientMapAdjustment = {
+			type: 'gradient map',
+			gradientType: 'solid',
+			method: 'linear',
+			colorStops: [
+				{ location: 0, midpoint: 0.5, color: { r: 0, g: 0, b: 0 } },
+				{ location: 1, midpoint: 0.5, color: { r: 255, g: 255, b: 255 } },
+			],
+			opacityStops: [
+				{ location: 0, midpoint: 0.5, opacity: 1 },
+				{ location: 1, midpoint: 0.5, opacity: 1 },
+			],
+		};
+		const psd = roundTrip({ width: 10, height: 10, children: [{ name: 'gm', adjustment }] });
+		expect((psd.children![0].adjustment as GradientMapAdjustment).method).equal('linear');
+	});
+
+	it('round-trips "lock all" protection flag', () => {
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [{ name: 'a', protected: { transparency: false, composite: false, position: false, all: true } }],
+		});
+		expect(psd.children![0].protected).eql({ transparency: false, composite: false, position: false, all: true });
+	});
+
+	it('does not take explicit id of other layer when fixing duplicate layer ids', () => {
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [{ name: 'a', id: 1 }, { name: 'b', id: 1 }, { name: 'c', id: 101 }],
+		});
+		const ids = psd.children!.map(c => c.id!);
+		expect(ids[0]).equal(1);
+		expect(ids[2]).equal(101);
+		expect(new Set(ids).size).equal(3);
+	});
+
+	it('round-trips multiple effects and exact opacity of animation frames', () => {
+		const shadow = (distance: number) => ({
+			enabled: true, distance: { units: 'Pixels' as const, value: distance }, size: { units: 'Pixels' as const, value: 5 },
+		});
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [{
+				name: 'a',
+				animationFrames: [{ frames: [1], opacity: 0.5294117647058824, effects: { dropShadow: [shadow(5), shadow(10)] } }],
+			}],
+		});
+		const frame = psd.children![0].animationFrames![0];
+		expect(frame.opacity).equal(0.5294117647058824);
+		expect(frame.effects!.dropShadow!.map(s => s.distance!.value)).eql([5, 10]);
+	});
+
+	it('reads artboard info without colors', () => {
+		const artdWriter = createWriter();
+		writeVersionAndDescriptor(artdWriter, '', 'null', { 'Cnt ': 2, autoExpandEnabled: true }, 'artd');
+		expect(readHandler('artd', getWriterBuffer(artdWriter)).artboards).eql({ count: 2, autoExpandEnabled: true, shrinkwrapOnSaveEnabled: false });
+
+		const artbWriter = createWriter();
+		const artboardRect = { 'Top ': 0, Left: 0, Btom: 10, Rght: 20 };
+		writeVersionAndDescriptor(artbWriter, '', 'artboard', { artboardRect, guideIndeces: [], artboardPresetName: '' });
+		expect(readHandler('artb', getWriterBuffer(artbWriter)).artboard).eql({
+			rect: { top: 0, left: 0, bottom: 10, right: 20 }, guideIndices: [], presetName: '',
+		});
+	});
+
+	it('reads empty linked file creator as undefined', () => {
+		const psd = roundTrip({
+			width: 10, height: 10,
+			linkedFiles: [{ id: guid1, name: 'a.png', data: new Uint8Array([1, 2, 3]) }],
+		});
+		expect(psd.linkedFiles![0].creator).undefined;
+		expect(psd.linkedFiles![0].type).undefined;
 	});
 });

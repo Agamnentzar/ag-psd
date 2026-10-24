@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { toReader, writeDescriptorId, writeDescriptorClass, writeDescriptorKey } from './common';
-import { readVersionAndDescriptor } from '../descriptor';
+import { pathSelectionStateToReference, readVersionAndDescriptor } from '../descriptor';
 import { createWriter, getWriterBuffer, writeInt32, writeSignature, writeUint32, writeUnicodeStringWithPadding } from '../psdWriter';
 import { resourceHandlersMap, InternalImageResources } from '../imageResources';
 import { writePsdBuffer, readPsd } from '../index';
@@ -149,13 +149,11 @@ describe('imageResources', () => {
 		expect(desc.null).eql(['My.Path']);
 
 		const values = ['Ordn.Trgt', 'ordinal.targetEnum', 'My.Path', 'Logo.v2', 'Rectangle 5'];
-		const written = readResource(1088, writeResource(1088, { pathSelectionState: values })).pathSelectionState!;
-		const [infos] = Object.getOwnPropertySymbols(written).map(key => (written as any)[key]);
-		expect(written).eql(values);
-		expect(infos.map((i: any) => i.type)).eql(['Enmr', 'Enmr', 'name', 'name', 'name']);
+		expect(readResource(1088, writeResource(1088, { pathSelectionState: values })).pathSelectionState).eql(values);
+		expect(pathSelectionStateToReference(values).map(i => i.type)).eql(['Enmr', 'Enmr', 'name', 'name', 'name']);
 	});
 
-	it('preserves path selection state reference classes', () => {
+	it('writes path selection state with the same reference classes as Photoshop', () => {
 		// Photoshop writes enumerated references with 'Path' class and names with 'Lyr ' class
 		const writer = createWriter();
 		writeUint32(writer, 16);
@@ -164,19 +162,23 @@ describe('imageResources', () => {
 		writeDescriptorKey(writer, 'null', 'obj ');
 		writeInt32(writer, 2);
 		writeSignature(writer, 'Enmr'); writeDescriptorClass(writer, '', 'Path'); writeDescriptorId(writer, 'Ordn'); writeDescriptorId(writer, 'Trgt');
-		writeSignature(writer, 'name'); writeDescriptorClass(writer, '', 'Lyr '); writeUnicodeStringWithPadding(writer, 'Work.Path');
+		writeSignature(writer, 'name'); writeDescriptorClass(writer, '', 'Lyr '); writeUnicodeStringWithPadding(writer, 'Work Path');
 		const bytes = new Uint8Array(getWriterBuffer(writer));
 
 		const target = readResource(1088, bytes);
-		expect(target.pathSelectionState).eql(['Ordn.Trgt', 'Work.Path']);
+		expect(target.pathSelectionState).eql(['Ordn.Trgt', 'Work Path']);
 		expect(Array.from(writeResource(1088, target))).eql(Array.from(bytes));
+	});
 
-		// items added to array read from the file use the same classes
-		target.pathSelectionState!.push('Ordn.Trgt', 'Shape 1');
-		const desc = readVersionAndDescriptor(toReader(writeResource(1088, target)));
-		expect(desc.null).eql(['Ordn.Trgt', 'Work.Path', 'Ordn.Trgt', 'Shape 1']);
-		const written = readResource(1088, writeResource(1088, target)).pathSelectionState!;
-		const [infos] = Object.getOwnPropertySymbols(written).map(key => (written as any)[key]);
-		expect(infos.map((i: any) => `${i.type} ${i.classID}`)).eql(['Enmr Path', 'name Lyr ', 'Enmr Path', 'name Lyr ']);
+	it('reads GBK alpha channel names', () => {
+		// also valid UTF-8 ('С'), GBK is preferred
+		const result = readResource(1006, new Uint8Array([2, 0xd0, 0xa1]));
+		expect(result.alphaChannelNames).eql(['小']);
+	});
+
+	it('reads UTF-8 alpha channel names that are not valid GBK', () => {
+		const name = Buffer.from('小', 'utf8');
+		const result = readResource(1006, new Uint8Array([name.byteLength, ...name]));
+		expect(result.alphaChannelNames).eql(['小']);
 	});
 });

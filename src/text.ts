@@ -274,7 +274,16 @@ const styleKeys: (keyof TextStyle)[] = [
 	'kashida', 'diacriticPos',
 ];
 
-const antialias: AntiAlias[] = ['none', 'crisp', 'strong', 'smooth', 'sharp'];
+const antialias: (AntiAlias | undefined)[] = [
+	'none', // 0
+	'crisp', // 1
+	'strong', // 2
+	'smooth', // 3
+	'sharp', // 4
+	undefined, // 5 - unknown
+	'platformLCD', // 6
+	'platform', // 7
+];
 const justification: Justification[] = [
 	'left', // 0
 	'right', // 1
@@ -578,7 +587,8 @@ export function decodeEngineData(engineData: EngineData) {
 	}
 
 	for (let counter = removedCharacters; result.paragraphStyleRuns.length && counter > 0; counter--) {
-		if (--result.paragraphStyleRuns[result.paragraphStyleRuns.length - 1].length === 0) {
+		// keep 0 length run if it's for empty last paragraph, otherwise we lose its style
+		if (--result.paragraphStyleRuns[result.paragraphStyleRuns.length - 1].length === 0 && result.paragraphStyleRuns.length === 1) {
 			result.paragraphStyleRuns.pop();
 		}
 	}
@@ -671,13 +681,13 @@ export function encodeEngineData(data: LayerTextData) {
 			let runLength = Math.min(run.length, leftLength);
 			leftLength -= runLength;
 
-			if (!runLength) continue; // ignore 0 size runs
-
-			// extend last run if it's only for trailing \r
+			// extend last run if it's only for trailing \r (last run has 0 length if it's for empty last paragraph)
 			if (leftLength === 1 && run === paragraphRuns[paragraphRuns.length - 1]) {
 				runLength++;
 				leftLength--;
 			}
+
+			if (!runLength) continue; // ignore 0 size runs
 
 			paragraphRunLengthArray.push(runLength);
 			paragraphRunArray.push({

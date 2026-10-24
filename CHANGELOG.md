@@ -1,5 +1,30 @@
 # Changelog
 
+## v33.0.0
+- **BREAKING CHANGE:** CMYK colors stored in binary color structures (legacy `lrFX` effects, background color, filter mask, etc.) are now inverted on read and write (Photoshop stores 0 as 100% ink), matching CMYK colors read from descriptors
+- **BREAKING CHANGE:** Text layers with "Windows" and "Windows LCD" anti-aliasing now read as `platform` and `platformLCD` instead of `smooth`, and writing them no longer produces `sharp` anti-aliasing
+- Added `shapeContour` field to bevel effect (contour used when `useShape` is enabled), previously it overwrote `contour` (gloss contour) and was lost when writing
+- Added `protected.all` field for "lock all" layer protection flag
+- Added `type` field to gradient color stops using foreground or background color
+- Added `scale` and `angle` fields to pattern stroke and pattern fill layer content
+- Added missing `angle` type on pattern overlay effect, `range` and `antialiased` on bevel effect and `technique` on outer glow effect
+- Fixed writing gradient map layers with interpolation method throwing an error, and interpolation method always reading as `perceptual`
+- Fixed writing layer raw data (`useRawData` option) to a file with different format (PSB to PSD or vice versa, or non-RGB color mode)
+- Fixed crash reading artboard info without background color
+- Fixed lost effects (other than the first) and rounded opacity of animation frames
+- Fixed lost style of empty last paragraph of text layer
+- Fixed reading book (Pantone) colors in descriptors throwing an error (book colors are not supported, they are read as black)
+- Removed hidden properties used to write back original descriptor value types, reference classes and exact color values, values are now always written based on their current data (`GlobalObject`, `GlobalClass` and `UnitFloat` descriptor values are written as `Object`, `Class` and `UnitDouble`)
+- Fixed gradient opacity stops, gradient offsets and HSB hue values changing slightly on round-trip
+- Fixed changing explicit id of other layer when fixing duplicate layer ids
+- Fixed writing `realMask` without `mask` producing empty user mask
+- Fixed reading 16bit RLE compressed brush samples
+- Fixed reading legacy (non-unicode) UTF-8 alpha channel names that are not valid GBK
+- Fixed empty linked file creator and type being read as `'\0\0\0\0'`
+- Fixed leading BOM being stripped only from long UTF-8 strings
+- Fixed JPEG thumbnails with both JFIF and Adobe markers decoding with wrong colors
+- Fixed malformed patterns and brushes bypassing memory limit
+
 ## v32.0.0
 - **BREAKING CHANGE:** Mask opacity (`filterMask.opacity`, `userMask.opacity` from `LMsk`, `globalLayerMaskInfo.opacity`) is now read and written using the correct 0-100 scale (Photoshop's default 50% now reads as `0.5` instead of `0.196`)
 - **BREAKING CHANGE:** HSB, CMYK, Lab and Grayscale colors in descriptors (effects, gradients, filters) are now converted to the ranges documented on the `Color` type (HSB `s`/`b` 0-1, CMYK and Gray 0-255, Lab `l` 0-1 and `a`/`b` -1..1)

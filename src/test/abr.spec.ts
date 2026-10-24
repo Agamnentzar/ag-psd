@@ -88,6 +88,26 @@ describe('ABR', () => {
 			}
 		}
 	});
+
+	function createAbr(w: number, h: number, depth: number, data: number[]) {
+		const body = [0, ...new Array(264).fill(0)]; // empty id, unknown bytes
+		const int32 = (v: number) => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+		body.push(...int32(0), ...int32(0), ...int32(h), ...int32(w), 0, depth, 1, ...data); // bounds, depth, RLE compression
+		const brushLength = body.length;
+		while (body.length % 4) body.push(0);
+		const samp = [...int32(brushLength), ...body];
+		return new Uint8Array([0, 6, 0, 2, ...Buffer.from('8BIMsamp', 'latin1'), ...int32(samp.length), ...samp]);
+	}
+
+	it('reads 16bit RLE compressed brush sample', () => {
+		// 1 row: length 5, literal run of 4 bytes (0x1234, 0xff00)
+		const abr = readAbr(createAbr(2, 1, 16, [0, 5, 3, 0x12, 0x34, 0xff, 0x00]));
+		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xff]);
+	});
+
+	it('throws for RLE compressed brush sample larger than its data', () => {
+		expect(() => readAbr(createAbr(10000, 10000, 8, new Array(100).fill(0)))).throw('Brush sample data out of bounds');
+	});
 });
 
 function alphaToCanvas(alpha: Uint8Array, width: number, height: number) {

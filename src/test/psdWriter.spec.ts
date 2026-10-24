@@ -4,8 +4,8 @@ import * as vm from 'vm';
 import { expect } from 'chai';
 import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
 import { Psd, WriteOptions, ReadOptions, PatternInfo, PixelData, LayerMaskData } from '../psd';
-import { writePsd, writeSignature, getWriterBuffer, createWriter, writePattern, getRLEChannelBound } from '../psdWriter';
-import { readPsd, createReader, readPattern } from '../psdReader';
+import { writePsd, writeSignature, getWriterBuffer, createWriter, writePattern, getRLEChannelBound, writeColor } from '../psdWriter';
+import { readPsd, createReader, readPattern, readColor } from '../psdReader';
 import { writePsdBuffer, writePsdUint8Array, readPsd as readPsdBuffer } from '../index';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
@@ -803,6 +803,60 @@ describe('PsdWriter', () => {
 				expect(result.colorSpace4).equal(0x4321);
 				expect(result.kind).equal(128);
 			}
+		});
+	});
+
+	describe('fixes', () => {
+		function testImageData(width: number, height: number): PixelData {
+			const data = new Uint8ClampedArray(width * height * 4);
+			for (let i = 0; i < data.length; i++) data[i] = (i * 37) & 0xff;
+			return { width, height, data };
+		}
+
+		it('re-encodes layer raw data read from PSB when writing PSD', () => {
+			const imageData = testImageData(5, 3);
+			const psb = writePsdBuffer({ width: 8, height: 8, children: [{ name: 'a', left: 1, top: 2, imageData }] }, { psb: true });
+			const raw = readPsdBuffer(psb, { useRawData: true, skipCompositeImageData: true, skipThumbnail: true });
+			expect(raw.children![0].rawData!.large).true;
+
+			const psd = writePsdBuffer(raw);
+			const result = readPsdBuffer(psd, { useImageData: true, skipCompositeImageData: true, skipThumbnail: true });
+			expect(Array.from(result.children![0].imageData!.data)).eql(Array.from(imageData.data));
+		});
+
+		it('writes real mask as the main mask if layer has no other mask', () => {
+			const imageData = testImageData(3, 3);
+			const buffer = writePsdBuffer({
+				width: 8, height: 8,
+				children: [{ name: 'a', imageData: testImageData(4, 4), realMask: { left: 1, top: 1, imageData, defaultColor: 255 } }],
+			});
+			const layer = readPsdBuffer(buffer, { useImageData: true, skipCompositeImageData: true, skipThumbnail: true }).children![0];
+			expect(layer.realMask).undefined;
+			expect(layer.mask).include({ left: 1, top: 1, right: 4, bottom: 4, defaultColor: 255 });
+		});
+
+		it('writes real mask as the main mask if layer with raw data has no other mask', () => {
+			const imageData = testImageData(3, 3);
+			const buffer = writePsdBuffer({
+				width: 8, height: 8,
+				children: [{ name: 'a', imageData: testImageData(4, 4), mask: { left: 1, top: 1, imageData, defaultColor: 255 } }],
+			});
+			const raw = readPsdBuffer(buffer, { useRawData: true, skipCompositeImageData: true, skipThumbnail: true });
+			const rawLayer = raw.children![0];
+			rawLayer.realMask = rawLayer.mask;
+			delete rawLayer.mask;
+
+			const layer = readPsdBuffer(writePsdBuffer(raw), { useImageData: true, skipCompositeImageData: true, skipThumbnail: true }).children![0];
+			expect(layer.mask).include({ left: 1, top: 1, right: 4, bottom: 4, defaultColor: 255 });
+			expect(Array.from(layer.mask!.imageData!.data)).eql(Array.from(readPsdBuffer(buffer, { useImageData: true }).children![0].mask!.imageData!.data));
+		});
+
+		it('writes and reads cmyk colors with 0 representing 100% ink', () => {
+			const writer = createWriter();
+			writeColor(writer, { c: 255, m: 0, y: 51, k: 0 });
+			const bytes = new Uint8Array(getWriterBuffer(writer));
+			expect(Array.from(bytes)).eql([0, 2, 0, 0, 0xff, 0xff, 0xcc, 0xcc, 0xff, 0xff]);
+			expect(readColor(createReader(bytes.buffer))).eql({ c: 255, m: 0, y: 51, k: 0 });
 		});
 	});
 });
