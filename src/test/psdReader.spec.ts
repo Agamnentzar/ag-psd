@@ -6,6 +6,8 @@ import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, s
 import { Layer, ReadOptions, Psd, ColorMode, PixelData } from '../psd';
 import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData } from '../index';
 import { readPsd as readPsdInternal, readPattern, readDataRLE, createReader, readBytes, readDataZip } from '../psdReader';
+import { createWriter, getWriterBuffer, writePattern } from '../psdWriter';
+import { infoHandlers, infoHandlersMap } from '../additionalInfo';
 import { decodeEngineData2 } from '../engineData2';
 import { imageDataToCanvas } from '../helpers';
 
@@ -638,7 +640,79 @@ describe('PsdReader', () => {
 			const reader = createReaderFromBuffer(buf);
 			reader.totalMemoryLimit = 2 * 1024 * 1024 * 1024; // same default readPsd uses
 
-			expect(() => readPattern(reader)).to.throw('Exceeded memory limit');
+			expect(() => readPattern(reader)).to.throw('Pattern too large');
+		});
+
+		it('rejects pattern channel outside of pattern bounds', () => {
+			const buf = buildPattern(1, 1, [{ depth: 8, rect: [0, 0, 30000, 30000], data: [1] }]);
+			expect(() => readPattern(createReaderFromBuffer(buf))).to.throw('Pattern channel bounds outside of pattern bounds');
+		});
+	});
+
+	describe('patterns', () => {
+		it('reads pattern transparency', () => {
+			const data = new Uint8Array([10, 20, 30, 0, 40, 50, 60, 128]);
+			const writer = createWriter();
+			writePattern(writer, { id: 'id', name: 'p', x: 0, y: 0, bounds: { x: 0, y: 0, w: 2, h: 1 }, data });
+			const pattern = readPattern(createReader(getWriterBuffer(writer)));
+			expect(Array.from(pattern.data)).eql(Array.from(data));
+		});
+
+		it('reads 16bit grayscale pattern with transparency', () => {
+			const buf = buildPattern(2, 1, [
+				{ depth: 16, data: [0x00, 0x00, 0xff, 0xff] }, // gray
+				{ depth: 16, data: [0xff, 0xff, 0x80, 0x00] }, // alpha
+			], ColorMode.Grayscale);
+			const pattern = readPattern(createReaderFromBuffer(buf));
+			expect(Array.from(pattern.data)).eql([0, 0, 0, 255, 255, 255, 255, 128]);
+		});
+
+		it('skips unsupported patterns and reads following ones', () => {
+			const unsupported = buildPattern(1, 1, [{ depth: 8, data: [1] }], ColorMode.CMYK);
+			const valid = buildPattern(1, 1, [{ depth: 8, data: [1] }, { depth: 8, data: [2] }, { depth: 8, data: [3] }]);
+			const block = Buffer.concat([unsupported, valid]);
+			const target: any = {};
+			const reader = createReaderFromBuffer(block);
+			infoHandlersMap['Patt'].read(reader, target, () => block.byteLength - reader.offset, { width: 1, height: 1 }, {});
+			expect(target.patterns.length).equal(1);
+			expect(Array.from(target.patterns[0].data)).eql([1, 2, 3, 255]);
+		});
+	});
+
+	describe('fixes', () => {
+		it('reads layer with negative size as empty layer', () => {
+			const buffer = writePsdBuffer({ width: 10, height: 10, children: [{ name: 'a', left: 7, top: 5 }] });
+			// find layer record bounds (top, left, bottom, right) and make the layer -1 pixel wide
+			const bounds = Buffer.from([0, 0, 0, 5, 0, 0, 0, 7, 0, 0, 0, 5, 0, 0, 0, 7]);
+			const offset = buffer.indexOf(bounds);
+			expect(offset).greaterThan(0);
+			buffer.writeInt32BE(6, offset + 12);
+			const psd = readPsd(buffer, { useImageData: true, skipCompositeImageData: true });
+			expect(psd.children![0]).include({ name: 'a', left: 7, top: 5, right: 6, bottom: 5 });
+		});
+
+		it('reads composite image transparency marked with Mtrn', () => {
+			const data = new Uint8ClampedArray([255, 0, 0, 0, 0, 255, 0, 255]);
+			const psd: Psd = { width: 2, height: 1, imageData: { width: 2, height: 1, data }, imageResources: { alphaChannelNames: ['Transparency'] } };
+			const handler = infoHandlers.find(h => h.key === 'Mtrn')!;
+			const has = handler.has;
+			handler.has = (target: any) => target === psd;
+			let buffer: Buffer;
+
+			try {
+				buffer = writePsdBuffer(psd);
+			} finally {
+				handler.has = has;
+			}
+
+			const result = readPsd(buffer, { useImageData: true });
+			expect(Array.from(result.imageData!.data).filter((_, i) => i % 4 === 3)).eql([0, 255]);
+		});
+
+		it('writes keys that Photoshop writes with 64bit length in PSB files with 8B64 signature', () => {
+			const buffer = writePsdBuffer({ width: 10, height: 10, artboards: { count: 1 } }, { psb: true });
+			expect(buffer.indexOf('8B64artd')).greaterThan(0);
+			expect(readPsd(buffer).artboards!.count).equal(1);
 		});
 
 		it('rejects a layer whose bounding box exceeds the document size limit', () => {
@@ -1081,4 +1155,20 @@ function clearCanvasFields(layer: Layer | undefined) {
 		if (layer.mask) delete layer.mask.imageData;
 		layer.children?.forEach(clearCanvasFields);
 	}
+}
+
+function buildPattern(width: number, height: number, channels: { depth: number; rect?: number[]; data: number[]; }[], colorMode = ColorMode.RGB) {
+	const uint32 = (v: number) => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+	const arrays: number[] = [];
+
+	for (const c of channels) {
+		const [top, left, bottom, right] = c.rect ?? [0, 0, height, width];
+		arrays.push(...uint32(1), ...uint32(23 + c.data.length), ...uint32(c.depth), ...uint32(top), ...uint32(left), ...uint32(bottom), ...uint32(right), 0, c.depth, 0, ...c.data);
+	}
+
+	arrays.push(...uint32(0), ...uint32(0)); // user mask and sheet mask
+	const vmal = [...uint32(0), ...uint32(0), ...uint32(height), ...uint32(width), ...uint32(channels.length), ...arrays];
+	const body = [...uint32(1), ...uint32(colorMode), 0, 0, 0, 0, ...uint32(0), 0, ...uint32(3), ...uint32(vmal.length), ...vmal];
+	while (body.length % 4) body.push(0);
+	return Buffer.from([...uint32(body.length), ...body]);
 }

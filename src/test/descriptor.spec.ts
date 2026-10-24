@@ -385,6 +385,26 @@ describe('effects', () => {
 		expect(parseVectorContent(readDesc(writeDesc(descriptor)) as any)).eql(content);
 	});
 
+	it('round-trips exact gradient fill scale and offset', () => {
+		const content: VectorContent = {
+			type: 'solid', name: 'g', style: 'linear', scale: 1.00136, offset: { x: -0.02375, y: -0.003125 },
+			colorStops: [{ location: 0, midpoint: 0.5, color: { r: 0, g: 0, b: 0 } }],
+			opacityStops: [{ location: 0, midpoint: 0.5, opacity: 1 }],
+		};
+		const { descriptor } = serializeVectorContent(content);
+		const result = parseVectorContent(readDesc(writeDesc(descriptor)) as any) as any;
+		expect(result.scale).equal(1.00136);
+		expect(result.offset).eql({ x: -0.02375, y: -0.003125 });
+	});
+
+	it('round-trips glow gradient interpolation method', () => {
+		const effects: LayerEffectsInfo = { outerGlow: { enabled: true, interpolationMethod: 'classic' } };
+		const info = serializeEffects(effects, false, false);
+		expect((info.OrGl as any).gradientsInterpolationMethod).equal('gradientInterpolationMethodType.Gcls');
+		expect((info.OrGl as any).gs99).undefined;
+		expect(parseEffects(readDesc(writeDesc(info)) as any, true).outerGlow!.interpolationMethod).equal('classic');
+	});
+
 	it('writes pattern overlay angle as Angl', () => {
 		const effects: LayerEffectsInfo = {
 			patternOverlay: { enabled: true, angle: 45, pattern: { name: 'p', id: 'id' } } as any,

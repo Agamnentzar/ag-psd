@@ -77,6 +77,8 @@ export interface LayerEffectsOuterGlow {
 	choke?: UnitsValue;
 	jitter?: number;
 	contour?: EffectContour;
+	gradient?: EffectSolidGradient | EffectNoiseGradient;
+	interpolationMethod?: InterpolationMethod;
 }
 
 export interface LayerEffectInnerGlow {
@@ -95,6 +97,8 @@ export interface LayerEffectInnerGlow {
 	choke?: UnitsValue; // spread
 	jitter?: number;
 	contour?: EffectContour;
+	gradient?: EffectSolidGradient | EffectNoiseGradient;
+	interpolationMethod?: InterpolationMethod;
 }
 
 export interface LayerEffectBevel {
@@ -588,7 +592,17 @@ export interface HueSaturationAdjustmentChannel {
 
 export interface HueSaturationAdjustment extends PresetInfo {
 	type: 'hue/saturation';
-	master?: HueSaturationAdjustmentChannel;
+	colorize?: boolean;
+	colorization?: {
+		hue: number; // 0..360
+		saturation: number; // 0..100
+		lightness: number; // -100..100
+	};
+	master?: {
+		hue: number;
+		saturation: number;
+		lightness: number;
+	};
 	reds?: HueSaturationAdjustmentChannel;
 	yellows?: HueSaturationAdjustmentChannel;
 	greens?: HueSaturationAdjustmentChannel;
@@ -743,6 +757,15 @@ export type LinkedFile = {
 		originalPath: string;
 		relativePath: string;
 	};
+}
+
+export interface LevelsFilterAdjustment {
+	channels: ('composite' | 'red' | 'green' | 'blue')[];
+	shadowInput?: number; // 0..255
+	highlightInput?: number; // 0..255
+	shadowOutput?: number; // 0..255
+	highlightOutput?: number; // 0..255
+	midtoneInput?: number; // gamma, 1 by default
 }
 
 type FilterVariant = {
@@ -1172,7 +1195,7 @@ type FilterVariant = {
 } | {
 	type: 'curves';
 	filter: {
-		presetKind: 'custom' | 'default';
+		presetKind?: 'custom' | 'default';
 		adjustments?: ({
 			channels: ('composite' | 'red' | 'green' | 'blue')[];
 			curve: { x: number; y: number; curved?: boolean; }[];
@@ -1180,6 +1203,12 @@ type FilterVariant = {
 			channels: ('composite' | 'red' | 'green' | 'blue')[];
 			values: number[];
 		})[];
+	};
+} | {
+	type: 'levels';
+	filter: {
+		presetKind?: 'custom' | 'default';
+		adjustments?: LevelsFilterAdjustment[];
 	};
 } | {
 	type: 'invert';
@@ -1190,6 +1219,10 @@ type FilterVariant = {
 		contrast: number;
 		useLegacy: boolean;
 	};
+} | {
+	type: 'unknown'; // filter not supported by this library, written back unchanged
+	filterID: number;
+	descriptor?: any; // raw filter settings descriptor (missing for filters without settings)
 };
 
 /*
@@ -1242,6 +1275,7 @@ export interface PlacedLayer {
 	id: string; // id of linked image file (psd.linkedFiles), must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)
 	placed?: string; // unique id
 	type: PlacedLayerType;
+	external?: boolean; // linked smart object (linked file is stored outside of the document)
 	pageNumber?: number;
 	totalPages?: number;
 	frameStep?: { numerator: number; denominator: number; };

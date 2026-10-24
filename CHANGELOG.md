@@ -3,6 +3,13 @@
 ## v33.0.0
 - **BREAKING CHANGE:** CMYK colors stored in binary color structures (legacy `lrFX` effects, background color, filter mask, etc.) are now inverted on read and write (Photoshop stores 0 as 100% ink), matching CMYK colors read from descriptors
 - **BREAKING CHANGE:** Text layers with "Windows" and "Windows LCD" anti-aliasing now read as `platform` and `platformLCD` instead of `smooth`, and writing them no longer produces `sharp` anti-aliasing
+- **BREAKING CHANGE:** Hue/saturation adjustment colorize settings are now read as `colorize` and `colorization` (`hue` 0-360, `saturation`, `lightness`) fields, previously they were incorrectly read as `a`, `b`, `c`, `d` fields of `master`, which now only has `hue`, `saturation` and `lightness`
+- Smart filters not supported by the library (Hue/Saturation, Camera Raw, Shadows/Highlights, filters stored with default settings, etc.) are now read with `type: 'unknown'` and written back unchanged, previously they were removed
+- Added support for levels smart filter
+- Added `external` field to `placedLayer` for linked smart objects, they are now written as `SoLE` without `PlLd` (like Photoshop), previously they were written as embedded smart objects
+- Added `gradient` and `interpolationMethod` fields to outer and inner glow effect types
+- Added `throwForMissingFeatures` and `totalMemoryLimit` options to `readAbr` and `logMissingFeatures` and `throwForMissingFeatures` options to `readAse`
+- Fixed curves smart filter without preset kind removing all smart filters of the layer
 - Added `shapeContour` field to bevel effect (contour used when `useShape` is enabled), previously it overwrote `contour` (gloss contour) and was lost when writing
 - Added `protected.all` field for "lock all" layer protection flag
 - Added `type` field to gradient color stops using foreground or background color
@@ -24,6 +31,19 @@
 - Fixed leading BOM being stripped only from long UTF-8 strings
 - Fixed JPEG thumbnails with both JFIF and Adobe markers decoding with wrong colors
 - Fixed malformed patterns and brushes bypassing memory limit
+- Fixed reading files with layers with negative size (now read as empty layers)
+- Fixed composite image transparency marked only by `Mtrn`/`Mt16`/`Mt32` (or by "Transparency" alpha channel name in 16bit documents) being ignored
+- Fixed duplicate layers in 16bit and 32bit documents with both 8bit compatibility layers and `Lr16`/`Lr32` layers
+- Fixed writing `lnk3`, `lnkE`, `pths`, `extd`, `extn`, `FELS` and `artd` in PSB files with 32bit length (Photoshop uses 64bit length), files written by previous versions are still read correctly
+- Fixed glow effect gradient interpolation method being lost
+- Fixed gradient fill and gradient stroke scale and offset being rounded to whole percent when writing
+- Fixed vector stroke without line dash set being lost
+- Fixed faux bold/faux italic (synthetic) variants of the same font being merged when writing text layers
+- Fixed reading photo filter version 3 colors (stored as XYZ, not Lab)
+- Fixed reading pattern transparency, 16bit/32bit patterns and RLE compressed indexed patterns, unsupported or invalid patterns are now skipped instead of removing all following patterns
+- Fixed invalid pattern channel bounds, brush sample sizes and section sizes in ABR files causing huge allocations or hangs
+- Fixed unknown sections (for example tool presets), invalid brushes and samples failing reading of whole ABR file, they are now skipped
+- Fixed ASE files with unknown blocks, unknown color modes or color types, missing color types or non-zero minor version failing to read
 
 ## v32.0.0
 - **BREAKING CHANGE:** Mask opacity (`filterMask.opacity`, `userMask.opacity` from `LMsk`, `globalLayerMaskInfo.opacity`) is now read and written using the correct 0-100 scale (Photoshop's default 50% now reads as `0.5` instead of `0.196`)

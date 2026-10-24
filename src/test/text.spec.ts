@@ -18,6 +18,19 @@ describe('text', () => {
 		expect(decoded.text).equal('Hello\n\n');
 	});
 
+	it('keeps separate fonts for faux bold/italic (synthetic) variants', () => {
+		const { decoded } = roundTrip({
+			text: 'abc',
+			styleRuns: [
+				{ length: 1, style: { font: { name: 'Arial', synthetic: 0 } } },
+				{ length: 1, style: { font: { name: 'Arial', synthetic: 1 } } },
+				{ length: 1, style: { font: { name: 'Arial', synthetic: 2 } } },
+			],
+		});
+
+		expect(decoded.styleRuns!.map(r => r.style.font!.synthetic)).eql([0, 1, 2]);
+	});
+
 	it('strips only single trailing new line written by photoshop', () => {
 		const { decoded } = roundTrip({ text: 'Hello' });
 

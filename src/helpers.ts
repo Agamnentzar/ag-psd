@@ -44,11 +44,15 @@ export const layerColors: LayerColor[] = [
 	'none', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray'
 ];
 
+// keys not listed in documentation that Photoshop writes with 64bit length in PSB files (with 8B64 signature)
+export const largeAdditionalInfoKeysObserved = ['lnk3', 'lnkE', 'pths', 'extd', 'extn', 'FELS', 'artd'];
+
 export const largeAdditionalInfoKeys = [
 	// from documentation
 	'LMsk', 'Lr16', 'Lr32', 'Layr', 'Mt16', 'Mt32', 'Mtrn', 'Alph', 'FMsk', 'lnk2', 'FEid', 'FXid', 'PxSD',
 	// from guessing
 	'cinf',
+	...largeAdditionalInfoKeysObserved,
 ];
 
 export interface Dict {

@@ -369,8 +369,9 @@ function objectsEqual(a: any, b: any) {
 }
 
 function findOrAddFont(fonts: Font[], font: Font) {
+	// Photoshop writes separate entries for the same font with different synthetic (faux bold/italic) styles
 	for (let i = 0; i < fonts.length; i++) {
-		if (fonts[i].name === font.name) return i;
+		if (fonts[i].name === font.name && (fonts[i].synthetic || 0) === (font.synthetic || 0)) return i;
 	}
 
 	fonts.push(font);

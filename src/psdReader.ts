@@ -1,6 +1,6 @@
 import { Inflate } from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression } from './psd';
-import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, imageDataToCanvas, normalizeLabAB } from './helpers';
+import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, largeAdditionalInfoKeysObserved, imageDataToCanvas, normalizeLabAB } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { decodeString } from './utf8';
 import { InternalImageResources, resourceHandlersMap } from './imageResources';
@@ -28,6 +28,7 @@ export interface PsdReader extends ReadOptions {
 	view: DataView;
 	large: boolean;
 	globalAlpha: boolean;
+	layersInGlobalInfo?: boolean; // layers were read from Lr16/Lr32/Layr global additional info
 	log(...args: any[]): void;
 	// text decoders, created lazily (null if not supported)
 	utf8Decoder?: TextDecoder | null;
@@ -290,6 +291,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	Object.assign(reader, readOptions);
 	reader.large = version === 2;
 	reader.globalAlpha = false;
+	reader.layersInGlobalInfo = false;
 	if (!('totalMemoryLimit' in reader)) { // setting totalMemoryLimit to undefined explicitly disables memory limit
 		reader.totalMemoryLimit = 2 * 1024 * 1024 * 1024; // default 2GB memory limit
 	}
@@ -336,7 +338,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 						skipBytes(reader, left());
 					}
 				} else {
-					// options.logMissingFeatures && console.log(`Unhandled image resource: ${id} (${left()})`);
+					reader.logMissingFeatures && reader.log(`Unhandled image resource: ${id} (${left()})`);
 					skipBytes(reader, left());
 				}
 			});
@@ -524,11 +526,12 @@ function readLayerRecord(reader: PsdReader, psd: Psd, imageResources: InternalIm
 	return { layer, channels };
 }
 
+// negative sizes are treated as empty (Photoshop writes them for some empty layers, like 0,0,-1,0 bounds of fill layer)
 function isValidBoxSize(box: { top?: number; left?: number; bottom?: number; right?: number; }, reader: PsdReader) {
 	const width = (box.right || 0) - (box.left || 0);
 	const height = (box.bottom || 0) - (box.top || 0);
 	const maxSize = reader.large ? 300000 : 30000;
-	return width >= 0 && height >= 0 && width <= maxSize && height <= maxSize;
+	return width <= maxSize && height <= maxSize;
 }
 
 function readLayerMaskData(reader: PsdReader, layer: Layer) {
@@ -955,7 +958,13 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 	const key = readSignature(reader);
 
 	// `largeAdditionalInfoKeys` fallback, because some keys don't have 8B64 signature even when they are 64bit
-	const u64 = sig === '8B64' || (reader.large && largeAdditionalInfoKeys.indexOf(key) !== -1);
+	let u64 = sig === '8B64' || (reader.large && largeAdditionalInfoKeys.indexOf(key) !== -1);
+
+	// these keys were written by older versions of this library with 32bit length and 8BIM signature,
+	// 64bit length always has high 32bits set to 0 (lengths over 4GB are not supported)
+	if (reader.large && sig === '8BIM' && largeAdditionalInfoKeysObserved.indexOf(key) !== -1) {
+		u64 = reader.view.getUint32(reader.offset) === 0;
+	}
 
 	readSection(reader, 2, left => {
 		const handler = infoHandlersMap[key];
@@ -1090,8 +1099,12 @@ function compositeChannelOffsets(reader: PsdReader, psd: Psd, colorChannels: num
 	// First extra channel is transparency if document has global alpha (negative layer count). Some non-Photoshop
 	// applications write transparency channel without setting global alpha, in that case extra channel is not
 	// listed in alpha channel names (Photoshop names all user alpha channels / saved selections).
-	const namedChannels = psd.imageResources?.alphaChannelNames?.length ?? 0;
-	const hasTransparency = reader.globalAlpha || (channelCount - colorChannels) > namedChannels;
+	// Photoshop also lists merged transparency as first alpha channel named "Transparency" (in documents marked with
+	// Mtrn/Mt16/Mt32 additional info, or in some 16bit documents with layers stored in Lr16 without any other mark)
+	const alphaNames = psd.imageResources?.alphaChannelNames ?? [];
+	const namedChannels = alphaNames.length;
+	const namedTransparency = !!reader.layersInGlobalInfo && alphaNames[0] === 'Transparency' && namedChannels === channelCount - colorChannels;
+	const hasTransparency = reader.globalAlpha || namedTransparency || (channelCount - colorChannels) > namedChannels;
 	const offsets: number[] = [];
 
 	for (let i = 0; i < channelCount; i++) {
@@ -1583,6 +1596,24 @@ export function readColor(reader: PsdReader): Color {
 	}
 }
 
+const MAX_PATTERN_SIZE = 30000;
+
+// reads pattern, unsupported or invalid patterns are skipped (returns undefined) unless throwForMissingFeatures is set
+export function readPatternSafe(reader: PsdReader): PatternInfo | undefined {
+	let length = reader.view.getUint32(reader.offset);
+	while (length % 4) length++;
+	const end = reader.offset + 4 + length;
+
+	try {
+		return readPattern(reader);
+	} catch (e) {
+		if (reader.throwForMissingFeatures) throw e;
+		reader.logMissingFeatures && reader.log(`Skipped pattern: ${(e as Error).message}`);
+		reader.offset = end;
+		return undefined;
+	}
+}
+
 export function readPattern(reader: PsdReader): PatternInfo {
 	let length = readUint32(reader);
 	while (length % 4) length++;
@@ -1594,7 +1625,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	const x = readInt16(reader);
 	const y = readInt16(reader);
 
-	// we only support RGB and grayscale for now
+	// we only support RGB, grayscale and indexed for now
 	if (colorMode !== ColorMode.RGB && colorMode !== ColorMode.Grayscale && colorMode !== ColorMode.Indexed) {
 		throw new Error(`Unsupported pattern color mode: ${colorMode}`);
 	}
@@ -1612,7 +1643,8 @@ export function readPattern(reader: PsdReader): PatternInfo {
 			})
 		}
 
-		skipBytes(reader, 4); // no idea what this is
+		// some writers follow the palette with 4 extra bytes (unknown)
+		if (reader.view.getUint32(reader.offset) !== 3) skipBytes(reader, 4);
 	}
 
 	// virtual memory array list
@@ -1628,6 +1660,10 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	const width = right - left;
 	const height = bottom - top;
 	if (width < 0 || height < 0) throw new Error('Invalid pattern bounds');
+	if (width > MAX_PATTERN_SIZE || height > MAX_PATTERN_SIZE) throw new Error(`Pattern too large (${width}x${height})`);
+	if (channelsCount > 64) throw new Error(`Invalid pattern channel count: ${channelsCount}`);
+	// channels cover whole pattern, each 2 bytes of RLE data can produce at most 128 bytes
+	if (width * height > (Math.min(end, reader.view.byteLength) - reader.offset) * 64) throw new Error('Pattern data out of bounds');
 	const size = width * height * 4;
 	consumeMemory(reader, size);
 	const data = new Uint8Array(size);
@@ -1636,11 +1672,17 @@ export function readPattern(reader: PsdReader): PatternInfo {
 		data[i] = 255;
 	}
 
-	for (let i = 0, ch = 0; i < (channelsCount + 2); i++) {
+	// first written arrays are color channels, next one is transparency (Photoshop stores it in the last, sheet mask, array)
+	const colorChannels = colorMode === ColorMode.RGB ? 3 : 1;
+
+	for (let i = 0, ch = 0; i < (channelsCount + 2) && reader.offset + 4 <= end; i++) {
 		const has = readUint32(reader);
 		if (!has) continue;
 
 		const length = readUint32(reader);
+		if (!length) continue;
+		if (length < 23) throw new Error('Invalid pattern channel length');
+
 		const pixelDepth = readUint32(reader);
 		const ctop = readUint32(reader);
 		const cleft = readUint32(reader);
@@ -1648,83 +1690,68 @@ export function readPattern(reader: PsdReader): PatternInfo {
 		const cright = readUint32(reader);
 		const pixelDepth2 = readUint16(reader);
 		const compressionMode = readUint8(reader); // 0 - raw, 1 - rle
-		const dataLength = length - (4 + 16 + 2 + 1);
-		const cdata = readBytes(reader, dataLength);
+		const cdata = readBytes(reader, length - 23);
+		const depth = (pixelDepth2 === 8 || pixelDepth2 === 16 || pixelDepth2 === 32) ? pixelDepth2 : pixelDepth;
 
-		if (pixelDepth !== 8 || pixelDepth2 !== 8) {
-			throw new Error('16bit pixel depth not supported for patterns');
+		if (depth !== 8 && depth !== 16 && depth !== 32) throw new Error(`Unsupported pattern pixel depth: ${depth}`);
+
+		if (ctop < top || cleft < left || cbottom > bottom || cright > right || cbottom < ctop || cright < cleft) {
+			throw new Error('Pattern channel bounds outside of pattern bounds');
 		}
+
+		const target = ch < colorChannels ? ch : (ch === colorChannels ? 3 : -1);
+		ch++;
+
+		if (target === -1) continue;
 
 		const w = cright - cleft;
 		const h = cbottom - ctop;
-		if (w < 0 || h < 0) throw new Error('Invalid pattern channel bounds');
-		const ox = cleft - left;
-		const oy = ctop - top;
+		const rowBytes = w * (depth / 8);
+		const channelSize = rowBytes * h;
+		let bytes: Uint8Array;
 
 		if (compressionMode === 0) {
-			if (colorMode === ColorMode.RGB && ch < 3) {
-				for (let y = 0; y < h; y++) {
-					for (let x = 0; x < w; x++) {
-						const src = x + y * w;
-						const dst = (ox + x + (y + oy) * width) * 4;
-						data[dst + ch] = cdata[src];
-					}
-				}
-			} else if (colorMode === ColorMode.Grayscale && ch < 1) {
-				for (let y = 0; y < h; y++) {
-					for (let x = 0; x < w; x++) {
-						const src = x + y * w;
-						const dst = (ox + x + (y + oy) * width) * 4;
-						const value = cdata[src];
-						data[dst + 0] = value;
-						data[dst + 1] = value;
-						data[dst + 2] = value;
-					}
-				}
-			} else if (colorMode === ColorMode.Indexed) {
-				for (let y = 0; y < h; y++) {
-					for (let x = 0; x < w; x++) {
-						const src = x + y * w;
-						const dst = (ox + x + (y + oy) * width) * 4;
-						const index = cdata[src];
-						const color = palette[index];
-						data[dst + 0] = color.r;
-						data[dst + 1] = color.g;
-						data[dst + 2] = color.b;
-					}
-				}
-			} else {
-				if (reader.throwForMissingFeatures) throw new Error('Invalid color pattern');
-			}
+			if (cdata.byteLength < channelSize) throw new Error('Pattern channel data out of bounds');
+			bytes = cdata;
 		} else if (compressionMode === 1) {
-			consumeMemory(reader, w * h);
+			// each 2 bytes of RLE data can produce at most 128 bytes
+			if (channelSize > cdata.byteLength * 64) throw new Error('Pattern channel data out of bounds');
 
-			const pixelData: PixelData = { data, width, height };
-			const tempData: PixelData = { data: new Uint8Array(w * h), width: w, height: h };
+			consumeMemory(reader, channelSize);
+			bytes = new Uint8Array(channelSize);
 			const cdataReader = createReader(cdata.buffer, cdata.byteOffset, cdata.byteLength);
-
-			if (colorMode === ColorMode.RGB && ch < 3) {
-				readDataRLE(cdataReader, tempData, w, h, 8, 1, [0], false);
-				copyChannelToRGBA(tempData, pixelData, ox, oy, ch);
-			}
-
-			if (colorMode === ColorMode.Grayscale && ch < 1) {
-				readDataRLE(cdataReader, tempData, w, h, 8, 1, [0], false);
-				copyChannelToRGBA(tempData, pixelData, ox, oy, 0);
-				setupGrayscale(pixelData);
-			}
-
-			if (colorMode === ColorMode.Indexed) {
-				// TODO:
-				throw new Error('Indexed pattern color mode not implemented');
-			}
-
-			recoverMemory(reader, w * h);
+			readDataRLE(cdataReader, { data: bytes, width: rowBytes, height: h }, rowBytes, h, 8, 1, [0], false);
 		} else {
 			throw new Error('Invalid pattern compression mode');
 		}
 
-		ch++;
+		const ox = cleft - left;
+		const oy = ctop - top;
+
+		for (let y = 0; y < h; y++) {
+			for (let x = 0; x < w; x++) {
+				const src = x + y * w;
+				const dst = (ox + x + (y + oy) * width) * 4;
+				const value = depth === 8 ? bytes[src] : patternValueTo8bit(bytes, src, depth);
+
+				if (target === 3) {
+					data[dst + 3] = value;
+				} else if (colorMode === ColorMode.Indexed) {
+					const color = palette[value];
+					data[dst + 0] = color.r;
+					data[dst + 1] = color.g;
+					data[dst + 2] = color.b;
+				} else if (colorMode === ColorMode.Grayscale) {
+					data[dst + 0] = value;
+					data[dst + 1] = value;
+					data[dst + 2] = value;
+				} else {
+					data[dst + target] = value;
+				}
+			}
+		}
+
+		if (compressionMode === 1) recoverMemory(reader, channelSize);
 	}
 
 	reader.offset = end;
@@ -1732,22 +1759,18 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	return { id, name, x, y, bounds: { x: left, y: top, w: width, h: height }, data };
 }
 
-function copyChannelToRGBA(srcData: PixelData, dstData: PixelData, ox: number, oy: number, offset: number) {
-	const w = srcData.width;
-	const h = srcData.height;
-	const width = dstData.width;
-
-	for (let y = 0; y < h; y++) {
-		for (let x = 0; x < w; x++) {
-			const src = x + y * w;
-			const dst = (ox + x + (y + oy) * width) * 4;
-			const value = srcData.data[src];
-			dstData.data[dst + offset] = value;
-		}
+// converts big-endian 16bit or 32bit (float) value at given index to 8bit value
+function patternValueTo8bit(bytes: Uint8Array, index: number, depth: number) {
+	if (depth === 16) {
+		return Math.round(((bytes[index * 2] << 8) | bytes[index * 2 + 1]) / 257);
+	} else {
+		const view = new DataView(bytes.buffer, bytes.byteOffset + index * 4, 4);
+		const value = view.getFloat32(0, false);
+		return value > 0 ? (value < 1 ? Math.round(value * 255) : 255) : 0;
 	}
 }
 
-function consumeMemory(reader: PsdReader, size: number) {
+export function consumeMemory(reader: PsdReader, size: number) {
 	if (!(size >= 0)) throw new Error('Invalid size');
 
 	if (reader.totalMemoryLimit !== undefined) {

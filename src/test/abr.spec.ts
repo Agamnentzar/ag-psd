@@ -105,8 +105,30 @@ describe('ABR', () => {
 		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xff]);
 	});
 
-	it('throws for RLE compressed brush sample larger than its data', () => {
-		expect(() => readAbr(createAbr(10000, 10000, 8, new Array(100).fill(0)))).throw('Brush sample data out of bounds');
+	it('skips RLE compressed brush sample larger than its data', () => {
+		const abr = createAbr(10000, 10000, 8, new Array(100).fill(0));
+		expect(readAbr(abr).samples).eql([]);
+		expect(() => readAbr(abr, { throwForMissingFeatures: true })).throw('Brush sample data out of bounds');
+	});
+
+	it('does not read brush sample data past the end of the file', () => {
+		// raw 8bit sample of 1000x1000 pixels with sample and section lengths claiming the data is there
+		const int32 = (v: number) => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+		const body = [0, ...new Array(264).fill(0), ...int32(0), ...int32(0), ...int32(1000), ...int32(1000), 0, 8, 0];
+		const samp = [...int32(1000 * 1000 + body.length), ...body];
+		const abr = new Uint8Array([0, 6, 0, 2, ...Buffer.from('8BIMsamp', 'latin1'), ...int32(0x7fffffff), ...samp]);
+		expect(readAbr(abr).samples).eql([]);
+		expect(() => readAbr(abr, { throwForMissingFeatures: true })).throw('Brush sample data out of bounds');
+	});
+
+	it('skips unknown sections and invalid samples', () => {
+		const int32 = (v: number) => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
+		const lPdc = [...Buffer.from('8BIMlPdc', 'latin1'), ...int32(4), 1, 2, 3, 4];
+		const valid = createAbr(2, 1, 16, [0, 5, 3, 0x12, 0x34, 0xff, 0x00]).slice(4);
+		const invalid = createAbr(10000, 10000, 8, new Array(100).fill(0)).slice(4);
+		const abr = readAbr(new Uint8Array([0, 6, 0, 2, ...lPdc, ...invalid, ...valid]));
+		expect(abr.samples.length).equal(1);
+		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xff]);
 	});
 });
 

@@ -1,6 +1,6 @@
 import { BlnM, DescriptorUnitsValue, parseAngle, parsePercent, parseUnitsToNumber, readVersionAndDescriptor } from './descriptor';
 import { BlendMode, PatternInfo } from './psd';
-import { checkSignature, createReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPattern, readSignature, readUint16, readUint32, readUint8, skipBytes } from './psdReader';
+import { checkSignature, consumeMemory, createReader, PsdReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPatternSafe, readSignature, readUint16, readUint32, readUint8, skipBytes } from './psdReader';
 
 export interface Abr {
 	brushes: Brush[];
@@ -516,8 +516,26 @@ function parseHeightmap(array: Uint8Array) {
 	// return result;
 }
 
-export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?: boolean; } = {}): Abr {
+export interface ReadAbrOptions {
+	logMissingFeatures?: boolean;
+	/** Throw on unsupported or invalid parts of the file instead of skipping them */
+	throwForMissingFeatures?: boolean;
+	/** Memory limit for decoded data in bytes (2GB by default), set to `undefined` explicitly to disable */
+	totalMemoryLimit?: number;
+}
+
+export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): Abr {
 	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	reader.logMissingFeatures = options.logMissingFeatures;
+	reader.throwForMissingFeatures = options.throwForMissingFeatures;
+	reader.totalMemoryLimit = 'totalMemoryLimit' in options ? options.totalMemoryLimit : 2 * 1024 * 1024 * 1024;
+
+	// skips invalid or unsupported part of the file
+	const skip = (e: unknown, what: string) => {
+		if (options.throwForMissingFeatures) throw e;
+		options.logMissingFeatures && reader.log(`Skipped ${what}: ${(e as Error).message}`);
+	};
+
 	const version = readInt16(reader);
 	const samples: SampleInfo[] = [];
 	const brushes: Brush[] = [];
@@ -529,252 +547,77 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 		const minorVersion = readInt16(reader);
 		if (minorVersion !== 1 && minorVersion !== 2) throw new Error('Unsupported ABR minor version');
 
-		while (reader.offset < reader.view.byteLength) {
+		// section header is 12 bytes, ignore any shorter trailing data
+		while (reader.offset + 12 <= reader.view.byteLength) {
 			checkSignature(reader, '8BIM');
 			const type = readSignature(reader) as 'samp' | 'desc' | 'patt' | 'phry';
 			const size = readUint32(reader);
-			const end = reader.offset + size;
+			const end = Math.min(reader.offset + size, reader.view.byteLength);
 
-			switch (type) {
-				case 'samp': {
-					while (reader.offset < end) {
-						let brushLength = readUint32(reader);
-						while (brushLength & 0b11) brushLength++; // pad to 4 byte alignment
-						const brushEnd = reader.offset + brushLength;
+			try {
+				switch (type) {
+					case 'samp': {
+						while (reader.offset + 4 <= end) {
+							let brushLength = readUint32(reader);
+							while (brushLength & 0b11) brushLength++; // pad to 4 byte alignment
+							const brushEnd = Math.min(reader.offset + brushLength, end);
 
-						const id = readPascalString(reader, 1);
-
-						// v1 - Skip the Int16 bounds rectangle and the unknown Int16.
-						// v2 - Skip the unknown bytes.
-						skipBytes(reader, minorVersion === 1 ? 10 : 264);
-
-						const y = readInt32(reader);
-						const x = readInt32(reader);
-						const h = readInt32(reader) - y;
-						const w = readInt32(reader) - x;
-						if (w <= 0 || h <= 0) throw new Error('Invalid bounds');
-						if (w > MAX_BRUSH_SIZE || h > MAX_BRUSH_SIZE) {
-							throw new Error(`Brush sample too large (${w}x${h})`);
-						}
-
-						const bithDepth = readInt16(reader);
-						const compression = readUint8(reader); // 0 - raw, 1 - RLE
-						const rowSize = w * (bithDepth === 16 ? 2 : 1);
-						// RLE needs at least 2 bytes for row length and 2 bytes per each 128 byte run
-						const minDataSize = compression === 0 ? h * rowSize : h * (2 + Math.ceil(rowSize / 128) * 2);
-						if (minDataSize > brushEnd - reader.offset) {
-							throw new Error('Brush sample data out of bounds');
-						}
-
-						const alpha = new Uint8Array(w * h);
-
-						if (bithDepth === 8) {
-							if (compression === 0) {
-								alpha.set(readBytes(reader, alpha.byteLength));
-							} else if (compression === 1) {
-								readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, bithDepth, 1, [0], false);
-							} else {
-								throw new Error('Invalid compression');
+							try {
+								const sample = readSample(reader, brushEnd, minorVersion);
+								samples.push(sample);
+							} catch (e) {
+								skip(e, 'brush sample');
 							}
-						} else if (bithDepth === 16) {
-							if (compression === 0) {
-								for (let i = 0; i < alpha.byteLength; i++) {
-									alpha[i] = readUint16(reader) >> 8; // convert to 8bit values
-								}
-							} else if (compression === 1) {
-								const data = new Uint16Array(w * h);
-								readDataRLE(reader, { width: w, height: h, data }, w, h, bithDepth, 1, [0], false);
-								for (let i = 0; i < alpha.byteLength; i++) {
-									alpha[i] = data[i] >> 8; // convert to 8bit values
-								}
-							} else {
-								throw new Error('Invalid compression');
+
+							reader.offset = brushEnd;
+						}
+						break;
+					}
+					case 'desc': {
+						const desc: DescDescriptor = readVersionAndDescriptor(reader, true);
+
+						for (const brush of desc.Brsh || []) {
+							try {
+								brushes.push(parseBrush(brush));
+							} catch (e) {
+								skip(e, `brush "${brush['Nm  ']}"`);
 							}
-						} else {
-							throw new Error('Invalid depth');
 						}
-
-						samples.push({ id, bounds: { x, y, w, h }, alpha });
-						reader.offset = brushEnd;
+						break;
 					}
-					break;
-				}
-				case 'desc': {
-					const desc: DescDescriptor = readVersionAndDescriptor(reader, true);
-					// console.log(require('util').inspect(desc, false, 99, true));
-					// require('fs').writeFileSync('test.log', require('util').inspect(desc, false, 99, false), 'utf8');
-
-					for (const brush of desc.Brsh) {
-						const b: Brush = {
-							name: brush['Nm  '],
-							shape: parseBrushShape(brush.Brsh),
-							spacing: parsePercent(brush.Spcn),
-							// TODO: brushGroup ???
-							wetEdges: brush.Wtdg,
-							noise: brush.Nose,
-							// TODO: TxtC ??? smoothing / build-up ?
-							// TODO: 'Rpt ' ???
-							useBrushSize: brush.useBrushSize, // ???
-						};
-
-						if (brush.interpretation != null) b.interpretation = brush.interpretation;
-						if (brush.protectTexture != null) b.protectTexture = brush.protectTexture;
-
-						if (brush.useTipDynamics) {
-							b.shapeDynamics = {
-								tiltScale: parsePercent(brush.tiltScale),
-								sizeDynamics: parseDynamics(brush.szVr),
-								angleDynamics: parseDynamics(brush.angleDynamics),
-								roundnessDynamics: parseDynamics(brush.roundnessDynamics),
-								flipX: brush.flipX,
-								flipY: brush.flipY,
-								brushProjection: brush.brushProjection,
-								minimumDiameter: parsePercent(brush.minimumDiameter),
-								minimumRoundness: parsePercent(brush.minimumRoundness),
-							};
+					case 'patt': {
+						while (reader.offset + 4 <= end) {
+							const pattern = readPatternSafe(reader);
+							if (pattern) patterns.push(pattern);
 						}
-
-						if (brush.useScatter) {
-							b.scatter = {
-								count: brush['Cnt '],
-								bothAxes: brush.bothAxes,
-								countDynamics: parseDynamics(brush.countDynamics),
-								scatterDynamics: parseDynamics(brush.scatterDynamics),
-							};
-						}
-
-						if (brush.useTexture && brush.Txtr) {
-							b.texture = {
-								id: brush.Txtr.Idnt,
-								name: brush.Txtr['Nm  '],
-								blendMode: BlnM.decode(brush.textureBlendMode),
-								depth: parsePercent(brush.textureDepth),
-								depthMinimum: parsePercent(brush.minimumDepth),
-								depthDynamics: parseDynamics(brush.textureDepthDynamics),
-								scale: parsePercent(brush.textureScale),
-								invert: brush.InvT,
-								brightness: brush.textureBrightness,
-								contrast: brush.textureContrast,
-								textureEachTip: !!brush.TxtC,
-							};
-						}
-
-						const db = brush.dualBrush;
-						if (db && db.useDualBrush) {
-							b.dualBrush = {
-								flip: db.Flip,
-								shape: parseBrushShape(db.Brsh),
-								blendMode: BlnM.decode(db.BlnM),
-								useScatter: db.useScatter,
-								spacing: parsePercent(db.Spcn),
-								count: db['Cnt '],
-								bothAxes: db.bothAxes,
-								countDynamics: parseDynamics(db.countDynamics),
-								scatterDynamics: parseDynamics(db.scatterDynamics),
-							};
-						}
-
-						if (brush.useColorDynamics) {
-							b.colorDynamics = {
-								foregroundBackground: parseDynamics(brush.clVr!),
-								hue: parsePercent(brush['H   ']!),
-								saturation: parsePercent(brush.Strt!),
-								brightness: parsePercent(brush.Brgh!),
-								purity: parsePercent(brush.purity!),
-								perTip: brush.colorDynamicsPerTip!,
-							};
-						}
-
-						if (brush.usePaintDynamics) {
-							b.transfer = {
-								flowDynamics: parseDynamics(brush.prVr!),
-								opacityDynamics: parseDynamics(brush.opVr!),
-								wetnessDynamics: parseDynamics(brush.wtVr!),
-								mixDynamics: parseDynamics(brush.mxVr!),
-							};
-						}
-
-						if (brush.useBrushPose) {
-							b.brushPose = {
-								overrideAngle: brush.overridePoseAngle!,
-								overrideTiltX: brush.overridePoseTiltX!,
-								overrideTiltY: brush.overridePoseTiltY!,
-								overridePressure: brush.overridePosePressure!,
-								pressure: parsePercent(brush.brushPosePressure!),
-								tiltX: brush.brushPoseTiltX!,
-								tiltY: brush.brushPoseTiltY!,
-								angle: brush.brushPoseAngle!,
-							};
-						}
-
-						const to = brush.toolOptions;
-						if (to) {
-							b.toolOptions = {
-								type: toBrushType[to._classID] || 'brush',
-								brushPreset: to.brushPreset,
-								flow: to.flow ?? 100,
-								smooth: to.Smoo ?? 0,
-								mode: BlnM.decode(to['Md  '] || 'BlnM.Nrml'), // sometimes mode is missing
-								opacity: to.Opct ?? 100,
-								smoothing: !!to.smoothing,
-								smoothingValue: to.smoothingValue || 0,
-								smoothingRadiusMode: !!to.smoothingRadiusMode,
-								smoothingCatchup: !!to.smoothingCatchup,
-								smoothingCatchupAtEnd: !!to.smoothingCatchupAtEnd,
-								smoothingZoomCompensation: !!to.smoothingZoomCompensation,
-								pressureSmoothing: !!to.pressureSmoothing,
-								usePressureOverridesSize: !!to.usePressureOverridesSize,
-								usePressureOverridesOpacity: !!to.usePressureOverridesOpacity,
-								useLegacy: !!to.useLegacy,
-							};
-
-							if (to.prVr) b.toolOptions.flowDynamics = parseDynamics(to.prVr);
-							if (to.opVr) b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
-							if (to.szVr) b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
-							if ('wetness' in to) b.toolOptions.wetness = to.wetness;
-							if ('dryness' in to) b.toolOptions.dryness = to.dryness;
-							if ('mix' in to) b.toolOptions.mix = to.mix;
-							if ('autoFill' in to) b.toolOptions.autoFill = to.autoFill;
-							if ('autoClean' in to) b.toolOptions.autoClean = to.autoClean;
-							if ('loadSolidColorOnly' in to) b.toolOptions.loadSolidColorOnly = to.loadSolidColorOnly;
-							if ('sampleAllLayers' in to) b.toolOptions.sampleAllLayers = to.sampleAllLayers;
-							if ('SmdF' in to) b.toolOptions.smudgeFingerPainting = to.SmdF;
-							if ('SmdS' in to) b.toolOptions.smudgeSampleAllLayers = to.SmdS;
-							if ('Prs ' in to) b.toolOptions.strength = to['Prs '];
-						}
-
-						brushes.push(b);
+						break;
 					}
-					break;
-				}
-				case 'patt': {
-					while (reader.offset < end) {
-						patterns.push(readPattern(reader));
-					}
-					reader.offset = end;
-					break;
-				}
-				case 'phry': {
-					// TODO: what is this ?
-					const desc: PhryDescriptor = readVersionAndDescriptor(reader);
-					// example:
-					// hierarchy: [
-					// 	{
-					// 		'Nm  ': 'PRE_EXPORT ',
-					// 		zuid: '965209f2-6f35-9a40-aa43-485684382172'
-					// 	},
-					// 	{},
-					//  ...
-					// ]
-					if (options.logMissingFeatures) {
-						if (desc.hierarchy?.length) {
-							// console.log('unhandled phry section', desc);
+					case 'phry': {
+						// TODO: brush groups (folders in brushes panel)
+						const desc: PhryDescriptor = readVersionAndDescriptor(reader);
+						// example:
+						// hierarchy: [
+						// 	{
+						// 		'Nm  ': 'PRE_EXPORT ',
+						// 		zuid: '965209f2-6f35-9a40-aa43-485684382172'
+						// 	},
+						// 	{},
+						//  ...
+						// ]
+						if (options.logMissingFeatures) {
+							if (desc.hierarchy?.length) {
+								// console.log('unhandled phry section', desc);
+							}
 						}
+						break;
 					}
-					break;
+					default:
+						// 'lPdc' (tool presets) and other unknown sections
+						options.logMissingFeatures && reader.log(`Unhandled brush section: ${type}`);
+						break;
 				}
-				default:
-					throw new Error(`Invalid brush type: ${type}`);
+			} catch (e) {
+				skip(e, `brush section ${type}`);
 			}
 
 			// skip any unread data in the section and align to 4 bytes
@@ -786,4 +629,205 @@ export function readAbr(buffer: ArrayBufferView, options: { logMissingFeatures?:
 	}
 
 	return { samples, patterns, brushes };
+}
+
+function readSample(reader: PsdReader, brushEnd: number, minorVersion: number): SampleInfo {
+	const id = readPascalString(reader, 1);
+
+	// v1 - Skip the Int16 bounds rectangle and the unknown Int16.
+	// v2 - Skip the unknown bytes.
+	skipBytes(reader, minorVersion === 1 ? 10 : 264);
+
+	const y = readInt32(reader);
+	const x = readInt32(reader);
+	const h = readInt32(reader) - y;
+	const w = readInt32(reader) - x;
+	if (w <= 0 || h <= 0) throw new Error('Invalid bounds');
+	if (w > MAX_BRUSH_SIZE || h > MAX_BRUSH_SIZE) {
+		throw new Error(`Brush sample too large (${w}x${h})`);
+	}
+
+	const bithDepth = readInt16(reader);
+	const compression = readUint8(reader); // 0 - raw, 1 - RLE
+	if (bithDepth !== 8 && bithDepth !== 16) throw new Error('Invalid depth');
+	if (compression !== 0 && compression !== 1) throw new Error('Invalid compression');
+	const rowSize = w * (bithDepth === 16 ? 2 : 1);
+	// RLE needs at least 2 bytes for row length and 2 bytes per each 128 byte run
+	const minDataSize = compression === 0 ? h * rowSize : h * (2 + Math.ceil(rowSize / 128) * 2);
+	if (minDataSize > brushEnd - reader.offset) {
+		throw new Error('Brush sample data out of bounds');
+	}
+
+	consumeMemory(reader, w * h * (compression === 1 && bithDepth === 16 ? 3 : 1));
+	const alpha = new Uint8Array(w * h);
+
+	if (bithDepth === 8) {
+		if (compression === 0) {
+			alpha.set(readBytes(reader, alpha.byteLength));
+		} else if (compression === 1) {
+			readDataRLE(reader, { width: w, height: h, data: alpha }, w, h, bithDepth, 1, [0], false);
+		} else {
+			throw new Error('Invalid compression');
+		}
+	} else if (bithDepth === 16) {
+		if (compression === 0) {
+			for (let i = 0; i < alpha.byteLength; i++) {
+				alpha[i] = readUint16(reader) >> 8; // convert to 8bit values
+			}
+		} else if (compression === 1) {
+			const data = new Uint16Array(w * h);
+			readDataRLE(reader, { width: w, height: h, data }, w, h, bithDepth, 1, [0], false);
+			for (let i = 0; i < alpha.byteLength; i++) {
+				alpha[i] = data[i] >> 8; // convert to 8bit values
+			}
+		} else {
+			throw new Error('Invalid compression');
+		}
+	} else {
+		throw new Error('Invalid depth');
+	}
+
+	return { id, bounds: { x, y, w, h }, alpha };
+}
+
+function parseBrush(brush: DescDescriptor['Brsh'][number]): Brush {
+	const b: Brush = {
+		name: brush['Nm  '],
+		shape: parseBrushShape(brush.Brsh),
+		spacing: parsePercent(brush.Spcn),
+		// TODO: brushGroup ???
+		wetEdges: brush.Wtdg,
+		noise: brush.Nose,
+		// TODO: TxtC ??? smoothing / build-up ?
+		// TODO: 'Rpt ' ???
+		useBrushSize: brush.useBrushSize, // ???
+	};
+
+	if (brush.interpretation != null) b.interpretation = brush.interpretation;
+	if (brush.protectTexture != null) b.protectTexture = brush.protectTexture;
+
+	if (brush.useTipDynamics) {
+		b.shapeDynamics = {
+			tiltScale: parsePercent(brush.tiltScale),
+			sizeDynamics: parseDynamics(brush.szVr),
+			angleDynamics: parseDynamics(brush.angleDynamics),
+			roundnessDynamics: parseDynamics(brush.roundnessDynamics),
+			flipX: brush.flipX,
+			flipY: brush.flipY,
+			brushProjection: brush.brushProjection,
+			minimumDiameter: parsePercent(brush.minimumDiameter),
+			minimumRoundness: parsePercent(brush.minimumRoundness),
+		};
+	}
+
+	if (brush.useScatter) {
+		b.scatter = {
+			count: brush['Cnt '],
+			bothAxes: brush.bothAxes,
+			countDynamics: parseDynamics(brush.countDynamics),
+			scatterDynamics: parseDynamics(brush.scatterDynamics),
+		};
+	}
+
+	if (brush.useTexture && brush.Txtr) {
+		b.texture = {
+			id: brush.Txtr.Idnt,
+			name: brush.Txtr['Nm  '],
+			blendMode: BlnM.decode(brush.textureBlendMode),
+			depth: parsePercent(brush.textureDepth),
+			depthMinimum: parsePercent(brush.minimumDepth),
+			depthDynamics: parseDynamics(brush.textureDepthDynamics),
+			scale: parsePercent(brush.textureScale),
+			invert: brush.InvT,
+			brightness: brush.textureBrightness,
+			contrast: brush.textureContrast,
+			textureEachTip: !!brush.TxtC,
+		};
+	}
+
+	const db = brush.dualBrush;
+	if (db && db.useDualBrush) {
+		b.dualBrush = {
+			flip: db.Flip,
+			shape: parseBrushShape(db.Brsh),
+			blendMode: BlnM.decode(db.BlnM),
+			useScatter: db.useScatter,
+			spacing: parsePercent(db.Spcn),
+			count: db['Cnt '],
+			bothAxes: db.bothAxes,
+			countDynamics: parseDynamics(db.countDynamics),
+			scatterDynamics: parseDynamics(db.scatterDynamics),
+		};
+	}
+
+	if (brush.useColorDynamics) {
+		b.colorDynamics = {
+			foregroundBackground: parseDynamics(brush.clVr!),
+			hue: parsePercent(brush['H   ']!),
+			saturation: parsePercent(brush.Strt!),
+			brightness: parsePercent(brush.Brgh!),
+			purity: parsePercent(brush.purity!),
+			perTip: brush.colorDynamicsPerTip!,
+		};
+	}
+
+	if (brush.usePaintDynamics) {
+		b.transfer = {
+			flowDynamics: parseDynamics(brush.prVr!),
+			opacityDynamics: parseDynamics(brush.opVr!),
+			wetnessDynamics: parseDynamics(brush.wtVr!),
+			mixDynamics: parseDynamics(brush.mxVr!),
+		};
+	}
+
+	if (brush.useBrushPose) {
+		b.brushPose = {
+			overrideAngle: brush.overridePoseAngle!,
+			overrideTiltX: brush.overridePoseTiltX!,
+			overrideTiltY: brush.overridePoseTiltY!,
+			overridePressure: brush.overridePosePressure!,
+			pressure: parsePercent(brush.brushPosePressure!),
+			tiltX: brush.brushPoseTiltX!,
+			tiltY: brush.brushPoseTiltY!,
+			angle: brush.brushPoseAngle!,
+		};
+	}
+
+	const to = brush.toolOptions;
+	if (to) {
+		b.toolOptions = {
+			type: toBrushType[to._classID] || 'brush',
+			brushPreset: to.brushPreset,
+			flow: to.flow ?? 100,
+			smooth: to.Smoo ?? 0,
+			mode: BlnM.decode(to['Md  '] || 'BlnM.Nrml'), // sometimes mode is missing
+			opacity: to.Opct ?? 100,
+			smoothing: !!to.smoothing,
+			smoothingValue: to.smoothingValue || 0,
+			smoothingRadiusMode: !!to.smoothingRadiusMode,
+			smoothingCatchup: !!to.smoothingCatchup,
+			smoothingCatchupAtEnd: !!to.smoothingCatchupAtEnd,
+			smoothingZoomCompensation: !!to.smoothingZoomCompensation,
+			pressureSmoothing: !!to.pressureSmoothing,
+			usePressureOverridesSize: !!to.usePressureOverridesSize,
+			usePressureOverridesOpacity: !!to.usePressureOverridesOpacity,
+			useLegacy: !!to.useLegacy,
+		};
+
+		if (to.prVr) b.toolOptions.flowDynamics = parseDynamics(to.prVr);
+		if (to.opVr) b.toolOptions.opacityDynamics = parseDynamics(to.opVr);
+		if (to.szVr) b.toolOptions.sizeDynamics = parseDynamics(to.szVr);
+		if ('wetness' in to) b.toolOptions.wetness = to.wetness;
+		if ('dryness' in to) b.toolOptions.dryness = to.dryness;
+		if ('mix' in to) b.toolOptions.mix = to.mix;
+		if ('autoFill' in to) b.toolOptions.autoFill = to.autoFill;
+		if ('autoClean' in to) b.toolOptions.autoClean = to.autoClean;
+		if ('loadSolidColorOnly' in to) b.toolOptions.loadSolidColorOnly = to.loadSolidColorOnly;
+		if ('sampleAllLayers' in to) b.toolOptions.sampleAllLayers = to.sampleAllLayers;
+		if ('SmdF' in to) b.toolOptions.smudgeFingerPainting = to.SmdF;
+		if ('SmdS' in to) b.toolOptions.smudgeSampleAllLayers = to.SmdS;
+		if ('Prs ' in to) b.toolOptions.strength = to['Prs '];
+	}
+
+	return b;
 }

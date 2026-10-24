@@ -662,6 +662,7 @@ interface PlacedLayer {
 	id: string; // id of linked image file (psd.linkedFiles), must be in a GUID format (example: 20953ddb-9391-11ec-b4f1-c15674f50bc4)
 	placed?: string; // unique id
 	type: PlacedLayerType;
+	external?: boolean; // linked smart object (linked file is stored outside of the document)
 	pageNumber?: number;
 	totalPages?: number;
 	frameStep?: { numerator: number; denominator: number; };
@@ -679,6 +680,8 @@ interface PlacedLayer {
 	filter?: PlacedLayerFilter; // smart filters
 }
 ```
+
+Smart filters that are not supported by this library are read with `type: 'unknown'`, they keep `filterID` and raw `descriptor` with filter settings (missing for filters stored without settings), and are written back unchanged.
 
 The Psd object has `linkedFiles` property, that specifies list of all files linked in smart objects. Each linked file has following structure:
 

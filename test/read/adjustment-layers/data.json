@@ -959,11 +959,13 @@
       "name": "Hue/Saturation 1",
       "adjustment": {
         "type": "hue/saturation",
+        "colorize": false,
+        "colorization": {
+          "hue": 66,
+          "saturation": 25,
+          "lightness": 0
+        },
         "master": {
-          "a": 0,
-          "b": 66,
-          "c": 25,
-          "d": 0,
           "hue": 0,
           "saturation": -40,
           "lightness": 5

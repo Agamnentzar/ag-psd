@@ -1,8 +1,8 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
-import { LayerAdditionalInfo, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
-import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPattern, readLayerInfo } from './psdReader';
+import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
+import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPatternSafe, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
@@ -1104,7 +1104,7 @@ addHandler(
 			lineAlignment: strokeStyleLineAlignment.decode(desc.strokeStyleLineAlignment),
 			scaleLock: desc.strokeStyleScaleLock,
 			strokeAdjust: desc.strokeStyleStrokeAdjust,
-			lineDashSet: desc.strokeStyleLineDashSet.map(parseUnits),
+			lineDashSet: (desc.strokeStyleLineDashSet || []).map(parseUnits),
 			blendMode: BlnM.decode(desc.strokeStyleBlendMode),
 			opacity: parsePercent(desc.strokeStyleOpacity),
 			content: parseVectorContent(desc.strokeStyleContent),
@@ -1308,7 +1308,7 @@ function encodeWarp(warp: Warp): WarpDescriptor {
 
 addHandler(
 	'PlLd',
-	hasKey('placedLayer'),
+	target => !!target.placedLayer && !target.placedLayer.external, // linked smart objects are stored in SoLE
 	(reader, target, left) => {
 		if (readSignature(reader) !== 'plcL') throw new Error(`Invalid PlLd signature`);
 		if (readInt32(reader) !== 3) throw new Error(`Invalid PlLd version`);
@@ -2045,7 +2045,7 @@ type SoLdDescriptorFilterItem = {
 	Fltr: {
 		_name: 'Curves';
 		_classID: 'Crvs';
-		presetKind: string; // 'presetKindType.presetKindCustom';
+		presetKind?: string; // 'presetKindType.presetKindCustom';
 		Adjs?: {
 			_name: '';
 			_classID: 'CrvA';
@@ -2053,6 +2053,14 @@ type SoLdDescriptorFilterItem = {
 			'Crv '?: FilterCurvesCurvePoint[];
 			Mpng?: number[];
 		}[];
+	};
+} | {
+	filterID: 1282829427;
+	Fltr: {
+		_name: 'Levels';
+		_classID: 'Lvls';
+		presetKind?: string; // 'presetKindType.presetKindCustom';
+		Adjs?: FilterLevelsAdjustment[];
 	};
 } | {
 	filterID: 1231976050;
@@ -2074,6 +2082,18 @@ interface FilterCurvesCurvePoint {
 	Vrtc: 0;
 	Cnty?: boolean;
 }
+
+interface FilterLevelsAdjustment {
+	_name: '';
+	_classID: 'LvlA';
+	Chnl: string[]; // 'Chnl.Cmps' | 'Chnl.Rd  ' | 'Chnl.Grn ' | 'Chnl.Bl  '
+	Inpt?: number[]; // shadow, highlight
+	Otpt?: number[]; // shadow, highlight
+	'Gmm '?: number;
+}
+
+const levelsFilterKeys = ['_name', '_classID', 'presetKind', 'Adjs'];
+const levelsFilterAdjustmentKeys = ['_name', '_classID', 'Chnl', 'Inpt', 'Otpt', 'Gmm '];
 
 interface SoLdDescriptorFilter {
 	_name: '',
@@ -2673,7 +2693,8 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					...base,
 					type: 'curves',
 					filter: {
-						presetKind: presetKindType.decode(f.Fltr.presetKind),
+						// Photoshop doesn't write preset kind for filters with explicit values
+						...(f.Fltr.presetKind !== undefined ? { presetKind: presetKindType.decode(f.Fltr.presetKind) } : {}),
 						...(f.Fltr.Adjs ? {
 							adjustments: f.Fltr.Adjs.map(a => {
 								const channels = a.Chnl.map(Chnl.decode);
@@ -2696,6 +2717,39 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					},
 				};
 			};
+			case 'Lvls': {
+				const adjustments = f.Fltr.Adjs;
+				const isKnown = (obj: object, keys: string[]) => Object.keys(obj).every(k => keys.indexOf(k) !== -1);
+
+				// keep filter with settings we don't know about as unknown filter, so it's written back unchanged
+				if (!isKnown(f.Fltr, levelsFilterKeys) || (adjustments && !adjustments.every(a => isKnown(a, levelsFilterAdjustmentKeys)))) {
+					if (options.throwForMissingFeatures) throw new Error('Unknown levels filter settings');
+					return { ...base, type: 'unknown', filterID: f.filterID, descriptor: f.Fltr };
+				}
+
+				return {
+					...base,
+					type: 'levels',
+					filter: {
+						...(f.Fltr.presetKind !== undefined ? { presetKind: presetKindType.decode(f.Fltr.presetKind) } : {}),
+						...(adjustments ? {
+							adjustments: adjustments.map(a => {
+								const result: LevelsFilterAdjustment = { channels: a.Chnl.map(Chnl.decode) };
+								if (a.Inpt) {
+									result.shadowInput = a.Inpt[0];
+									result.highlightInput = a.Inpt[1];
+								}
+								if (a.Otpt) {
+									result.shadowOutput = a.Otpt[0];
+									result.highlightOutput = a.Otpt[1];
+								}
+								if (a['Gmm '] !== undefined) result.midtoneInput = a['Gmm '];
+								return result;
+							}),
+						} : {}),
+					},
+				};
+			};
 			case 'BrgC': {
 				return {
 					...base,
@@ -2712,7 +2766,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					// console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
 				}
-				return undefined;
+				return { ...base, type: 'unknown', filterID: (f as any).filterID, descriptor: (f as any).Fltr };
 		}
 	} else {
 		switch (f.filterID) {
@@ -2734,6 +2788,8 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					// console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filterID: ${(f as any).filterID}`);
 				}
+				// filters with default settings (like shadows/highlights or radial blur) are also stored without settings
+				return { ...base, type: 'unknown', filterID: (f as any).filterID };
 		}
 	}
 }
@@ -3406,7 +3462,7 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Curves',
 				_classID: 'Crvs',
-				presetKind: presetKindType.encode(f.filter.presetKind),
+				...(f.filter.presetKind !== undefined ? { presetKind: presetKindType.encode(f.filter.presetKind) } : {}),
 				...(f.filter.adjustments ? {
 					Adjs: f.filter.adjustments.map(a => 'curve' in a ? {
 						_name: '',
@@ -3429,6 +3485,28 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			},
 			filterID: 1131574899,
 		};
+		case 'levels': return {
+			...base,
+			Fltr: {
+				_name: 'Levels',
+				_classID: 'Lvls',
+				...(f.filter.presetKind !== undefined ? { presetKind: presetKindType.encode(f.filter.presetKind) } : {}),
+				...(f.filter.adjustments ? {
+					Adjs: f.filter.adjustments.map(a => {
+						const adjustment: FilterLevelsAdjustment = { _name: '', _classID: 'LvlA', Chnl: a.channels.map(Chnl.encode) };
+						if (a.shadowInput !== undefined || a.highlightInput !== undefined) {
+							adjustment.Inpt = [Math.round(a.shadowInput ?? 0), Math.round(a.highlightInput ?? 255)];
+						}
+						if (a.shadowOutput !== undefined || a.highlightOutput !== undefined) {
+							adjustment.Otpt = [Math.round(a.shadowOutput ?? 0), Math.round(a.highlightOutput ?? 255)];
+						}
+						if (a.midtoneInput !== undefined) adjustment['Gmm '] = a.midtoneInput;
+						return adjustment;
+					}),
+				} : {}),
+			},
+			filterID: 1282829427,
+		};
 		case 'brightness/contrast': return {
 			...base,
 			Fltr: {
@@ -3450,6 +3528,11 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			},
 			filterID: 1215521360,
 		};
+		case 'unknown': return {
+			...base,
+			filterID: f.filterID,
+			...(f.descriptor ? { Fltr: f.descriptor } : {}),
+		} as SoLdDescriptorFilterItem;
 		default: throw new Error(`Unknown filter type: ${(f as any).type}`);
 	}
 }
@@ -3521,7 +3604,7 @@ function getWarpFromPlacedLayer(placed: PlacedLayer): Warp {
 
 addHandler(
 	'SoLd',
-	hasKey('placedLayer'),
+	target => !!target.placedLayer && !target.placedLayer.external, // linked smart objects are stored in SoLE
 	(reader, target, left) => {
 		if (readSignature(reader) !== 'soLD') throw new Error(`Invalid SoLd type`);
 		const version = readInt32(reader);
@@ -3659,7 +3742,17 @@ addHandler(
 	},
 );
 
-addHandlerAlias('SoLE', 'SoLd');
+const soLdHandler = infoHandlersMap['SoLd'];
+
+addHandler(
+	'SoLE', // linked smart object (Photoshop doesn't write PlLd for these)
+	target => !!target.placedLayer?.external,
+	(reader, target, left, psd, imageResources) => {
+		soLdHandler.read(reader, target, left, psd, imageResources);
+		target.placedLayer!.external = true;
+	},
+	soLdHandler.write,
+);
 
 addHandler(
 	'fxrp',
@@ -3676,25 +3769,42 @@ addHandler(
 	},
 );
 
-addHandler(
-	'Lr16',
-	() => false,
-	(reader, _target, _left, psd, imageResources) => {
-		readLayerInfo(reader, psd, imageResources);
-	},
-	(_writer, _target) => {
-	},
-);
+function createGlobalLayerInfoHandler(key: string, bitsPerChannel: number | undefined) {
+	addHandler(
+		key,
+		() => false,
+		(reader, _target, left, psd, imageResources) => {
+			// Photoshop writes empty (or 8bit compatibility) layer info section alongside Lr16/Lr32 in 16/32bit documents,
+			// layers from global info with matching bit depth replace layers from that section, other ones are only used
+			// if the section is empty
+			if (!reader.layersInGlobalInfo && (psd.bitsPerChannel === bitsPerChannel || !psd.children?.length)) {
+				psd.children = [];
+				readLayerInfo(reader, psd, imageResources);
+				reader.layersInGlobalInfo = true;
+			}
 
-addHandler(
-	'Lr32',
-	() => false,
-	(reader, _target, _left, psd, imageResources) => {
-		readLayerInfo(reader, psd, imageResources);
-	},
-	(_writer, _target) => {
-	},
-);
+			skipBytes(reader, left());
+		},
+		() => { },
+	);
+}
+
+createGlobalLayerInfoHandler('Lr16', 16);
+createGlobalLayerInfoHandler('Lr32', 32);
+createGlobalLayerInfoHandler('Layr', undefined);
+
+// merged transparency markers, first extra channel of composite image is transparency
+for (const key of ['Mtrn', 'Mt16', 'Mt32']) {
+	addHandler(
+		key,
+		() => false,
+		(reader, _target, left) => {
+			reader.globalAlpha = true;
+			skipBytes(reader, left());
+		},
+		() => { },
+	);
+}
 
 addHandler(
 	'LMsk',
@@ -3733,7 +3843,8 @@ if (MOCK_HANDLERS) {
 		target => !!(target.patterns && target.patterns.length > 0),
 		(reader, target, left) => {
 			while (left() > 0) {
-				const pattern = readPattern(reader);
+				const pattern = readPatternSafe(reader);
+				if (!pattern) continue;
 				if (target.patterns === undefined) target.patterns = [];
 				target.patterns.push(pattern);
 			}
@@ -4501,10 +4612,26 @@ addHandler(
 	(reader, target, left) => {
 		if (readUint16(reader) !== 2) throw new Error('Invalid hue2 version');
 
+		const colorize = !!readUint8(reader);
+		skipBytes(reader, 1);
+		const colorizeHue = readInt16(reader); // stored as -180..180
+		const colorizeSaturation = readInt16(reader);
+		const colorizeLightness = readInt16(reader);
+
 		target.adjustment = {
 			...target.adjustment as PresetInfo,
 			type: 'hue/saturation',
-			master: readHueChannel(reader),
+			colorize,
+			colorization: {
+				hue: colorizeHue < 0 ? colorizeHue + 360 : colorizeHue,
+				saturation: colorizeSaturation,
+				lightness: colorizeLightness,
+			},
+			master: {
+				hue: readInt16(reader),
+				saturation: readInt16(reader),
+				lightness: readInt16(reader),
+			},
 			reds: readHueChannel(reader),
 			yellows: readHueChannel(reader),
 			greens: readHueChannel(reader),
@@ -4519,7 +4646,15 @@ addHandler(
 		const info = target.adjustment as HueSaturationAdjustment;
 
 		writeUint16(writer, 2); // version
-		writeHueChannel(writer, info.master);
+		writeUint8(writer, info.colorize ? 1 : 0);
+		writeUint8(writer, 0);
+		const colorizeHue = Math.round(info.colorization?.hue ?? 0);
+		writeInt16(writer, colorizeHue > 180 ? colorizeHue - 360 : colorizeHue);
+		writeInt16(writer, Math.round(info.colorization?.saturation ?? 0));
+		writeInt16(writer, Math.round(info.colorization?.lightness ?? 0));
+		writeInt16(writer, Math.round(info.master?.hue ?? 0));
+		writeInt16(writer, Math.round(info.master?.saturation ?? 0));
+		writeInt16(writer, Math.round(info.master?.lightness ?? 0));
 		writeHueChannel(writer, info.reds);
 		writeHueChannel(writer, info.yellows);
 		writeHueChannel(writer, info.greens);
@@ -4633,16 +4768,17 @@ addHandler(
 		if (version === 2) {
 			color = readColor(reader);
 		} else { // version 3
-			// TODO: test this, this is probably wrong
-			// values are stored as L (0..100), a, b (-128..127) multiplied by 100,
-			// normalize them to the same scale as readColor() so they can be written back as version 2
-			const l = readInt32(reader) / 100;
-			const a = readInt32(reader) / 100;
-			const b = readInt32(reader) / 100;
+			// XYZ color relative to D50 white point, 32768 = 1.0 (not documented, matches colors of Photoshop presets),
+			// converted to Lab (same scale as readColor()) so it can be written back as version 2
+			const x = readInt32(reader) / 32768;
+			const y = readInt32(reader) / 32768;
+			const z = readInt32(reader) / 32768;
+			if (!(x >= 0 && y >= 0 && z >= 0 && x <= 2 && y <= 2 && z <= 2)) throw new Error('Invalid phfl XYZ color');
+			const f = (t: number) => t > 216 / 24389 ? Math.cbrt(t) : (24389 / 27 * t + 16) / 116;
 			color = {
-				l: l / 100,
-				a: normalizeLabAB(a),
-				b: normalizeLabAB(b),
+				l: Math.max(0, 116 * f(y) - 16) / 100,
+				a: normalizeLabAB(500 * (f(x) - f(y))),
+				b: normalizeLabAB(200 * (f(y) - f(z))),
 			};
 		}
 

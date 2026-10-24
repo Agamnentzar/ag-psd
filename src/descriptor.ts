@@ -232,7 +232,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'moreAccurate', 'GpuY', 'LIWy', 'Cnty', 'Lnkd', 'showAlteredVideo', 'lightingOn',
 	],
 	'doub': [
-		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght',
+		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght', 'Gmm ',
 		'strokeStyleMiterLimit', 'strokeStyleResolution', 'layerTime', 'keyOriginResolution',
 		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
 		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat', 'imageResolution',
@@ -287,6 +287,8 @@ function guessOSType(value: any): string | undefined {
 const fieldToArrayType: Dict = {
 	'Mnm ': 'long',
 	'Mxm ': 'long',
+	Inpt: 'long', // levels filter
+	Otpt: 'long', // levels filter
 	FrLs: 'long',
 	strokeStyleLineDashSet: 'UntF',
 	Trnf: 'doub',
@@ -373,6 +375,8 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 		return 'long';
 	} else if ((key === 'Inpt' || key === 'Otpt') && parent._classID === 'HsbP') {
 		return 'enum';
+	} else if ((key === 'Inpt' || key === 'Otpt') && parent._classID === 'LvlA') {
+		return 'VlLs';
 	} else if (key === 'LghD' && parent._classID === 'oilPaint') {
 		return 'long';
 	} else {
@@ -1555,7 +1559,10 @@ function parseEffectObject(obj: any, reportErrors: boolean, objName?: string) {
 			case 'GlwT': result.technique = BETE.decode(val) as any; break;
 			case 'glwS': result.source = IGSr.decode(val); break;
 			case 'Type': result.type = GrdT.decode(val); break;
-			case 'gs99': result.interpolationMethod = gradientInterpolationMethodType.decode(val); break;
+			case 'gs99': // gradient overlay
+			case 'gradientsInterpolationMethod': // glows
+				result.interpolationMethod = gradientInterpolationMethodType.decode(val);
+				break;
 			case 'Opct': result.opacity = parsePercent(val); break;
 			case 'hglO': result.highlightOpacity = parsePercent(val); break;
 			case 'sdwO': result.shadowOpacity = parsePercent(val); break;
@@ -1646,7 +1653,9 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 				break;
 			case 'source': result.glwS = IGSr.encode(val); break;
 			case 'type': result.Type = GrdT.encode(val); break;
-			case 'interpolationMethod': result.gs99 = gradientInterpolationMethodType.encode(val); break;
+			case 'interpolationMethod':
+				result[(objName === 'outerGlow' || objName === 'innerGlow') ? 'gradientsInterpolationMethod' : 'gs99'] = gradientInterpolationMethodType.encode(val);
+				break;
 			case 'opacity': result.Opct = unitsPercent(val); break;
 			case 'highlightOpacity': result.hglO = unitsPercent(val); break;
 			case 'shadowOpacity': result.sdwO = unitsPercent(val); break;
@@ -1828,11 +1837,11 @@ function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGra
 	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
 	result.Type = GrdT.encode(content.style);
 	if (content.align !== undefined) result.Algn = content.align;
-	if (content.scale !== undefined) result['Scl '] = unitsPercent(content.scale);
+	if (content.scale !== undefined) result['Scl '] = unitsPercentF(content.scale);
 	if (content.offset) {
 		result.Ofst = {
-			Hrzn: unitsPercent(content.offset.x),
-			Vrtc: unitsPercent(content.offset.y),
+			Hrzn: unitsPercentF(content.offset.x),
+			Vrtc: unitsPercentF(content.offset.y),
 		};
 	}
 	result.Grad = serializeGradient(content);
