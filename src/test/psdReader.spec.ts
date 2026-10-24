@@ -5,7 +5,7 @@ import { deflate } from 'pako';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas, createReaderFromBuffer, compareBuffers, compareTwoFiles } from './common';
 import { Layer, ReadOptions, Psd, ColorMode, PixelData } from '../psd';
 import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData } from '../index';
-import { readPsd as readPsdInternal, readPattern, readDataRLE, createReader, readBytes, readDataZip } from '../psdReader';
+import { readPsd as readPsdInternal, readPattern, readDataRLE, createReader, readBytes, readDataZip, readAdditionalLayerInfo } from '../psdReader';
 import { createWriter, getWriterBuffer, writePattern } from '../psdWriter';
 import { infoHandlers, infoHandlersMap } from '../additionalInfo';
 import { decodeEngineData2 } from '../engineData2';
@@ -725,6 +725,49 @@ describe('PsdReader', () => {
 
 			const result = readPsd(buffer, { useImageData: true });
 			expect(Array.from(result.imageData!.data).filter((_, i) => i % 4 === 3)).eql([0, 255]);
+		});
+
+		it('does not write color mode specific image resources for documents in other color modes than RGB', () => {
+			const imageResources: Psd['imageResources'] = {
+				iccProfile: new Uint8Array([1, 2, 3]),
+				indexedColorCount: 2,
+				transparencyIndex: 1,
+				alphaChannelDisplayInfo: [{ color: { r: 255, g: 0, b: 0 }, opacity: 0.5, kind: 'protected' }],
+				grayscaleTransferFunctions: [{ curve: [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1000], override: false }],
+				globalAngle: 30,
+			};
+			const read = (colorMode: ColorMode) => readPsd(writePsdBuffer({ width: 1, height: 1, colorMode, imageResources }), { skipCompositeImageData: true }).imageResources!;
+			expect(read(ColorMode.RGB)).deep.include(imageResources);
+			const fromCmyk = read(ColorMode.CMYK);
+			expect(fromCmyk.globalAngle).equal(30);
+			for (const key of ['iccProfile', 'indexedColorCount', 'transparencyIndex', 'alphaChannelDisplayInfo', 'grayscaleTransferFunctions']) {
+				expect((fromCmyk as any)[key], key).undefined;
+			}
+		});
+
+		it('decodes raw composite data with transparency named in alpha channel names when layers are in Lr16', () => {
+			// 1x1 RGB with 1 extra channel named "Transparency", raw compression
+			const psd: Psd = {
+				width: 1, height: 1, channels: 4, bitsPerChannel: 8, colorMode: ColorMode.RGB,
+				imageResources: { alphaChannelNames: ['Transparency'] },
+				rawCompositeData: new Uint8Array([0, 0, 10, 20, 30, 128]),
+				rawCompositeDataInfo: { large: false, globalAlpha: false, layersInGlobalInfo: true },
+			};
+			expect(Array.from(getCompositeImageData(psd)!.data)).eql([10, 20, 30, 128]);
+			psd.rawCompositeDataInfo!.layersInGlobalInfo = false;
+			expect(Array.from(getCompositeImageData(psd)!.data)).eql([10, 20, 30, 255]);
+		});
+
+		it('reads 32bit zero length of keys written with 8BIM signature in PSB files by older versions', () => {
+			// 'pths' written by older version with 32bit length of 0, followed by next block
+			const buffer = Buffer.concat([ascii('8BIMpths'), u32(0), ascii('8BIMlspf'), u32(4), u32(0x80000000)]);
+			const reader = createReaderFromBuffer(buffer);
+			reader.large = true;
+			const layer: Layer = {};
+			readAdditionalLayerInfo(reader, layer, { width: 1, height: 1 }, {});
+			expect(reader.offset).equal(12);
+			readAdditionalLayerInfo(reader, layer, { width: 1, height: 1 }, {});
+			expect(layer.protected).eql({ transparency: false, composite: false, position: false, all: true });
 		});
 
 		it('reads files with trailing bytes in image resources section', () => {

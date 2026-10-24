@@ -332,8 +332,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 			skipBytes(reader, (nameLength + 1) % 2); // pad to even size
 
 			readSection(reader, 2, left => {
-				// plug-in resources (4000-4999) are identified by the key stored in the data, not by the id
-				const handler = resourceHandlersMap[id] || (id >= 4000 && id <= 4999 ? resourceHandlersMap[4000] : undefined);
+				const handler = resourceHandlersMap[id];
 				const skip = id === 1036 && !!reader.skipThumbnail;
 
 				if (handler && !skip) {
@@ -408,6 +407,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 			const rawCompositeData = new Uint8Array(reader.view.buffer, reader.view.byteOffset + rawOffset, reader.view.byteLength - rawOffset);
 			psd.rawCompositeData = rawCompositeData;
 			psd.rawCompositeDataInfo = { large: reader.large, globalAlpha: reader.globalAlpha };
+			if (reader.layersInGlobalInfo) psd.rawCompositeDataInfo.layersInGlobalInfo = true;
 		} else {
 			const imageData = readImageData(reader, psd);
 			if (reader.useImageData) {
@@ -727,6 +727,7 @@ export function getCompositeImageData(psd: Psd) {
 	if (info) {
 		reader.large = info.large;
 		reader.globalAlpha = info.globalAlpha;
+		reader.layersInGlobalInfo = !!info.layersInGlobalInfo;
 	}
 
 	return readImageData(reader, psd);
@@ -966,7 +967,10 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 	// these keys were written by older versions of this library with 32bit length and 8BIM signature,
 	// 64bit length always has high 32bits set to 0 (lengths over 4GB are not supported)
 	if (reader.large && sig === '8BIM' && largeAdditionalInfoKeysObserved.indexOf(key) !== -1) {
-		u64 = reader.view.getUint32(reader.offset) === 0;
+		// 32bit length of 0 is followed by signature of the next block, 64bit length would continue with its low 32bits
+		const next = reader.offset + 8 <= reader.view.byteLength ? reader.view.getUint32(reader.offset + 4) : 0;
+		const nextIsSignature = next === 0x3842494d /* 8BIM */ || next === 0x38423634 /* 8B64 */;
+		u64 = reader.view.getUint32(reader.offset) === 0 && !nextIsSignature;
 	}
 
 	readSection(reader, 2, left => {

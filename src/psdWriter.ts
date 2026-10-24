@@ -254,6 +254,18 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	const imageResources: InternalImageResources = { ...psd.imageResources };
 	const opt: ExtendedWriteOptions = { ...options, layerIds: new Set(), layerToId: new Map() };
 
+	// document is always written in RGB color mode, skip resources specific to original color mode
+	if (psd.colorMode !== undefined && psd.colorMode !== ColorMode.RGB) {
+		delete imageResources.iccProfile;
+		delete imageResources.indexedColorCount;
+		delete imageResources.transparencyIndex;
+		delete imageResources.alphaChannelDisplayInfo;
+		delete imageResources.colorHalftoneScreens;
+		delete imageResources.grayscaleHalftoneScreens;
+		delete imageResources.colorTransferFunctions;
+		delete imageResources.grayscaleTransferFunctions;
+	}
+
 	if (opt.generateThumbnail) {
 		imageResources.thumbnail = createThumbnail(psd);
 	}

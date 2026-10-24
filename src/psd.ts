@@ -1213,10 +1213,6 @@ type FilterVariant = {
 		contrast: number;
 		useLegacy: boolean;
 	};
-} | {
-	type: 'unknown'; // filter not supported by this library, written back unchanged
-	filterID: number;
-	descriptor?: any; // raw filter settings descriptor (missing for filters without settings)
 };
 
 /*
@@ -1921,7 +1917,7 @@ export interface Psd extends LayerAdditionalInfo {
 	imageData?: PixelData;
 	rawCompositeData?: Uint8Array;
 	/** Information needed to decode `rawCompositeData` (see `getCompositeImageData`) */
-	rawCompositeDataInfo?: { large: boolean; globalAlpha: boolean; };
+	rawCompositeDataInfo?: { large: boolean; globalAlpha: boolean; layersInGlobalInfo?: boolean; };
 	imageResources?: ImageResources;
 	linkedFiles?: LinkedFile[]; // used in smart objects
 	artboards?: {

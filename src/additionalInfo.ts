@@ -1,7 +1,7 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
-import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
+import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, Layer } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPatternSafe, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor } from './descriptor';
@@ -2244,7 +2244,7 @@ function pointToHrznVrtc(point: { x: UnitsValue; y: UnitsValue; }): HrznVrtcDesc
 	};
 }
 
-function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): Filter | undefined {
+function parseFilterFXItem(f: SoLdDescriptorFilterItem, reader: PsdReader): Filter | undefined {
 	const base: Omit<Filter, 'type' | 'filter'> = {
 		name: f['Nm  '],
 		opacity: parsePercent(f.blendOptions.Opct),
@@ -2806,10 +2806,11 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 				const adjustments = f.Fltr.Adjs;
 				const isKnown = (obj: object, keys: string[]) => Object.keys(obj).every(k => keys.indexOf(k) !== -1);
 
-				// keep filter with settings we don't know about as unknown filter, so it's written back unchanged
+				// skip filter with settings we don't know about
 				if (!isKnown(f.Fltr, levelsFilterKeys) || (adjustments && !adjustments.every(a => isKnown(a, levelsFilterAdjustmentKeys)))) {
-					if (options.throwForMissingFeatures) throw new Error('Unknown levels filter settings');
-					return { ...base, type: 'unknown', filterID: f.filterID, descriptor: f.Fltr };
+					if (reader.throwForMissingFeatures) throw new Error('Unknown levels filter settings');
+					reader.logMissingFeatures && reader.log(`Skipped levels smart filter with unknown settings`);
+					return undefined;
 				}
 
 				return {
@@ -2847,11 +2848,12 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 				};
 			};
 			default:
-				if (options.throwForMissingFeatures) {
+				if (reader.throwForMissingFeatures) {
 					// console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filter classId: ${(f as any).Fltr._classID}`);
 				}
-				return { ...base, type: 'unknown', filterID: (f as any).filterID, descriptor: (f as any).Fltr };
+				reader.logMissingFeatures && reader.log(`Unhandled smart filter: ${(f as any).Fltr._classID} (${f['Nm  ']})`);
+				return undefined;
 		}
 	} else {
 		switch (f.filterID) {
@@ -2869,24 +2871,24 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 			case 1314149187: return { ...base, type: 'ntsc colors' };
 			case 1231976050: return { ...base, type: 'invert' }
 			default:
-				if (options.throwForMissingFeatures) {
+				if (reader.throwForMissingFeatures) {
 					// console.log('FILTER', require('util').inspect(f, false, 99, true));
 					throw new Error(`Unknown filterID: ${(f as any).filterID}`);
 				}
-				// filters with default settings (like shadows/highlights or radial blur) are also stored without settings
-				return { ...base, type: 'unknown', filterID: (f as any).filterID };
+				reader.logMissingFeatures && reader.log(`Unhandled smart filter: ${(f as any).filterID} (${f['Nm  ']})`);
+				return undefined;
 		}
 	}
 }
 
-function parseFilterFX(desc: SoLdDescriptorFilter, options: ReadOptions): PlacedLayerFilter {
+function parseFilterFX(desc: SoLdDescriptorFilter, reader: PsdReader): PlacedLayerFilter {
 	return {
 		enabled: desc.enab,
 		validAtPosition: desc.validAtPosition,
 		maskEnabled: desc.filterMaskEnable,
 		maskLinked: desc.filterMaskLinked,
 		maskExtendWithWhite: desc.filterMaskExtendWithWhite,
-		list: desc.filterFXList.map(x => parseFilterFXItem(x, options)).filter((x): x is Filter => !!x),
+		list: desc.filterFXList.map(x => parseFilterFXItem(x, reader)).filter((x): x is Filter => !!x),
 	};
 }
 
@@ -3613,11 +3615,6 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			},
 			filterID: 1215521360,
 		};
-		case 'unknown': return {
-			...base,
-			filterID: f.filterID,
-			...(f.descriptor ? { Fltr: f.descriptor } : {}),
-		} as SoLdDescriptorFilterItem;
 		default: throw new Error(`Unknown filter type: ${(f as any).type}`);
 	}
 }
@@ -3860,8 +3857,16 @@ function createGlobalLayerInfoHandler(key: string, bitsPerChannel: number | unde
 			// layers from global info with matching bit depth replace layers from that section, other ones are only used
 			// if the section is empty
 			if (!reader.layersInGlobalInfo && (psd.bitsPerChannel === bitsPerChannel || !psd.children?.length)) {
+				const sectionLayers = psd.children;
 				psd.children = [];
-				readLayerInfo(reader, psd, imageResources);
+
+				try {
+					readLayerInfo(reader, psd, imageResources);
+				} catch (e) {
+					psd.children = sectionLayers; // keep layers from layer info section if global info is broken
+					throw e;
+				}
+
 				reader.layersInGlobalInfo = true;
 			}
 

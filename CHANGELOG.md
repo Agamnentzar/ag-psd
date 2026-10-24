@@ -6,7 +6,6 @@
 - **BREAKING CHANGE:** Hue/saturation adjustment colorize settings are now read as `colorize` and `colorization` (`hue` 0-360, `saturation`, `lightness`) fields, previously they were incorrectly read as `a`, `b`, `c`, `d` fields of `master`, which now only has `hue`, `saturation` and `lightness`
 - **BREAKING CHANGE:** Removed `pathList` field (it was always empty), saved paths are now read and written as `imageResources.savedPaths`
 - **BREAKING CHANGE:** Levels and curves adjustment layers now use `channels` array (index 0 is composite channel, followed by document color channels) instead of `rgb`, `red`, `green` and `blue` fields, previously black channel of CMYK documents (and other channels) was lost
-- Smart filters not supported by the library (Hue/Saturation, Camera Raw, Shadows/Highlights, filters stored with default settings, etc.) are now read with `type: 'unknown'` and written back unchanged, previously they were removed
 - Added support for levels smart filter
 - Added `savedPaths`, `workPath` and `clippingPath` image resources (paths from the Paths panel), previously they were not written back
 - Added support for reading CMYK documents (8 and 16 bits per channel), image data is converted to RGB using approximation of Photoshop's default U.S. Web Coated (SWOP) v2 profile

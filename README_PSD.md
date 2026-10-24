@@ -678,7 +678,7 @@ Image resources are global document settings, stored in `psd.imageResources` fie
 
 - `iccUntaggedProfile` ICC Untagged Profile
 
-- `iccProfile` raw ICC color profile data (`Uint8Array`).
+- `iccProfile` raw ICC color profile data (`Uint8Array`). Documents are always written in RGB color mode, so `iccProfile`, `indexedColorCount`, `transparencyIndex`, `alphaChannelDisplayInfo`, halftone screens and transfer functions are not written if `colorMode` of the document is set to color mode other than RGB.
 
 - `exifData` raw EXIF data (`Uint8Array`, TIFF format).
 
@@ -777,7 +777,7 @@ interface PlacedLayer {
 }
 ```
 
-Smart filters that are not supported by this library are read with `type: 'unknown'`, they keep `filterID` and raw `descriptor` with filter settings (missing for filters stored without settings), and are written back unchanged.
+Smart filters that are not supported by this library are skipped when reading (an error is thrown instead if `throwForMissingFeatures` option is set).
 
 The Psd object has `linkedFiles` property, that specifies list of all files linked in smart objects. Each linked file has following structure:
 

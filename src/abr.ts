@@ -546,7 +546,7 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 	const samples: SampleInfo[] = [];
 	const brushes: Brush[] = [];
 	const patterns: PatternInfo[] = [];
-	const brushIndices: number[] = []; // index of preset in 'desc' section for each brush (brushes that fail to parse are skipped)
+	const brushByPreset: (Brush | undefined)[] = []; // brush for each preset in 'desc' section (brushes that fail to parse are skipped)
 	let hierarchy: PhryDescriptor['hierarchy'];
 
 	if (version === 1 || version === 2) {
@@ -586,8 +586,9 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 
 						for (const [index, brush] of (desc.Brsh || []).entries()) {
 							try {
-								brushes.push(parseBrush(brush));
-								brushIndices.push(index);
+								const parsed = parseBrush(brush);
+								brushes.push(parsed);
+								brushByPreset[index] = parsed;
 							} catch (e) {
 								skip(e, `brush "${brush['Nm  ']}"`);
 							}
@@ -634,7 +635,7 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 			} else if (item._classID === 'groupEnd') {
 				groups.pop();
 			} else if (item._classID === 'preset') {
-				const brush = brushes[brushIndices.indexOf(presetIndex)];
+				const brush = brushByPreset[presetIndex];
 				if (brush && groups.length) brush.group = groups.slice();
 				presetIndex++;
 			}

@@ -414,14 +414,12 @@ describe('additionalInfo', () => {
 		expect(filter.filter).eql({ inputMode: 'rgb', rowOrder: 'hsl' });
 	});
 
-	it('keeps unknown smart filters and curves filter without preset kind', () => {
+	it('reads curves filter without preset kind and skips unknown smart filters', () => {
 		const base = {
 			opacity: 1, blendMode: 'normal' as const, enabled: true, hasOptions: true,
 			foregroundColor: { r: 0, g: 0, b: 0 }, backgroundColor: { r: 255, g: 255, b: 255 },
 		};
 		const list: Filter[] = [
-			{ ...base, name: 'Shadows/Highlights', type: 'unknown', filterID: 781 }, // stored without settings at default values
-			{ ...base, name: 'Hue/Saturation', type: 'unknown', filterID: 1213428850, descriptor: { _name: 'Hue/Saturation', _classID: 'HStr', Clrz: true } },
 			{ ...base, name: 'Curves', type: 'curves', filter: { adjustments: [{ channels: ['composite'], curve: [{ x: 0, y: 0 }, { x: 255, y: 200 }] }] } },
 		];
 		const layer: Layer = {
@@ -432,6 +430,23 @@ describe('additionalInfo', () => {
 		};
 		const buffer = writeHandler('SoLd', layer, { width: 10, height: 10 });
 		expect(readHandler('SoLd', buffer).placedLayer.filter.list).eql(list);
+
+		// add unknown filters (unknown class and unknown filter id without settings)
+		const reader = createReader(buffer);
+		readSignature(reader);
+		readUint32(reader);
+		const desc = readVersionAndDescriptor(reader, true);
+		const curves = desc.filterFX.filterFXList[0];
+		desc.filterFX.filterFXList = [
+			{ ...curves, filterID: 1213428850, Fltr: { _name: 'Hue/Saturation', _classID: 'HStr', presetKind: 'presetKindType.presetKindCustom' } },
+			{ ...curves, filterID: 781, Fltr: undefined },
+			curves,
+		];
+		const writer = createWriter();
+		writeSignature(writer, 'soLD');
+		writeUint32(writer, 4);
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+		expect(readHandler('SoLd', getWriterBuffer(writer)).placedLayer.filter.list).eql(list);
 	});
 
 	it('round-trips levels smart filter', () => {
@@ -459,7 +474,7 @@ describe('additionalInfo', () => {
 		const buffer = writeHandler('SoLd', layer, { width: 10, height: 10 });
 		expect(readHandler('SoLd', buffer).placedLayer.filter.list).eql(list);
 
-		// levels with settings we don't know about are kept as unknown filter
+		// levels with settings we don't know about are skipped
 		const reader = createReader(buffer);
 		readSignature(reader);
 		readUint32(reader);
@@ -469,9 +484,7 @@ describe('additionalInfo', () => {
 		writeSignature(writer, 'soLD');
 		writeUint32(writer, 4);
 		writeVersionAndDescriptor(writer, '', 'null', desc);
-		const unknown = readHandler('SoLd', getWriterBuffer(writer)).placedLayer.filter.list[0];
-		expect(unknown.type).equal('unknown');
-		expect(unknown.descriptor.Adjs[0].Auto).true;
+		expect(readHandler('SoLd', getWriterBuffer(writer)).placedLayer.filter.list).eql([]);
 	});
 
 	it('writes linked smart objects as SoLE without PlLd', () => {
@@ -541,6 +554,14 @@ describe('additionalInfo', () => {
 		const reader8 = createReader(layerInfo.buffer);
 		infoHandlersMap['Layr'].read(reader8, psd8, () => layerInfo.byteLength - reader8.offset, psd8, {});
 		expect(psd8.children!.map(c => c.name)).eql(['section']);
+
+		// broken Lr16 data keeps layers from layer info section
+		const broken = layerInfo.slice(0, 20);
+		const psdBroken: Psd = { width: 10, height: 10, bitsPerChannel: 16, children: [{ name: 'compatibility' }] };
+		const readerBroken = createReader(broken.buffer);
+		readerBroken.skipLayerImageData = true;
+		expect(() => infoHandlersMap['Lr16'].read(readerBroken, psdBroken, () => broken.byteLength - readerBroken.offset, psdBroken, {})).throw();
+		expect(psdBroken.children!.map(c => c.name)).eql(['compatibility']);
 	});
 
 	it('round-trips pixelSource (PxSc)', () => {
