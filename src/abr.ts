@@ -1,6 +1,6 @@
 import { BlnM, DescriptorUnitsValue, parseAngle, parsePercent, parseUnitsToNumber, readVersionAndDescriptor } from './descriptor';
 import { BlendMode, PatternInfo } from './psd';
-import { checkSignature, consumeMemory, createReader, PsdReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPatternSafe, readSignature, readUint16, readUint32, readUint8, skipBytes } from './psdReader';
+import { checkSignature, consumeMemory, createReader, PsdReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPatternSafe, readSignature, readUint16, readUint32, readUint8, readUnicodeString, skipBytes } from './psdReader';
 
 export interface Abr {
 	brushes: Brush[];
@@ -99,6 +99,7 @@ interface DynamicBrushShape {
 
 export interface Brush {
 	name: string;
+	group?: string[]; // names of brush groups (folders in brushes panel) the brush is in, from outermost to innermost
 	shape: BrushShape;
 	shapeDynamics?: {
 		sizeDynamics: BrushDynamics;
@@ -152,8 +153,8 @@ export interface Brush {
 	transfer?: {
 		flowDynamics: BrushDynamics;
 		opacityDynamics: BrushDynamics;
-		wetnessDynamics: BrushDynamics;
-		mixDynamics: BrushDynamics;
+		wetnessDynamics?: BrushDynamics; // missing in brushes from older Photoshop versions
+		mixDynamics?: BrushDynamics;
 	};
 	brushPose?: {
 		overrideAngle: boolean;
@@ -167,8 +168,8 @@ export interface Brush {
 	};
 	noise: boolean;
 	wetEdges: boolean;
-	// TODO: build-up
-	// TODO: smoothing
+	buildUp: boolean;
+	// smoothing option is stored in toolOptions.smoothing
 	protectTexture?: boolean;
 	spacing: number;
 	brushGroup?: undefined; // ?
@@ -210,7 +211,10 @@ export interface Brush {
 // internal
 
 interface PhryDescriptor {
-	hierarchy: ({} | {
+	hierarchy?: ({
+		_classID: 'preset' | 'groupEnd';
+	} | {
+		_classID: 'Grup';
 		'Nm  ': string;
 		zuid: string;
 	})[];
@@ -536,13 +540,17 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 		options.logMissingFeatures && reader.log(`Skipped ${what}: ${(e as Error).message}`);
 	};
 
+	if (reader.view.byteLength < 4) throw new Error('Invalid ABR file');
+
 	const version = readInt16(reader);
 	const samples: SampleInfo[] = [];
 	const brushes: Brush[] = [];
 	const patterns: PatternInfo[] = [];
+	const brushIndices: number[] = []; // index of preset in 'desc' section for each brush (brushes that fail to parse are skipped)
+	let hierarchy: PhryDescriptor['hierarchy'];
 
 	if (version === 1 || version === 2) {
-		throw new Error(`Unsupported ABR version (${version})`); // TODO: ...
+		readLegacyBrushes(reader, version, samples, brushes, skip);
 	} else if (version === 6 || version === 7 || version === 9 || version === 10) {
 		const minorVersion = readInt16(reader);
 		if (minorVersion !== 1 && minorVersion !== 2) throw new Error('Unsupported ABR minor version');
@@ -576,9 +584,10 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 					case 'desc': {
 						const desc: DescDescriptor = readVersionAndDescriptor(reader, true);
 
-						for (const brush of desc.Brsh || []) {
+						for (const [index, brush] of (desc.Brsh || []).entries()) {
 							try {
 								brushes.push(parseBrush(brush));
+								brushIndices.push(index);
 							} catch (e) {
 								skip(e, `brush "${brush['Nm  ']}"`);
 							}
@@ -592,23 +601,10 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 						}
 						break;
 					}
-					case 'phry': {
-						// TODO: brush groups (folders in brushes panel)
-						const desc: PhryDescriptor = readVersionAndDescriptor(reader);
-						// example:
-						// hierarchy: [
-						// 	{
-						// 		'Nm  ': 'PRE_EXPORT ',
-						// 		zuid: '965209f2-6f35-9a40-aa43-485684382172'
-						// 	},
-						// 	{},
-						//  ...
-						// ]
-						if (options.logMissingFeatures) {
-							if (desc.hierarchy?.length) {
-								// console.log('unhandled phry section', desc);
-							}
-						}
+					case 'phry': { // brush groups (folders in brushes panel)
+						// flat list of group starts, presets (in the same order as in 'desc' section) and group ends
+						const desc: PhryDescriptor = readVersionAndDescriptor(reader, true);
+						hierarchy = desc.hierarchy;
 						break;
 					}
 					default:
@@ -628,6 +624,23 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 		throw new Error(`Unsupported ABR version (${version})`);
 	}
 
+	if (hierarchy) {
+		const groups: string[] = [];
+		let presetIndex = 0;
+
+		for (const item of hierarchy) {
+			if (item._classID === 'Grup') {
+				groups.push(item['Nm  ']);
+			} else if (item._classID === 'groupEnd') {
+				groups.pop();
+			} else if (item._classID === 'preset') {
+				const brush = brushes[brushIndices.indexOf(presetIndex)];
+				if (brush && groups.length) brush.group = groups.slice();
+				presetIndex++;
+			}
+		}
+	}
+
 	return { samples, patterns, brushes };
 }
 
@@ -638,6 +651,11 @@ function readSample(reader: PsdReader, brushEnd: number, minorVersion: number): 
 	// v2 - Skip the unknown bytes.
 	skipBytes(reader, minorVersion === 1 ? 10 : 264);
 
+	return readSampleBitmap(reader, brushEnd, id);
+}
+
+// bounds, bit depth, compression and image data of brush sample
+function readSampleBitmap(reader: PsdReader, brushEnd: number, id: string): SampleInfo {
 	const y = readInt32(reader);
 	const x = readInt32(reader);
 	const h = readInt32(reader) - y;
@@ -690,16 +708,85 @@ function readSample(reader: PsdReader, brushEnd: number, minorVersion: number): 
 	return { id, bounds: { x, y, w, h }, alpha };
 }
 
+// ABR versions 1 and 2 (Photoshop 6 and earlier) contain a list of brushes with brush tips in them
+function readLegacyBrushes(reader: PsdReader, version: number, samples: SampleInfo[], brushes: Brush[], skip: (e: unknown, what: string) => void) {
+	const count = readUint16(reader);
+
+	for (let i = 0; i < count; i++) {
+		const type = readUint16(reader);
+		const size = readUint32(reader);
+		const end = reader.offset + size;
+
+		if (end > reader.view.byteLength) { // truncated file
+			skip(new Error('Brush data out of bounds'), `brush ${i + 1}`);
+			break;
+		}
+
+		try {
+			if (type === 1) { // computed brush
+				skipBytes(reader, 4); // misc
+				const spacing = readUint16(reader);
+				const diameter = readUint16(reader);
+				const roundness = readUint16(reader);
+				const angle = readInt16(reader);
+				const hardness = readUint16(reader);
+				if (reader.offset > end) throw new Error('Brush data out of bounds');
+
+				brushes.push(createLegacyBrush('', {
+					type: 'computed',
+					size: diameter,
+					angle,
+					roundness: roundness / 100,
+					spacingOn: spacing !== 0,
+					spacing: spacing / 100,
+					flipX: false,
+					flipY: false,
+					hardness: hardness / 100,
+				}));
+			} else if (type === 2) { // sampled brush
+				skipBytes(reader, 4); // misc
+				const spacing = readUint16(reader);
+				const name = version === 2 ? readUnicodeString(reader) : '';
+				skipBytes(reader, 1 + 8); // antialiasing, Int16 bounds rectangle (same as Int32 one)
+
+				// legacy brushes don't have sample ids
+				const sample = readSampleBitmap(reader, end, `brush-${i + 1}`);
+				samples.push(sample);
+				brushes.push(createLegacyBrush(name, {
+					type: 'sampled',
+					size: Math.max(sample.bounds.w, sample.bounds.h),
+					angle: 0,
+					roundness: 1,
+					spacingOn: spacing !== 0,
+					spacing: spacing / 100,
+					flipX: false,
+					flipY: false,
+					name,
+					sampledData: sample.id,
+				}));
+			} else {
+				throw new Error(`Unknown brush type: ${type}`);
+			}
+		} catch (e) {
+			skip(e, `brush ${i + 1}`);
+		}
+
+		reader.offset = end;
+	}
+}
+
+function createLegacyBrush(name: string, shape: BrushShape): Brush {
+	return { name, shape, spacing: 1, wetEdges: false, noise: false, buildUp: false, useBrushSize: true };
+}
+
 function parseBrush(brush: DescDescriptor['Brsh'][number]): Brush {
 	const b: Brush = {
 		name: brush['Nm  '],
 		shape: parseBrushShape(brush.Brsh),
 		spacing: parsePercent(brush.Spcn),
-		// TODO: brushGroup ???
 		wetEdges: brush.Wtdg,
 		noise: brush.Nose,
-		// TODO: TxtC ??? smoothing / build-up ?
-		// TODO: 'Rpt ' ???
+		buildUp: !!brush['Rpt '],
 		useBrushSize: brush.useBrushSize, // ???
 	};
 
@@ -775,9 +862,10 @@ function parseBrush(brush: DescDescriptor['Brsh'][number]): Brush {
 		b.transfer = {
 			flowDynamics: parseDynamics(brush.prVr!),
 			opacityDynamics: parseDynamics(brush.opVr!),
-			wetnessDynamics: parseDynamics(brush.wtVr!),
-			mixDynamics: parseDynamics(brush.mxVr!),
 		};
+
+		if (brush.wtVr) b.transfer.wetnessDynamics = parseDynamics(brush.wtVr);
+		if (brush.mxVr) b.transfer.mixDynamics = parseDynamics(brush.mxVr);
 	}
 
 	if (brush.useBrushPose) {

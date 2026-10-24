@@ -149,6 +149,7 @@ const fieldToArrayExtType: ExtTypeDict = {
 	Clrs: makeType('', 'Clrt'),
 	Trns: makeType('', 'TrnS'),
 	keyDescriptorList: nullType,
+	keyRootDescriptorList: nullType,
 	solidFillMulti: makeType('', 'SoFi'),
 	gradientFillMulti: makeType('', 'GrFl'),
 	dropShadowMulti: makeType('', 'DrSh'),
@@ -183,10 +184,11 @@ const fieldToArrayExtType: ExtTypeDict = {
 
 const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
-		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName',
+		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName', 'exportOption', 'scaleSettings',
+		'BackgroundImagePath', 'ImageSubfolderName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
-		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth', 'comment', 'originalPath', 'Bk  ',
+		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth', 'comment', 'originalPath', 'Bk  ', 'pathUnicodeName',
 	],
 	'tdta': [
 		'EngineData', 'LUT3DFileData', 'indexArray', 'originalVertexArray', 'deformedVertexArray',
@@ -194,6 +196,11 @@ const typeToField: { [key: string]: string[]; } = {
 	],
 	'long': [
 		'TextIndex', 'RndS', 'Mdpn', 'Smth', 'Lctn', 'strokeStyleVersion', 'LaID', 'Vrsn', 'Cnt ', 'bookID',
+		'cropRectBottom', 'cropRectLeft', 'cropRectRight', 'cropRectTop',
+		// save for web output settings
+		'Version', 'BackgroundColorBlue', 'BackgroundColorGreen', 'BackgroundColorRed', 'BackgroundColorState', 'AttributeCase', 'Encoding',
+		'DuplicateFileNameBehavior', 'ImageMapLocation', 'ImageMapType', 'Indent', 'LineEndings', 'SpacersEmptyCells',
+		'SpacersHorizontal', 'SpacersVertical', 'StylesFormat', 'TDWidthHeight', 'TagCase', 'ColorPolicy', 'MetadataPolicy',
 		'Brgh', 'Cntr', 'means', 'vibrance', 'Strt', 'bwPresetKind', 'comp', 'compID', 'originalCompID',
 		'curvesPresetKind', 'mixerPresetKind', 'uOrder', 'vOrder', 'PgNm', 'totalPages', 'Crop',
 		'numerator', 'denominator', 'frameCount', 'Annt', 'keyOriginType', 'unitValueQuadVersion',
@@ -215,7 +222,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'tableOrder', 'enableCompCore', 'enableCompCoreGPU', 'compCoreSupport', 'compCoreGPUSupport', 'Engn',
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
 		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
-		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion', 'gradientsInterpolationMethod',
+		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion', 'gradientsInterpolationMethod', 'pathSymmetryMode',
 		'interpretAlpha',
 	],
 	'bool': [
@@ -246,7 +253,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'topRight', 'topLeft', 'bottomLeft', 'bottomRight', 'ClNs', 'Shrp',
 	],
 	'VlLs': [
-		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'strokeStyleLineDashSet', 'FrLs', 'slices',
+		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'keyRootDescriptorList', 'strokeStyleLineDashSet', 'FrLs', 'slices',
 		'LaSt', 'Trnf', 'nonAffineTransform', 'keyDescriptorList', 'guideIndeces', 'gradientFillMulti',
 		'solidFillMulti', 'frameFXMulti', 'innerShadowMulti', 'dropShadowMulti', 'FrIn', 'FSts', 'FsFr',
 		'sheetTimelineOptions', 'audioClipList', 'trackList', 'globalTrackList', 'keyList', 'audioClipList',
@@ -287,6 +294,9 @@ function guessOSType(value: any): string | undefined {
 const fieldToArrayType: Dict = {
 	'Mnm ': 'long',
 	'Mxm ': 'long',
+	HtmlFileNameComponents: 'long', // save for web output settings
+	SavingFileNameComponents: 'long',
+	SliceFileNameComponents: 'long',
 	Inpt: 'long', // levels filter
 	Otpt: 'long', // levels filter
 	FrLs: 'long',
@@ -294,6 +304,8 @@ const fieldToArrayType: Dict = {
 	Trnf: 'doub',
 	nonAffineTransform: 'doub',
 	keyDescriptorList: 'Objc',
+	keyRootDescriptorList: 'Objc',
+	pathList: 'Objc',
 	gradientFillMulti: 'Objc',
 	solidFillMulti: 'Objc',
 	frameFXMulti: 'Objc',
@@ -377,6 +389,10 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 		return 'enum';
 	} else if ((key === 'Inpt' || key === 'Otpt') && parent._classID === 'LvlA') {
 		return 'VlLs';
+	} else if (key === 'Intr' && typeof value === 'boolean') {
+		return 'bool'; // interpolation in print style
+	} else if (key === 'PgPs') {
+		return 'enum';
 	} else if (key === 'LghD' && parent._classID === 'oilPaint') {
 		return 'long';
 	} else {
@@ -390,7 +406,7 @@ export function readAsciiStringOrClassId(reader: PsdReader) {
 }
 
 export function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
-	if (value.length === 4 && value !== 'warp' && value !== 'time' && value !== 'hold' && value !== 'list') {
+	if (value.length === 4 && value !== 'warp' && value !== 'time' && value !== 'hold' && value !== 'list' && value !== 'json') {
 		// write classId
 		writeInt32(writer, 0);
 		writeSignature(writer, value);
@@ -422,12 +438,21 @@ export function readDescriptorStructure(reader: PsdReader, includeClass: boolean
 	return object;
 }
 
+export const outputSettingsRoot = 'outputSettings';
+
 export function writeDescriptorStructure(writer: PsdWriter, name: string, classId: string, value: any, root: string) {
 	if (logErrors && !classId) console.log('Missing classId for: ', name, classId, value);
 
 	// write class structure
 	writeUnicodeStringWithPadding(writer, name);
-	writeAsciiStringOrClassId(writer, classId);
+
+	if (root === outputSettingsRoot && classId === 'null') {
+		// Photoshop writes 'null' class id as 4 character string in save for web output settings
+		writeInt32(writer, 4);
+		writeSignature(writer, classId);
+	} else {
+		writeAsciiStringOrClassId(writer, classId);
+	}
 
 	const allKeys = Object.keys(value);
 	const keys = allKeys.filter(key => key !== '_name' && key !== '_classID' && value[key] !== undefined);
@@ -514,9 +539,12 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			extType = makeType('', 'classFloatRect');
 		}
 
+		// guess color class from its fields (colors created by serializeColor always have _classID set)
 		if (extType && extType.classID === 'RGBC') {
 			if ('H   ' in value[key]) extType = { classID: 'HSBC', name: '' };
-			// TODO: other color spaces
+			else if ('Cyn ' in value[key]) extType = { classID: 'CMYC', name: '' };
+			else if ('Lmnc' in value[key]) extType = { classID: 'LbCl', name: '' };
+			else if ('Gry ' in value[key]) extType = { classID: 'Grsc', name: '' };
 		}
 
 		if (!type) type = guessOSType(value[key]);
@@ -730,12 +758,13 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			break;
 		}
 		case 'Pth ': { // File path
-			const length = 4 + 4 + 4 + value.path.length * 2;
+			const path = value.path + '\0'; // Photoshop stores trailing null character (stripped when reading)
+			const length = 4 + 4 + 4 + path.length * 2;
 			writeInt32(writer, length);
 			writeSignature(writer, value.sig);
 			writeInt32LE(writer, length);
-			writeInt32LE(writer, value.path.length);
-			writeUnicodeStringWithoutLengthLE(writer, value.path);
+			writeInt32LE(writer, path.length);
+			writeUnicodeStringWithoutLengthLE(writer, path);
 			break;
 		}
 		default:
@@ -996,7 +1025,7 @@ export interface DescriptorGradientContent {
 export interface DescriptorPatternContent {
 	Ptrn: DesciptorPattern;
 	Lnkd?: boolean;
-	phase?: { Hrzn: number; Vrtc: number; };
+	phase?: { Hrzn: number | DescriptorUnitsValue; Vrtc: number | DescriptorUnitsValue; };
 	'Scl '?: DescriptorUnitsValue;
 	Angl?: DescriptorUnitsValue;
 }
@@ -1294,7 +1323,7 @@ function parseFxObject(fx: EffectDescriptor) {
 		fillType: FrFl.decode(fx.PntT!),
 		blendMode: BlnM.decode(fx['Md  ']!),
 		opacity: parsePercent(fx.Opct),
-		size: parseUnits(fx['Sz  ']!),
+		size: parseUnitsOrNumber(fx['Sz  '] as DescriptorUnitsValue | number), // stored as number (pixels) in old versions
 	};
 
 	if (fx.present !== undefined) stroke.present = fx.present;
@@ -1379,9 +1408,9 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 
 export function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean) {
 	const effects: LayerEffectsInfo = {};
-	const { masterFXSwitch, DrSh, dropShadowMulti, IrSh, innerShadowMulti, OrGl, IrGl, ebbl, SoFi, solidFillMulti, patternFill, GrFl, gradientFillMulti, ChFX, FrFX, frameFXMulti, numModifyingFX, ...rest } = info;
+	const { _name, _classID, 'Scl ': scale, masterFXSwitch, DrSh, dropShadowMulti, IrSh, innerShadowMulti, OrGl, IrGl, ebbl, SoFi, solidFillMulti, patternFill, GrFl, gradientFillMulti, ChFX, FrFX, frameFXMulti, numModifyingFX, ...rest } = info as typeof info & { _name?: string; _classID?: string; };
 	if (!masterFXSwitch) effects.disabled = true;
-	if (info['Scl ']) effects.scale = parsePercent(info['Scl ']);
+	if (scale) effects.scale = parsePercent(scale);
 	if (DrSh) effects.dropShadow = [parseEffectObject(DrSh, log)];
 	if (dropShadowMulti) effects.dropShadow = dropShadowMulti.map(i => parseEffectObject(i, log));
 	if (IrSh) effects.innerShadow = [parseEffectObject(IrSh, log)];
@@ -1397,7 +1426,7 @@ export function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean
 	if (ChFX) effects.satin = parseEffectObject(ChFX, log);
 	if (FrFX) effects.stroke = [parseFxObject(FrFX)];
 	if (frameFXMulti) effects.stroke = frameFXMulti.map(i => parseFxObject(i));
-	if (log && Object.keys(rest).length > 1) console.log('Unhandled effect keys:', rest);
+	if (log && Object.keys(rest).length) console.log('Unhandled effect keys:', rest);
 	return effects;
 }
 
@@ -1579,7 +1608,7 @@ function parseEffectObject(obj: any, reportErrors: boolean, objName?: string) {
 			case 'Dstn': result.distance = parseUnits(val); break;
 			case 'Scl ': result.scale = parsePercent(val); break;
 			case 'Ptrn': result.pattern = { name: val['Nm  '], id: val.Idnt }; break;
-			case 'phase': result.phase = { x: val.Hrzn, y: val.Vrtc }; break;
+			case 'phase': result.phase = parsePhase(val); break;
 			case 'Ofst': result.offset = { x: parsePercent(val.Hrzn), y: parsePercent(val.Vrtc) }; break;
 			case 'MpgS':
 			case 'TrnS': {
@@ -1804,13 +1833,21 @@ function parseGradientContent(descriptor: DescriptorGradientContent) {
 	return result;
 }
 
+// phase is usually stored as plain numbers, but some files store it as unit values
+function parsePhase({ Hrzn, Vrtc }: { Hrzn: number | DescriptorUnitsValue; Vrtc: number | DescriptorUnitsValue; }) {
+	return {
+		x: typeof Hrzn === 'number' ? Hrzn : Hrzn.value,
+		y: typeof Vrtc === 'number' ? Vrtc : Vrtc.value,
+	};
+}
+
 function parsePatternContent(descriptor: DescriptorPatternContent) {
 	const result: EffectPattern & ExtraPatternInfo = {
 		name: descriptor.Ptrn['Nm  '],
 		id: descriptor.Ptrn.Idnt,
 	};
 	if (descriptor.Lnkd !== undefined) result.linked = descriptor.Lnkd;
-	if (descriptor.phase !== undefined) result.phase = { x: descriptor.phase.Hrzn, y: descriptor.phase.Vrtc };
+	if (descriptor.phase !== undefined) result.phase = parsePhase(descriptor.phase);
 	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
 	if (descriptor.Angl !== undefined) result.angle = parseAngle(descriptor.Angl);
 	return result;
@@ -1993,7 +2030,8 @@ export function parsePercentOrAngle(x: DescriptorUnitsValue | undefined) {
 export function parseUnits({ units, value }: DescriptorUnitsValue): UnitsValue {
 	if (
 		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
-		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
+		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density' &&
+		units !== 'Distance'
 	) {
 		throw new Error(`Invalid units: ${JSON.stringify({ units, value })}`);
 	}
@@ -2035,7 +2073,8 @@ export function unitsValue(x: UnitsValue | undefined, key: string): DescriptorUn
 
 	if (
 		units !== 'Pixels' && units !== 'Millimeters' && units !== 'Points' && units !== 'None' &&
-		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density'
+		units !== 'Picas' && units !== 'Inches' && units !== 'Centimeters' && units !== 'Density' &&
+		units !== 'Distance'
 	) {
 		throw new Error(`Invalid units in ${JSON.stringify(x)} (key: ${key})`);
 	}

@@ -4,7 +4,6 @@ import { decodeJpeg } from './jpeg';
 import { PsdReader } from './psdReader';
 
 export const MOCK_HANDLERS = false;
-export const RAW_IMAGE_DATA = false;
 
 export const fromBlendMode: { [key: string]: string } = {};
 export const toBlendMode: { [key: string]: BlendMode } = {

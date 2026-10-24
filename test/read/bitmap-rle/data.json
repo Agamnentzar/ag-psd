@@ -5,6 +5,7 @@
   "bitsPerChannel": 1,
   "colorMode": 0,
   "imageResources": {
+    "iptcData": "HAFaAAMbJUccAVoAAxslRxwCAAAC7iY=",
     "captionDigest": "3f400644348efc5d3bcf3f311fa62568",
     "printInformation": {
       "printerName": "",
@@ -13,6 +14,52 @@
       "printSixteenBit": false,
       "proofSetup": {
         "builtin": "proofCMYK"
+      }
+    },
+    "printStyle": {
+      "caption": false,
+      "calibrationBars": false,
+      "registrationMarks": false,
+      "cornerCropMarks": false,
+      "centerCropMarks": false,
+      "labels": false,
+      "negative": false,
+      "emulsionDown": false,
+      "interpolate": false,
+      "backgroundColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "border": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "bleed": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "resolution": {
+        "value": 72,
+        "units": "Pixels"
+      },
+      "vectorData": true,
+      "pagePosition": "centered",
+      "left": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "top": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "scale": 1,
+      "cropWhenPrinting": false,
+      "cropRect": {
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "right": 0
       }
     },
     "resolutionInfo": {
@@ -41,6 +88,11 @@
       "interpolate": false,
       "caption": false,
       "printFlags": true
+    },
+    "printFlagsInfo": {
+      "centerCropMarks": false,
+      "bleedWidth": 0,
+      "bleedWidthScale": 2
     },
     "gridAndGuidesInformation": {
       "grid": {
@@ -106,7 +158,8 @@
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
-    }
+    },
+    "exifData": "TU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAAeAAAAcgEyAAIAAAAUAAAAkIdpAAQAAAABAAAApAAAANAACvyAAAAnEAAK/IAAACcQQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykAMjAxNToxMjowOCAwMjozODoyMAAAA6ABAAMAAAAB//8AAKACAAQAAAABAAABLKADAAQAAAABAAAAyAAAAAAAAAAGAQMAAwAAAAEABgAAARoABQAAAAEAAAEeARsABQAAAAEAAAEmASgAAwAAAAEAAgAAAgEABAAAAAEAAAEuAgIABAAAAAEAAAAAAAAAAAAAAEgAAAABAAAASAAAAAE="
   },
   "filterMask": {
     "colorSpace": {

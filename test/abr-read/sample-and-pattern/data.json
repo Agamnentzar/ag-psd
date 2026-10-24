@@ -42,6 +42,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": false,
+      "buildUp": false,
       "useBrushSize": true,
       "interpretation": true,
       "protectTexture": false,

@@ -1,7 +1,7 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
-import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, LayerVectorMask, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
+import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, ReadOptions, Layer } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPatternSafe, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
 import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor } from './descriptor';
@@ -229,7 +229,7 @@ function writeBezierKnot(writer: PsdWriter, points: number[], width: number, hei
 
 export const booleanOperations: BooleanOperation[] = ['exclude', 'combine', 'subtract', 'intersect'];
 
-export function readVectorMask(reader: PsdReader, vectorMask: LayerVectorMask, width: number, height: number, size: number) {
+export function readVectorMask(reader: PsdReader, vectorMask: VectorPathData, width: number, height: number, size: number) {
 	const end = reader.offset + size;
 	const paths = vectorMask.paths;
 	let path: BezierPath | undefined = undefined;
@@ -284,6 +284,51 @@ export function readVectorMask(reader: PsdReader, vectorMask: LayerVectorMask, w
 	return paths;
 }
 
+// componentIndices - write index of path component for each subpath (Photoshop writes them for layer vector masks)
+export function writeVectorMask(writer: PsdWriter, vectorMask: VectorPathData, width: number, height: number, componentIndices = false) {
+	// initial entry
+	writeUint16(writer, 6);
+	writeZeros(writer, 24);
+
+	const clipboard = vectorMask.clipboard;
+	if (clipboard) {
+		writeUint16(writer, 7);
+		writeFixedPointPath32(writer, clipboard.top);
+		writeFixedPointPath32(writer, clipboard.left);
+		writeFixedPointPath32(writer, clipboard.bottom);
+		writeFixedPointPath32(writer, clipboard.right);
+		writeFixedPointPath32(writer, clipboard.resolution);
+		writeZeros(writer, 4);
+	}
+
+	writeUint16(writer, 8);
+	writeUint16(writer, vectorMask.fillStartsWithAllPixels ? 1 : 0);
+	writeZeros(writer, 22);
+
+	let componentIndex = -1;
+
+	for (const path of vectorMask.paths) {
+		// subpaths without operation are part of the same path component as previous subpath
+		if (path.operation || componentIndex < 0) componentIndex++;
+
+		writeUint16(writer, path.open ? 3 : 0);
+		writeUint16(writer, path.knots.length);
+		writeUint16(writer, path.operation ? booleanOperations.indexOf(path.operation) : -1); // -1 for undefined
+		writeUint16(writer, path.fillRule === 'non-zero' ? 2 : 1);
+		writeZeros(writer, 4);
+		writeUint32(writer, componentIndices ? componentIndex : 0);
+		writeZeros(writer, 10);
+
+		const linkedKnot = path.open ? 4 : 1;
+		const unlinkedKnot = path.open ? 5 : 2;
+
+		for (const { linked, points } of path.knots) {
+			writeUint16(writer, linked ? linkedKnot : unlinkedKnot);
+			writeBezierKnot(writer, points, width, height);
+		}
+	}
+}
+
 addHandler(
 	'vmsk',
 	hasKey('vectorMask'),
@@ -313,45 +358,11 @@ addHandler(
 
 		writeUint32(writer, 3); // version
 		writeUint32(writer, flags);
-
-		// initial entry
-		writeUint16(writer, 6);
-		writeZeros(writer, 24);
-
-		const clipboard = vectorMask.clipboard;
-		if (clipboard) {
-			writeUint16(writer, 7);
-			writeFixedPointPath32(writer, clipboard.top);
-			writeFixedPointPath32(writer, clipboard.left);
-			writeFixedPointPath32(writer, clipboard.bottom);
-			writeFixedPointPath32(writer, clipboard.right);
-			writeFixedPointPath32(writer, clipboard.resolution);
-			writeZeros(writer, 4);
-		}
-
-		writeUint16(writer, 8);
-		writeUint16(writer, vectorMask.fillStartsWithAllPixels ? 1 : 0);
-		writeZeros(writer, 22);
-
-		for (const path of vectorMask.paths) {
-			writeUint16(writer, path.open ? 3 : 0);
-			writeUint16(writer, path.knots.length);
-			writeUint16(writer, path.operation ? booleanOperations.indexOf(path.operation) : -1); // -1 for undefined
-			writeUint16(writer, path.fillRule === 'non-zero' ? 2 : 1);
-			writeZeros(writer, 18); // TODO: these are sometimes non-zero
-
-			const linkedKnot = path.open ? 4 : 1;
-			const unlinkedKnot = path.open ? 5 : 2;
-
-			for (const { linked, points } of path.knots) {
-				writeUint16(writer, linked ? linkedKnot : unlinkedKnot);
-				writeBezierKnot(writer, points, width, height);
-			}
-		}
+		writeVectorMask(writer, vectorMask, width, height, true);
 	},
 );
 
-// TODO: need to write vmsk if has outline ?
+// written instead of 'vmsk' for layers with vector stroke ('vscg' section)
 addHandlerAlias('vsms', 'vmsk');
 // addHandlerAlias('vmsk', 'vsms');
 
@@ -366,7 +377,7 @@ addHandler(
 	},
 );
 
-interface VogkDescriptor {
+export interface KeyDescriptorListDescriptor {
 	keyDescriptorList: {
 		keyShapeInvalidated?: boolean;
 		keyOriginType?: number;
@@ -396,121 +407,128 @@ interface VogkDescriptor {
 	}[];
 }
 
+export function parseKeyDescriptorList(desc: KeyDescriptorListDescriptor) {
+	const keyDescriptorList: KeyDescriptorItem[] = [];
+
+	for (const i of desc.keyDescriptorList) {
+		const item: KeyDescriptorItem = {};
+
+		if (i.keyShapeInvalidated != null) item.keyShapeInvalidated = i.keyShapeInvalidated;
+		if (i.keyOriginType != null) item.keyOriginType = i.keyOriginType;
+		if (i.keyOriginResolution != null) item.keyOriginResolution = i.keyOriginResolution;
+		if (i.keyOriginShapeBBox) {
+			item.keyOriginShapeBoundingBox = {
+				top: parseUnitsOrNumber(i.keyOriginShapeBBox['Top ']),
+				left: parseUnitsOrNumber(i.keyOriginShapeBBox.Left),
+				bottom: parseUnitsOrNumber(i.keyOriginShapeBBox.Btom),
+				right: parseUnitsOrNumber(i.keyOriginShapeBBox.Rght),
+			};
+		}
+		const rectRadii = i.keyOriginRRectRadii;
+		if (rectRadii) {
+			item.keyOriginRRectRadii = {
+				topRight: parseUnits(rectRadii.topRight),
+				topLeft: parseUnits(rectRadii.topLeft),
+				bottomLeft: parseUnits(rectRadii.bottomLeft),
+				bottomRight: parseUnits(rectRadii.bottomRight),
+			};
+		}
+		const corners = i.keyOriginBoxCorners;
+		if (corners) {
+			item.keyOriginBoxCorners = [
+				{ x: corners.rectangleCornerA.Hrzn, y: corners.rectangleCornerA.Vrtc },
+				{ x: corners.rectangleCornerB.Hrzn, y: corners.rectangleCornerB.Vrtc },
+				{ x: corners.rectangleCornerC.Hrzn, y: corners.rectangleCornerC.Vrtc },
+				{ x: corners.rectangleCornerD.Hrzn, y: corners.rectangleCornerD.Vrtc },
+			];
+		}
+		const trnf = i.Trnf;
+		if (trnf) {
+			item.transform = [trnf.xx, trnf.xy, trnf.yx, trnf.yy, trnf.tx, trnf.ty];
+		}
+
+		keyDescriptorList.push(item);
+	}
+
+	return keyDescriptorList;
+}
+
+export function serializeKeyDescriptorList(keyDescriptorList: KeyDescriptorItem[]) {
+	const desc: KeyDescriptorListDescriptor = { keyDescriptorList: [] };
+
+	for (let i = 0; i < keyDescriptorList.length; i++) {
+		const item = keyDescriptorList[i];
+
+		desc.keyDescriptorList.push({} as any); // we're adding keyOriginIndex at the end
+
+		const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
+
+		if (item.keyOriginType != null) out.keyOriginType = item.keyOriginType;
+		if (item.keyOriginResolution != null) out.keyOriginResolution = item.keyOriginResolution;
+
+		const radii = item.keyOriginRRectRadii;
+		if (radii) {
+			out.keyOriginRRectRadii = {
+				unitValueQuadVersion: 1,
+				topRight: unitsValue(radii.topRight, 'topRight'),
+				topLeft: unitsValue(radii.topLeft, 'topLeft'),
+				bottomLeft: unitsValue(radii.bottomLeft, 'bottomLeft'),
+				bottomRight: unitsValue(radii.bottomRight, 'bottomRight'),
+			};
+		}
+
+		const box = item.keyOriginShapeBoundingBox;
+		if (box) {
+			out.keyOriginShapeBBox = {
+				unitValueQuadVersion: 1,
+				'Top ': unitsValue(box.top, 'top'),
+				Left: unitsValue(box.left, 'left'),
+				Btom: unitsValue(box.bottom, 'bottom'),
+				Rght: unitsValue(box.right, 'right'),
+			};
+		}
+
+		const corners = item.keyOriginBoxCorners;
+		if (corners && corners.length === 4) {
+			out.keyOriginBoxCorners = {
+				rectangleCornerA: { Hrzn: corners[0].x, Vrtc: corners[0].y },
+				rectangleCornerB: { Hrzn: corners[1].x, Vrtc: corners[1].y },
+				rectangleCornerC: { Hrzn: corners[2].x, Vrtc: corners[2].y },
+				rectangleCornerD: { Hrzn: corners[3].x, Vrtc: corners[3].y },
+			};
+		}
+
+		const transform = item.transform;
+		if (transform && transform.length === 6) {
+			out.Trnf = {
+				xx: transform[0],
+				xy: transform[1],
+				yx: transform[2],
+				yy: transform[3],
+				tx: transform[4],
+				ty: transform[5],
+			};
+		}
+
+		if (item.keyShapeInvalidated != null) out.keyShapeInvalidated = item.keyShapeInvalidated;
+		out.keyOriginIndex = i;
+	}
+
+	return desc;
+}
+
 addHandler(
 	'vogk',
 	hasKey('vectorOrigination'),
 	(reader, target, left) => {
 		if (readInt32(reader) !== 1) throw new Error(`Invalid vogk version`);
-		const desc = readVersionAndDescriptor(reader) as VogkDescriptor;
+		const desc = readVersionAndDescriptor(reader) as KeyDescriptorListDescriptor;
 		// console.log(require('util').inspect(desc, false, 99, true));
-
-		target.vectorOrigination = { keyDescriptorList: [] };
-
-		for (const i of desc.keyDescriptorList) {
-			const item: KeyDescriptorItem = {};
-
-			if (i.keyShapeInvalidated != null) item.keyShapeInvalidated = i.keyShapeInvalidated;
-			if (i.keyOriginType != null) item.keyOriginType = i.keyOriginType;
-			if (i.keyOriginResolution != null) item.keyOriginResolution = i.keyOriginResolution;
-			if (i.keyOriginShapeBBox) {
-				item.keyOriginShapeBoundingBox = {
-					top: parseUnitsOrNumber(i.keyOriginShapeBBox['Top ']),
-					left: parseUnitsOrNumber(i.keyOriginShapeBBox.Left),
-					bottom: parseUnitsOrNumber(i.keyOriginShapeBBox.Btom),
-					right: parseUnitsOrNumber(i.keyOriginShapeBBox.Rght),
-				};
-			}
-			const rectRadii = i.keyOriginRRectRadii;
-			if (rectRadii) {
-				item.keyOriginRRectRadii = {
-					topRight: parseUnits(rectRadii.topRight),
-					topLeft: parseUnits(rectRadii.topLeft),
-					bottomLeft: parseUnits(rectRadii.bottomLeft),
-					bottomRight: parseUnits(rectRadii.bottomRight),
-				};
-			}
-			const corners = i.keyOriginBoxCorners;
-			if (corners) {
-				item.keyOriginBoxCorners = [
-					{ x: corners.rectangleCornerA.Hrzn, y: corners.rectangleCornerA.Vrtc },
-					{ x: corners.rectangleCornerB.Hrzn, y: corners.rectangleCornerB.Vrtc },
-					{ x: corners.rectangleCornerC.Hrzn, y: corners.rectangleCornerC.Vrtc },
-					{ x: corners.rectangleCornerD.Hrzn, y: corners.rectangleCornerD.Vrtc },
-				];
-			}
-			const trnf = i.Trnf;
-			if (trnf) {
-				item.transform = [trnf.xx, trnf.xy, trnf.yx, trnf.yy, trnf.tx, trnf.ty];
-			}
-
-			target.vectorOrigination.keyDescriptorList.push(item);
-		}
-
+		target.vectorOrigination = { keyDescriptorList: parseKeyDescriptorList(desc) };
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		target;
-		const orig = target.vectorOrigination!;
-		const desc: VogkDescriptor = { keyDescriptorList: [] };
-
-		for (let i = 0; i < orig.keyDescriptorList.length; i++) {
-			const item = orig.keyDescriptorList[i];
-
-			desc.keyDescriptorList.push({} as any); // we're adding keyOriginIndex at the end
-
-			const out = desc.keyDescriptorList[desc.keyDescriptorList.length - 1];
-
-			if (item.keyOriginType != null) out.keyOriginType = item.keyOriginType;
-			if (item.keyOriginResolution != null) out.keyOriginResolution = item.keyOriginResolution;
-
-			const radii = item.keyOriginRRectRadii;
-			if (radii) {
-				out.keyOriginRRectRadii = {
-					unitValueQuadVersion: 1,
-					topRight: unitsValue(radii.topRight, 'topRight'),
-					topLeft: unitsValue(radii.topLeft, 'topLeft'),
-					bottomLeft: unitsValue(radii.bottomLeft, 'bottomLeft'),
-					bottomRight: unitsValue(radii.bottomRight, 'bottomRight'),
-				};
-			}
-
-			const box = item.keyOriginShapeBoundingBox;
-			if (box) {
-				out.keyOriginShapeBBox = {
-					unitValueQuadVersion: 1,
-					'Top ': unitsValue(box.top, 'top'),
-					Left: unitsValue(box.left, 'left'),
-					Btom: unitsValue(box.bottom, 'bottom'),
-					Rght: unitsValue(box.right, 'right'),
-				};
-			}
-
-			const corners = item.keyOriginBoxCorners;
-			if (corners && corners.length === 4) {
-				out.keyOriginBoxCorners = {
-					rectangleCornerA: { Hrzn: corners[0].x, Vrtc: corners[0].y },
-					rectangleCornerB: { Hrzn: corners[1].x, Vrtc: corners[1].y },
-					rectangleCornerC: { Hrzn: corners[2].x, Vrtc: corners[2].y },
-					rectangleCornerD: { Hrzn: corners[3].x, Vrtc: corners[3].y },
-				};
-			}
-
-			const transform = item.transform;
-			if (transform && transform.length === 6) {
-				out.Trnf = {
-					xx: transform[0],
-					xy: transform[1],
-					yx: transform[2],
-					yy: transform[3],
-					tx: transform[4],
-					ty: transform[5],
-				};
-			}
-
-			if (item.keyShapeInvalidated != null) out.keyShapeInvalidated = item.keyShapeInvalidated;
-			out.keyOriginIndex = i;
-		}
-
+		const desc = serializeKeyDescriptorList(target.vectorOrigination!.keyDescriptorList);
 		writeInt32(writer, 1); // version
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	}
@@ -518,7 +536,7 @@ addHandler(
 
 addHandler(
 	'lmfx',
-	target => target.effects !== undefined && hasMultiEffects(target.effects),
+	target => target.effects !== undefined && !isGroupLayer(target) && hasMultiEffects(target.effects),
 	(reader, target, left) => {
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error('Invalid lmfx version');
@@ -772,6 +790,62 @@ interface CustomDescriptor {
 	layerTime?: number;
 }
 
+interface GeneratorSettingsDescriptor {
+	generatorSettings?: {
+		_name: '';
+		_classID: string; // 'null' or 'generatorSettings'
+		exportAs?: {
+			_name: '';
+			_classID: 'null';
+			exportOption?: string; // JSON
+			scaleSettings?: string; // JSON
+		};
+		generator_45_assets?: { _name: ''; _classID: string; json: string; };
+		layerTime?: number;
+		crema?: { _name: ''; _classID: string; json: string; };
+	};
+}
+
+function parseGeneratorSettings(settings: NonNullable<GeneratorSettingsDescriptor['generatorSettings']>) {
+	const result: NonNullable<LayerAdditionalInfo['generatorSettings']> = {};
+
+	if (settings.exportAs) {
+		result.exportAs = {};
+		if (settings.exportAs.exportOption !== undefined) result.exportAs.exportOption = settings.exportAs.exportOption;
+		if (settings.exportAs.scaleSettings !== undefined) result.exportAs.scaleSettings = settings.exportAs.scaleSettings;
+	}
+
+	if (settings.generator_45_assets) result.assets = settings.generator_45_assets.json;
+	if (settings.layerTime !== undefined) result.layerTime = settings.layerTime;
+	if (settings.crema) result.crema = settings.crema.json;
+
+	return result;
+}
+
+function serializeGeneratorSettings(generatorSettings: NonNullable<LayerAdditionalInfo['generatorSettings']>): GeneratorSettingsDescriptor {
+	const settings: GeneratorSettingsDescriptor['generatorSettings'] = {
+		_name: '',
+		_classID: generatorSettings.assets !== undefined ? 'generatorSettings' : 'null',
+	};
+
+	if (generatorSettings.exportAs) {
+		settings.exportAs = { _name: '', _classID: 'null' };
+		if (generatorSettings.exportAs.exportOption !== undefined) settings.exportAs.exportOption = generatorSettings.exportAs.exportOption;
+		if (generatorSettings.exportAs.scaleSettings !== undefined) settings.exportAs.scaleSettings = generatorSettings.exportAs.scaleSettings;
+	}
+
+	if (generatorSettings.assets !== undefined) settings.generator_45_assets = { _name: '', _classID: 'generatorSettings', json: generatorSettings.assets };
+	if (generatorSettings.layerTime !== undefined) settings.layerTime = generatorSettings.layerTime;
+	if (generatorSettings.crema !== undefined) settings.crema = { _name: '', _classID: 'null', json: generatorSettings.crema };
+
+	return { generatorSettings: settings };
+}
+
+// document (Psd object) stores generator settings in 'extn' section instead of 'shmd' section
+function isDocument(target: LayerAdditionalInfo) {
+	return (target as Psd).width !== undefined;
+}
+
 interface CmlsDescriptor {
 	origFXRefPoint?: { Hrzn: number; Vrtc: number; };
 	LyrI: number;
@@ -785,112 +859,113 @@ interface CmlsDescriptor {
 
 addHandler(
 	'shmd', // Metadata setting
-	target => target.timestamp !== undefined || target.animationFrames !== undefined || target.animationFrameFlags !== undefined || target.timeline !== undefined || target.comps !== undefined,
+	target => target.timestamp !== undefined || target.animationFrames !== undefined || target.animationFrameFlags !== undefined || target.timeline !== undefined || target.comps !== undefined ||
+		(target.generatorSettings !== undefined && !isDocument(target)),
 	(reader, target, left) => {
 		const count = readUint32(reader);
 
 		for (let i = 0; i < count; i++) {
-			checkSignature(reader, '8BIM');
+			const signature = readSignature(reader);
+			if (signature !== '8BIM' && signature !== '8ELE') throw new Error(`Invalid shmd signature: '${signature}'`); // 8ELE in Photoshop Elements
 			const key = readSignature(reader);
 			readUint8(reader); // copy
 			skipBytes(reader, 3);
 
-			readSection(reader, 1, left => {
-				if (key === 'cust') {
-					const desc = readVersionAndDescriptor(reader) as CustomDescriptor;
-					// console.log('cust', target.name, require('util').inspect(desc, false, 99, true));
-					if (desc.layerTime !== undefined) target.timestamp = desc.layerTime;
-				} else if (key === 'mlst') {
-					const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
-					// console.log('mlst', target.name, require('util').inspect(desc, false, 99, true));
+			const end = reader.offset + 4 + reader.view.getUint32(reader.offset);
 
-					target.animationFrames = [];
+			try {
+				readSection(reader, 1, left => {
+					if (key === 'cust') {
+						const desc = readVersionAndDescriptor(reader) as CustomDescriptor;
+						// console.log('cust', target.name, require('util').inspect(desc, false, 99, true));
+						if (desc.layerTime !== undefined) target.timestamp = desc.layerTime;
+					} else if (key === 'mlst') {
+						const desc = readVersionAndDescriptor(reader) as FrameListDescriptor;
+						// console.log('mlst', target.name, require('util').inspect(desc, false, 99, true));
 
-					for (let i = 0; i < desc.LaSt.length; i++) {
-						const f = desc.LaSt[i];
-						const frame: AnimationFrame = { frames: f.FrLs };
-						if (f.enab !== undefined) frame.enable = f.enab;
-						if (f.Ofst) frame.offset = horzVrtcToXY(f.Ofst);
-						if (f.FXRf) frame.referencePoint = horzVrtcToXY(f.FXRf);
-						if (f.Lefx) frame.effects = parseEffects(f.Lefx, !!reader.logMissingFeatures);
-						if (f.blendOptions && f.blendOptions.Opct) frame.opacity = parsePercent(f.blendOptions.Opct);
-						target.animationFrames.push(frame);
-					}
-				} else if (key === 'mdyn') {
-					// frame flags
-					readUint16(reader); // unknown
-					const propagate = readUint8(reader);
-					const flags = readUint8(reader);
+						target.animationFrames = [];
 
-					target.animationFrameFlags = {
-						propagateFrameOne: !propagate,
-						unifyLayerPosition: (flags & 1) !== 0,
-						unifyLayerStyle: (flags & 2) !== 0,
-						unifyLayerVisibility: (flags & 4) !== 0,
-					};
-				} else if (key === 'tmln') {
-					const desc = readVersionAndDescriptor(reader) as TimelineDescriptor;
-					const timeScope = desc.timeScope;
-					// console.log('tmln', target.name, target.id, require('util').inspect(desc, false, 99, true));
+						for (let i = 0; i < desc.LaSt.length; i++) {
+							const f = desc.LaSt[i];
+							const frame: AnimationFrame = { frames: f.FrLs };
+							if (f.enab !== undefined) frame.enable = f.enab;
+							if (f.Ofst) frame.offset = horzVrtcToXY(f.Ofst);
+							if (f.FXRf) frame.referencePoint = horzVrtcToXY(f.FXRf);
+							if (f.Lefx) frame.effects = parseEffects(f.Lefx, !!reader.logMissingFeatures);
+							if (f.blendOptions && f.blendOptions.Opct) frame.opacity = parsePercent(f.blendOptions.Opct);
+							target.animationFrames.push(frame);
+						}
+					} else if (key === 'mdyn') {
+						// frame flags
+						readUint16(reader); // unknown
+						const propagate = readUint8(reader);
+						const flags = readUint8(reader);
 
-					const timeline: Timeline = {
-						start: frac(timeScope.Strt),
-						duration: frac(timeScope.duration),
-						inTime: frac(timeScope.inTime),
-						outTime: frac(timeScope.outTime),
-						autoScope: desc.autoScope,
-						audioLevel: desc.audioLevel,
-					};
-
-					if (desc.trackList) {
-						timeline.tracks = parseTrackList(desc.trackList, !!reader.logMissingFeatures);
-					}
-
-					target.timeline = timeline;
-					// console.log('tmln:result', target.name, target.id, require('util').inspect(timeline, false, 99, true));
-				} else if (key === 'cmls') {
-					const desc = readVersionAndDescriptor(reader) as CmlsDescriptor;
-					// console.log('cmls', require('util').inspect(desc, false, 99, true));
-
-					target.comps = {
-						settings: [],
-					};
-
-					if (desc.origFXRefPoint) target.comps.originalEffectsReferencePoint = { x: desc.origFXRefPoint.Hrzn, y: desc.origFXRefPoint.Vrtc };
-
-					for (const item of desc.layerSettings) {
-						target.comps.settings.push({ compList: item.compList });
-						const t = target.comps.settings[target.comps.settings.length - 1];
-						if ('enab' in item) t.enabled = item.enab;
-						if (item.Ofst) t.offset = { x: item.Ofst.Hrzn, y: item.Ofst.Vrtc };
-						if (item.FXRefPoint) t.effectsReferencePoint = { x: item.FXRefPoint.Hrzn, y: item.FXRefPoint.Vrtc };
-					}
-				} else if (key === 'extn') {
-					interface ExtnDescriptor {
-						generatorSettings: {
-							exportAs: {
-								exportOption: string;
-							};
-							layerTime: number;
+						target.animationFrameFlags = {
+							propagateFrameOne: !propagate,
+							unifyLayerPosition: (flags & 1) !== 0,
+							unifyLayerStyle: (flags & 2) !== 0,
+							unifyLayerVisibility: (flags & 4) !== 0,
 						};
+					} else if (key === 'tmln') {
+						const desc = readVersionAndDescriptor(reader) as TimelineDescriptor;
+						const timeScope = desc.timeScope;
+						// console.log('tmln', target.name, target.id, require('util').inspect(desc, false, 99, true));
+
+						const timeline: Timeline = {
+							start: frac(timeScope.Strt),
+							duration: frac(timeScope.duration),
+							inTime: frac(timeScope.inTime),
+							outTime: frac(timeScope.outTime),
+							autoScope: desc.autoScope,
+							audioLevel: desc.audioLevel,
+						};
+
+						if (desc.trackList) {
+							timeline.tracks = parseTrackList(desc.trackList, !!reader.logMissingFeatures);
+						}
+
+						target.timeline = timeline;
+						// console.log('tmln:result', target.name, target.id, require('util').inspect(timeline, false, 99, true));
+					} else if (key === 'cmls') {
+						const desc = readVersionAndDescriptor(reader) as CmlsDescriptor;
+						// console.log('cmls', require('util').inspect(desc, false, 99, true));
+
+						target.comps = {
+							settings: [],
+						};
+
+						if (desc.origFXRefPoint) target.comps.originalEffectsReferencePoint = { x: desc.origFXRefPoint.Hrzn, y: desc.origFXRefPoint.Vrtc };
+
+						for (const item of desc.layerSettings) {
+							target.comps.settings.push({ compList: item.compList });
+							const t = target.comps.settings[target.comps.settings.length - 1];
+							if ('enab' in item) t.enabled = item.enab;
+							if (item.Ofst) t.offset = { x: item.Ofst.Hrzn, y: item.Ofst.Vrtc };
+							if (item.FXRefPoint) t.effectsReferencePoint = { x: item.FXRefPoint.Hrzn, y: item.FXRefPoint.Vrtc };
+						}
+					} else if (key === 'extn') {
+						const desc = readVersionAndDescriptor(reader) as GeneratorSettingsDescriptor;
+						if (desc.generatorSettings) target.generatorSettings = parseGeneratorSettings(desc.generatorSettings);
+					} else {
+						reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
 					}
 
-					const desc = readVersionAndDescriptor(reader) as ExtnDescriptor;
-					// console.log(require('util').inspect(desc, false, 99, true));
-					desc; // TODO: save this
-					reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
-				} else {
-					reader.logMissingFeatures && reader.log('Unhandled "shmd" section key', key);
-				}
-
-				skipBytes(reader, left());
-			});
+					skipBytes(reader, left());
+				});
+			} catch (e) {
+				// failure to read one item shouldn't drop all other items
+				if (reader.throwForMissingFeatures) throw e;
+				reader.logMissingFeatures && reader.log(`Failed to read "shmd" section key ${key}: ${(e as Error).message}`);
+				reader.offset = end;
+			}
 		}
 
 		skipBytes(reader, left());
 	},
 	(writer, target, _, options) => {
 		const { animationFrames, animationFrameFlags, timestamp, timeline, comps } = target;
+		const generatorSettings = isDocument(target) ? undefined : target.generatorSettings;
 
 		let count = 0;
 		if (animationFrames) count++;
@@ -898,6 +973,7 @@ addHandler(
 		if (timeline) count++;
 		if (timestamp !== undefined) count++;
 		if (comps) count++;
+		if (generatorSettings) count++;
 		writeUint32(writer, count);
 
 		if (animationFrames) {
@@ -1011,6 +1087,16 @@ addHandler(
 
 				// console.log('cmls', require('util').inspect(desc, false, 99, true));
 				writeVersionAndDescriptor(writer, '', 'null', desc);
+			}, true);
+		}
+
+		if (generatorSettings) {
+			writeSignature(writer, '8BIM');
+			writeSignature(writer, 'extn');
+			writeUint8(writer, 0); // copy (always false)
+			writeZeros(writer, 3);
+			writeSection(writer, 2, () => {
+				writeVersionAndDescriptor(writer, '', 'null', serializeGeneratorSettings(generatorSettings));
 			}, true);
 		}
 	},
@@ -1314,7 +1400,7 @@ addHandler(
 		if (readInt32(reader) !== 3) throw new Error(`Invalid PlLd version`);
 		const id = readPascalString(reader, 1);
 		const pageNumber = readInt32(reader);
-		const totalPages = readInt32(reader); // TODO: check how this works ?
+		const totalPages = readInt32(reader); // for multi-page documents (PDF)
 		readInt32(reader); // anitAliasPolicy 16
 		const placedLayerType = readInt32(reader); // 0 = unknown, 1 = vector, 2 = raster, 3 = image stack
 		if (!placedLayerTypes[placedLayerType]) throw new Error('Invalid PlLd type');
@@ -1866,7 +1952,7 @@ type SoLdDescriptorFilterItem = {
 		'Fl  ': string;
 	};
 } | {
-	filterID: 991 | 943; // TODO: why 2 different IDs? do we need to handle them separately?
+	filterID: 991 | 943; // 943 in older Photoshop versions (2021), 991 in newer ones, settings are the same
 	Fltr: {
 		_name: 'Rigid Transform';
 		_classID: 'rigidTransform';
@@ -2238,7 +2324,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					undefinedAreas: UndA.decode(f.Fltr.UndA),
 					displacementFile: {
 						signature: f.Fltr.DspF.sig,
-						path: f.Fltr.DspF.path, // TODO: this is decoded incorrectly ???
+						path: f.Fltr.DspF.path,
 					},
 				},
 			};
@@ -2573,8 +2659,7 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, options: ReadOptions): F
 					],
 					puppetShapeList: (f.Fltr.puppetShapeList || []).map(p => ({
 						rigidType: p.rigidType,
-						// TODO: VrsM
-						// TODO: VrsN
+						// VrsM / VrsN - version (always 1.0)
 						originalVertexArray: uint8ToPoints(p.originalVertexArray),
 						deformedVertexArray: uint8ToPoints(p.deformedVertexArray),
 						indexArray: Array.from(uint8ToUint32(p.indexArray)),
@@ -3340,14 +3425,14 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			Fltr: {
 				_name: 'Rigid Transform',
 				_classID: 'rigidTransform',
-				'null': ['Ordn.Trgt'], // TODO: ???
+				'null': ['Ordn.Trgt'], // target layer reference
 				rigidType: f.filter.rigidType,
 				puppetShapeList: (f.filter.puppetShapeList || []).map(p => ({
 					_name: '',
 					_classID: 'puppetShape',
 					rigidType: p.rigidType,
-					VrsM: 1, // TODO: ???
-					VrsN: 0, // TODO: ???
+					VrsM: 1, // version major
+					VrsN: 0, // version minor
 					originalVertexArray: toUint8(new Float32Array(pointsToArray(p.originalVertexArray))),
 					deformedVertexArray: toUint8(new Float32Array(pointsToArray(p.deformedVertexArray))),
 					indexArray: toUint8(new Uint32Array(p.indexArray)),
@@ -3555,8 +3640,8 @@ interface SoLdDescriptor {
 	'Sz  ': { _name: '', _classID: 'Pnt ', Wdth: number; Hght: number; };
 	Rslt: DescriptorUnitsValue;
 	filterFX?: SoLdDescriptorFilter;
-	comp?: number; // TODO: support this ?
-	compInfo?: { compID: number; originalCompID: number; }; // TODO: support this ?
+	comp?: number;
+	compInfo?: { compID: number; originalCompID: number; };
 	Impr?: {}; // ???
 	ClMg?: { // TODO: support this ?
 		_name: '';
@@ -3665,6 +3750,12 @@ addHandler(
 		const placedType = placedLayerTypes.indexOf(placed.type);
 		if (placedType === -1) throw new Error('Invalid placedLayer type');
 
+		const warp = getWarpFromPlacedLayer(placed);
+		// size of linked image matches warp bounds if it's not provided
+		const bounds = warp.bounds;
+		const width = placed.width || (bounds ? bounds.right.value - bounds.left.value : 0);
+		const height = placed.height || (bounds ? bounds.bottom.value - bounds.top.value : 0);
+
 		const desc: SoLdDescriptor = {
 			Idnt: placed.id,
 			placed: placed.placed ?? placed.id,
@@ -3679,12 +3770,12 @@ addHandler(
 			Trnf: placed.transform,
 			nonAffineTransform: placed.nonAffineTransform ?? placed.transform,
 			// quiltWarp: {} as any,
-			warp: encodeWarp(getWarpFromPlacedLayer(placed)),
+			warp: encodeWarp(warp),
 			'Sz  ': {
 				_name: '',
 				_classID: 'Pnt ',
-				Wdth: placed.width || 0, // TODO: find size ?
-				Hght: placed.height || 0, // TODO: find size ?
+				Wdth: width,
+				Hght: height,
 			},
 			Rslt: placed.resolution ? unitsValue(placed.resolution, 'resolution') : { units: 'Density', value: 72 },
 		};
@@ -3701,15 +3792,6 @@ addHandler(
 				filterFXList: placed.filter.list.map(f => serializeFilterFXItem(f)),
 			};
 		}
-
-		// TODO:
-		// desc.comp = -1;
-		// desc.compInfo = { _name: '', _classID: 'null', compID: -1, originalCompID: -1 } as any;
-		// desc.ClMg = {
-		// 	_name: '',
-		// 	_classID: 'ClMg',
-		// 	placedLayerOCIOConversion: 'placedLayerOCIOConversion.placedLayerOCIOConvertEmbedded'
-		// } as any;
 
 		// if (JSON.stringify(t) !== JSON.stringify(desc)) {
 		// 	console.log('read', require('util').inspect(t, false, 99, true));
@@ -3839,7 +3921,7 @@ if (MOCK_HANDLERS) {
 	);
 } else {
 	addHandler(
-		'Patt', // TODO: handle also Pat2 & Pat3
+		'Patt', // 'Pat2' and 'Pat3' (16 and 32 bit documents) are aliases, patterns are always written as 8 bit
 		target => !!(target.patterns && target.patterns.length > 0),
 		(reader, target, left) => {
 			while (left() > 0) {
@@ -4262,28 +4344,55 @@ addHandlerAlias('lnk3', 'lnk2');
 
 interface PthsDescriptor {
 	pathList: {
+		_name: '';
 		_classID: 'pathInfoClass';
 		pathUnicodeName: string;
-		pathSymmetryClass: {
+		pathSymmetryClass?: {
+			_name: '';
 			_classID: 'pathSymmetryClass';
 			pathSymmetryMode: string; // 'pathSymmetryModeEnum.pathSymmetryModeBasicPath'
 		};
 	}[];
 }
 
+// unicode names of saved paths (path data is stored in image resources 2000-2998)
 addHandler(
 	'pths',
-	hasKey('pathList'),
-	(reader, target) => {
+	target => (target as Psd).imageResources?.savedPaths !== undefined,
+	(reader, _target, left, psd) => {
 		const desc = readVersionAndDescriptor(reader, true) as PthsDescriptor;
-		// console.log(require('util').inspect(desc, false, 99, true));
-		// if (options.throwForMissingFeatures && desc?.pathList?.length) throw new Error('non-empty pathList in `pths`');
-		desc;
-		target.pathList = []; // TODO: read paths
+		const imageResources = psd.imageResources ??= {};
+		const savedPaths = imageResources.savedPaths ??= [];
+
+		for (let i = 0; i < desc.pathList.length && i < savedPaths.length; i++) {
+			const { pathUnicodeName, pathSymmetryClass } = desc.pathList[i];
+			const path = savedPaths[i];
+
+			// clipping path is referenced by (non-unicode) name
+			if (imageResources.clippingPath && imageResources.clippingPath.name === path.name) {
+				imageResources.clippingPath.name = pathUnicodeName;
+			}
+
+			path.name = pathUnicodeName;
+			if (pathSymmetryClass) path.symmetryMode = pathSymmetryClass.pathSymmetryMode.split('.')[1];
+		}
+
+		skipBytes(reader, left());
 	},
-	(writer, _target) => {
+	(writer, _target, psd) => {
 		const desc: PthsDescriptor = {
-			pathList: [], // TODO: write paths
+			pathList: psd.imageResources!.savedPaths!.map(path => ({
+				_name: '',
+				_classID: 'pathInfoClass',
+				pathUnicodeName: path.name,
+				...(path.symmetryMode ? {
+					pathSymmetryClass: {
+						_name: '',
+						_classID: 'pathSymmetryClass',
+						pathSymmetryMode: `pathSymmetryModeEnum.${path.symmetryMode}`,
+					},
+				} : {}),
+			})),
 		};
 
 		writeVersionAndDescriptor(writer, '', 'pathsDataClass', desc);
@@ -4298,15 +4407,8 @@ addHandler(
 );
 
 addHandler(
-	'lfxs',
-	() => false, // TODO: not sure when we actually need to write this section
-	// NOTE: this might be insufficient
-	// target => target.effects !== undefined && (
-	// 	!!target.effects.dropShadow?.some(e => e.choke) ||
-	// 	!!target.effects.innerShadow?.some(e => e.choke) ||
-	// 	!!target.effects.outerGlow?.choke ||
-	// 	!!target.effects.innerGlow?.choke
-	// ),
+	'lfxs', // effects of group layers (instead of 'lfx2' / 'lmfx')
+	target => target.effects !== undefined && isGroupLayer(target),
 	(reader, target, left) => {
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error(`Invalid lfxs version`);
@@ -4363,6 +4465,12 @@ function readLevelsChannel(reader: PsdReader): LevelsAdjustmentChannel {
 	return { shadowInput, highlightInput, shadowOutput, highlightOutput, midtoneInput };
 }
 
+const defaultLevelsChannel: LevelsAdjustmentChannel = { shadowInput: 0, highlightInput: 255, shadowOutput: 0, highlightOutput: 255, midtoneInput: 1 };
+
+function isDefaultLevelsChannel(c: LevelsAdjustmentChannel) {
+	return c.shadowInput === 0 && c.highlightInput === 255 && c.shadowOutput === 0 && c.highlightOutput === 255 && c.midtoneInput === 1;
+}
+
 function writeLevelsChannel(writer: PsdWriter, channel: LevelsAdjustmentChannel) {
 	writeInt16(writer, channel.shadowInput);
 	writeInt16(writer, channel.highlightInput);
@@ -4377,62 +4485,49 @@ addHandler(
 	(reader, target, left) => {
 		if (readUint16(reader) !== 2) throw new Error('Invalid levl version');
 
-		const levels: LevelsAdjustmentChannel[] = [];
+		const channels: LevelsAdjustmentChannel[] = [];
 
-		for (let i = 0; i < 29 && left(); i++) {
-			levels.push(readLevelsChannel(reader));
+		for (let i = 0; i < 29 && left() >= 10; i++) {
+			channels.push(readLevelsChannel(reader));
 		}
 
-		const [rgb, red, green, blue] = levels;
-
-		target.adjustment = {
-			...target.adjustment as PresetInfo,
-			type: 'levels',
-			rgb,
-			red,
-			green,
-			blue,
-		};
-
-		if (left()) {
+		if (left() >= 8) {
 			if (readSignature(reader) !== 'Lvls') throw new Error(`Invalid levl signature`);
 			if (readUint16(reader) !== 3) throw new Error(`Invalid levl version`);
 
 			const totalChannelRecords = readUint16(reader);
 
-			for (let i = 0; i < (totalChannelRecords - levels.length) && left(); i++) {
-				levels.push(readLevelsChannel(reader));
+			while (channels.length < totalChannelRecords && left() >= 10) {
+				channels.push(readLevelsChannel(reader));
 			}
 		}
+
+		// records for all possible channels are stored, skip unused ones
+		while (channels.length && isDefaultLevelsChannel(channels[channels.length - 1])) channels.pop();
+
+		target.adjustment = {
+			...target.adjustment as PresetInfo,
+			type: 'levels',
+			channels,
+		};
 
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		const info = target.adjustment as LevelsAdjustment;
-		const defaultChannel = {
-			shadowInput: 0,
-			highlightInput: 255,
-			shadowOutput: 0,
-			highlightOutput: 255,
-			midtoneInput: 1,
-		};
+		const channels = (target.adjustment as LevelsAdjustment).channels || [];
 
 		writeUint16(writer, 2); // version
-		writeLevelsChannel(writer, info.rgb || defaultChannel);
-		writeLevelsChannel(writer, info.red || defaultChannel);
-		writeLevelsChannel(writer, info.green || defaultChannel);
-		writeLevelsChannel(writer, info.blue || defaultChannel);
 
-		for (let i = 0; i < (29 - 4); i++) {
-			writeLevelsChannel(writer, defaultChannel);
+		for (let i = 0; i < 29; i++) {
+			writeLevelsChannel(writer, channels[i] || defaultLevelsChannel);
 		}
 
 		writeSignature(writer, 'Lvls');
 		writeUint16(writer, 3); // version
 		writeUint16(writer, 62); // total count
 
-		for (let i = 0; i < (62 - 29); i++) {
-			writeLevelsChannel(writer, defaultChannel);
+		for (let i = 29; i < 62; i++) {
+			writeLevelsChannel(writer, channels[i] || defaultLevelsChannel);
 		}
 	},
 );
@@ -4466,17 +4561,20 @@ addHandler(
 		readUint8(reader);
 		if (readUint16(reader) !== 1) throw new Error('Invalid curv version');
 		readUint16(reader);
-		const channels = readUint16(reader);
-		const info: CurvesAdjustment = { type: 'curves' };
+		const channelsMask = readUint16(reader);
+		const channels: CurvesAdjustmentChannel[] = [];
 
-		if (channels & 1) info.rgb = readCurveChannel(reader);
-		if (channels & 2) info.red = readCurveChannel(reader);
-		if (channels & 4) info.green = readCurveChannel(reader);
-		if (channels & 8) info.blue = readCurveChannel(reader);
+		for (let i = 0; i < 16; i++) {
+			if (channelsMask & (1 << i)) {
+				while (channels.length < i) channels.push([]);
+				channels.push(readCurveChannel(reader));
+			}
+		}
 
 		target.adjustment = {
 			...target.adjustment as PresetInfo,
-			...info,
+			type: 'curves',
+			channels,
 		};
 
 		// ignoring, duplicate information
@@ -4499,35 +4597,33 @@ addHandler(
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		const info = target.adjustment as CurvesAdjustment;
-		const { rgb, red, green, blue } = info;
-		let channels = 0;
-		let channelCount = 0;
+		const channels = ((target.adjustment as CurvesAdjustment).channels || []).slice(0, 16);
+		const used: number[] = [];
+		let channelsMask = 0;
 
-		if (rgb && rgb.length) { channels |= 1; channelCount++; }
-		if (red && red.length) { channels |= 2; channelCount++; }
-		if (green && green.length) { channels |= 4; channelCount++; }
-		if (blue && blue.length) { channels |= 8; channelCount++; }
+		for (let i = 0; i < channels.length; i++) {
+			if (channels[i]?.length) {
+				channelsMask |= 1 << i;
+				used.push(i);
+			}
+		}
 
 		writeUint8(writer, 0);
 		writeUint16(writer, 1); // version
 		writeUint16(writer, 0);
-		writeUint16(writer, channels);
+		writeUint16(writer, channelsMask);
 
-		if (rgb && rgb.length) writeCurveChannel(writer, rgb);
-		if (red && red.length) writeCurveChannel(writer, red);
-		if (green && green.length) writeCurveChannel(writer, green);
-		if (blue && blue.length) writeCurveChannel(writer, blue);
+		for (const i of used) writeCurveChannel(writer, channels[i]);
 
 		writeSignature(writer, 'Crv ');
 		writeUint16(writer, 4); // version
 		writeUint16(writer, 0);
-		writeUint16(writer, channelCount);
+		writeUint16(writer, used.length);
 
-		if (rgb && rgb.length) { writeUint16(writer, 0); writeCurveChannel(writer, rgb); }
-		if (red && red.length) { writeUint16(writer, 1); writeCurveChannel(writer, red); }
-		if (green && green.length) { writeUint16(writer, 2); writeCurveChannel(writer, green); }
-		if (blue && blue.length) { writeUint16(writer, 3); writeCurveChannel(writer, blue); }
+		for (const i of used) {
+			writeUint16(writer, i);
+			writeCurveChannel(writer, channels[i]);
+		}
 	},
 );
 
@@ -5528,13 +5624,17 @@ addHandler(
 	},
 );
 
+function isGroupLayer(target: LayerAdditionalInfo) {
+	return !!(target as Layer).children;
+}
+
 export function hasMultiEffects(effects: LayerEffectsInfo) {
 	return Object.keys(effects).map(key => (effects as any)[key]).some(v => Array.isArray(v) && v.length > 1);
 }
 
 addHandler(
 	'lfx2',
-	target => target.effects !== undefined && !hasMultiEffects(target.effects),
+	target => target.effects !== undefined && !isGroupLayer(target) && !hasMultiEffects(target.effects),
 	(reader, target, left) => {
 		const version = readUint32(reader);
 		if (version !== 0) throw new Error(`Invalid lfx2 version`);
@@ -5542,8 +5642,7 @@ addHandler(
 		const desc: Lfx2Descriptor & LmfxDescriptor = readVersionAndDescriptor(reader);
 		// console.log('READ', require('util').inspect(desc, false, 99, true));
 
-		// TODO: don't discard if we got it from lmfx
-		// discard if read in 'lrFX' section
+		// discard if read in 'lrFX' section ('lmfx' and 'lfx2' are never stored together)
 		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
 
 		skipBytes(reader, left());
@@ -5617,26 +5716,17 @@ addHandler(
 	},
 );
 
-interface ExtensionDesc {
-	generatorSettings: {
-		generator_45_assets: { json: string; };
-		layerTime: number;
-	};
-}
-
-// extension settings ?, ignore it
+// generator settings of the document (layers store them in 'shmd' section)
 addHandler(
 	'extn',
-	target => (target as any)._extn !== undefined,
-	(reader, target) => {
-		const desc: ExtensionDesc = readVersionAndDescriptor(reader);
-		// console.log(require('util').inspect(desc, false, 99, true));
-
-		if (MOCK_HANDLERS) (target as any)._extn = desc;
+	target => target.generatorSettings !== undefined && isDocument(target),
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as GeneratorSettingsDescriptor;
+		if (desc.generatorSettings) target.generatorSettings = parseGeneratorSettings(desc.generatorSettings);
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		// TODO: need to add correct types for desc fields (resources/src.psd)
-		if (MOCK_HANDLERS) writeVersionAndDescriptor(writer, '', 'null', (target as any)._extn);
+		writeVersionAndDescriptor(writer, '', 'null', serializeGeneratorSettings(target.generatorSettings!));
 	},
 );
 

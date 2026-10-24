@@ -1,21 +1,36 @@
 import { toByteArray } from 'base64-js';
-import { BlendMode, ImageResources, RenderingIntent } from './psd';
+import { BlendMode, HalftoneScreen, ImageResources, KeyDescriptorItem, PrintTransferFunction, RenderingIntent, SavedPath } from './psd';
+import { KeyDescriptorListDescriptor, parseKeyDescriptorList, readVectorMask, serializeKeyDescriptorList, writeVectorMask } from './additionalInfo';
 import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString, decodeUtf8, getUtf8StrictDecoder, getGbkStrictDecoder } from './psdReader';
-import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, } from './psdWriter';
-import { createCanvasFromData, createEnum, MOCK_HANDLERS } from './helpers';
+import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, writeZeros } from './psdWriter';
+import { clamp, ColorSpace, createCanvasFromData, createEnum, createImageData, imageDataToCanvas, MOCK_HANDLERS } from './helpers';
 import { encodeString } from './utf8';
-import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, pathSelectionStateToReference, DescriptorReferenceItem, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor } from './descriptor';
+import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, pathSelectionStateToReference, DescriptorReferenceItem, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor, DescriptorColor, DescriptorUnitsValue, parseColor, serializeColor, parseUnits, unitsValue, parsePercent, unitsPercentF , outputSettingsRoot } from './descriptor';
 
 export interface InternalImageResources extends ImageResources {
 	layersGroup?: number[];
 	layerGroupsEnabledId?: number[];
+	savedPathsOrigination?: KeyDescriptorItem[][];
+}
+
+export interface ResourceDocumentInfo {
+	width: number;
+	height: number;
+}
+
+export interface ResourceInfo extends ResourceDocumentInfo {
+	signature: string; // '8BIM', or 'MeSa' etc. for resources from other applications
+	id: number;
+	name: Uint8Array; // raw pascal string bytes
 }
 
 export interface ResourceHandler {
 	key: number;
+	keyCount: number; // number of consecutive resource ids handled, starting at `key` (index is added to `key` when writing)
 	has: (target: InternalImageResources) => boolean | number;
-	read: (reader: PsdReader, target: InternalImageResources, left: () => number) => void;
-	write: (writer: PsdWriter, target: InternalImageResources, index: number) => void;
+	read: (reader: PsdReader, target: InternalImageResources, left: () => number, info: ResourceInfo) => void;
+	write: (writer: PsdWriter, target: InternalImageResources, index: number, document: ResourceDocumentInfo) => void;
+	name?: (target: InternalImageResources, index: number) => string;
 }
 
 export const resourceHandlers: ResourceHandler[] = [];
@@ -24,12 +39,13 @@ export const resourceHandlersMap: { [key: number]: ResourceHandler } = {};
 function addHandler(
 	key: number,
 	has: (target: InternalImageResources) => boolean | number,
-	read: (reader: PsdReader, target: InternalImageResources, left: () => number) => void,
-	write: (writer: PsdWriter, target: InternalImageResources, index: number) => void,
+	read: (reader: PsdReader, target: InternalImageResources, left: () => number, info: ResourceInfo) => void,
+	write: (writer: PsdWriter, target: InternalImageResources, index: number, document: ResourceDocumentInfo) => void,
+	options: { keyCount?: number; name?: (target: InternalImageResources, index: number) => string; } = {},
 ) {
-	const handler: ResourceHandler = { key, has, read, write };
+	const handler: ResourceHandler = { key, keyCount: options.keyCount ?? 1, has, read, write, name: options.name };
 	resourceHandlers.push(handler);
-	resourceHandlersMap[handler.key] = handler;
+	for (let i = 0; i < handler.keyCount; i++) resourceHandlersMap[handler.key + i] = handler;
 }
 
 const LOG_MOCK_HANDLERS = false;
@@ -60,7 +76,10 @@ function writeUtf8String(writer: PsdWriter, value: string) {
 function readEncodedString(reader: PsdReader) {
 	const length = readUint8(reader);
 	const buffer = readBytes(reader, length);
+	return decodeEncodedString(reader, buffer);
+}
 
+function decodeEncodedString(reader: PsdReader, buffer: Uint8Array) {
 	let notAscii = false;
 	for (let i = 0; i < buffer.byteLength; i++) {
 		if (buffer[i] & 0x80) {
@@ -84,7 +103,7 @@ function readEncodedString(reader: PsdReader) {
 	return decodeUtf8(reader, buffer);
 }
 
-function writeEncodedString(writer: PsdWriter, value: string) {
+function toShortAsciiString(value: string) {
 	let ascii = '';
 
 	for (let i = 0; i < value.length;) {
@@ -94,22 +113,23 @@ function writeEncodedString(writer: PsdWriter, value: string) {
 	}
 
 	// length is stored in a single byte
-	if (ascii.length > 255) ascii = ascii.substring(0, 255);
+	return ascii.length > 255 ? ascii.substring(0, 255) : ascii;
+}
 
-	const buffer = encodeString(ascii);
+function writeEncodedString(writer: PsdWriter, value: string) {
+	const buffer = encodeString(toShortAsciiString(value));
 	writeUint8(writer, buffer.byteLength);
 	writeBytes(writer, buffer);
 }
 
-MOCK_HANDLERS && addHandler(
+addHandler(
 	1028, // IPTC-NAA record
-	target => (target as any)._ir1028 !== undefined,
+	target => target.iptcData !== undefined,
 	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1028', left());
-		(target as any)._ir1028 = readBytes(reader, left());
+		target.iptcData = readBytes(reader, left());
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1028);
+		writeBytes(writer, target.iptcData!);
 	},
 );
 
@@ -171,14 +191,14 @@ interface PrintInformationDescriptor {
 	};
 }
 
-MOCK_HANDLERS && addHandler(
+addHandler(
 	1085, // Windows DEVMODE. Variable OS specific info for Windows.
-	target => (target as any)._ir1085 !== undefined,
+	target => target.windowsDevMode !== undefined,
 	(reader, target, left) => {
-		(target as any)._ir1085 = readBytes(reader, left());
+		target.windowsDevMode = readBytes(reader, left());
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1085);
+		writeBytes(writer, target.windowsDevMode!);
 	}
 );
 
@@ -196,6 +216,7 @@ addHandler(
 		const info = target.printInformation;
 
 		if (desc.PstS !== undefined) info.printerManagesColors = desc.PstS;
+		if (desc.ClrS === 'ClrS.Grys') info.printerProfileColorSpace = 'grayscale';
 		if (desc['Nm  '] !== undefined) info.printerProfile = desc['Nm  '];
 		if (desc.MpBl !== undefined) info.blackPointCompensation = desc.MpBl;
 		if (desc.printSixteenBit !== undefined) info.printSixteenBit = desc.printSixteenBit;
@@ -221,13 +242,13 @@ addHandler(
 			desc.PstS = true;
 		} else {
 			if (info.hardProof !== undefined) desc.hardProof = !!info.hardProof;
-			desc.ClrS = 'ClrS.RGBC'; // TODO: ???
-			desc['Nm  '] = info.printerProfile ?? 'CIE RGB';
+			desc.ClrS = info.printerProfileColorSpace === 'grayscale' ? 'ClrS.Grys' : 'ClrS.RGBC';
+			if (info.printerProfile !== undefined) desc['Nm  '] = info.printerProfile;
 		}
 
 		desc.Inte = Inte.encode(info.renderingIntent);
 
-		if (!info.printerManagesColors) desc.MpBl = !!info.blackPointCompensation;
+		if (!info.printerManagesColors && info.blackPointCompensation !== undefined) desc.MpBl = !!info.blackPointCompensation;
 
 		desc.printSixteenBit = !!info.printSixteenBit;
 		desc.printerName = info.printerName || '';
@@ -239,9 +260,9 @@ addHandler(
 				MpBl: !!info.proofSetup.blackPointCompensation,
 				paperWhite: !!info.proofSetup.paperWhite,
 			};
-		} else {
+		} else if (info.proofSetup) {
 			desc.printProofSetup = {
-				Bltn: info.proofSetup?.builtin ? `builtinProof.${info.proofSetup.builtin}` : 'builtinProof.proofCMYK',
+				Bltn: `builtinProof.${info.proofSetup.builtin || 'proofCMYK'}`,
 			};
 		}
 
@@ -249,19 +270,101 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	1083, // Print style
-	target => (target as any)._ir1083 !== undefined,
-	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1083', left());
-		(target as any)._ir1083 = readBytes(reader, left());
+interface PrintStyleDescriptor {
+	Cptn: boolean;
+	Clbr: boolean;
+	RgsM: boolean;
+	CrnC: boolean;
+	CntC: boolean;
+	Lbls: boolean;
+	Ngtv: boolean;
+	EmlD: boolean;
+	Intr: boolean;
+	Bckg: DescriptorColor;
+	BrdT: DescriptorUnitsValue;
+	'Bld ': DescriptorUnitsValue;
+	Rslt: DescriptorUnitsValue;
+	vectorData: boolean;
+	PgPs: string;
+	Left: DescriptorUnitsValue;
+	'Top ': DescriptorUnitsValue;
+	'Scl ': DescriptorUnitsValue;
+	cropWhenPrinting?: boolean;
+	cropRectBottom?: number;
+	cropRectLeft?: number;
+	cropRectRight?: number;
+	cropRectTop?: number;
+}
 
-		// TODO:
-		// const desc = readVersionAndDescriptor(reader);
-		// console.log('1083', require('util').inspect(desc, false, 99, true));
+addHandler(
+	1083, // Print style
+	target => target.printStyle !== undefined,
+	(reader, target) => {
+		const desc: PrintStyleDescriptor = readVersionAndDescriptor(reader);
+
+		target.printStyle = {
+			caption: desc.Cptn,
+			calibrationBars: desc.Clbr,
+			registrationMarks: desc.RgsM,
+			cornerCropMarks: desc.CrnC,
+			centerCropMarks: desc.CntC,
+			labels: desc.Lbls,
+			negative: desc.Ngtv,
+			emulsionDown: desc.EmlD,
+			interpolate: desc.Intr,
+			backgroundColor: parseColor(desc.Bckg),
+			border: parseUnits(desc.BrdT),
+			bleed: parseUnits(desc['Bld ']),
+			resolution: parseUnits(desc.Rslt),
+			vectorData: desc.vectorData,
+			pagePosition: desc.PgPs === 'PgPs.PgPC' ? 'centered' : desc.PgPs,
+			left: parseUnits(desc.Left),
+			top: parseUnits(desc['Top ']),
+			scale: parsePercent(desc['Scl ']),
+		};
+
+		if (desc.cropWhenPrinting !== undefined) {
+			target.printStyle.cropWhenPrinting = desc.cropWhenPrinting;
+			target.printStyle.cropRect = {
+				top: desc.cropRectTop || 0,
+				left: desc.cropRectLeft || 0,
+				bottom: desc.cropRectBottom || 0,
+				right: desc.cropRectRight || 0,
+			};
+		}
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1083);
+		const style = target.printStyle!;
+		const desc: PrintStyleDescriptor = {
+			Cptn: !!style.caption,
+			Clbr: !!style.calibrationBars,
+			RgsM: !!style.registrationMarks,
+			CrnC: !!style.cornerCropMarks,
+			CntC: !!style.centerCropMarks,
+			Lbls: !!style.labels,
+			Ngtv: !!style.negative,
+			EmlD: !!style.emulsionDown,
+			Intr: !!style.interpolate,
+			Bckg: serializeColor(style.backgroundColor || { r: 255, g: 255, b: 255 }),
+			BrdT: unitsValue(style.border || { units: 'Distance', value: 0 }, 'border'),
+			'Bld ': unitsValue(style.bleed || { units: 'Distance', value: 0 }, 'bleed'),
+			Rslt: unitsValue(style.resolution || { units: 'Pixels', value: 72 }, 'resolution'),
+			vectorData: style.vectorData ?? true,
+			PgPs: (!style.pagePosition || style.pagePosition === 'centered') ? 'PgPs.PgPC' : style.pagePosition,
+			Left: unitsValue(style.left || { units: 'Distance', value: 0 }, 'left'),
+			'Top ': unitsValue(style.top || { units: 'Distance', value: 0 }, 'top'),
+			'Scl ': unitsPercentF(style.scale ?? 1),
+		};
+
+		if (style.cropWhenPrinting !== undefined || style.cropRect) {
+			desc.cropWhenPrinting = !!style.cropWhenPrinting;
+			desc.cropRectBottom = style.cropRect?.bottom ?? 0;
+			desc.cropRectLeft = style.cropRect?.left ?? 0;
+			desc.cropRectRight = style.cropRect?.right ?? 0;
+			desc.cropRectTop = style.cropRect?.top ?? 0;
+		}
+
+		writeVersionAndDescriptor(writer, '', 'printOutputOptions', desc);
 	},
 );
 
@@ -360,15 +463,72 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	1077,
-	target => (target as any)._ir1077 !== undefined,
+const displayInfoKinds = ['selected', 'protected', 'spot'] as const;
+const supportedColorSpaces: number[] = [ColorSpace.RGB, ColorSpace.HSB, ColorSpace.CMYK, ColorSpace.Lab, ColorSpace.Grayscale];
+
+function readDisplayInfo(reader: PsdReader) {
+	const info: NonNullable<ImageResources['alphaChannelDisplayInfo']>[number] = { opacity: 0, kind: 'selected' };
+	const colorSpace = reader.view.getUint16(reader.offset);
+
+	if (supportedColorSpaces.indexOf(colorSpace) !== -1) {
+		info.color = readColor(reader);
+	} else {
+		// keep color in unknown color space as it is, so the channel info is not lost or misaligned
+		skipBytes(reader, 2);
+		info.rawColor = { colorSpace, values: [readUint16(reader), readUint16(reader), readUint16(reader), readUint16(reader)] };
+	}
+
+	info.opacity = readUint16(reader) / 100;
+	const kind = displayInfoKinds[readUint8(reader)];
+	if (!kind) throw new Error('Invalid display info kind');
+	info.kind = kind;
+	return info;
+}
+
+addHandler(
+	1007, // Display info (obsolete, replaced by 1077), written back as 1077
+	() => false,
 	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1077', left());
-		(target as any)._ir1077 = readBytes(reader, left());
+		const info: NonNullable<ImageResources['alphaChannelDisplayInfo']> = [];
+
+		while (left() >= 14) {
+			info.push(readDisplayInfo(reader));
+			skipBytes(reader, 1); // padding
+		}
+
+		// 1077 resource has more precise data and is used if present
+		if (!target.alphaChannelDisplayInfo) target.alphaChannelDisplayInfo = info;
+	},
+	() => { },
+);
+
+addHandler(
+	1077, // Display info (alpha and spot channels)
+	target => target.alphaChannelDisplayInfo !== undefined,
+	(reader, target, left) => {
+		const version = readUint32(reader);
+		if (version !== 1) throw new Error(`Invalid display info version: ${version}`);
+
+		target.alphaChannelDisplayInfo = [];
+
+		while (left() >= 13) {
+			target.alphaChannelDisplayInfo.push(readDisplayInfo(reader));
+		}
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1077);
+		writeUint32(writer, 1); // version
+
+		for (const info of target.alphaChannelDisplayInfo!) {
+			if (!info.color && info.rawColor) {
+				writeUint16(writer, info.rawColor.colorSpace);
+				for (let i = 0; i < 4; i++) writeUint16(writer, info.rawColor.values[i] | 0);
+			} else {
+				writeColor(writer, info.color || { r: 255, g: 0, b: 0 });
+			}
+
+			writeUint16(writer, Math.round(clamp(info.opacity, 0, 1) * 100));
+			writeUint8(writer, Math.max(0, displayInfoKinds.indexOf(info.kind)));
+		}
 	},
 );
 
@@ -462,40 +622,130 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	10000, // Print flags
-	target => (target as any)._ir10000 !== undefined,
-	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 10000', left());
-		(target as any)._ir10000 = readBytes(reader, left());
+addHandler(
+	10000, // Print flags information
+	target => target.printFlagsInfo !== undefined,
+	(reader, target) => {
+		const version = readUint16(reader);
+		if (version !== 1) throw new Error(`Invalid print flags information version: ${version}`);
+		const centerCropMarks = !!readUint8(reader);
+		skipBytes(reader, 1);
+		const bleedWidth = readUint32(reader);
+		const bleedWidthScale = readUint16(reader);
+		target.printFlagsInfo = { centerCropMarks, bleedWidth, bleedWidthScale };
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir10000);
+		const info = target.printFlagsInfo!;
+		writeUint16(writer, 1); // version
+		writeUint8(writer, info.centerCropMarks ? 1 : 0);
+		writeUint8(writer, 0);
+		writeUint32(writer, info.bleedWidth | 0);
+		writeUint16(writer, info.bleedWidthScale | 0);
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	1013, // Color halftoning
-	target => (target as any)._ir1013 !== undefined,
-	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1013', left());
-		(target as any)._ir1013 = readBytes(reader, left());
+addHandler(
+	1046, // Indexed color table count
+	target => target.indexedColorCount !== undefined,
+	(reader, target) => {
+		target.indexedColorCount = readUint16(reader);
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1013);
+		writeUint16(writer, target.indexedColorCount!);
 	},
 );
 
-MOCK_HANDLERS && addHandler(
+addHandler(
+	1047, // Transparency index
+	target => target.transparencyIndex !== undefined,
+	(reader, target) => {
+		target.transparencyIndex = readUint16(reader);
+	},
+	(writer, target) => {
+		writeUint16(writer, target.transparencyIndex!);
+	},
+);
+
+const halftoneFrequencyUnits: HalftoneScreen['frequencyUnits'][] = ['lines/inch', 'lines/cm']; // 1, 2
+const halftoneShapes: (HalftoneScreen['shape'] | undefined)[] = ['round', 'ellipse', 'line', 'square', 'cross', undefined, 'diamond']; // 0 - 6
+
+function readHalftoneScreens(reader: PsdReader, left: () => number) {
+	const screens: HalftoneScreen[] = [];
+
+	while (left() >= 18) {
+		const frequency = readFixedPoint32(reader);
+		const frequencyUnits = halftoneFrequencyUnits[readUint16(reader) - 1];
+		if (!frequencyUnits) throw new Error('Invalid halftone screen frequency units');
+		const angle = readFixedPoint32(reader);
+		const shape = halftoneShapes[readInt16(reader)];
+		if (!shape) throw new Error('Invalid halftone screen shape');
+		skipBytes(reader, 4);
+		const accurateScreens = !!readUint8(reader);
+		const printerDefaultScreens = !!readUint8(reader);
+		screens.push({ frequency, frequencyUnits, angle, shape, accurateScreens, printerDefaultScreens });
+	}
+
+	return screens;
+}
+
+function writeHalftoneScreens(writer: PsdWriter, screens: HalftoneScreen[]) {
+	for (const screen of screens) {
+		writeFixedPoint32(writer, screen.frequency);
+		writeUint16(writer, Math.max(0, halftoneFrequencyUnits.indexOf(screen.frequencyUnits)) + 1);
+		writeFixedPoint32(writer, screen.angle);
+		writeInt16(writer, Math.max(0, halftoneShapes.indexOf(screen.shape)));
+		writeZeros(writer, 4);
+		writeUint8(writer, screen.accurateScreens ? 1 : 0);
+		writeUint8(writer, screen.printerDefaultScreens ? 1 : 0);
+	}
+}
+
+addHandler(
+	1012, // Grayscale and multichannel halftoning information
+	target => target.grayscaleHalftoneScreens !== undefined,
+	(reader, target, left) => target.grayscaleHalftoneScreens = readHalftoneScreens(reader, left),
+	(writer, target) => writeHalftoneScreens(writer, target.grayscaleHalftoneScreens!),
+);
+
+addHandler(
+	1013, // Color halftoning information
+	target => target.colorHalftoneScreens !== undefined,
+	(reader, target, left) => target.colorHalftoneScreens = readHalftoneScreens(reader, left),
+	(writer, target) => writeHalftoneScreens(writer, target.colorHalftoneScreens!),
+);
+
+function readTransferFunctions(reader: PsdReader, left: () => number) {
+	const functions: PrintTransferFunction[] = [];
+
+	while (left() >= 28) {
+		const curve: number[] = [];
+		for (let i = 0; i < 13; i++) curve.push(readInt16(reader));
+		const override = !!readUint16(reader);
+		functions.push({ curve, override });
+	}
+
+	return functions;
+}
+
+function writeTransferFunctions(writer: PsdWriter, functions: PrintTransferFunction[]) {
+	for (const f of functions) {
+		for (let i = 0; i < 13; i++) writeInt16(writer, f.curve[i] ?? -1);
+		writeUint16(writer, f.override ? 1 : 0);
+	}
+}
+
+addHandler(
+	1015, // Grayscale and multichannel transfer function
+	target => target.grayscaleTransferFunctions !== undefined,
+	(reader, target, left) => target.grayscaleTransferFunctions = readTransferFunctions(reader, left),
+	(writer, target) => writeTransferFunctions(writer, target.grayscaleTransferFunctions!),
+);
+
+addHandler(
 	1016, // Color transfer functions
-	target => (target as any)._ir1016 !== undefined,
-	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1016', left());
-		(target as any)._ir1016 = readBytes(reader, left());
-	},
-	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1016);
-	},
+	target => target.colorTransferFunctions !== undefined,
+	(reader, target, left) => target.colorTransferFunctions = readTransferFunctions(reader, left),
+	(writer, target) => writeTransferFunctions(writer, target.colorTransferFunctions!),
 );
 
 interface CountInformationDesc {
@@ -619,17 +869,20 @@ addHandler(
 
 		if (version !== 1) throw new Error(`Invalid 1032 resource version: ${version}`);
 
-		target.gridAndGuidesInformation = {
-			grid: { horizontal, vertical },
-			guides: [],
-		};
+		const previous = target.gridAndGuidesInformation?.guides; // in case guides were already read from 1092
+		const guides: Guide[] = [];
 
 		for (let i = 0; i < count; i++) {
-			target.gridAndGuidesInformation.guides!.push({
+			const guide: Guide = {
 				location: readInt32(reader) / 32,
 				direction: readUint8(reader) ? 'horizontal' : 'vertical'
-			});
+			};
+			if (previous?.length === count && previous[i].color) guide.color = previous[i].color;
+			if (previous?.length === count && previous[i].id) guide.id = previous[i].id;
+			guides.push(guide);
 		}
+
+		target.gridAndGuidesInformation = { grid: { horizontal, vertical }, guides };
 	},
 	(writer, target) => {
 		const info = target.gridAndGuidesInformation!;
@@ -644,6 +897,91 @@ addHandler(
 		for (const g of guides) {
 			writeInt32(writer, Math.round(g.location * 32));
 			writeUint8(writer, g.direction === 'horizontal' ? 1 : 0);
+		}
+	},
+);
+
+type Guide = NonNullable<NonNullable<ImageResources['gridAndGuidesInformation']>['guides']>[number];
+
+const defaultGuideColor = { r: 74, g: 255, b: 255 }; // Photoshop default (cyan)
+
+addHandler(
+	1092, // Grid and guides information with guide colors (same as 1032 with color of each guide)
+	target => target.gridAndGuidesInformation !== undefined,
+	(reader, target) => {
+		const version = readUint32(reader);
+		if (version !== 2) throw new Error(`Invalid 1092 resource version: ${version}`);
+		const horizontal = readUint32(reader);
+		const vertical = readUint32(reader);
+		const count = readUint32(reader);
+		const guides: Guide[] = [];
+
+		for (let i = 0; i < count; i++) {
+			const location = readInt32(reader) / 32;
+			const direction = readUint8(reader) ? 'horizontal' : 'vertical';
+			skipBytes(reader, 1);
+			const color = { r: readUint8(reader), g: readUint8(reader), b: readUint8(reader) };
+			guides.push({ location, direction, color });
+		}
+
+		const existing = target.gridAndGuidesInformation?.guides;
+
+		if (existing && existing.length === count) {
+			existing.forEach((guide, i) => guide.color = guides[i].color);
+		} else {
+			target.gridAndGuidesInformation = { grid: { horizontal, vertical }, guides };
+		}
+	},
+	(writer, target) => {
+		const info = target.gridAndGuidesInformation!;
+		const grid = info.grid || { horizontal: 18 * 32, vertical: 18 * 32 };
+		const guides = info.guides || [];
+
+		writeUint32(writer, 2); // version
+		writeUint32(writer, Math.round(grid.horizontal));
+		writeUint32(writer, Math.round(grid.vertical));
+		writeUint32(writer, guides.length);
+
+		for (const g of guides) {
+			const color = g.color || defaultGuideColor;
+			writeInt32(writer, Math.round(g.location * 32));
+			writeUint8(writer, g.direction === 'horizontal' ? 1 : 0);
+			writeUint8(writer, 0);
+			writeUint8(writer, Math.round(color.r));
+			writeUint8(writer, Math.round(color.g));
+			writeUint8(writer, Math.round(color.b));
+		}
+	},
+);
+
+const emptyGuid = '00000000-0000-0000-0000-000000000000';
+
+addHandler(
+	1097, // Guide ids
+	target => !!target.gridAndGuidesInformation && (target.gridAndGuidesInformation.guides || []).every(g => g.id),
+	(reader, target) => {
+		const count = readUint32(reader);
+		const ids: string[] = [];
+
+		for (let i = 0; i < count; i++) {
+			ids.push(readAsciiString(reader, readUint32(reader)));
+			readUint32(reader); // unknown, always 0
+			readAsciiString(reader, readUint32(reader)); // unknown, always empty guid
+		}
+
+		const guides = target.gridAndGuidesInformation?.guides;
+		if (guides && guides.length === count) guides.forEach((guide, i) => guide.id = ids[i]);
+	},
+	(writer, target) => {
+		const guides = target.gridAndGuidesInformation!.guides || [];
+		writeUint32(writer, guides.length);
+
+		for (const g of guides) {
+			writeUint32(writer, g.id!.length);
+			writeAsciiString(writer, g.id!);
+			writeUint32(writer, 0);
+			writeUint32(writer, emptyGuid.length);
+			writeAsciiString(writer, emptyGuid);
 		}
 	},
 );
@@ -1242,16 +1580,14 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
+addHandler(
 	1039, // ICC Profile
-	target => (target as any)._ir1039 !== undefined,
+	target => target.iccProfile !== undefined,
 	(reader, target, left) => {
-		// TODO: this is raw bytes, just return as a byte array
-		LOG_MOCK_HANDLERS && console.log('image resource 1039', left());
-		(target as any)._ir1039 = readBytes(reader, left());
+		target.iccProfile = readBytes(reader, left());
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1039);
+		writeBytes(writer, target.iccProfile!);
 	},
 );
 
@@ -1263,20 +1599,86 @@ addHandler(
 );
 
 addHandler(
+	1038, // Color samplers (Photoshop 5.0, replaced by 1073 in CS3)
+	target => target.colorSamplers !== undefined,
+	(reader, target, left) => {
+		const version = readUint32(reader);
+		if (version !== 1) throw new Error(`Invalid color samplers version: ${version}`);
+		const count = readUint32(reader);
+		target.colorSamplers = [];
+
+		for (let i = 0; i < count && left() >= 10; i++) {
+			// vertical and horizontal position in 1/16 pixel (inferred from sample files, the specification describes
+			// these values as horizontal and vertical fixed point numbers)
+			const y = readInt32(reader) / 16;
+			const x = readInt32(reader) / 16;
+			const colorSpace = readInt16(reader);
+			target.colorSamplers.push({ x, y, colorSpace });
+		}
+	},
+	(writer, target) => {
+		writeUint32(writer, 1); // version
+		writeUint32(writer, target.colorSamplers!.length);
+
+		for (const sampler of target.colorSamplers!) {
+			writeInt32(writer, Math.round(sampler.y * 16));
+			writeInt32(writer, Math.round(sampler.x * 16));
+			writeInt16(writer, sampler.colorSpace);
+		}
+	},
+);
+
+addHandler(
+	1042, // Effects visible (only present when effects are hidden)
+	target => target.effectsVisible !== undefined,
+	(reader, target) => {
+		target.effectsVisible = !!readUint8(reader);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.effectsVisible ? 1 : 0);
+	},
+);
+
+addHandler(
 	1036,
 	target => target.thumbnail !== undefined || target.thumbnailRaw !== undefined,
 	(reader, target, left) => {
 		const format = readUint32(reader); // 1 = kJpegRGB, 0 = kRawRGB
 		const width = readUint32(reader);
 		const height = readUint32(reader);
-		readUint32(reader); // widthBytes = (width * bits_per_pixel + 31) / 32 * 4.
+		const widthBytes = readUint32(reader); // widthBytes = (width * bits_per_pixel + 31) / 32 * 4.
 		readUint32(reader); // totalSize = widthBytes * height * planes
 		readUint32(reader); // sizeAfterCompression
 		const bitsPerPixel = readUint16(reader); // 24
-		const planes = readUint16(reader); // 1
+		readUint16(reader); // planes, should be 1 (some applications write 3)
 
-		if (format !== 1 || bitsPerPixel !== 24 || planes !== 1) {
-			reader.logMissingFeatures && reader.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel}, planes: ${planes})`);
+		if (format === 0 && bitsPerPixel === 24 && widthBytes >= width * 3 && widthBytes * height <= left()) {
+			// raw RGB data, rows are padded to 4 bytes
+			if (reader.useRawThumbnail) {
+				reader.logMissingFeatures && reader.log('Raw thumbnail data is not supported with useRawThumbnail option');
+				skipBytes(reader, left());
+				return;
+			}
+
+			const data = readBytes(reader, widthBytes * height);
+			const imageData = createImageData(width, height);
+
+			for (let y = 0, dst = 0; y < height; y++) {
+				for (let x = 0, src = y * widthBytes; x < width; x++, src += 3, dst += 4) {
+					imageData.data[dst + 0] = data[src + 0];
+					imageData.data[dst + 1] = data[src + 1];
+					imageData.data[dst + 2] = data[src + 2];
+					imageData.data[dst + 3] = 255;
+				}
+			}
+
+			target.thumbnail = imageDataToCanvas(imageData);
+			skipBytes(reader, left());
+			return;
+		}
+
+		if (format !== 1 || bitsPerPixel !== 24) {
+			reader.logMissingFeatures && reader.log(`Invalid thumbnail data (format: ${format}, bitsPerPixel: ${bitsPerPixel})`);
 			skipBytes(reader, left());
 			return;
 		}
@@ -1355,15 +1757,14 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	1058, // EXIF data 1.
-	target => (target as any)._ir1058 !== undefined,
+addHandler(
+	1058, // EXIF data 1
+	target => target.exifData !== undefined,
 	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1058', left());
-		(target as any)._ir1058 = readBytes(reader, left());
+		target.exifData = readBytes(reader, left());
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1058);
+		writeBytes(writer, target.exifData!);
 	},
 );
 
@@ -1410,15 +1811,95 @@ addHandler(
 	},
 );
 
-MOCK_HANDLERS && addHandler(
-	1025,
-	target => (target as any)._ir1025 !== undefined,
+addHandler(
+	1025, // Work path
+	target => target.workPath !== undefined,
+	(reader, target, left, { width, height }) => {
+		target.workPath = { paths: [] };
+		readVectorMask(reader, target.workPath, width, height, left());
+		skipBytes(reader, left());
+	},
+	(writer, target, _index, { width, height }) => {
+		writeVectorMask(writer, target.workPath!, width, height);
+	},
+);
+
+const MAX_SAVED_PATHS = 999; // ids 2000-2998
+
+addHandler(
+	2000, // Saved paths (one resource for each path, named after the path)
+	target => target.savedPaths ? Math.min(target.savedPaths.length, MAX_SAVED_PATHS) : 0,
+	(reader, target, left, { signature, id, name, width, height }) => {
+		if (signature !== '8BIM') { // ImageReady ('MeSa') resources use the same ids for other data
+			reader.logMissingFeatures && reader.log(`Unhandled image resource: ${signature} ${id}`);
+			skipBytes(reader, left());
+			return;
+		}
+
+		const savedPaths = target.savedPaths ??= [];
+		const path: SavedPath = { name: decodeEncodedString(reader, name), paths: [] };
+		readVectorMask(reader, path, width, height, left());
+		skipBytes(reader, left());
+
+		const keyDescriptorList = target.savedPathsOrigination?.[savedPaths.length];
+		if (keyDescriptorList) path.vectorOrigination = { keyDescriptorList };
+
+		savedPaths.push(path);
+	},
+	(writer, target, index, { width, height }) => {
+		writeVectorMask(writer, target.savedPaths![index], width, height);
+	},
+	{ keyCount: MAX_SAVED_PATHS, name: (target, index) => toShortAsciiString(target.savedPaths![index].name) },
+);
+
+interface OriginPathInfoDescriptor {
+	keyRootDescriptorList: KeyDescriptorListDescriptor[];
+}
+
+addHandler(
+	3000, // Origin path info (origination data of saved paths)
+	target => !!target.savedPaths?.some(path => path.vectorOrigination),
 	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 1025', left());
-		(target as any)._ir1025 = readBytes(reader, left());
+		const desc = readVersionAndDescriptor(reader) as OriginPathInfoDescriptor;
+
+		desc.keyRootDescriptorList.forEach((item, i) => {
+			const keyDescriptorList = parseKeyDescriptorList(item);
+			if (!keyDescriptorList.length) return; // written for paths without origination data
+
+			const path = target.savedPaths?.[i];
+
+			if (path) {
+				path.vectorOrigination = { keyDescriptorList };
+			} else { // saved paths are stored after this resource
+				(target.savedPathsOrigination ??= [])[i] = keyDescriptorList;
+			}
+		});
+
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		writeBytes(writer, (target as any)._ir1025);
+		const desc: OriginPathInfoDescriptor = {
+			keyRootDescriptorList: target.savedPaths!.slice(0, MAX_SAVED_PATHS)
+				.map(path => serializeKeyDescriptorList(path.vectorOrigination?.keyDescriptorList ?? [])),
+		};
+		writeVersionAndDescriptor(writer, '', 'null', desc);
+	},
+	{ name: () => 'OriginDataIRB' },
+);
+
+addHandler(
+	2999, // Clipping path
+	target => target.clippingPath !== undefined,
+	(reader, target, left) => {
+		const name = readEncodedString(reader);
+		const flatness = readFixedPoint32(reader);
+		skipBytes(reader, left()); // fill rule (ignored by Photoshop)
+		target.clippingPath = { name, flatness };
+	},
+	(writer, target) => {
+		writeEncodedString(writer, target.clippingPath!.name);
+		writeFixedPoint32(writer, target.clippingPath!.flatness);
+		writeUint16(writer, 1); // fill rule (ignored by Photoshop)
 	},
 );
 
@@ -1448,13 +1929,28 @@ interface AnimationsDescriptor {
 	FSts: AnimationDescriptor[];
 }
 
+// plug-in resources are written with consecutive ids starting at 4000, in the same order as Photoshop writes them
+function pluginResourceKeys(target: InternalImageResources) {
+	const keys: string[] = [];
+	if (target.outputSettings !== undefined) keys.push('mset');
+	if (target.animations !== undefined) keys.push('mani', 'mfri');
+	return keys;
+}
+
 addHandler(
-	4000, // Plug-In resource(s)
-	target => target.animations !== undefined,
+	4000, // Plug-In resource(s), identified by key stored in the data (ids 4000-4999)
+	target => pluginResourceKeys(target).length,
 	(reader, target, left) => {
 		const key = readSignature(reader);
 
-		if (key === 'mani') {
+		if (key === 'mset') {
+			// Save for Web output settings
+			target.outputSettings = readVersionAndDescriptor(reader, true);
+			skipBytes(reader, left());
+		} else if (key === 'mfri') {
+			// frame count, active frame and animation count, same data as in animations (mani)
+			skipBytes(reader, left());
+		} else if (key === 'mani') {
 			checkSignature(reader, 'IRFR');
 			readSection(reader, 1, left => {
 				while (left() > 0) {
@@ -1482,24 +1978,43 @@ addHandler(
 
 							// console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
 							// console.log('#4000 AnDs:result', require('util').inspect(target.animations, false, 99, true));
+							skipBytes(reader, left()); // padding
 						} else if (key === 'Roll') {
 							const bytes = readBytes(reader, left());
 							reader.logDevFeatures && reader.log('#4000 Roll', bytes);
 						} else {
 							reader.logMissingFeatures && reader.log('Unhandled subsection in #4000', key);
+							skipBytes(reader, left());
 						}
 					});
 				}
 			});
+
+			skipBytes(reader, left()); // unknown data after animations section
 		} else if (key === 'mopt') {
 			const bytes = readBytes(reader, left());
 			reader.logDevFeatures && reader.log('#4000 mopt', bytes);
 		} else {
-			reader.logMissingFeatures && reader.log('Unhandled key in #4000:', key);
+			reader.logMissingFeatures && reader.log(`Unhandled plug-in resource key: ${key}`);
+			skipBytes(reader, left());
 		}
 	},
-	(writer, target) => {
-		if (target.animations) {
+	(writer, target, index) => {
+		const key = pluginResourceKeys(target)[index];
+
+		if (key === 'mset') {
+			writeSignature(writer, 'mset');
+			writeVersionAndDescriptor(writer, '', 'null', target.outputSettings, outputSettingsRoot);
+		} else if (key === 'mfri') {
+			const animations = target.animations!;
+			writeSignature(writer, 'mfri');
+			writeUint32(writer, 2); // version
+			writeUint32(writer, 16); // length
+			writeUint32(writer, animations.frames.length);
+			writeUint32(writer, animations.animations[0]?.activeFrame ?? 0);
+			writeUint32(writer, animations.animations.length);
+			writeUint32(writer, 0);
+		} else if (key === 'mani') {
 			writeSignature(writer, 'mani');
 			writeSignature(writer, 'IRFR');
 			writeSection(writer, 1, () => {
@@ -1545,49 +2060,6 @@ addHandler(
 			});
 		}
 	},
+	{ keyCount: 1000 },
 );
 
-// TODO: Unfinished
-MOCK_HANDLERS && addHandler(
-	4001, // Plug-In resource(s)
-	target => (target as any)._ir4001 !== undefined,
-	(reader, target, left) => {
-		if (MOCK_HANDLERS) {
-			LOG_MOCK_HANDLERS && console.log('image resource 4001', left());
-			(target as any)._ir4001 = readBytes(reader, left());
-			return;
-		}
-
-		const key = readSignature(reader);
-
-		if (key === 'mfri') {
-			const version = readUint32(reader);
-			if (version !== 2) throw new Error('Invalid mfri version');
-
-			const length = readUint32(reader);
-			const bytes = readBytes(reader, length);
-			reader.logDevFeatures && reader.log('mfri', bytes);
-		} else if (key === 'mset') {
-			const desc = readVersionAndDescriptor(reader);
-			reader.logDevFeatures && reader.log('mset', desc);
-		} else {
-			reader.logMissingFeatures && reader.log('Unhandled key in #4001', key);
-		}
-	},
-	(writer, target) => {
-		writeBytes(writer, (target as any)._ir4001);
-	},
-);
-
-// TODO: Unfinished
-MOCK_HANDLERS && addHandler(
-	4002, // Plug-In resource(s)
-	target => (target as any)._ir4002 !== undefined,
-	(reader, target, left) => {
-		LOG_MOCK_HANDLERS && console.log('image resource 4002', left());
-		(target as any)._ir4002 = readBytes(reader, left());
-	},
-	(writer, target) => {
-		writeBytes(writer, (target as any)._ir4002);
-	},
-);

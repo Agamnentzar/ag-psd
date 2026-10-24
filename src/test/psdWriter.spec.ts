@@ -395,7 +395,7 @@ describe('PsdWriter', () => {
 		});
 	});
 
-	it.skip('placedLayer with transform', () => {
+	it('placedLayer with transform', () => {
 		const w = 300;
 		const h = 200;
 		const psd: Psd = {
@@ -430,10 +430,21 @@ describe('PsdWriter', () => {
 		const buffer = writePsdBuffer(psd);
 		fs.writeFileSync(path.join(resultsFilesPath, `placedLayer-with-transform.psd`), buffer);
 
-		// TODO: need to test the file here
-
-		const psd2 = readPsdBuffer(buffer, { throwForMissingFeatures: true, logMissingFeatures: true });
-		console.log(require('util').inspect(psd2, false, 99, false), 'utf8');
+		const psd2 = readPsdBuffer(buffer, { throwForMissingFeatures: true });
+		const layer = psd2.children![0];
+		expect(layer.left).equal(200);
+		expect(layer.top).equal(200);
+		expect(layer.right).equal(800);
+		expect(layer.bottom).equal(800);
+		expect(layer.placedLayer!.id).equal('20953ddb-9391-11ec-b4f1-c15674f50bc4');
+		expect(layer.placedLayer!.placed).equal('aaa');
+		expect(layer.placedLayer!.type).equal('raster');
+		expect(layer.placedLayer!.transform).eql([200, 200, 800, 200, 800, 800, 200, 800]);
+		expect(layer.placedLayer!.width).equal(w);
+		expect(layer.placedLayer!.height).equal(h);
+		expect(psd2.linkedFiles!.length).equal(1);
+		expect(psd2.linkedFiles![0].id).equal('20953ddb-9391-11ec-b4f1-c15674f50bc4');
+		expect(Array.from(psd2.linkedFiles![0].data!)).eql(Array.from(psd.linkedFiles![0].data!));
 	});
 
 	it.skip('vectorMaskFeather', () => {
@@ -489,7 +500,13 @@ describe('PsdWriter', () => {
 			const psd = loadPsdFromJSONAndPNGFiles(basePath);
 
 			const before = JSON.stringify(psd, replacer);
-			const buffer = writePsdBuffer(psd, { generateThumbnail: false, trimImageData: true, logMissingFeatures: true, compress });
+			const buffer = writePsdBuffer(psd, {
+				generateThumbnail: false,
+				trimImageData: true,
+				logMissingFeatures: true,
+				compress,
+				log: (...args: any[]) => console.log(`[${f}]`, ...args),
+			});
 			const after = JSON.stringify(psd, replacer);
 
 			expect(before).equal(after, 'psd object mutated');
@@ -857,6 +874,28 @@ describe('PsdWriter', () => {
 			const bytes = new Uint8Array(getWriterBuffer(writer));
 			expect(Array.from(bytes)).eql([0, 2, 0, 0, 0xff, 0xff, 0xcc, 0xcc, 0xff, 0xff]);
 			expect(readColor(createReader(bytes.buffer))).eql({ c: 255, m: 0, y: 51, k: 0 });
+		});
+
+		it('writes composite image from raw composite data (useRawData)', () => {
+			const imageData = testImageData(5, 3);
+			for (let i = 3; i < imageData.data.length; i += 4) imageData.data[i] = 255; // opaque, transparent composite is not stored exactly
+			const buffer = writePsdBuffer({ width: 5, height: 3, imageData, children: [{ name: 'a' }] });
+			const raw = readPsdBuffer(buffer, { useRawData: true, skipThumbnail: true });
+			expect(raw.imageData).undefined;
+			expect(raw.rawCompositeData).not.undefined;
+
+			const expected = readPsdBuffer(buffer, { useImageData: true, skipThumbnail: true }).imageData!;
+			const result = readPsdBuffer(writePsdBuffer(raw), { useImageData: true, skipThumbnail: true }).imageData!;
+			expect(Array.from(result.data)).eql(Array.from(expected.data));
+		});
+
+		it('does not write color palette (color mode data) to RGB file', () => {
+			const psd = readPsdBuffer(fs.readFileSync(path.join('test', 'read', 'indexed', 'src.psd')), { skipThumbnail: true });
+			expect(psd.palette).not.undefined;
+
+			const buffer = Buffer.from(writePsdBuffer(psd));
+			expect(buffer.readUInt16BE(24)).equal(3); // RGB color mode
+			expect(buffer.readUInt32BE(26)).equal(0); // color mode data length
 		});
 	});
 });

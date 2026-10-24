@@ -40,8 +40,7 @@ export interface EffectContour {
 
 export interface EffectPattern {
 	name: string;
-	id: string;
-	// TODO: add fields
+	id: string; // pattern data is stored in `patterns` field of the document
 }
 
 export interface LayerEffectShadow {
@@ -150,7 +149,7 @@ export interface LayerEffectStroke {
 	opacity?: number;
 	color?: Color;
 	gradient?: (EffectSolidGradient | EffectNoiseGradient) & ExtraGradientInfo;
-	pattern?: EffectPattern & {}; // TODO: additional pattern info
+	pattern?: EffectPattern & ExtraPatternInfo;
 }
 
 export interface LayerEffectSatin {
@@ -168,7 +167,6 @@ export interface LayerEffectSatin {
 	contour?: EffectContour;
 }
 
-// not supported yet because of `Patt` section not implemented
 export interface LayerEffectPatternOverlay {
 	present?: boolean;
 	showInDialog?: boolean;
@@ -259,7 +257,7 @@ export interface LayerMaskData {
 	imageData?: PixelData;
 }
 
-export type TextGridding = 'none' | 'round'; // TODO: other values (no idea where to set it up in Photoshop)
+export type TextGridding = 'none' | 'round';
 export type Orientation = 'horizontal' | 'vertical';
 export type AntiAlias = 'none' | 'sharp' | 'crisp' | 'strong' | 'smooth' | 'platform' | 'platformLCD';
 export type WarpStyle =
@@ -517,7 +515,7 @@ export type VectorContent = { type: 'color'; color: Color; } |
 
 export type RenderingIntent = 'perceptual' | 'saturation' | 'relative colorimetric' | 'absolute colorimetric';
 
-export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None' | 'Density';
+export type Units = 'Pixels' | 'Points' | 'Picas' | 'Millimeters' | 'Centimeters' | 'Inches' | 'None' | 'Density' | 'Distance'; // Distance is in points (1/72 inch)
 
 export interface UnitsValue {
 	units: Units;
@@ -549,22 +547,18 @@ export interface PresetInfo {
 
 export interface LevelsAdjustment extends PresetInfo {
 	type: 'levels';
-	// TODO: change to generic array of channels (because of other document type CMYK, Lab, etc)
-	rgb?: LevelsAdjustmentChannel;
-	red?: LevelsAdjustmentChannel;
-	green?: LevelsAdjustmentChannel;
-	blue?: LevelsAdjustmentChannel;
+	// levels for each channel, index 0 is composite channel, followed by document color channels (red, green, blue for RGB,
+	// cyan, magenta, yellow, black for CMYK, gray for Grayscale), missing channels use default values (no change)
+	channels?: LevelsAdjustmentChannel[];
 }
 
 export type CurvesAdjustmentChannel = { input: number; output: number; }[];
 
 export interface CurvesAdjustment extends PresetInfo {
 	type: 'curves';
-	// TODO: change to generic array of channels (because of other document type CMYK, Lab, etc)
-	rgb?: CurvesAdjustmentChannel;
-	red?: CurvesAdjustmentChannel;
-	green?: CurvesAdjustmentChannel;
-	blue?: CurvesAdjustmentChannel;
+	// curve for each channel, index 0 is composite channel, followed by document color channels (red, green, blue for RGB,
+	// cyan, magenta, yellow, black for CMYK, gray for Grayscale), missing or empty curve means no change to the channel
+	channels?: CurvesAdjustmentChannel[];
 }
 
 export interface ExposureAdjustment extends PresetInfo {
@@ -1304,7 +1298,7 @@ export type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue'
 
 export interface KeyDescriptorItem {
 	keyShapeInvalidated?: boolean;
-	keyOriginType?: number;
+	keyOriginType?: number; // shape type: 1 - rectangle, 2 - rounded rectangle, 4 - line, 5 - ellipse, 8 - polygon
 	keyOriginResolution?: number;
 	keyOriginRRectRadii?: {
 		topRight: UnitsValue;
@@ -1322,10 +1316,7 @@ export interface KeyDescriptorItem {
 	transform?: number[]; // 2d transform matrix [xx, xy, yx, yy, tx, ty]
 }
 
-export interface LayerVectorMask {
-	invert?: boolean;
-	notLink?: boolean;
-	disable?: boolean;
+export interface VectorPathData {
 	fillStartsWithAllPixels?: boolean;
 	clipboard?: {
 		top: number;
@@ -1335,6 +1326,20 @@ export interface LayerVectorMask {
 		resolution: number;
 	};
 	paths: BezierPath[];
+}
+
+export interface LayerVectorMask extends VectorPathData {
+	invert?: boolean;
+	notLink?: boolean;
+	disable?: boolean;
+}
+
+export interface SavedPath extends VectorPathData {
+	name: string;
+	symmetryMode?: string; // raw enum value, e.g. 'pathSymmetryModeBasicPath'
+	vectorOrigination?: {
+		keyDescriptorList: KeyDescriptorItem[];
+	};
 }
 
 export interface AnimationFrame {
@@ -1458,9 +1463,15 @@ export interface LayerAdditionalInfo {
 	vectorMask?: LayerVectorMask;
 	usingAlignedRendering?: boolean;
 	timestamp?: number; // seconds
-	pathList?: {
-		// TODO: ...
-	}[];
+	generatorSettings?: { // Generator (Export As) settings
+		exportAs?: {
+			exportOption?: string; // JSON string
+			scaleSettings?: string; // JSON string
+		};
+		assets?: string; // JSON string, Generator image assets settings (only on document)
+		layerTime?: number; // seconds
+		crema?: string; // JSON string, Export As document settings (only on document)
+	};
 	adjustment?: AdjustmentLayer;
 	placedLayer?: PlacedLayer;
 	vectorOrigination?: {
@@ -1568,6 +1579,20 @@ export enum LayerCompCapturedInfo {
 	Appearance = 4,
 }
 
+export interface HalftoneScreen {
+	frequency: number;
+	frequencyUnits: 'lines/inch' | 'lines/cm';
+	angle: number; // degrees
+	shape: 'round' | 'ellipse' | 'line' | 'square' | 'cross' | 'diamond';
+	accurateScreens: boolean;
+	printerDefaultScreens: boolean;
+}
+
+export interface PrintTransferFunction {
+	curve: number[]; // 13 points, values 0..1000 (0% - 100%), -1 for missing points (first and last point are always set)
+	override: boolean;
+}
+
 export interface ImageResources {
 	layerState?: number;
 	layerSelectionIds?: number[];
@@ -1597,6 +1622,8 @@ export interface ImageResources {
 		guides?: {
 			location: number;
 			direction: 'horizontal' | 'vertical';
+			color?: RGB; // Photoshop default is cyan (74, 255, 255)
+			id?: string; // unique id (GUID)
 		}[];
 	};
 	resolutionInfo?: {
@@ -1621,6 +1648,7 @@ export interface ImageResources {
 		printerManagesColors?: boolean;
 		printerName?: string;
 		printerProfile?: string;
+		printerProfileColorSpace?: 'rgb' | 'grayscale'; // color space of printer profile, missing value means 'rgb'
 		printSixteenBit?: boolean;
 		renderingIntent?: RenderingIntent;
 		hardProof?: boolean;
@@ -1648,7 +1676,63 @@ export interface ImageResources {
 		printFlags?: boolean;
 	};
 	iccUntaggedProfile?: boolean;
+	colorSamplers?: {
+		x: number; // pixels
+		y: number; // pixels
+		colorSpace: number; // -1 - actual color, 0 - RGB, 1 - HSB, 2 - CMYK, 7 - Lab, 8 - grayscale, ...
+	}[];
+	effectsVisible?: boolean; // global flag to show or hide all layer effects
+	iccProfile?: Uint8Array; // raw ICC profile data
+	exifData?: Uint8Array; // raw EXIF data (TIFF format)
+	iptcData?: Uint8Array; // raw IPTC-NAA record
+	windowsDevMode?: Uint8Array; // raw Windows DEVMODE structure (printer settings)
+	outputSettings?: any; // Save for Web output settings (raw descriptor)
+	colorHalftoneScreens?: HalftoneScreen[]; // cyan, magenta, yellow and black
+	grayscaleHalftoneScreens?: HalftoneScreen[];
+	colorTransferFunctions?: PrintTransferFunction[]; // one for each of 4 printing plates
+	grayscaleTransferFunctions?: PrintTransferFunction[];
+	printStyle?: {
+		caption?: boolean;
+		calibrationBars?: boolean;
+		registrationMarks?: boolean;
+		cornerCropMarks?: boolean;
+		centerCropMarks?: boolean;
+		labels?: boolean;
+		negative?: boolean;
+		emulsionDown?: boolean;
+		interpolate?: boolean;
+		backgroundColor?: Color;
+		border?: UnitsValue;
+		bleed?: UnitsValue;
+		resolution?: UnitsValue;
+		vectorData?: boolean;
+		pagePosition?: string; // 'centered' or raw enum value
+		left?: UnitsValue;
+		top?: UnitsValue;
+		scale?: number; // 0..1
+		cropWhenPrinting?: boolean;
+		cropRect?: { top: number; left: number; bottom: number; right: number; };
+	};
+	printFlagsInfo?: {
+		centerCropMarks: boolean;
+		bleedWidth: number;
+		bleedWidthScale: number;
+	};
+	indexedColorCount?: number; // number of used colors in indexed color palette
+	transparencyIndex?: number; // index of transparent color in indexed color palette
+	alphaChannelDisplayInfo?: {
+		color?: Color;
+		rawColor?: { colorSpace: number; values: number[]; }; // color in color space not supported by this library (instead of `color`)
+		opacity: number; // 0..1
+		kind: 'selected' | 'protected' | 'spot'; // color indicates selected areas, protected (masked) areas or spot color
+	}[];
 	pathSelectionState?: string[];
+	savedPaths?: SavedPath[]; // paths from the paths panel
+	workPath?: VectorPathData;
+	clippingPath?: {
+		name: string; // name of the saved path used as clipping path
+		flatness: number; // device pixels, 0 for printer default
+	};
 	imageReadyVariables?: string;
 	imageReadyDataSets?: string;
 	animations?: Animations;
@@ -1908,4 +1992,7 @@ export interface WriteOptions {
 	/** Uses zip compression when writing PSD file, will result in smaller file size but may be incompatible
 	 *  with some software. It may also be significantly slower. */
 	compress?: boolean;
+
+	/** Used only for development. */
+	log?: (...args: any[]) => void;
 }

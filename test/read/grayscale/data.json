@@ -5,6 +5,7 @@
   "bitsPerChannel": 8,
   "colorMode": 1,
   "imageResources": {
+    "iptcData": "HAFaAAMbJUccAVoAAxslRxwCAAACAB8=",
     "captionDigest": "3382e982187ee414d1b76b9fb510d6d0",
     "printInformation": {
       "printerName": "",
@@ -13,6 +14,52 @@
       "printSixteenBit": false,
       "proofSetup": {
         "builtin": "proofCMYK"
+      }
+    },
+    "printStyle": {
+      "caption": false,
+      "calibrationBars": false,
+      "registrationMarks": false,
+      "cornerCropMarks": false,
+      "centerCropMarks": false,
+      "labels": false,
+      "negative": false,
+      "emulsionDown": false,
+      "interpolate": false,
+      "backgroundColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "border": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "bleed": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "resolution": {
+        "value": 72,
+        "units": "Pixels"
+      },
+      "vectorData": true,
+      "pagePosition": "centered",
+      "left": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "top": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "scale": 1,
+      "cropWhenPrinting": false,
+      "cropRect": {
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "right": 0
       }
     },
     "resolutionInfo": {
@@ -42,6 +89,41 @@
       "caption": false,
       "printFlags": true
     },
+    "printFlagsInfo": {
+      "centerCropMarks": false,
+      "bleedWidth": 0,
+      "bleedWidthScale": 2
+    },
+    "grayscaleHalftoneScreens": [
+      {
+        "frequency": 53,
+        "frequencyUnits": "lines/inch",
+        "angle": 45,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      }
+    ],
+    "grayscaleTransferFunctions": [
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      }
+    ],
     "layerState": 1,
     "layerSelectionIds": [
       3
@@ -102,12 +184,19 @@
     "pixelAspectRatio": {
       "aspect": 1
     },
+    "iccProfile": "AAADkEFEQkUCEAAAcHJ0ckdSQVlYWVogB88ABgADAAAAAAAAYWNzcEFQUEwAAAAAbm9uZQAAAAAAAAAAAAAAAAAAAAEAAPbWAAEAAAAA0y1BREJFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFY3BydAAAAMAAAAAyZGVzYwAAAPQAAABnd3RwdAAAAVwAAAAUYmtwdAAAAXAAAAAUa1RSQwAAAYQAAAIMdGV4dAAAAABDb3B5cmlnaHQgMTk5OSBBZG9iZSBTeXN0ZW1zIEluY29ycG9yYXRlZAAAAGRlc2MAAAAAAAAADURvdCBHYWluIDIwJQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWFlaIAAAAAAAAPbWAAEAAAAA0y1YWVogAAAAAAAAAAAAAAAAAAAAAGN1cnYAAAAAAAABAAAAABAAIAAwAEAAUABhAH8AoADFAOwBFwFEAXUBqAHeAhYCUgKQAtADEwNZA6ED7AQ5BIgE2gUuBYUF3gY5BpYG9gdXB7sIIgiKCPQJYQnQCkEKtAspC6AMGgyVDRINkg4TDpYPHA+jECwQuBFFEdQSZRL4E40UJBS9FVcV9BaSFzIX1Bh4GR4ZxhpvGxsbyBx2HScd2h6OH0Qf/CC1IXEiLiLtI60kcCU0JfkmwSeKKFUpIinwKsArkixlLTouES7qL8QwoDF9MlwzPTQfNQM16TbQN7k4pDmQOn47bTxePVE+RT87QDNBLEImQyJEIEUfRiBHI0gnSS1KNEs8TEdNU05gT29Qf1GRUqVTulTRVelXAlgeWTpaWFt4XJldvF7gYAZhLWJWY4BkrGXZZwhoOGlpap1r0W0Hbj9veHCyce5zK3Rqdap27HgveXR6unwBfUp+lX/hgS6CfIPNhR6GcYfFiRuKcovLjSWOgY/dkTySm5P9lV+Ww5gomY+a95xgncufN6ClohSjhaT2pmmn3qlUqsusRK2+rzmwtrI0s7S1NLa3uDq5v7tFvM2+Vr/gwWzC+cSHxhfHqMk7ys7MY836z5LRK9LF1GHV/tec2Tza3dx/3iPfyOFu4xbkv+Zp6BTpwetv7R/u0PCC8jXz6vWg91f5EPrK/IX+Qf//",
     "idsSeedNumber": 3,
     "versionInfo": {
       "hasRealMergedData": true,
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "exifData": "TU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAAeAAAAcgEyAAIAAAAUAAAAkIdpAAQAAAABAAAApAAAANAACvyAAAAnEAAK/IAAACcQQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykAMjAxNToxMjoxMSAwNDoyMzo0MwAAA6ABAAMAAAAB//8AAKACAAQAAAABAAABLKADAAQAAAABAAAAyAAAAAAAAAAGAQMAAwAAAAEABgAAARoABQAAAAEAAAEeARsABQAAAAEAAAEmASgAAwAAAAEAAgAAAgEABAAAAAEAAAEuAgIABAAAAAEAAAAAAAAAAAAAAEgAAAABAAAASAAAAAE=",
+    "outputSettings": {
+      "_name": "",
+      "_classID": "null",
+      "Version": 0
     }
   },
   "children": [

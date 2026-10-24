@@ -5,6 +5,7 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "savedPaths": [],
     "captionDigest": "cdcffa7da8c7be09057076aeaf05c34e",
     "resolutionInfo": {
       "horizontalResolution": 72,
@@ -244,6 +245,5 @@
       "b": 0
     },
     "opacity": 0.5
-  },
-  "pathList": []
+  }
 }

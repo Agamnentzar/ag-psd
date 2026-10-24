@@ -5,6 +5,7 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "iptcData": "HAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAIAAAIAAA==",
     "captionDigest": "d3c99f4b3d8dea288548356a84159c2b",
     "printInformation": {
       "printerName": "",
@@ -13,6 +14,52 @@
       "printSixteenBit": false,
       "proofSetup": {
         "builtin": "proofCMYK"
+      }
+    },
+    "printStyle": {
+      "caption": false,
+      "calibrationBars": false,
+      "registrationMarks": false,
+      "cornerCropMarks": false,
+      "centerCropMarks": false,
+      "labels": false,
+      "negative": false,
+      "emulsionDown": false,
+      "interpolate": false,
+      "backgroundColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "border": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "bleed": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "resolution": {
+        "value": 72,
+        "units": "Pixels"
+      },
+      "vectorData": true,
+      "pagePosition": "centered",
+      "left": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "top": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "scale": 1,
+      "cropWhenPrinting": false,
+      "cropRect": {
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "right": 0
       }
     },
     "resolutionInfo": {
@@ -33,6 +80,26 @@
       "Transparency",
       "Alpha 1"
     ],
+    "alphaChannelDisplayInfo": [
+      {
+        "opacity": 1,
+        "kind": "protected",
+        "color": {
+          "r": 255,
+          "g": 0,
+          "b": 0
+        }
+      },
+      {
+        "opacity": 0.5,
+        "kind": "protected",
+        "color": {
+          "r": 255,
+          "g": 0,
+          "b": 0
+        }
+      }
+    ],
     "alphaIdentifiers": [
       0,
       2
@@ -50,6 +117,119 @@
       "caption": false,
       "printFlags": true
     },
+    "printFlagsInfo": {
+      "centerCropMarks": false,
+      "bleedWidth": 0,
+      "bleedWidthScale": 1
+    },
+    "colorHalftoneScreens": [
+      {
+        "frequency": 47.399993896484375,
+        "frequencyUnits": "lines/inch",
+        "angle": 108.39999389648438,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 47.399993896484375,
+        "frequencyUnits": "lines/inch",
+        "angle": 161.60000610351562,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 50,
+        "frequencyUnits": "lines/inch",
+        "angle": 90,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 53,
+        "frequencyUnits": "lines/inch",
+        "angle": 45,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      }
+    ],
+    "colorTransferFunctions": [
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      }
+    ],
     "layerState": 0,
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
@@ -120,6 +300,151 @@
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CS6",
       "fileVersion": 1
+    },
+    "exifData": "TU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAAeAAAAcgEyAAIAAAAUAAAAkIdpAAQAAAABAAAApAAAANAACvyAAAAnEAAK/IAAACcQQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykAMjAxNzoxMDoyMyAwMjoxODozNQAAA6ABAAMAAAAB//8AAKACAAQAAAABAAAAHKADAAQAAAABAAAAEwAAAAAAAAAGAQMAAwAAAAEABgAAARoABQAAAAEAAAEeARsABQAAAAEAAAEmASgAAwAAAAEAAgAAAgEABAAAAAEAAAEuAgIABAAAAAEAAAAAAAAAAAAAAEgAAAABAAAASAAAAAE=",
+    "outputSettings": {
+      "_name": "",
+      "_classID": "null",
+      "Version": 0
+    },
+    "animations": {
+      "frames": [
+        {
+          "id": 372053929,
+          "delay": 1,
+          "dispose": "auto"
+        },
+        {
+          "id": 276808660,
+          "delay": 0.04,
+          "dispose": "auto"
+        },
+        {
+          "id": 326809485,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 275010311,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 318809353,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 541317226,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 582158236,
+          "delay": 1.2,
+          "dispose": "auto"
+        },
+        {
+          "id": 200408874,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 213484720,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 222325202,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 754277887,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 220089871,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 229451370,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 363644130,
+          "delay": 1.2,
+          "dispose": "auto"
+        },
+        {
+          "id": 365946480,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 390585542,
+          "delay": 1,
+          "dispose": "auto"
+        },
+        {
+          "id": 828095067,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 914550275,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 904919864,
+          "delay": 0.12,
+          "dispose": "auto"
+        },
+        {
+          "id": 951391219,
+          "delay": 0.08,
+          "dispose": "auto"
+        },
+        {
+          "id": 961677103,
+          "delay": 0.08,
+          "dispose": "auto"
+        }
+      ],
+      "animations": [
+        {
+          "id": 0,
+          "frames": [
+            372053929,
+            276808660,
+            326809485,
+            275010311,
+            318809353,
+            541317226,
+            582158236,
+            200408874,
+            213484720,
+            222325202,
+            754277887,
+            220089871,
+            229451370,
+            363644130,
+            365946480,
+            390585542,
+            828095067,
+            914550275,
+            904919864,
+            951391219,
+            961677103
+          ],
+          "repeats": 0,
+          "activeFrame": 0
+        }
+      ]
     }
   },
   "children": [

@@ -1,6 +1,6 @@
 import { Inflate } from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression } from './psd';
-import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, RAW_IMAGE_DATA, largeAdditionalInfoKeys, largeAdditionalInfoKeysObserved, imageDataToCanvas, normalizeLabAB } from './helpers';
+import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, largeAdditionalInfoKeys, largeAdditionalInfoKeysObserved, imageDataToCanvas, normalizeLabAB } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { decodeString } from './utf8';
 import { InternalImageResources, resourceHandlersMap } from './imageResources';
@@ -10,7 +10,7 @@ interface ChannelInfo {
 	length: number;
 }
 
-export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed];
+export const supportedColorModes = [ColorMode.Bitmap, ColorMode.Grayscale, ColorMode.RGB, ColorMode.Indexed, ColorMode.CMYK];
 const colorModes = ['bitmap', 'grayscale', 'indexed', 'RGB', 'CMYK', '', '', 'multichannel', 'duotone', 'lab'];
 
 function setupGrayscale(data: PixelData) {
@@ -282,7 +282,8 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	const maxSize = version === 1 ? 30000 : 300000;
 
 	if (width > maxSize || height > maxSize) throw new Error(`Invalid size: ${width}x${height}`);
-	if (channels < 1 || channels > 56) throw new Error(`Invalid channel count: ${channels}`);
+	// up to 56 channels plus transparency of composite image (Photoshop CS3 writes 57 channels for 53 alpha channels)
+	if (channels < 1 || channels > 57) throw new Error(`Invalid channel count: ${channels}`);
 	if (![1, 8, 16, 32].includes(bitsPerChannel)) throw new Error(`Invalid bitsPerChannel: ${bitsPerChannel}`);
 	if (supportedColorModes.indexOf(colorMode) === -1) throw new Error(`Color mode not supported: ${colorModes[colorMode] ?? colorMode}`);
 
@@ -319,20 +320,25 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	// image resources
 
 	const imageResources: InternalImageResources = {};
+	let unreadResourceBytes = 0;
 
 	readSection(reader, 1, left => {
-		while (left() > 0) {
-			realignWithSignature(reader, isValidSignature);
+		// stop if there's not enough data left for resource header (some files have few trailing bytes in this section)
+		while (left() >= 12) {
+			const signature = realignWithSignature(reader, isValidSignature);
 			const id = readUint16(reader);
-			readPascalString(reader, 2); // name
+			const nameLength = readUint8(reader);
+			const name = readBytes(reader, nameLength);
+			skipBytes(reader, (nameLength + 1) % 2); // pad to even size
 
 			readSection(reader, 2, left => {
-				const handler = resourceHandlersMap[id];
+				// plug-in resources (4000-4999) are identified by the key stored in the data, not by the id
+				const handler = resourceHandlersMap[id] || (id >= 4000 && id <= 4999 ? resourceHandlersMap[4000] : undefined);
 				const skip = id === 1036 && !!reader.skipThumbnail;
 
 				if (handler && !skip) {
 					try {
-						handler.read(reader, imageResources, left);
+						handler.read(reader, imageResources, left, { signature, id, name, width, height });
 					} catch (e) {
 						if (reader.throwForMissingFeatures) throw e;
 						skipBytes(reader, left());
@@ -343,9 +349,18 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 				}
 			});
 		}
+
+		unreadResourceBytes = left();
+		skipBytes(reader, left());
 	});
 
-	const { layersGroup, layerGroupsEnabledId, ...rest } = imageResources;
+	// some files have image resources section length few bytes larger than the data, layer and mask info section
+	// starts right after the last resource in that case
+	if (unreadResourceBytes && !sectionFits(reader, reader.offset) && sectionFits(reader, reader.offset - unreadResourceBytes)) {
+		reader.offset -= unreadResourceBytes;
+	}
+
+	const { layersGroup, layerGroupsEnabledId, savedPathsOrigination, ...rest } = imageResources;
 
 	if (Object.keys(rest).length) {
 		psd.imageResources = rest;
@@ -402,10 +417,6 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 			}
 		}
 	}
-
-	// TODO: show converted color mode instead of original PSD file color mode
-	//       but add option to preserve file color mode (need to return image data instead of canvas in that case)
-	// psd.colorMode = ColorMode.RGB; // we convert all color modes to RGB
 
 	return psd;
 }
@@ -491,8 +502,11 @@ function readLayerRecord(reader: PsdReader, psd: Psd, imageResources: InternalIm
 
 	checkSignature(reader, '8BIM');
 	const blendMode = readSignature(reader);
-	if (!toBlendMode[blendMode]) throw new Error(`Invalid blend mode: '${blendMode}'`);
-	layer.blendMode = toBlendMode[blendMode];
+	if (!toBlendMode[blendMode]) {
+		if (reader.throwForMissingFeatures) throw new Error(`Invalid blend mode: '${blendMode}'`);
+		reader.logMissingFeatures && reader.log(`Unknown blend mode: '${blendMode}', using normal blend mode`);
+	}
+	layer.blendMode = toBlendMode[blendMode] || 'normal';
 
 	layer.opacity = readUint8(reader) / 0xff;
 	layer.clipping = readUint8(reader) === 1;
@@ -527,6 +541,14 @@ function readLayerRecord(reader: PsdReader, psd: Psd, imageResources: InternalIm
 }
 
 // negative sizes are treated as empty (Photoshop writes them for some empty layers, like 0,0,-1,0 bounds of fill layer)
+// checks if length of section (layer and mask info) at given offset fits in the file
+function sectionFits(reader: PsdReader, offset: number) {
+	const lengthSize = reader.large ? 8 : 4;
+	if (offset < 0 || offset + lengthSize > reader.view.byteLength) return false;
+	const length = reader.large ? reader.view.getUint32(offset) * 0x100000000 + reader.view.getUint32(offset + 4) : reader.view.getUint32(offset);
+	return offset + lengthSize + length <= reader.view.byteLength;
+}
+
 function isValidBoxSize(box: { top?: number; left?: number; bottom?: number; right?: number; }, reader: PsdReader) {
 	const width = (box.right || 0) - (box.left || 0);
 	const height = (box.bottom || 0) - (box.top || 0);
@@ -800,16 +822,11 @@ function getDataFromLayer(layer: Layer, read: LayerDataType, throwForMissingFeat
 
 	if (layerWidth && layerHeight && read === LayerDataType.Layer) {
 		if (cmyk) {
-			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel not supported');
-			imageData = { width: layerWidth, height: layerHeight, data: new Uint8ClampedArray(layerWidth * layerHeight * 5) } as any as ImageData;
+			if (bitsPerChannel !== 8 && bitsPerChannel !== 16) throw new Error('bitsPerChannel not supported');
+			imageData = createImageDataBitDepth(layerWidth, layerHeight, bitsPerChannel, 5, memoryLimit);
 		} else {
 			imageData = createImageDataBitDepth(layerWidth, layerHeight, bitsPerChannel, 4, memoryLimit);
 		}
-	}
-
-	if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
-		(layer as any).imageDataRaw = [];
-		(layer as any).imageDataRawCompression = [];
 	}
 
 	for (const { id, compression, data } of channels) {
@@ -834,15 +851,6 @@ function getDataFromLayer(layer: Layer, read: LayerDataType, throwForMissingFeat
 				maskData = createImageDataBitDepth(maskWidth, maskHeight, bitsPerChannel, 4, memoryLimit);
 				if (memoryLimit !== undefined) dataReader.totalMemoryLimit = Math.max(0, dataReader.totalMemoryLimit! - maskData.data.byteLength);
 				readData(dataReader, data.byteLength, maskData, compression, maskWidth, maskHeight, bitsPerChannel, 0, large, 4);
-				if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
-					if (id === ChannelID.UserMask) {
-						(layer as any).maskDataRawCompression = compression;
-						(layer as any).maskDataRaw = data;
-					} else {
-						(layer as any).realMaskDataRawCompression = compression;
-						(layer as any).realMaskDataRaw = data;
-					}
-				}
 				setupGrayscale(maskData);
 				resetAlpha(maskData, false);
 			}
@@ -861,12 +869,6 @@ function getDataFromLayer(layer: Layer, read: LayerDataType, throwForMissingFeat
 			}
 
 			readData(dataReader, data.byteLength, targetData, compression, layerWidth, layerHeight, bitsPerChannel, offset, large, cmyk ? 5 : 4);
-
-			if (RAW_IMAGE_DATA) { // TODO: use layer.rawData instead
-				(layer as any).imageDataRawCompression[id] = compression;
-				(layer as any).imageDataRaw[id] = data;
-			}
-
 		}
 
 		if (id === ChannelID.Transparency) {
@@ -880,7 +882,8 @@ function getDataFromLayer(layer: Layer, read: LayerDataType, throwForMissingFeat
 
 		if (cmyk) {
 			const cmykData = imageData;
-			imageData = createImageData(cmykData.width, cmykData.height);
+			const rgbMemoryLimit = memoryLimit === undefined ? undefined : Math.max(0, memoryLimit - cmykData.data.byteLength);
+			imageData = createImageDataBitDepth(cmykData.width, cmykData.height, bitsPerChannel, 4, rgbMemoryLimit);
 			cmykToRgb(cmykData, imageData, false);
 		}
 	}
@@ -976,7 +979,7 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 				if (reader.throwForMissingFeatures) throw e;
 			}
 		} else {
-			reader.logMissingFeatures && key !== 'GenI' && key !== 'OCIO' && reader.log(`Unhandled additional info: ${key}`);
+			reader.logMissingFeatures && key !== 'GenI' && key !== 'OCIO' && key !== 'CAI ' && reader.log(`Unhandled additional info: ${key}`);
 			skipBytes(reader, left());
 		}
 
@@ -1042,13 +1045,7 @@ function readImageData(reader: PsdReader, psd: Psd) {
 		case ColorMode.Grayscale: {
 			const colorChannels = psd.colorMode === ColorMode.Grayscale ? 1 : 3;
 			const offsets = compositeChannelOffsets(reader, psd, colorChannels, 3);
-			const start = reader.offset;
-
 			readCompositeChannels(reader, compression, imageData, bitsPerChannel, 4, offsets);
-
-			if (RAW_IMAGE_DATA && compression === Compression.RleCompressed) {
-				(psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
-			}
 
 			if (psd.colorMode === ColorMode.Grayscale) {
 				setupGrayscale(imageData);
@@ -1062,29 +1059,25 @@ function readImageData(reader: PsdReader, psd: Psd) {
 			const offsets = compositeChannelOffsets(reader, psd, 1, -1);
 			const indexedImageData: PixelData = { width, height, data: new Uint8Array(width * height) };
 			readCompositeChannels(reader, compression, indexedImageData, 8, 1, offsets);
-			indexedToRgb(indexedImageData, imageData, psd.palette);
+			indexedToRgb(indexedImageData, imageData, psd.palette, psd.imageResources?.transparencyIndex ?? -1);
 			break;
 		}
 		case ColorMode.CMYK: {
-			if (bitsPerChannel !== 8) throw new Error('bitsPerChannel not supported');
+			if (bitsPerChannel !== 8 && bitsPerChannel !== 16) throw new Error('bitsPerChannel not supported');
 
 			const offsets = compositeChannelOffsets(reader, psd, 4, 4);
-			const cmykImageData: PixelData = { width, height, data: new Uint8Array(width * height * 5) };
-			const start = reader.offset;
+			const cmykImageData = createImageDataBitDepth(width, height, bitsPerChannel, 5, reader.totalMemoryLimit);
 
-			readCompositeChannels(reader, compression, cmykImageData, 8, 5, offsets);
-			cmykToRgb(cmykImageData, imageData, true);
-
-			if (RAW_IMAGE_DATA && compression === Compression.RleCompressed) {
-				(psd as any).imageDataRaw = new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, reader.offset - start);
-			}
+			resetAlpha(cmykImageData, true);
+			readCompositeChannels(reader, compression, cmykImageData, bitsPerChannel, 5, offsets);
+			cmykToRgb(cmykImageData, imageData, !!reader.globalAlpha);
 			break;
 		}
 		default: throw new Error(`Color mode not supported: ${psd.colorMode}`);
 	}
 
-	// remove weird white matte
-	if (reader.globalAlpha) {
+	// remove weird white matte (already removed when converting from CMYK)
+	if (reader.globalAlpha && psd.colorMode !== ColorMode.CMYK) {
 		removeWhiteMatte(imageData);
 	}
 
@@ -1188,45 +1181,74 @@ function removeWhiteMatte({ data, width, height }: PixelData) {
 	}
 }
 
-function cmykToRgb(cmyk: PixelData, rgb: PixelData, reverseAlpha: boolean) {
+// converts value in 0-255 range to target range, rounding and clamping it
+function toRange(value: number, max: number) {
+	value = Math.round(value * (max / 255));
+	return value <= 0 ? 0 : (value >= max ? max : value);
+}
+
+// Polynomial approximation of U.S. Web Coated (SWOP) v2 CMYK to RGB conversion (default CMYK profile of Photoshop).
+// Coefficients are taken from pdf.js (DeviceCmykCS in src/core/colorspace.js, https://github.com/mozilla/pdf.js),
+// Copyright 2012 Mozilla Foundation, licensed under the Apache License, Version 2.0
+// (http://www.apache.org/licenses/LICENSE-2.0)
+// cmyk - 8 or 16 bit data with 5 channels (cmyka), rgb - 8 or 16 bit data with 4 channels (rgba)
+// removeMatte - colors are blended with white (no ink), used for composite image of documents with global alpha
+function cmykToRgb(cmyk: PixelData, rgb: PixelData, removeMatte: boolean) {
 	const size = rgb.width * rgb.height * 4;
 	const srcData = cmyk.data;
 	const dstData = rgb.data;
+	const srcMax = srcData instanceof Uint16Array ? 0xffff : 0xff;
+	const dstMax = dstData instanceof Uint16Array ? 0xffff : 0xff;
 
 	for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
-		const c = srcData[src];
-		const m = srcData[src + 1];
-		const y = srcData[src + 2];
-		const k = srcData[src + 3];
-		dstData[dst] = ((((c * k) | 0) / 255) | 0);
-		dstData[dst + 1] = ((((m * k) | 0) / 255) | 0);
-		dstData[dst + 2] = ((((y * k) | 0) / 255) | 0);
-		dstData[dst + 3] = reverseAlpha ? 255 - srcData[src + 4] : srcData[src + 4];
-	}
+		const a = srcData[src + 4];
 
-	// for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
-	// 	const c = 1 - (srcData[src + 0] / 255);
-	// 	const m = 1 - (srcData[src + 1] / 255);
-	// 	const y = 1 - (srcData[src + 2] / 255);
-	// 	// const k = srcData[src + 3] / 255;
-	// 	dstData[dst + 0] = ((1 - c * 0.8) * 255) | 0;
-	// 	dstData[dst + 1] = ((1 - m * 0.8) * 255) | 0;
-	// 	dstData[dst + 2] = ((1 - y * 0.8) * 255) | 0;
-	// 	dstData[dst + 3] = reverseAlpha ? 255 - srcData[src + 4] : srcData[src + 4];
-	// }
+		// image data stores inverted values (0 = 100% ink)
+		let c = 1 - srcData[src] / srcMax;
+		let m = 1 - srcData[src + 1] / srcMax;
+		let y = 1 - srcData[src + 2] / srcMax;
+		let k = 1 - srcData[src + 3] / srcMax;
+
+		if (removeMatte && a > 0 && a < srcMax) {
+			const ra = srcMax / a;
+			c = Math.min(1, c * ra);
+			m = Math.min(1, m * ra);
+			y = Math.min(1, y * ra);
+			k = Math.min(1, k * ra);
+		}
+
+		dstData[dst] = toRange(255 +
+			c * (-4.387332384609988 * c + 54.48615194189176 * m + 18.82290502165302 * y + 212.25662451639585 * k - 285.2331026137004) +
+			m * (1.7149763477362134 * m - 5.6096736904047315 * y - 17.873870861415444 * k - 5.497006427196366) +
+			y * (-2.5217340131683033 * y - 21.248923337353073 * k + 17.5119270841813) +
+			k * (-21.86122147463605 * k - 189.48180835922747), dstMax);
+		dstData[dst + 1] = toRange(255 +
+			c * (8.841041422036149 * c + 60.118027045597366 * m + 6.871425592049007 * y + 31.159100130055922 * k - 79.2970844816548) +
+			m * (-15.310361306967817 * m + 17.575251261109482 * y + 131.35250912493976 * k - 190.9453302588951) +
+			y * (4.444339102852739 * y + 9.8632861493405 * k - 24.86741582555878) +
+			k * (-20.737325471181034 * k - 187.80453709719578), dstMax);
+		dstData[dst + 2] = toRange(255 +
+			c * (0.8842522430003296 * c + 8.078677503112928 * m + 30.89978309703729 * y - 0.23883238689178934 * k - 14.183576799673286) +
+			m * (10.49593273432072 * m + 63.02378494754052 * y + 50.606957656360734 * k - 112.23884253719248) +
+			y * (0.03296041114873217 * y + 115.60384449646641 * k - 193.58209356861505) +
+			k * (-22.33816807309886 * k - 180.12613974708367), dstMax);
+		dstData[dst + 3] = srcMax === dstMax ? a : Math.round(a * dstMax / srcMax);
+	}
 }
 
-function indexedToRgb(indexed: PixelData, rgb: PixelData, palette: RGB[]) {
+// transparencyIndex - palette index of transparent color (-1 if there's none)
+function indexedToRgb(indexed: PixelData, rgb: PixelData, palette: RGB[], transparencyIndex: number) {
 	const size = indexed.width * indexed.height;
 	const srcData = indexed.data;
 	const dstData = rgb.data;
 
 	for (let src = 0, dst = 0; src < size; src++, dst += 4) {
-		const c = palette[srcData[src]];
+		const index = srcData[src];
+		const c = palette[index];
 		dstData[dst + 0] = c.r;
 		dstData[dst + 1] = c.g;
 		dstData[dst + 2] = c.b;
-		dstData[dst + 3] = 255;
+		dstData[dst + 3] = index === transparencyIndex ? 0 : 255;
 	}
 }
 
@@ -1625,8 +1647,8 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	const x = readInt16(reader);
 	const y = readInt16(reader);
 
-	// we only support RGB, grayscale and indexed for now
-	if (colorMode !== ColorMode.RGB && colorMode !== ColorMode.Grayscale && colorMode !== ColorMode.Indexed) {
+	// we only support RGB, grayscale, indexed and CMYK for now
+	if (colorMode !== ColorMode.RGB && colorMode !== ColorMode.Grayscale && colorMode !== ColorMode.Indexed && colorMode !== ColorMode.CMYK) {
 		throw new Error(`Unsupported pattern color mode: ${colorMode}`);
 	}
 
@@ -1673,7 +1695,11 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	}
 
 	// first written arrays are color channels, next one is transparency (Photoshop stores it in the last, sheet mask, array)
-	const colorChannels = colorMode === ColorMode.RGB ? 3 : 1;
+	const colorChannels = colorMode === ColorMode.RGB ? 3 : (colorMode === ColorMode.CMYK ? 4 : 1);
+	// CMYK channels are decoded into separate buffer (5 values per pixel, inverted, 0 = 100% ink) and converted to RGB at the end
+	const cmyk = colorMode === ColorMode.CMYK ? new Uint8Array(width * height * 5).fill(255) : undefined;
+	if (cmyk) consumeMemory(reader, cmyk.byteLength);
+	const alphaTarget = cmyk ? 4 : 3;
 
 	for (let i = 0, ch = 0; i < (channelsCount + 2) && reader.offset + 4 <= end; i++) {
 		const has = readUint32(reader);
@@ -1699,7 +1725,7 @@ export function readPattern(reader: PsdReader): PatternInfo {
 			throw new Error('Pattern channel bounds outside of pattern bounds');
 		}
 
-		const target = ch < colorChannels ? ch : (ch === colorChannels ? 3 : -1);
+		const target = ch < colorChannels ? ch : (ch === colorChannels ? alphaTarget : -1);
 		ch++;
 
 		if (target === -1) continue;
@@ -1734,7 +1760,9 @@ export function readPattern(reader: PsdReader): PatternInfo {
 				const dst = (ox + x + (y + oy) * width) * 4;
 				const value = depth === 8 ? bytes[src] : patternValueTo8bit(bytes, src, depth);
 
-				if (target === 3) {
+				if (cmyk) {
+					cmyk[(ox + x + (y + oy) * width) * 5 + target] = value;
+				} else if (target === 3) {
 					data[dst + 3] = value;
 				} else if (colorMode === ColorMode.Indexed) {
 					const color = palette[value];
@@ -1752,6 +1780,11 @@ export function readPattern(reader: PsdReader): PatternInfo {
 		}
 
 		if (compressionMode === 1) recoverMemory(reader, channelSize);
+	}
+
+	if (cmyk) {
+		cmykToRgb({ width, height, data: cmyk }, { width, height, data }, false);
+		recoverMemory(reader, cmyk.byteLength);
 	}
 
 	reader.offset = end;

@@ -199,8 +199,7 @@ describe('PsdReader', () => {
 	// 	fs.writeFileSync('output.psd', buffer);
 	// });
 
-	// skipping "cmyk" test because we can't convert CMYK to RGB
-	fs.readdirSync(readFilesPath).filter(f => !/cmyk/.test(f)).forEach(f => {
+	fs.readdirSync(readFilesPath).forEach(f => {
 		// fs.readdirSync(readFilesPath).filter(f => /ignore-text-curve/.test(f)).forEach(f => {
 		it(`reads PSD file (${f})`, () => {
 			const basePath = path.join(readFilesPath, f);
@@ -348,6 +347,10 @@ describe('PsdReader', () => {
 
 			delete psd.rawCompositeData;
 			if (psd.imageResources) delete psd.imageResources.thumbnailRaw;
+			if (psd.imageResources?.iccProfile) psd.imageResources.iccProfile = byteArrayToBase64(psd.imageResources.iccProfile) as any;
+			if (psd.imageResources?.exifData) psd.imageResources.exifData = byteArrayToBase64(psd.imageResources.exifData) as any;
+			if (psd.imageResources?.iptcData) psd.imageResources.iptcData = byteArrayToBase64(psd.imageResources.iptcData) as any;
+			if (psd.imageResources?.windowsDevMode) psd.imageResources.windowsDevMode = byteArrayToBase64(psd.imageResources.windowsDevMode) as any;
 
 			compare.forEach(i => saveCanvas(path.join(resultsDir, i.name), i.canvas));
 			compareFiles.forEach(i => fs.writeFileSync(path.join(resultsDir, i.name), i.data));
@@ -667,8 +670,23 @@ describe('PsdReader', () => {
 			expect(Array.from(pattern.data)).eql([0, 0, 0, 255, 255, 255, 255, 128]);
 		});
 
+		it('reads CMYK pattern', () => {
+			// values are inverted (255 = 0% ink), first pixel - no ink, second pixel - 100% black at 50% opacity
+			const buf = buildPattern(2, 1, [
+				{ depth: 8, data: [255, 255] },
+				{ depth: 8, data: [255, 255] },
+				{ depth: 8, data: [255, 255] },
+				{ depth: 8, data: [255, 0] },
+				{ depth: 8, data: [255, 128] },
+			], ColorMode.CMYK);
+			const pattern = readPattern(createReaderFromBuffer(buf));
+			expect(Array.from(pattern.data.slice(0, 4))).eql([255, 255, 255, 255]);
+			expect(pattern.data[7]).equal(128);
+			expect(pattern.data[4]).lessThan(64); // dark
+		});
+
 		it('skips unsupported patterns and reads following ones', () => {
-			const unsupported = buildPattern(1, 1, [{ depth: 8, data: [1] }], ColorMode.CMYK);
+			const unsupported = buildPattern(1, 1, [{ depth: 8, data: [1] }], ColorMode.Lab);
 			const valid = buildPattern(1, 1, [{ depth: 8, data: [1] }, { depth: 8, data: [2] }, { depth: 8, data: [3] }]);
 			const block = Buffer.concat([unsupported, valid]);
 			const target: any = {};
@@ -707,6 +725,31 @@ describe('PsdReader', () => {
 
 			const result = readPsd(buffer, { useImageData: true });
 			expect(Array.from(result.imageData!.data).filter((_, i) => i % 4 === 3)).eql([0, 255]);
+		});
+
+		it('reads files with trailing bytes in image resources section', () => {
+			const globalAngle = Buffer.concat([ascii('8BIM'), u16(1037), u16(0), u32(4), u32(30)]);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 3, resources: Buffer.concat([globalAngle, Buffer.alloc(2)]), composite: Buffer.concat([u16(0), u8(1, 2, 3)]) }), strictOpts);
+			expect(psd.imageResources!.globalAngle).equal(30);
+		});
+
+		it('reads files with image resources section length larger than the data', () => {
+			// Photoshop CS2 file with section length 2 bytes larger than resources (layer info starts right after last resource)
+			const buffer = writePsdBuffer({ width: 10, height: 10, imageResources: { globalAngle: 30 }, children: [{ name: 'a' }] });
+			const offset = 26 + 4 + buffer.readUInt32BE(26);
+			buffer.writeUInt32BE(buffer.readUInt32BE(offset) + 2, offset);
+			const psd = readPsd(buffer, { skipCompositeImageData: true, skipThumbnail: true });
+			expect(psd.imageResources!.globalAngle).equal(30);
+			expect(psd.children!.map(c => c.name)).eql(['a']);
+		});
+
+		it('reads layers with unknown blend mode as normal', () => {
+			const buffer = writePsdBuffer({ width: 10, height: 10, children: [{ name: 'a', blendMode: 'multiply' }] });
+			const offset = buffer.indexOf('8BIMmul ');
+			expect(offset).greaterThan(0);
+			buffer.write('BoEF', offset + 4, 'latin1');
+			expect(readPsd(buffer, { skipCompositeImageData: true }).children![0].blendMode).equal('normal');
+			expect(() => readPsd(buffer, { skipCompositeImageData: true, throwForMissingFeatures: true })).throw(`Invalid blend mode: 'BoEF'`);
 		});
 
 		it('writes keys that Photoshop writes with 64bit length in PSB files with 8B64 signature', () => {
@@ -896,8 +939,12 @@ describe('PsdReader', () => {
 			expect(Array.from(psd.imageData!.data)).eql([10, 20, 30, 255]);
 		});
 
-		it('rejects more than 56 channels', () => {
-			expect(() => readPsd(buildPsd({ width: 1, height: 1, channels: 57, composite: u16(0) }), strictOpts)).throw('Invalid channel count');
+		it('reads 56 channels with transparency (57 channels) and rejects more', () => {
+			const channels = Array.from({ length: 57 }, (_, i) => i < 3 ? (i + 1) * 10 : 255);
+			const psd = readPsd(buildPsd({ width: 1, height: 1, channels: 57, globalAlpha: true, composite: Buffer.concat([u16(0), u8(...channels)]) }), strictOpts);
+			expect(psd.channels).equal(57);
+			expect(Array.from(psd.imageData!.data)).eql([10, 20, 30, 255]);
+			expect(() => readPsd(buildPsd({ width: 1, height: 1, channels: 58, composite: u16(0) }), strictOpts)).throw('Invalid channel count');
 		});
 	});
 

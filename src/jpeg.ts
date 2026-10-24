@@ -761,7 +761,7 @@ function parse(data: Uint8Array) {
             };
           }
         }
-        // TODO APP1 - Exif
+        // APP1 - Exif
         if (fileMarker === 0xFFE1) {
           if (appData[0] === 0x45 &&
             appData[1] === 0x78 &&
@@ -952,11 +952,11 @@ function parse(data: Uint8Array) {
   // set each frame's components quantization table
   for (let i = 0; i < frames.length; i++) {
     const cp = frames[i].components;
-    for (let j in cp) { // TODO: don't use `in`
-      const table = quantizationTables[cp[j].quantizationIdx!];
-      if (!table) throw new Error(`Missing quantization table ${cp[j].quantizationIdx}`);
-      cp[j].quantizationTable = table;
-      delete cp[j].quantizationIdx; // TODO: why ???
+    for (const key of Object.keys(cp)) {
+      const component = cp[+key];
+      const table = quantizationTables[component.quantizationIdx!];
+      if (!table) throw new Error(`Missing quantization table ${component.quantizationIdx}`);
+      component.quantizationTable = table;
     }
   }
 

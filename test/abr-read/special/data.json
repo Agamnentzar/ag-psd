@@ -58,6 +58,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": false,
+      "buildUp": false,
       "useBrushSize": true
     },
     {
@@ -81,6 +82,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": false,
+      "buildUp": false,
       "useBrushSize": true
     },
     {
@@ -594,6 +596,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": false,
+      "buildUp": false,
       "useBrushSize": true,
       "interpretation": true,
       "texture": {
@@ -665,6 +668,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": true,
+      "buildUp": true,
       "useBrushSize": true,
       "interpretation": true,
       "scatter": {
@@ -791,6 +795,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": true,
+      "buildUp": false,
       "useBrushSize": false,
       "interpretation": true,
       "texture": {
@@ -997,6 +1002,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": false,
+      "buildUp": false,
       "useBrushSize": false,
       "interpretation": true,
       "texture": {

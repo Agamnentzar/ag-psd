@@ -1,0 +1,19 @@
+{
+  "width": 250,
+  "height": 250,
+  "channels": 3,
+  "bitsPerChannel": 8,
+  "colorMode": 3,
+  "imageResources": {
+    "iptcData": "HAIAAAIAAg==",
+    "resolutionInfo": {
+      "horizontalResolution": 72,
+      "horizontalResolutionUnit": "PPI",
+      "widthUnit": "Inches",
+      "verticalResolution": 72,
+      "verticalResolutionUnit": "PPI",
+      "heightUnit": "Inches"
+    },
+    "layerState": 0
+  }
+}

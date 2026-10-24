@@ -397,6 +397,16 @@ describe('effects', () => {
 		expect(result.offset).eql({ x: -0.02375, y: -0.003125 });
 	});
 
+	it('reads stroke size stored as number (old Photoshop versions)', () => {
+		const effects = parseEffects({
+			FrFX: {
+				enab: true, Styl: 'FStl.OutF', PntT: 'FrFl.SClr', 'Md  ': 'BlnM.Nrml', Opct: { units: 'Percent', value: 100 }, 'Sz  ': 3,
+				'Clr ': { _name: '', _classID: 'RGBC', 'Rd  ': 255, 'Grn ': 0, 'Bl  ': 0 },
+			},
+		} as any, false);
+		expect(effects.stroke![0].size).eql({ units: 'Pixels', value: 3 });
+	});
+
 	it('round-trips glow gradient interpolation method', () => {
 		const effects: LayerEffectsInfo = { outerGlow: { enabled: true, interpolationMethod: 'classic' } };
 		const info = serializeEffects(effects, false, false);

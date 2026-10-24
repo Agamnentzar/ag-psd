@@ -18,6 +18,7 @@
       "spacing": 1,
       "wetEdges": false,
       "noise": false,
+      "buildUp": false,
       "useBrushSize": false,
       "shapeDynamics": {
         "tiltScale": 2,

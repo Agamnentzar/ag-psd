@@ -1,21 +1,22 @@
 import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData, Compression, ChannelID, PatternInfo } from './psd';
-import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, RAW_IMAGE_DATA, writeDataZipWithoutPrediction, imageDataToCanvas, denormalizeLabAB } from './helpers';
-import { ExtendedWriteOptions, infoHandlers } from './additionalInfo';
+import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, writeDataZipWithoutPrediction, imageDataToCanvas, denormalizeLabAB } from './helpers';
+import { ExtendedWriteOptions, infoHandlers, infoHandlersMap } from './additionalInfo';
 import { InternalImageResources, resourceHandlers } from './imageResources';
-import { getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData } from './psdReader';
+import { getCompositeImageData, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData } from './psdReader';
 
 export interface PsdWriter {
 	offset: number;
 	buffer: ArrayBuffer;
 	view: DataView;
 	tempBuffer: Uint8Array | undefined;
+	log(...args: any[]): void;
 }
 
 export function createWriter(size = 4096): PsdWriter {
 	const buffer = new ArrayBuffer(size);
 	const view = new DataView(buffer);
 	const offset = 0;
-	return { buffer, view, offset, tempBuffer: undefined };
+	return { buffer, view, offset, tempBuffer: undefined, log: console.log };
 }
 
 export function getWriterBuffer(writer: PsdWriter) {
@@ -242,6 +243,8 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	if (bitsPerChannel !== 8)
 		throw new Error('bitsPerChannel other than 8 are not supported for writing');
 
+	if (options.log) writer.log = options.log;
+
 	const layers: Layer[] = [];
 	addChildren(layers, psd.children);
 	if (!layers.length) layers.push({});
@@ -261,6 +264,10 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 		imageData = psd.canvas.getContext('2d')!.getImageData(0, 0, psd.canvas.width, psd.canvas.height);
 	}
 
+	if (!imageData && psd.rawCompositeData) { // read with `useRawData` option
+		imageData = getCompositeImageData(psd);
+	}
+
 	if (imageData && (psd.width !== imageData.width || psd.height !== imageData.height))
 		throw new Error('Document canvas must have the same size as document');
 
@@ -278,16 +285,8 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	writeUint16(writer, bitsPerChannel); // bits per channel
 	writeUint16(writer, ColorMode.RGB); // we only support saving RGB right now
 
-	// color mode data
-	writeSection(writer, 1, () => {
-		if (psd.palette) {
-			for (let i = 0; i < 256; i++) writeUint8(writer, psd.palette[i]?.r || 0);
-			for (let i = 0; i < 256; i++) writeUint8(writer, psd.palette[i]?.g || 0);
-			for (let i = 0; i < 256; i++) writeUint8(writer, psd.palette[i]?.b || 0);
-		}
-
-		// TODO: other data?
-	});
+	// color mode data (empty for RGB color mode)
+	writeUint32(writer, 0);
 
 	// image resources
 
@@ -299,10 +298,12 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 			const has = handler.has(imageResources);
 			const count = has === false ? 0 : (has === true ? 1 : has);
 			for (let i = 0; i < count; i++) {
+				const id = handler.keyCount > 1 ? handler.key + i : handler.key;
+				const name = handler.name ? handler.name(imageResources, i) : '';
 				writeSignature(writer, '8BIM');
-				writeUint16(writer, handler.key);
-				writePascalString(writer, '', 2);
-				writeSection(writer, 2, () => handler.write(writer, imageResources, i));
+				writeUint16(writer, id);
+				writePascalString(writer, name, 2);
+				writeSection(writer, 2, () => handler.write(writer, imageResources, i, psd));
 			}
 		}
 	});
@@ -319,19 +320,14 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	// image data
 	writeUint16(writer, Compression.RleCompressed); // Photoshop doesn't support zip compression of composite image data
 
-	if (RAW_IMAGE_DATA && (psd as any).imageDataRaw) {
-		console.log('writing raw image data');
-		writeBytes(writer, (psd as any).imageDataRaw);
-	} else {
-		const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
-		const data = getCompositeData(imageData, psd.width, psd.height, globalAlpha);
+	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
+	const data = getCompositeData(imageData, psd.width, psd.height, globalAlpha);
 
-		// encode directly into the writer buffer
-		const maxSize = channels.length * getRLEChannelBound(data.width, data.height, !!options.psb);
-		ensureSize(writer, writer.offset + maxSize);
-		const buffer = new Uint8Array(writer.buffer, writer.offset, maxSize);
-		writer.offset += writeDataRLE(buffer, data, channels, !!options.psb).length;
-	}
+	// encode directly into the writer buffer
+	const maxSize = channels.length * getRLEChannelBound(data.width, data.height, !!options.psb);
+	ensureSize(writer, writer.offset + maxSize);
+	const buffer = new Uint8Array(writer.buffer, writer.offset, maxSize);
+	writer.offset += writeDataRLE(buffer, data, channels, !!options.psb).length;
 }
 
 function getCompositeData(imageData: PixelData | undefined, width: number, height: number, globalAlpha: boolean): PixelData {
@@ -520,7 +516,7 @@ function writeAdditionalLayerInfo(writer: PsdWriter, target: LayerAdditionalInfo
 		let key = handler.key;
 
 		if (key === 'Txt2' && options.invalidateTextLayers) continue;
-		if (key === 'vmsk' && options.psb) key = 'vsms';
+		if (key === 'vmsk' && infoHandlersMap['vscg'].has(target)) key = 'vsms'; // Photoshop uses 'vsms' for layers with vector stroke
 
 		if (handler.has(target)) {
 			const large = options.psb && largeAdditionalInfoKeys.indexOf(key) !== -1;
@@ -632,7 +628,7 @@ function createThumbnail(psd: Psd) {
 	return canvas;
 }
 
-function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, layer: Layer, mask: LayerMaskData, options: WriteOptions, realMask: boolean) {
+function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, mask: LayerMaskData, options: WriteOptions, realMask: boolean) {
 	let top = (mask.top as any) | 0;
 	let left = (mask.left as any) | 0;
 	let right = (mask.right as any) | 0;
@@ -654,10 +650,7 @@ function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, la
 	let buffer: Uint8Array;
 	let compression: Compression;
 
-	if (RAW_IMAGE_DATA && (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw']) {
-		buffer = (layer as any)[realMask ? 'realMaskDataRaw' : 'maskDataRaw'];
-		compression = (layer as any)[realMask ? 'realMaskDataRawCompression' : 'maskDataRawCompression'];
-	} else if (!imageData) {
+	if (!imageData) {
 		buffer = new Uint8Array(0);
 		compression = Compression.RleCompressed;
 	} else if (options.compress) {
@@ -720,8 +713,8 @@ function getChannels(writer: PsdWriter, layer: Layer, background: boolean, optio
 	const tempBuffer = writer.tempBuffer!;
 	const { mask, realMask } = getMasks(source);
 	const layerData = getLayerChannels(tempBuffer, source, background, options);
-	if (mask) getMaskChannels(tempBuffer, layerData, source, mask, options, false);
-	if (realMask) getMaskChannels(tempBuffer, layerData, source, realMask, options, true);
+	if (mask) getMaskChannels(tempBuffer, layerData, mask, options, false);
+	if (realMask) getMaskChannels(tempBuffer, layerData, realMask, options, true);
 	layerData.layer = layer;
 	return layerData;
 }
@@ -803,20 +796,16 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 		ChannelID.Color2,
 	];
 
-	if (!background || options.noBackground || layer.mask || hasAlpha(imageData) || (RAW_IMAGE_DATA && (layer as any).imageDataRaw?.['-1'])) {
+	if (!background || options.noBackground || layer.mask || hasAlpha(imageData)) {
 		channelIds.unshift(ChannelID.Transparency);
 	}
 
 	channels = channelIds.map(id => {
-		const offset = offsetForChannel(id, false); // TODO: psd.colorMode === ColorMode.CMYK);
+		const offset = offsetForChannel(id, false); // image data is always RGBA
 		let data: Uint8Array;
 		let compression: Compression;
 
-		if (RAW_IMAGE_DATA && (layer as any).imageDataRaw) {
-			// console.log('written raw layer image data');
-			data = (layer as any).imageDataRaw[id];
-			compression = (layer as any).imageDataRawCompression[id];
-		} else if (options.compress) {
+		if (options.compress) {
 			data = writeDataZipWithoutPrediction(imageData, [offset]);
 			compression = Compression.ZipWithoutPrediction;
 		} else {

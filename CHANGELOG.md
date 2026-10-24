@@ -4,11 +4,29 @@
 - **BREAKING CHANGE:** CMYK colors stored in binary color structures (legacy `lrFX` effects, background color, filter mask, etc.) are now inverted on read and write (Photoshop stores 0 as 100% ink), matching CMYK colors read from descriptors
 - **BREAKING CHANGE:** Text layers with "Windows" and "Windows LCD" anti-aliasing now read as `platform` and `platformLCD` instead of `smooth`, and writing them no longer produces `sharp` anti-aliasing
 - **BREAKING CHANGE:** Hue/saturation adjustment colorize settings are now read as `colorize` and `colorization` (`hue` 0-360, `saturation`, `lightness`) fields, previously they were incorrectly read as `a`, `b`, `c`, `d` fields of `master`, which now only has `hue`, `saturation` and `lightness`
+- **BREAKING CHANGE:** Removed `pathList` field (it was always empty), saved paths are now read and written as `imageResources.savedPaths`
+- **BREAKING CHANGE:** Levels and curves adjustment layers now use `channels` array (index 0 is composite channel, followed by document color channels) instead of `rgb`, `red`, `green` and `blue` fields, previously black channel of CMYK documents (and other channels) was lost
 - Smart filters not supported by the library (Hue/Saturation, Camera Raw, Shadows/Highlights, filters stored with default settings, etc.) are now read with `type: 'unknown'` and written back unchanged, previously they were removed
 - Added support for levels smart filter
+- Added `savedPaths`, `workPath` and `clippingPath` image resources (paths from the Paths panel), previously they were not written back
+- Added support for reading CMYK documents (8 and 16 bits per channel), image data is converted to RGB using approximation of Photoshop's default U.S. Web Coated (SWOP) v2 profile
+- Added `iccProfile`, `exifData`, `iptcData`, `printStyle`, `printFlagsInfo`, `indexedColorCount`, `transparencyIndex`, `alphaChannelDisplayInfo`, `colorHalftoneScreens`, `grayscaleHalftoneScreens`, `colorTransferFunctions` and `grayscaleTransferFunctions` image resources, previously they were not written back
+- Added `generatorSettings` layer field (Generator / Export As settings), and document-level `generatorSettings` (with `assets` and `crema` fields), previously it was not written back
+- Added `printerProfileColorSpace` field to `printInformation`, grayscale printer profile was previously written as RGB, `printerProfile`, `blackPointCompensation` and `proofSetup` are no longer written with default values when missing
+- Added `buildUp` and `group` (brush groups / folders) fields to brushes read with `readAbr`
+- Added support for reading ABR version 1 and 2 files (Photoshop 6 and earlier), sampled brushes are read as brushes with `sampled` shape and sample with generated `brush-N` id
+- Added pattern `linked`, `phase`, `scale` and `angle` fields to stroke effect type (they were already read and written)
+- Fixed writing file read with `useRawData` option producing black composite image
+- Fixed writing color palette of Indexed documents into color mode data of RGB file
+- Fixed writing vector mask of layers with vector stroke as `vmsk` instead of `vsms` (and vector mask of all layers in PSB files as `vsms`), vector masks now also include path component indices like Photoshop
+- Fixed writing effects of group layers in `lfx2` / `lmfx` section instead of `lfxs`
+- Fixed writing Displace smart filter displacement map path without trailing null character
+- Fixed writing placed layer without `width` and `height` with zero size when `warp` is provided
+- Added `'Distance'` units (used by print style)
 - Added `external` field to `placedLayer` for linked smart objects, they are now written as `SoLE` without `PlLd` (like Photoshop), previously they were written as embedded smart objects
 - Added `gradient` and `interpolationMethod` fields to outer and inner glow effect types
 - Added `throwForMissingFeatures` and `totalMemoryLimit` options to `readAbr` and `logMissingFeatures` and `throwForMissingFeatures` options to `readAse`
+- Added `log` write option and `log` field to `PsdWriter`, same as for reading
 - Fixed curves smart filter without preset kind removing all smart filters of the layer
 - Added `shapeContour` field to bevel effect (contour used when `useShape` is enabled), previously it overwrote `contour` (gloss contour) and was lost when writing
 - Added `protected.all` field for "lock all" layer protection flag
@@ -26,6 +44,8 @@
 - Fixed changing explicit id of other layer when fixing duplicate layer ids
 - Fixed writing `realMask` without `mask` producing empty user mask
 - Fixed reading 16bit RLE compressed brush samples
+- Fixed brushes with transfer dynamics from older Photoshop versions being skipped when reading ABR files (`transfer.wetnessDynamics` and `transfer.mixDynamics` are now optional)
+- Fixed reading empty ABR file throwing `RangeError` instead of `Invalid ABR file` error
 - Fixed reading legacy (non-unicode) UTF-8 alpha channel names that are not valid GBK
 - Fixed empty linked file creator and type being read as `'\0\0\0\0'`
 - Fixed leading BOM being stripped only from long UTF-8 strings
@@ -44,6 +64,20 @@
 - Fixed invalid pattern channel bounds, brush sample sizes and section sizes in ABR files causing huge allocations or hangs
 - Fixed unknown sections (for example tool presets), invalid brushes and samples failing reading of whole ABR file, they are now skipped
 - Fixed ASE files with unknown blocks, unknown color modes or color types, missing color types or non-zero minor version failing to read
+- Fixed frame animations (`imageResources.animations`) being lost when stored in plug-in image resource other than 4000
+- Fixed reading files with 57 channels (56 channels and transparency, written by Photoshop CS3 for 53 alpha channels)
+- Fixed reading files with trailing bytes in image resources section or with image resources section length larger than its data (Photoshop CS2)
+- Fixed layer metadata (timestamp, animation frames, layer comps) being lost for files from Photoshop Elements (`8ELE` signature) and when one of metadata items fails to read
+- Fixed reading stroke effect size stored as number (old Photoshop versions)
+- Fixed display info (`alphaChannelDisplayInfo`) being lost when channel color uses unsupported color space, the color is kept in `rawColor` field
+- Fixed layers with unknown blend mode failing the whole file, they are read with normal blend mode (unless `throwForMissingFeatures` is set)
+- Added support for reading CMYK patterns
+- Added `colorSamplers` (Photoshop 5 color samplers) and `effectsVisible` image resources, obsolete display info resource is read into `alphaChannelDisplayInfo`
+- Added `color` and `id` fields to guides (`gridAndGuidesInformation.guides`)
+- Added `windowsDevMode` (raw printer settings) and `outputSettings` (Save for Web output settings) image resources
+- Frame info plug-in resource is written together with animations, plug-in resources are written with consecutive ids like in Photoshop
+- Added reading of uncompressed (raw RGB) thumbnails
+- Fixed JPEG thumbnails with number of planes other than 1 not being read
 
 ## v32.0.0
 - **BREAKING CHANGE:** Mask opacity (`filterMask.opacity`, `userMask.opacity` from `LMsk`, `globalLayerMaskInfo.opacity`) is now read and written using the correct 0-100 scale (Photoshop's default 50% now reads as `0.5` instead of `0.196`)

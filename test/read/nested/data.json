@@ -15,6 +15,52 @@
         "builtin": "proofCMYK"
       }
     },
+    "printStyle": {
+      "caption": false,
+      "calibrationBars": false,
+      "registrationMarks": false,
+      "cornerCropMarks": false,
+      "centerCropMarks": false,
+      "labels": false,
+      "negative": false,
+      "emulsionDown": false,
+      "interpolate": false,
+      "backgroundColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "border": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "bleed": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "resolution": {
+        "value": 71.99998474121094,
+        "units": "Pixels"
+      },
+      "vectorData": true,
+      "pagePosition": "centered",
+      "left": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "top": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "scale": 1,
+      "cropWhenPrinting": false,
+      "cropRect": {
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "right": 0
+      }
+    },
     "resolutionInfo": {
       "horizontalResolution": 71.99998474121094,
       "horizontalResolutionUnit": "PPI",
@@ -42,6 +88,119 @@
       "caption": false,
       "printFlags": true
     },
+    "printFlagsInfo": {
+      "centerCropMarks": false,
+      "bleedWidth": 0,
+      "bleedWidthScale": 1
+    },
+    "colorHalftoneScreens": [
+      {
+        "frequency": 47.399993896484375,
+        "frequencyUnits": "lines/inch",
+        "angle": 108.39999389648438,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 47.399993896484375,
+        "frequencyUnits": "lines/inch",
+        "angle": 161.60000610351562,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 50,
+        "frequencyUnits": "lines/inch",
+        "angle": 90,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 53,
+        "frequencyUnits": "lines/inch",
+        "angle": 45,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      }
+    ],
+    "colorTransferFunctions": [
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      }
+    ],
     "layerState": 0,
     "layerSelectionIds": [
       2
@@ -110,7 +269,8 @@
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CC 2019",
       "fileVersion": 1
-    }
+    },
+    "exifData": "TU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAAiAAAAcgEyAAIAAAAUAAAAlIdpAAQAAAABAAAAqAAAANQACvyAAAAnEAAK/IAAACcQQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpADIwMjE6MDg6MjAgMTg6MDg6NDkAAAOgAQADAAAAAf//AACgAgAEAAAAAQAAAAGgAwAEAAAAAQAAAAEAAAAAAAAABgEDAAMAAAABAAYAAAEaAAUAAAABAAABIgEbAAUAAAABAAABKgEoAAMAAAABAAIAAAIBAAQAAAABAAABMgICAAQAAAABAAAAAAAAAAAAAABIAAAAAQAAAEgAAAAB"
   },
   "children": [
     {

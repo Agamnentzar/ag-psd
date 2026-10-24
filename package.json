@@ -13,7 +13,7 @@
   },
   "scripts": {
     "ts": "npm run clean && tsc --watch --project tsconfig.json",
-    "test": "mocha --watch --timeout 50000 --reporter-option maxDiffSize=99999999 -R dot dist/test",
+    "test": "mocha --watch --watch-files dist --timeout 50000 --reporter-option maxDiffSize=99999999 -R dot dist/test",
     "test-single": "mocha --timeout 50000 --reporter-option maxDiffSize=99999999 -R dot dist/test",
     "lint": "tslint -c tslint.json src/ts/**/*.ts",
     "build": "npm run clean && tsc --project tsconfig.json && tsc --project tsconfig-es6.json && browserify dist/index.js --standalone agPsd -o dist/bundle.js",

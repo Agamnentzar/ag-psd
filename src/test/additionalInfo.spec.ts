@@ -584,6 +584,35 @@ describe('additionalInfo', () => {
 		expect((psd.children![0].adjustment as GradientMapAdjustment).method).equal('linear');
 	});
 
+	it('reads metadata items with 8ELE signature (Photoshop Elements)', () => {
+		const buffer = new Uint8Array(writeHandler('shmd', { timestamp: 1688087424.5 }, { width: 10, height: 10 }));
+		const offset = Buffer.from(buffer).indexOf('8BIMcust');
+		expect(offset).greaterThan(0);
+		buffer.set(Buffer.from('8ELE', 'latin1'), offset);
+		expect(readHandler('shmd', buffer.buffer).timestamp).equal(1688087424.5);
+	});
+
+	it('reads other metadata items if one of them fails to read', () => {
+		const comps = { settings: [{ compList: [1], enabled: true }] };
+		const buffer = new Uint8Array(writeHandler('shmd', { id: 1, timestamp: 1688087424.5, comps }, { width: 10, height: 10 }));
+		// corrupt value type of layerTime in 'cust' item
+		const offset = Buffer.from(buffer).indexOf('layerTimedoub');
+		expect(offset).greaterThan(0);
+		buffer.set(Buffer.from('xxxx', 'latin1'), offset + 9);
+		const target = readHandler('shmd', buffer.buffer);
+		expect(target.timestamp).undefined;
+		expect(target.comps).eql(comps);
+	});
+
+	it('round-trips layer generator settings', () => {
+		const generatorSettings: Layer['generatorSettings'] = {
+			exportAs: { exportOption: '{"format":"JPG","scale":1}', scaleSettings: '[{"size":1}]' },
+			layerTime: 1716984064.42108,
+		};
+		const psd = roundTrip({ width: 10, height: 10, children: [{ name: 'a', generatorSettings }] });
+		expect(psd.children![0].generatorSettings).eql(generatorSettings);
+	});
+
 	it('round-trips "lock all" protection flag', () => {
 		const psd = roundTrip({
 			width: 10, height: 10,
@@ -639,5 +668,122 @@ describe('additionalInfo', () => {
 		});
 		expect(psd.linkedFiles![0].creator).undefined;
 		expect(psd.linkedFiles![0].type).undefined;
+	});
+
+	it('round-trips curves and levels for all channels (including CMYK black)', () => {
+		const curve = (y: number) => [{ input: 0, output: 0 }, { input: 128, output: y }, { input: 255, output: 255 }];
+		const level = (shadowInput: number) => ({ shadowInput, highlightInput: 255, shadowOutput: 0, highlightOutput: 255, midtoneInput: 1 });
+		const defaultLevel = level(0);
+
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [
+				{ name: 'curves', adjustment: { type: 'curves', channels: [curve(100), [], [], [], curve(150)] } },
+				{ name: 'levels', adjustment: { type: 'levels', channels: [level(10), defaultLevel, defaultLevel, defaultLevel, level(20)] } },
+			],
+		});
+
+		expect(psd.children![0].adjustment).eql({ type: 'curves', channels: [curve(100), [], [], [], curve(150)] });
+		expect(psd.children![1].adjustment).eql({ type: 'levels', channels: [level(10), defaultLevel, defaultLevel, defaultLevel, level(20)] });
+	});
+
+	it('skips trailing default channels of levels', () => {
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [{ name: 'levels', adjustment: { type: 'levels', channels: [] } }],
+		});
+
+		expect(psd.children![0].adjustment).eql({ type: 'levels', channels: [] });
+	});
+
+	it('writes effects of group layers in lfxs section', () => {
+		const effects = { dropShadow: [{ enabled: true, size: { units: 'Pixels' as const, value: 5 } }] };
+		const psd: Psd = {
+			width: 10, height: 10,
+			children: [{ name: 'group', effects, children: [{ name: 'layer', effects }] }],
+		};
+		const buffer = Buffer.from(writePsdBuffer(psd));
+
+		expect(buffer.indexOf('8BIMlfxs')).not.equal(-1);
+		expect(buffer.indexOf('8BIMlfx2')).not.equal(-1); // child layer
+		expect(buffer.indexOf('8BIMlfxs')).equal(buffer.lastIndexOf('8BIMlfxs'));
+
+		const result = readPsd(buffer, readOpts);
+		expect(result.children![0].effects!.dropShadow![0].size).eql({ units: 'Pixels', value: 5 });
+		expect(result.children![0].children![0].effects!.dropShadow![0].size).eql({ units: 'Pixels', value: 5 });
+	});
+
+	it('writes vector mask as vsms only for layers with vector stroke', () => {
+		const vectorMask = { paths: [{ open: false, fillRule: 'even-odd' as const, knots: [{ linked: false, points: [0, 0, 0, 0, 0, 0] }] }] };
+		const psd: Psd = {
+			width: 10, height: 10,
+			children: [
+				{ name: 'fill', vectorMask, vectorFill: { type: 'color', color: { r: 255, g: 0, b: 0 } } },
+				{ name: 'stroke', vectorMask, vectorFill: { type: 'color', color: { r: 255, g: 0, b: 0 } }, vectorStroke: { strokeEnabled: true } },
+			],
+		};
+
+		for (const psb of [false, true]) {
+			const buffer = Buffer.from(writePsdBuffer(psd, { psb }));
+			expect(buffer.indexOf('8BIMvmsk'), `psb: ${psb}`).not.equal(-1);
+			expect(buffer.indexOf('8BIMvmsk'), `psb: ${psb}`).equal(buffer.lastIndexOf('8BIMvmsk'));
+			expect(buffer.indexOf('8BIMvsms'), `psb: ${psb}`).not.equal(-1);
+			expect(buffer.indexOf('8BIMvsms'), `psb: ${psb}`).equal(buffer.lastIndexOf('8BIMvsms'));
+		}
+	});
+
+	it('writes path component index in vector mask', () => {
+		const knots = [{ linked: false, points: [0, 0, 0, 0, 0, 0] }];
+		const target = {
+			vectorMask: {
+				paths: [
+					{ open: false, fillRule: 'even-odd' as const, operation: 'combine' as const, knots },
+					{ open: false, fillRule: 'even-odd' as const, knots }, // part of the previous component
+					{ open: false, fillRule: 'even-odd' as const, operation: 'subtract' as const, knots },
+				],
+			},
+		};
+		const buffer = new Uint8Array(writeHandler('vmsk', target, { width: 10, height: 10 }));
+		const view = new DataView(buffer.buffer, buffer.byteOffset);
+		const indices: number[] = [];
+
+		for (let offset = 8; offset + 26 <= buffer.byteLength; offset += 26) {
+			if (view.getUint16(offset) === 0) indices.push(view.getUint32(offset + 12));
+		}
+
+		expect(indices).eql([0, 0, 1]);
+	});
+
+	it('writes placed layer size from warp bounds if width and height are missing', () => {
+		const warp = {
+			style: 'custom' as const,
+			bounds: {
+				top: { units: 'Pixels' as const, value: 0 },
+				left: { units: 'Pixels' as const, value: 0 },
+				bottom: { units: 'Pixels' as const, value: 20 },
+				right: { units: 'Pixels' as const, value: 30 },
+			},
+			uOrder: 4,
+			vOrder: 4,
+		};
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [{ name: 'a', placedLayer: { id: guid1, type: 'raster', transform: [0, 0, 30, 0, 30, 20, 0, 20], warp } }],
+		});
+
+		expect(psd.children![0].placedLayer!.width).equal(30);
+		expect(psd.children![0].placedLayer!.height).equal(20);
+	});
+
+	it('round-trips document generator settings (extn)', () => {
+		const generatorSettings = { assets: '{"enabled":true}', layerTime: 1, crema: '{"docSettings":{}}' };
+		const psd = roundTrip({
+			width: 10, height: 10,
+			generatorSettings,
+			children: [{ name: 'a', generatorSettings: { exportAs: { scaleSettings: '[{"size":1}]' }, layerTime: 2 } }],
+		});
+
+		expect(psd.generatorSettings).eql(generatorSettings);
+		expect(psd.children![0].generatorSettings).eql({ exportAs: { scaleSettings: '[{"size":1}]' }, layerTime: 2 });
 	});
 });

@@ -45,7 +45,7 @@ const psd: Psd = {
     Lab = 9,
   }
   ```
-  The library supports reading "Bitmap", "Grayscale", "Indexed" and "RGB" color modes at the moment. Image data of "Bitmap", "Grayscale" and "Indexed" documents will be converted to RGB when reading PSD file (the `colorMode` field keeps the original value). Writing is only supported for "RGB" mode. The value is ignored when writing and "RGB" color mode is always used.
+  The library supports reading "Bitmap", "Grayscale", "Indexed", "RGB" and "CMYK" color modes at the moment. Image data of "Bitmap", "Grayscale", "Indexed" and "CMYK" documents will be converted to RGB when reading PSD file (the `colorMode` field keeps the original value). CMYK image data is converted using approximation of U.S. Web Coated (SWOP) v2 profile (Photoshop's default CMYK profile), embedded color profile (`imageResources.iccProfile`) is not used, so colors of documents using other profiles can differ slightly from Photoshop. 32 bit CMYK documents are not supported. Writing is only supported for "RGB" mode. The value is ignored when writing and "RGB" color mode is always used.
 
 - `palette` list of 256 RGB colors used by "Indexed" color mode, this property is only present when reading documents in "Indexed" color mode. It can be omitted when writing.
 
@@ -120,7 +120,7 @@ const psd: Psd = {
   }
   ```
 
-  Reading supports raw and RLE compressed patterns in RGB and Grayscale color modes and raw (uncompressed) patterns in Indexed color mode, all of them are converted to RGBA pixel data. Zip-compressed, RLE compressed Indexed and 16-bit patterns are not supported. Patterns are always written in RGB color mode. Layer-effect pattern references (Pattern Overlay, stroke/vector fill) only carry a `name`/`id` and are not linked to these resources.
+  Reading supports raw and RLE compressed 8, 16 and 32 bit patterns in RGB, Grayscale, Indexed and CMYK color modes, all of them are converted to 8 bit RGBA pixel data. Zip-compressed patterns and patterns in other color modes are not supported (they are skipped). Patterns are always written in RGB color mode. Layer-effect pattern references (Pattern Overlay, stroke/vector fill) only carry a `name`/`id` and are not linked to these resources.
 
 ## Bitmaps and image data
 
@@ -290,6 +290,8 @@ Example layer structure:
 
 - `timestamp` timestamp of last time layer was modified (in unix time). Can be omitted when writing.
 
+- `generatorSettings` Generator (Export As) settings of the layer, `exportOption` and `scaleSettings` are JSON strings. The same field on the document (`Psd` object) holds document generator settings, which can also have `assets` (Generator image assets settings) and `crema` (Export As document settings) JSON strings. Can be omitted when writing.
+
 - `transparencyProtected` and `protected` properties specify status of various locks that you can set for each layer.
 
   ![](/files/locks.png)
@@ -322,9 +324,9 @@ Example layer structure:
 
   ![](/files/layer-color.png)
 
-- `version` _unknown functionality_
+- `version` layer version, the Photoshop version of the layer format (`70` - Photoshop 7, `80` - CS, `110` - CS4, `120` - CS5, `130` - CS6 and newer versions). Internal Photoshop information, can be omitted when writing.
 
-- `referencePoint` _unknown functionality_
+- `referencePoint` reference point of the layer (`x`, `y` in pixels). Photoshop updates it when the layer is moved, to keep content aligned to the layer position, like patterns of pattern overlay effect. It's `{ x: 0, y: 0 }` for layers that were never moved. Can be omitted when writing.
 
 - `mask` Layer mask, property has the following structure.
 
@@ -431,13 +433,32 @@ Example layer structure:
 	}
   ```
 
-- `vectorMask` Specifies vector mask used by `vectorFill` and `vectorStroke` to draw vector images.
+- `vectorMask` Specifies vector mask used by `vectorFill` and `vectorStroke` to draw vector images. For layers without `vectorFill` it acts as a regular vector mask of the layer (clipping layer content to the path). This property has following structure:
 
-   _TODO: expand this description_
+  ```ts
+  type LayerVectorMask = {
+    invert?: boolean; // mask is inverted
+    notLink?: boolean; // mask is not linked to the layer (doesn't move with layer content)
+    disable?: boolean; // mask is disabled
+    fillStartsWithAllPixels?: boolean; // initial fill rule, area outside of all paths is filled
+    clipboard?: { top: number; left: number; bottom: number; right: number; resolution: number; }; // clipboard record, raw values
+    paths: BezierPath[];
+  };
 
-- `usingAlignedRendering` _unknown functionality_
+  type BezierPath = {
+    open: boolean; // path is open (not closed)
+    operation?: 'combine' | 'subtract' | 'intersect' | 'exclude'; // how the path is combined with previous paths
+    fillRule: 'even-odd' | 'non-zero';
+    knots: BezierKnot[];
+  };
 
-- `pathList` _not supported yet_
+  type BezierKnot = {
+    linked: boolean; // control points are linked (smooth point)
+    points: number[]; // [x0, y0, x1, y1, x2, y2] - preceding control point, anchor point and leaving control point in pixels
+  };
+  ```
+
+- `usingAlignedRendering` "Align Edges" option of shape layers, snaps vector shape edges to pixel grid. Photoshop stores it on shape layers.
 
 - `adjustment` indicates that the layer is an adjustment layer. Adjustment layer do not have image data. This property is not present on non-adjustment layers.
 
@@ -461,9 +482,36 @@ Example layer structure:
 
 - `placedLayer` indicates that this is smart object layer, see [Smart Objects section](#smart-objects) for more information. This property is only present on smart object layers.
 
-- `vectorOrigination` _TODO_
+- `vectorOrigination` Live shape properties of shape layers (shapes drawn with rectangle, ellipse, polygon, line, etc. tools that keep their original parameters editable in Properties panel). Contains one item in `keyDescriptorList` for each live shape in the layer's vector mask. Each item has the following structure:
 
-- `compositorUsed` _internal photoshop information_
+  ```ts
+  type KeyDescriptorItem = {
+    keyOriginType?: number; // shape type: 1 - rectangle, 2 - rounded rectangle, 4 - line, 5 - ellipse, 8 - polygon
+    keyOriginResolution?: number; // document resolution the shape was created with
+    keyOriginRRectRadii?: { topRight: UnitsValue; topLeft: UnitsValue; bottomLeft: UnitsValue; bottomRight: UnitsValue; }; // corner radii of the rectangle
+    keyOriginShapeBoundingBox?: { top: UnitsValue; left: UnitsValue; bottom: UnitsValue; right: UnitsValue; }; // bounds of the shape
+    keyOriginBoxCorners?: { x: number; y: number; }[]; // 4 corners of the shape bounding box (top-left, top-right, bottom-right, bottom-left)
+    transform?: number[]; // 2d transform matrix of the shape [xx, xy, yx, yy, tx, ty]
+    keyShapeInvalidated?: boolean; // shape path was edited directly and is no longer a live shape
+  };
+  ```
+
+- `compositorUsed` information about the compositing engine Photoshop used to render the image when saving the file. It's informational only and doesn't need to be provided when writing. Photoshop stores it on the document (`Psd` object), not on individual layers. Example value:
+
+  ```js
+  compositorUsed: {
+    description: '',
+    reason: '',
+    engine: 'compCoreGPU', // 'compCore', 'compCoreGPU' or 'umerge' (older compositor, used when CompCore is disabled)
+    version: { major: 1, minor: 3, fix: 0 }, // compositor version
+    photoshopVersion: { major: 27, minor: 7, fix: 0 },
+    enableCompCore: 'feature',
+    enableCompCoreGPU: 'feature',
+    enableCompCoreThreads: 'feature',
+    compCoreSupport: 'supported', // 'supported' or 'featureDisabled'
+    compCoreGPUSupport: 'supported', // 'supported' or 'featureDisabled'
+  }
+  ```
 
 - `artboard` Artboard location and parameters, this property is only present when using artboards. Artboard object has the following structure:
 
@@ -585,7 +633,7 @@ Image resources are global document settings, stored in `psd.imageResources` fie
   }
   ```
 
-- `gridAndGuidesInformation` Information about document grid and guides. Guide `location` is specified in pixels, `grid` values are specified in 1/32 pixel units (`576` is 18 pixels).
+- `gridAndGuidesInformation` Information about document grid and guides. Guide `location` is specified in pixels, `grid` values are specified in 1/32 pixel units (`576` is 18 pixels). Guides can also have `color` (RGB, Photoshop default is `{ r: 74, g: 255, b: 255 }`) and unique `id` (GUID string), guide ids are only written if all guides have them.
 
   ![](/files/guides.png)
   
@@ -600,7 +648,9 @@ Image resources are global document settings, stored in `psd.imageResources` fie
     "guides": [
       {
         "location": 531.4375,
-        "direction": "vertical" // "horizontal" or "vertical"
+        "direction": "vertical", // "horizontal" or "vertical"
+        "color": { "r": 74, "g": 255, "b": 255 },
+        "id": "8544d157-6d38-7249-8b2c-56d4a2d49c08"
       },
       // ... more guides here ...
     ]
@@ -622,13 +672,33 @@ Image resources are global document settings, stored in `psd.imageResources` fie
 
 - `thumbnail` Canvas element with thumbnail image for the document, this property can be missing in some PSD files. This property can be omitted when writing if there's no need to support thumbnails, this field can be automatically generated from composite image data if `generateThumbnail: true` option is passed to `writePsd` function.
 
-- `thumbnailRaw` This property will be used instead if `useRawThumbnail` option is specified when reading PSD file. It contains `width`, `height` and `data` (JPEG encoded thumbnail) fields.
+- `thumbnailRaw` This property will be used instead if `useRawThumbnail` option is specified when reading PSD file. It contains `width`, `height` and `data` (JPEG encoded thumbnail) fields. Uncompressed (raw RGB) thumbnails are only read into `thumbnail` field.
 
 - `xmpMetadata` XMP metadata. File info as XML description. See http://www.adobe.com/devnet/xmp/
 
 - `iccUntaggedProfile` ICC Untagged Profile
 
-- `printInformation`, `printScale` and `printFlags` Specifies options for printing the document.
+- `iccProfile` raw ICC color profile data (`Uint8Array`).
+
+- `exifData` raw EXIF data (`Uint8Array`, TIFF format).
+
+- `iptcData` raw IPTC-NAA record (`Uint8Array`).
+
+- `windowsDevMode` raw Windows DEVMODE structure with printer settings (`Uint8Array`).
+
+- `outputSettings` Save for Web output settings, raw descriptor object (with `_name` and `_classID` fields), written back unchanged.
+
+- `colorHalftoneScreens`, `grayscaleHalftoneScreens`, `colorTransferFunctions` and `grayscaleTransferFunctions` halftone screens and transfer functions used for printing.
+
+- `printInformation`, `printScale`, `printFlags`, `printFlagsInfo` and `printStyle` Specifies options for printing the document.
+
+- `indexedColorCount` and `transparencyIndex` number of used colors and index of transparent color of "Indexed" color mode palette, pixels with transparent color are read as transparent in composite image.
+
+- `alphaChannelDisplayInfo` display options (color, opacity and kind) of alpha and spot channels, in the same order as `alphaChannelNames`. Colors in color spaces not supported by the library are stored in `rawColor` field (color space id and 4 raw values) instead of `color`. Obsolete display info resource (Photoshop 5) is also read into this field, it is always written in the newer format.
+
+- `colorSamplers` positions (in pixels) and color spaces of color samplers (Photoshop 5 format).
+
+- `effectsVisible` global flag to show or hide all layer effects (Photoshop only writes it when effects are hidden).
 
 - `layerComps` list of layer comps defined in the document, per-layer settings are stored in `comps` field of each layer.
 
@@ -640,18 +710,44 @@ Image resources are global document settings, stored in `psd.imageResources` fie
 
 - `copyrighted` and `url` copyright status and URL from File Info dialog.
 
-- `layerState` _TODO_
-- `alphaIdentifiers` _TODO_
-- `alphaChannelNames` _TODO_
-- `globalAngle` _TODO_
-- `globalAltitude` _TODO_
-- `urlsList` _TODO_
-- `captionDigest` _TODO_
-- `backgroundColor` _TODO_
-- `idsSeedNumber` _TODO_
-- `pathSelectionState` _TODO_
-- `imageReadyVariables` _TODO_
-- `imageReadyDataSets` _TODO_
+- `layerState` index of the target (active) layer, `0` is the bottom layer.
+
+- `alphaChannelNames` names of alpha channels (saved selections) and spot channels stored in the composite image, in channel order. Photoshop also lists merged transparency as the first channel named `"Transparency"` in some documents. Written to both the legacy (Pascal string) and the unicode image resource.
+
+- `alphaIdentifiers` unique identifiers of alpha channels, in the same order as `alphaChannelNames`.
+
+- `globalAngle` and `globalAltitude` global light angle (in degrees) and altitude (in degrees) used by layer effects with `useGlobalLight` option enabled.
+
+- `urlsList` list of URLs assigned to slices, `id` is the id of the slice (`ref` is always `'slice'`).
+
+- `captionDigest` MD5 digest of the IPTC data (`iptcData`), as 32 character hex string.
+
+- `backgroundColor` background color of the color picker (tools panel) at the time the document was saved.
+
+- `idsSeedNumber` base value that new layer IDs are generated from (Photoshop uses higher value if existing IDs already exceed it).
+
+- `pathSelectionState` reference to selected path in the paths panel, for example `['Path.vectorMask', 'Rectangle 1']` for vector mask of the layer named "Rectangle 1", or `['Ordn.Trgt']` for the target path.
+
+- `savedPaths` saved paths from the Paths panel. Path data uses the same structure as layer `vectorMask` (points are in document pixels):
+
+  ```ts
+  type SavedPath = {
+    name: string;
+    symmetryMode?: string; // raw enum value from paths with symmetry, e.g. 'pathSymmetryModeBasicPath'
+    fillStartsWithAllPixels?: boolean;
+    clipboard?: { top: number; left: number; bottom: number; right: number; resolution: number; };
+    paths: BezierPath[];
+    vectorOrigination?: { keyDescriptorList: KeyDescriptorItem[]; }; // live shape properties, same as layer `vectorOrigination`
+  };
+  ```
+
+  Photoshop stores each path in a separate image resource (named using legacy encoding, non-ASCII characters are written as `?`) and unicode names in `pths` additional info, which is written whenever `savedPaths` is set (Photoshop writes empty `pths` for documents without paths, which reads as an empty array).
+
+- `workPath` temporary "Work Path" from the Paths panel, same structure as saved path without `name`.
+
+- `clippingPath` saved path used as clipping path (when placing image in other applications), `name` refers to name of one of `savedPaths`, `flatness` is in device pixels (`0` for printer default).
+
+- `imageReadyVariables` and `imageReadyDataSets` XML of variables and data sets (Image > Variables), stored as raw strings.
 
 ## Smart Objects
 

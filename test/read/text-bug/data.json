@@ -5,6 +5,7 @@
   "bitsPerChannel": 8,
   "colorMode": 3,
   "imageResources": {
+    "iptcData": "HAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwBWgADGyVHHAFaAAMbJUccAVoAAxslRxwCAAACAAA=",
     "captionDigest": "eae15362e1895a37e00cda8f2fe9ec1b",
     "printInformation": {
       "printerName": "",
@@ -13,6 +14,52 @@
       "printSixteenBit": false,
       "proofSetup": {
         "builtin": "proofCMYK"
+      }
+    },
+    "printStyle": {
+      "caption": false,
+      "calibrationBars": false,
+      "registrationMarks": false,
+      "cornerCropMarks": false,
+      "centerCropMarks": false,
+      "labels": false,
+      "negative": false,
+      "emulsionDown": false,
+      "interpolate": false,
+      "backgroundColor": {
+        "r": 255,
+        "g": 255,
+        "b": 255
+      },
+      "border": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "bleed": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "resolution": {
+        "value": 72,
+        "units": "Pixels"
+      },
+      "vectorData": true,
+      "pagePosition": "centered",
+      "left": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "top": {
+        "value": 0,
+        "units": "Distance"
+      },
+      "scale": 1,
+      "cropWhenPrinting": false,
+      "cropRect": {
+        "top": 0,
+        "left": 0,
+        "bottom": 0,
+        "right": 0
       }
     },
     "resolutionInfo": {
@@ -47,6 +94,119 @@
       "caption": false,
       "printFlags": true
     },
+    "printFlagsInfo": {
+      "centerCropMarks": false,
+      "bleedWidth": 0,
+      "bleedWidthScale": 2
+    },
+    "colorHalftoneScreens": [
+      {
+        "frequency": 47.399993896484375,
+        "frequencyUnits": "lines/inch",
+        "angle": 108.39999389648438,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 47.399993896484375,
+        "frequencyUnits": "lines/inch",
+        "angle": 161.60000610351562,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 50,
+        "frequencyUnits": "lines/inch",
+        "angle": 90,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      },
+      {
+        "frequency": 53,
+        "frequencyUnits": "lines/inch",
+        "angle": 45,
+        "shape": "diamond",
+        "accurateScreens": false,
+        "printerDefaultScreens": true
+      }
+    ],
+    "colorTransferFunctions": [
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      },
+      {
+        "curve": [
+          0,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          -1,
+          1000
+        ],
+        "override": false
+      }
+    ],
     "layerState": 6,
     "layerSelectionIds": [],
     "gridAndGuidesInformation": {
@@ -112,6 +272,12 @@
       "writerName": "Adobe Photoshop",
       "readerName": "Adobe Photoshop CC 2019",
       "fileVersion": 1
+    },
+    "exifData": "TU0AKgAAAAgABwESAAMAAAABAAEAAAEaAAUAAAABAAAAYgEbAAUAAAABAAAAagEoAAMAAAABAAIAAAExAAIAAAAiAAAAcgEyAAIAAAAUAAAAlIdpAAQAAAABAAAAqAAAANQACvyAAAAnEAAK/IAAACcQQWRvYmUgUGhvdG9zaG9wIENDIDIwMTkgKFdpbmRvd3MpADIwMjE6MDU6MjIgMDc6NTM6NTUAAAOgAQADAAAAAf//AACgAgAEAAAAAQAAB4CgAwAEAAAAAQAABM0AAAAAAAAABgEDAAMAAAABAAYAAAEaAAUAAAABAAABIgEbAAUAAAABAAABKgEoAAMAAAABAAIAAAIBAAQAAAABAAABMgICAAQAAAABAAAAAAAAAAAAAABIAAAAAQAAAEgAAAAB",
+    "outputSettings": {
+      "_name": "",
+      "_classID": "null",
+      "Version": 0
     }
   },
   "children": [
