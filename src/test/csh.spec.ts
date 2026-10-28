@@ -31,4 +31,19 @@ describe('CSH', () => {
 			expect(csh).eql(expected, f);
 		});
 	});
+
+	it('throws regular error for bezier knot without subpath length record', () => {
+		const bytes: number[] = [];
+		const u32 = (v: number) => bytes.push((v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff);
+		bytes.push(...Buffer.from('cush', 'latin1'));
+		u32(2); // version
+		u32(1); // count
+		u32(0); // empty name (already aligned to 4 bytes)
+		u32(1); // shape version
+		u32(1 + 16 + 26); // size
+		bytes.push(0); // empty id
+		u32(0); u32(0); u32(10); u32(10); // bounds
+		bytes.push(0, 1, ...new Array(24).fill(0)); // closed subpath bezier knot, linked
+		expect(() => readCsh(new Uint8Array(bytes))).throw(Error, 'Bezier knot record without subpath length record');
+	});
 });

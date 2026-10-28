@@ -31,21 +31,48 @@ export interface ResourceHandler {
 	read: (reader: PsdReader, target: InternalImageResources, left: () => number, info: ResourceInfo) => void;
 	write: (writer: PsdWriter, target: InternalImageResources, index: number, document: ResourceDocumentInfo) => void;
 	name?: (target: InternalImageResources, index: number) => string;
+	fields: string[]; // fields of image resources stored in this resource
 }
 
 export const resourceHandlers: ResourceHandler[] = [];
 export const resourceHandlersMap: { [key: number]: ResourceHandler } = {};
+
+// fields accessed by `has` function, these are the fields that writer stores in the resource
+function fieldsCheckedBy(has: (target: InternalImageResources) => boolean | number) {
+	const fields: string[] = [];
+	const target = new Proxy({}, {
+		get(_, field) {
+			if (typeof field === 'string' && !fields.includes(field)) fields.push(field);
+			return undefined;
+		},
+	});
+
+	try {
+		has(target);
+	} catch { }
+
+	return fields;
+}
 
 function addHandler(
 	key: number,
 	has: (target: InternalImageResources) => boolean | number,
 	read: (reader: PsdReader, target: InternalImageResources, left: () => number, info: ResourceInfo) => void,
 	write: (writer: PsdWriter, target: InternalImageResources, index: number, document: ResourceDocumentInfo) => void,
-	options: { keyCount?: number; name?: (target: InternalImageResources, index: number) => string; } = {},
+	options: { keyCount?: number; name?: (target: InternalImageResources, index: number) => string; fields?: string[]; } = {},
 ) {
-	const handler: ResourceHandler = { key, keyCount: options.keyCount ?? 1, has, read, write, name: options.name };
+	const fields = options.fields ?? fieldsCheckedBy(has);
+	const handler: ResourceHandler = { key, keyCount: options.keyCount ?? 1, has, read, write, name: options.name, fields };
 	resourceHandlers.push(handler);
 	for (let i = 0; i < handler.keyCount; i++) resourceHandlersMap[handler.key + i] = handler;
+}
+
+// resources used when reading layers and composite image, they're always read
+const requiredFields = ['layersGroup', 'layerGroupsEnabledId', 'alphaChannelNames', 'transparencyIndex'];
+
+// returns false if resource should be skipped because none of its fields are listed in `imageResourcesWhitelist` read option
+export function shouldReadResource(handler: ResourceHandler, whitelist: string[] | undefined) {
+	return !whitelist || handler.fields.some(field => whitelist.includes(field) || requiredFields.includes(field));
 }
 
 const LOG_MOCK_HANDLERS = false;
@@ -500,6 +527,7 @@ addHandler(
 		if (!target.alphaChannelDisplayInfo) target.alphaChannelDisplayInfo = info;
 	},
 	() => { },
+	{ fields: ['alphaChannelDisplayInfo'] }, // never written, so `has` doesn't check any fields
 );
 
 addHandler(
@@ -1484,7 +1512,7 @@ addHandler(
 
 			if (!target.slices) target.slices = [];
 			target.slices.push({
-				groupName: desc.baseName,
+				groupName: desc.baseName ?? '',
 				bounds: boundsFromBounds(desc.bounds),
 				slices: desc.slices.map(s => ({
 					...(s['Nm  '] ? { name: s['Nm  '] } : {}),

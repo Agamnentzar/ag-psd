@@ -654,6 +654,7 @@
       "bottom": 256,
       "right": 256,
       "depth": 8,
+      "colorMode": 3,
       "channels": [
         {
           "compressionMode": 3,

@@ -1,9 +1,9 @@
 import { Inflate } from 'pako';
-import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression } from './psd';
+import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression, FilterEffectsMask } from './psd';
 import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, largeAdditionalInfoKeys, largeAdditionalInfoKeysObserved, imageDataToCanvas, normalizeLabAB, cmykToRgbValues } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { decodeString } from './utf8';
-import { InternalImageResources, resourceHandlersMap } from './imageResources';
+import { InternalImageResources, resourceHandlersMap, shouldReadResource } from './imageResources';
 
 interface ChannelInfo {
 	id: ChannelID;
@@ -139,6 +139,9 @@ export function readFixedPointPath32(reader: PsdReader): number {
 
 // NOTE: returned array may alias the reader's underlying buffer, never write into it
 export function readBytes(reader: PsdReader, length: number) {
+	// negative length comes from sizes computed from malformed data (e.g. section shorter than its header)
+	if (!(length >= 0)) throw new Error(`Invalid length: ${length}`);
+
 	const start = reader.offset;
 	const viewLength = reader.view.byteLength;
 	reader.offset += length;
@@ -368,14 +371,19 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 
 			readSection(reader, 2, left => {
 				const handler = resourceHandlersMap[id];
-				const skip = id === 1036 && !!reader.skipThumbnail;
 
-				if (handler && !skip) {
-					try {
-						handler.read(reader, imageResources, left, { signature, id, name, width, height });
-					} catch (e) {
-						if (reader.throwForMissingFeatures) throw e;
+				if (handler) {
+					const skip = (id === 1036 && !!reader.skipThumbnail) || !shouldReadResource(handler, reader.imageResourcesWhitelist);
+
+					if (skip) {
 						skipBytes(reader, left());
+					} else {
+						try {
+							handler.read(reader, imageResources, left, { signature, id, name, width, height });
+						} catch (e) {
+							if (reader.throwForMissingFeatures) throw e;
+							skipBytes(reader, left());
+						}
 					}
 				} else {
 					reader.logMissingFeatures && reader.log(`Unhandled image resource: ${id} (${left()})`);
@@ -805,6 +813,73 @@ export function getLayerMaskCanvas(layer: Layer) {
 
 export function getLayerRealMaskCanvas(layer: Layer) {
 	return imageDataToCanvasSafe(getLayerRealMaskImageData(layer));
+}
+
+export function getFilterEffectsMaskImageData(mask: FilterEffectsMask) {
+	const { depth, channels, colorMode = ColorMode.RGB } = mask;
+	const width = Math.max(0, mask.right - mask.left);
+	const height = Math.max(0, mask.bottom - mask.top);
+	if (!width || !height) return undefined;
+
+	const cmyk = colorMode === ColorMode.CMYK;
+	if (cmyk && depth !== 8 && depth !== 16) throw new Error('bitsPerChannel not supported');
+
+	const step = cmyk ? 5 : 4;
+	// channels are color channels, followed by user mask and transparency
+	const transparencyIndex = channels.length - 1;
+	const colorChannels = Math.min(cmyk ? 4 : (colorMode === ColorMode.Grayscale ? 1 : 3), channels.length - 2);
+	let imageData = createImageDataBitDepth(width, height, depth, step, undefined);
+
+	for (let i = 0; i < channels.length; i++) {
+		const channel = channels[i];
+		if (!channel) continue;
+
+		if (i < colorChannels) {
+			readFilterEffectsChannel(channel, imageData, width, height, depth, i, step);
+		} else if (i === transparencyIndex) {
+			readFilterEffectsChannel(channel, imageData, width, height, depth, step - 1, step);
+		}
+	}
+
+	if (colorMode === ColorMode.Grayscale) setupGrayscale(imageData);
+	if (!channels[transparencyIndex]) resetAlpha(imageData, cmyk);
+
+	if (cmyk) {
+		const cmykData = imageData;
+		imageData = createImageDataBitDepth(cmykData.width, cmykData.height, depth, 4, undefined);
+		cmykToRgb(cmykData, imageData, false);
+	}
+
+	return imageData;
+}
+
+export function getFilterEffectsMaskExtraImageData(mask: FilterEffectsMask) {
+	const { extra, depth } = mask;
+	if (!extra) return undefined;
+
+	const width = Math.max(0, extra.right - extra.left);
+	const height = Math.max(0, extra.bottom - extra.top);
+	if (!width || !height) return undefined;
+
+	const maskData = createImageDataBitDepth(width, height, depth, 4, undefined);
+	readFilterEffectsChannel(extra, maskData, width, height, depth, 0, 4);
+	setupGrayscale(maskData);
+	resetAlpha(maskData, false);
+	return maskData;
+}
+
+export function getFilterEffectsMaskCanvas(mask: FilterEffectsMask) {
+	return imageDataToCanvasSafe(getFilterEffectsMaskImageData(mask));
+}
+
+export function getFilterEffectsMaskExtraCanvas(mask: FilterEffectsMask) {
+	return imageDataToCanvasSafe(getFilterEffectsMaskExtraImageData(mask));
+}
+
+function readFilterEffectsChannel({ compressionMode, data }: { compressionMode: Compression; data: Uint8Array; }, pixels: PixelData, width: number, height: number, depth: number, offset: number, step: number) {
+	const reader = createReader(data.buffer, data.byteOffset, data.byteLength);
+	// RLE row lengths are always 4 bytes, same as in PSB files
+	readData(reader, data.byteLength, pixels, compressionMode, width, height, depth, offset, true, step);
 }
 
 function imageDataToCanvasSafe(imageData: PixelData | undefined) {
@@ -1346,12 +1421,12 @@ function decodePredicted(data: Uint8Array, width: number, height: number) {
 const zipOverflow = new Error('Decompressed data exceeds expected size');
 
 // inflates data, stopping when output exceeds expected size (protects against zip bombs)
-function inflateLimited(compressed: Uint8Array, expectedSize: number, reader: PsdReader | undefined) {
+function inflateLimited(compressed: Uint8Array, expectedSize: number, reader: PsdReader | undefined, raw = false): Uint8Array {
 	const output = new Uint8Array(expectedSize);
 	let position = 0;
 	let overflow = false;
 
-	const inflator = new Inflate({ chunkSize: Math.max(1024, Math.min(expectedSize, 0x10000)) });
+	const inflator = new Inflate({ chunkSize: Math.max(1024, Math.min(expectedSize, 0x10000)), raw });
 	inflator.onData = (chunk: any) => {
 		const data = chunk as Uint8Array;
 		const count = Math.min(data.length, expectedSize - position);
@@ -1377,6 +1452,10 @@ function inflateLimited(compressed: Uint8Array, expectedSize: number, reader: Ps
 
 	if (overflow) {
 		if (reader) warnOrThrow(reader, zipOverflow.message);
+	} else if (inflator.err && inflator.msg === 'incorrect data check' && !raw) {
+		// some files have zeroed checksum (filter effects masks written by Photoshop), inflate again skipping zlib header and checksum
+		if (reader) warnOrThrow(reader, `Invalid zip data: ${inflator.msg}`);
+		return inflateLimited(compressed.subarray(2), expectedSize, reader, true);
 	} else if (inflator.err) {
 		throw new Error(`Invalid zip data: ${inflator.msg}`);
 	}

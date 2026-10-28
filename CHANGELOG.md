@@ -1,5 +1,11 @@
 # Changelog
 
+## v34.1.0
+- Added `imageResourcesWhitelist` read option for reading only listed image resources (other image resources are skipped without decoding)
+- Added `getFilterEffectsMaskImageData`, `getFilterEffectsMaskExtraImageData`, `getFilterEffectsMaskCanvas` and `getFilterEffectsMaskExtraCanvas` functions for decoding image data of `filterEffectsMasks`
+- Added `FilterEffectsMask` type and `colorMode` field to `filterEffectsMasks` items (color mode of the document, used for decoding image data)
+- Fixed reading zip compressed image data with invalid checksum throwing an error (data is decoded ignoring the checksum, unless `strict` option is set)
+
 ## v34.0.0
 - **BREAKING CHANGE:** Documents are now written in their `colorMode` and `bitsPerChannel` ("Bitmap", "Grayscale", "Indexed", "RGB" and "CMYK" color modes, 16 and 32 bits per channel for "RGB" and "Grayscale" and 16 bits for "CMYK"), previously documents were always written as 8 bit RGB documents (set `colorMode` to `ColorMode.RGB` and `bitsPerChannel` to `8` before writing to keep the previous behavior). Image data is converted from RGB data to the color mode and bit depth of the document, 16 and 32 bit layers are written in `Lr16` / `Lr32` sections using zip compression with prediction, 32 bit documents include HDR toning settings required by Photoshop
 - **BREAKING CHANGE:** Book (Pantone) colors in descriptors are now read with their color values (previously they were read as black) and `book` field with name of the color book and the color

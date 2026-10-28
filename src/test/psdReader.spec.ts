@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { deflate } from 'pako';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas, createReaderFromBuffer, compareBuffers, compareTwoFiles } from './common';
 import { Layer, ReadOptions, Psd, ColorMode, PixelData } from '../psd';
-import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData, readAse } from '../index';
+import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData, readAse, getFilterEffectsMaskCanvas, getFilterEffectsMaskExtraCanvas } from '../index';
 import { readPsd as readPsdInternal, readPattern, readDataRLE, createReader, readBytes, readDataZip, readAdditionalLayerInfo } from '../psdReader';
 import { createWriter, getWriterBuffer, writePattern } from '../psdWriter';
 import { infoHandlers, infoHandlersMap } from '../additionalInfo';
@@ -154,6 +154,36 @@ describe('PsdReader', () => {
 	it('skips layer image data', () => {
 		const psd = readPsdFromFile(path.join(readFilesPath, 'layers', 'src.psd'), { ...opts, skipLayerImageData: true });
 		expect(psd.children![0].canvas).not.ok;
+	});
+
+	describe('imageResourcesWhitelist', () => {
+		const filePath = path.join(readFilesPath, 'vector-complex', 'src.psd');
+		const readOpts: ReadOptions = { ...opts, skipLayerImageData: true, skipCompositeImageData: true, useRawThumbnail: true };
+		const linkGroups = (psd: Psd) => psd.children!.map(l => [l.linkGroup, l.linkGroupEnabled]);
+		// resources needed to read layers and composite image are always read
+		const notRequiredKeys = (psd: Psd) => Object.keys(psd.imageResources ?? {}).filter(key => key !== 'alphaChannelNames' && key !== 'transparencyIndex');
+
+		it('reads only listed image resources', () => {
+			const full = readPsdFromFile(filePath, readOpts);
+			const psd = readPsdFromFile(filePath, { ...readOpts, imageResourcesWhitelist: ['resolutionInfo', 'gridAndGuidesInformation'] });
+
+			expect(Object.keys(full.imageResources!)).include.members(['thumbnailRaw', 'savedPaths', 'xmpMetadata']);
+			expect(notRequiredKeys(psd)).members(['resolutionInfo', 'gridAndGuidesInformation']);
+			expect(psd.imageResources!.resolutionInfo).eql(full.imageResources!.resolutionInfo);
+			expect(psd.imageResources!.gridAndGuidesInformation).eql(full.imageResources!.gridAndGuidesInformation);
+			expect(linkGroups(psd)).eql(linkGroups(full));
+		});
+
+		it('skips all image resources (except required ones) if empty', () => {
+			const psd = readPsdFromFile(filePath, { ...readOpts, imageResourcesWhitelist: [] });
+			expect(notRequiredKeys(psd)).eql([]);
+		});
+
+		it('reads saved paths with unicode names', () => {
+			const full = readPsdFromFile(filePath, readOpts);
+			const psd = readPsdFromFile(filePath, { ...readOpts, imageResourcesWhitelist: ['savedPaths'] });
+			expect(psd.imageResources!.savedPaths).eql(full.imageResources!.savedPaths);
+		});
 	});
 
 	it('reads PSD from Buffer with offset', () => {
@@ -309,7 +339,10 @@ describe('PsdReader', () => {
 			}
 
 			if (psd.filterEffectsMasks) {
-				for (const mask of psd.filterEffectsMasks) {
+				for (const [index, mask] of psd.filterEffectsMasks.entries()) {
+					compare.push({ name: `filter-effects-${index}.png`, canvas: getFilterEffectsMaskCanvas(mask) });
+					if (mask.extra) compare.push({ name: `filter-effects-${index}-extra.png`, canvas: getFilterEffectsMaskExtraCanvas(mask) });
+
 					for (let i = 0; i < mask.channels.length; i++) {
 						if (mask.channels[i]) {
 							mask.channels[i]!.data = byteArrayToBase64(mask.channels[i]!.data) as any;
@@ -1031,6 +1064,12 @@ describe('PsdReader', () => {
 			okReader.strict = true;
 			okReader.offset = 1;
 			expect(Array.from(readBytes(okReader, 5))).eql([4, 5, 6, 7, 8]);
+		});
+
+		it('throws regular error for negative length', () => {
+			const reader = createReader(new Uint8Array(8).buffer);
+			expect(() => readBytes(reader, -12)).throw(Error, 'Invalid length: -12');
+			expect(() => readBytes(reader, NaN)).throw(Error, 'Invalid length: NaN');
 		});
 
 		it('limits raw composite data to the view', () => {

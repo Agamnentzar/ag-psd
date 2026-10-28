@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { toReader, writeDescriptorId, writeDescriptorClass, writeDescriptorKey } from './common';
-import { pathSelectionStateToReference, readVersionAndDescriptor } from '../descriptor';
+import { pathSelectionStateToReference, readVersionAndDescriptor, writeVersionAndDescriptor } from '../descriptor';
 import { createWriter, getWriterBuffer, writeInt32, writeSignature, writeUint32, writeUnicodeStringWithPadding } from '../psdWriter';
 import { resourceHandlersMap, InternalImageResources } from '../imageResources';
 import { writePsdBuffer, readPsd } from '../index';
@@ -135,6 +135,18 @@ describe('imageResources', () => {
 		};
 		const result = readResource(1082, writeResource(1082, { printInformation }));
 		expect(result.printInformation!.proofSetup).eql(printInformation.proofSetup);
+	});
+
+	it('reads slices without group name', () => {
+		const writer = createWriter();
+		writeUint32(writer, 7); // version
+		writeVersionAndDescriptor(writer, '', 'null', {
+			bounds: { 'Top ': 0, Left: 0, Btom: 4, Rght: 4 },
+			slices: [],
+		}, 'slices');
+		const result = readResource(1050, new Uint8Array(getWriterBuffer(writer)));
+		expect(result.slices).eql([{ groupName: '', bounds: { top: 0, left: 0, bottom: 4, right: 4 }, slices: [] }]);
+		expect(readResource(1050, writeResource(1050, result)).slices).eql(result.slices);
 	});
 
 	it('writes slices with background color', () => {

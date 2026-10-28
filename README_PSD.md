@@ -553,7 +553,7 @@ Example layer structure:
 
 - `comps` per-layer settings for layer comps (see `layerComps` in [Image Resources](#image-resources)).
 
-- `filterMask`, `userMask` and `filterEffectsMasks` additional mask information, `userMask.opacity` and `filterMask.opacity` values range from 0 to 1.
+- `filterMask`, `userMask` and `filterEffectsMasks` additional mask information, `userMask.opacity` and `filterMask.opacity` values range from 0 to 1. Image data of `filterEffectsMasks` items is stored undecoded, it can be decoded using `getFilterEffectsMaskImageData` / `getFilterEffectsMaskCanvas` (color and transparency channels) and `getFilterEffectsMaskExtraImageData` / `getFilterEffectsMaskExtraCanvas` (`extra` mask) functions (see [main README document](/README.md#functions)). `colorMode` of `filterEffectsMasks` items is set to color mode of the document when reading (it's not written to the file), it's used for decoding the color channels.
 
 - `pixelSource` video layer source information.
 

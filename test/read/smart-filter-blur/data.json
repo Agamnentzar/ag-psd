@@ -80,13 +80,13 @@
     ],
     "alphaChannelDisplayInfo": [
       {
+        "opacity": 1,
+        "kind": "protected",
         "color": {
           "r": 255,
           "g": 0,
           "b": 0
-        },
-        "opacity": 1,
-        "kind": "protected"
+        }
       }
     ],
     "alphaIdentifiers": [
@@ -536,6 +536,7 @@
       "bottom": 500,
       "right": 500,
       "depth": 8,
+      "colorMode": 3,
       "channels": [
         {
           "compressionMode": 1,

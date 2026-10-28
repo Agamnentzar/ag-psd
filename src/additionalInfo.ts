@@ -339,7 +339,8 @@ export function readVectorMask(reader: PsdReader, vectorMask: VectorPathData, wi
 			case 2: // Closed subpath Bezier knot, unlinked
 			case 4: // Open subpath Bezier knot, linked
 			case 5: // Open subpath Bezier knot, unlinked
-				path!.knots.push({ linked: (selector === 1 || selector === 4), points: readBezierKnot(reader, width, height) });
+				if (!path) throw new Error('Bezier knot record without subpath length record');
+				path.knots.push({ linked: (selector === 1 || selector === 4), points: readBezierKnot(reader, width, height) });
 				break;
 			case 6: // Path fill rule record
 				skipBytes(reader, 24);
@@ -4459,7 +4460,12 @@ function createLnkHandler(tag: string) {
 					const seconds = readFloat64(reader);
 					const wholeSeconds = Math.floor(seconds);
 					const ms = (seconds - wholeSeconds) * 1000;
-					file.time = (new Date(Date.UTC(year, month, day, hour, minute, wholeSeconds, ms))).toISOString();
+
+					try {
+						file.time = (new Date(Date.UTC(year, month, day, hour, minute, wholeSeconds, ms))).toISOString();
+					} catch {
+						file.time = (new Date(0)).toISOString(); // invalid date
+					}
 				}
 
 				const fileSize = type === 'liFE' ? readLength64(reader) : 0;
@@ -4605,6 +4611,11 @@ addHandler(
 	'pths',
 	target => (target as Psd).imageResources?.savedPaths !== undefined,
 	(reader, _target, left, psd) => {
+		if (reader.imageResourcesWhitelist && !reader.imageResourcesWhitelist.includes('savedPaths')) {
+			skipBytes(reader, left());
+			return;
+		}
+
 		const desc = readVersionAndDescriptor(reader, true) as PthsDescriptor;
 		const imageResources = psd.imageResources ??= {};
 		const savedPaths = imageResources.savedPaths ??= [];
@@ -5698,7 +5709,7 @@ addHandler(
 addHandler(
 	'FEid',
 	hasKey('filterEffectsMasks'),
-	(reader, target, leftBytes) => {
+	(reader, target, leftBytes, psd) => {
 		const version = readInt32(reader);
 		if (version < 1 || version > 3) throw new Error(`Invalid filterEffects version ${version}`);
 
@@ -5741,7 +5752,7 @@ addHandler(
 				}
 			}
 
-			target.filterEffectsMasks.push({ id, top, left, bottom, right, depth, channels });
+			target.filterEffectsMasks.push({ id, top, left, bottom, right, depth, colorMode: psd.colorMode, channels });
 
 			if (reader.offset < end && readUint8(reader)) {
 				const top = readInt32(reader);

@@ -1482,6 +1482,30 @@ export interface Timeline {
 	tracks?: TimelineTrack[];
 }
 
+export interface FilterEffectsMask {
+	id: string;
+	top: number;
+	left: number;
+	bottom: number;
+	right: number;
+	depth: number;
+	// color mode of the document (not stored in the file), used for decoding channels, defaults to RGB
+	colorMode?: ColorMode;
+	// color channels, followed by user mask and transparency channel
+	channels: ({
+		compressionMode: Compression;
+		data: Uint8Array;
+	} | undefined)[];
+	extra?: {
+		top: number;
+		left: number;
+		bottom: number;
+		right: number;
+		compressionMode: Compression;
+		data: Uint8Array;
+	};
+}
+
 export interface LayerAdditionalInfo {
 	name?: string; // layer name
 	nameSource?: string; // layer name source
@@ -1583,26 +1607,7 @@ export interface LayerAdditionalInfo {
 		unifyLayerVisibility?: boolean;
 	};
 	timeline?: Timeline;
-	filterEffectsMasks?: {
-		id: string;
-		top: number;
-		left: number;
-		bottom: number;
-		right: number;
-		depth: number;
-		channels: ({
-			compressionMode: number;
-			data: Uint8Array;
-		} | undefined)[];
-		extra?: {
-			top: number;
-			left: number;
-			bottom: number;
-			right: number;
-			compressionMode: number;
-			data: Uint8Array;
-		};
-	}[];
+	filterEffectsMasks?: FilterEffectsMask[];
 	comps?: {
 		originalEffectsReferencePoint?: { x: number; y: number; };
 		settings: {
@@ -2072,6 +2077,11 @@ export interface ReadOptions {
 	/** Loads thumbnail raw data instead of decoding it's content into canvas.
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;
+	/** Reads only listed `imageResources` fields, other image resources are skipped without decoding them
+	 * (e.g. `['resolutionInfo', 'gridAndGuidesInformation']`). Use empty array to skip all image resources.
+	 * Resources needed to read layers and composite image (`alphaChannelNames`, `transparencyIndex`, layer link groups)
+	 * are always read. */
+	imageResourcesWhitelist?: (keyof ImageResources)[];
 
 	/** Used only for development. */
 	logDevFeatures?: boolean;

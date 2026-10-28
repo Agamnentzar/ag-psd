@@ -1,6 +1,6 @@
 import { Psd, ReadOptions, WriteOptions } from './psd';
 import { PsdWriter, writePsd as writePsdInternal, getWriterBuffer, createWriter, getWriterBufferNoCopy } from './psdWriter';
-import { PsdReader, readPsd as readPsdInternal, createReader, decodeLayerPixels, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData, getLayerCanvas, getLayerMaskCanvas, getLayerRealMaskCanvas, getCompositeImageData, getCompositeCanvas } from './psdReader';
+import { PsdReader, readPsd as readPsdInternal, createReader, decodeLayerPixels, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData, getLayerCanvas, getLayerMaskCanvas, getLayerRealMaskCanvas, getCompositeImageData, getCompositeCanvas, getFilterEffectsMaskImageData, getFilterEffectsMaskExtraImageData, getFilterEffectsMaskCanvas, getFilterEffectsMaskExtraCanvas } from './psdReader';
 import { fromByteArray } from 'base64-js';
 
 export * from './abr';
@@ -18,7 +18,7 @@ interface BufferLike {
 
 export const byteArrayToBase64 = fromByteArray;
 
-export { decodeLayerPixels, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData, getLayerCanvas, getLayerMaskCanvas, getLayerRealMaskCanvas, getCompositeImageData, getCompositeCanvas };
+export { decodeLayerPixels, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData, getLayerCanvas, getLayerMaskCanvas, getLayerRealMaskCanvas, getCompositeImageData, getCompositeCanvas, getFilterEffectsMaskImageData, getFilterEffectsMaskExtraImageData, getFilterEffectsMaskCanvas, getFilterEffectsMaskExtraCanvas };
 
 export function readPsd(buffer: ArrayBuffer | BufferLike, options?: ReadOptions): Psd {
 	const reader = 'buffer' in buffer ?

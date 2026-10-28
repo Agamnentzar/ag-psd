@@ -51,6 +51,12 @@ export function getLayerRealMaskCanvas(layer: Layer): Canvas | undefined;
 export function getCompositeImageData(psd: Psd): PixelData | undefined;
 export function getCompositeCanvas(psd: Psd): Canvas | undefined;
 
+// functions for reading image data stored in `filterEffectsMasks` field
+export function getFilterEffectsMaskImageData(mask: FilterEffectsMask): PixelData | undefined;
+export function getFilterEffectsMaskExtraImageData(mask: FilterEffectsMask): PixelData | undefined;
+export function getFilterEffectsMaskCanvas(mask: FilterEffectsMask): Canvas | undefined;
+export function getFilterEffectsMaskExtraCanvas(mask: FilterEffectsMask): Canvas | undefined;
+
 // Writing
 
 // write PSD to ArrayBuffer
@@ -306,6 +312,11 @@ interface ReadOptions {
   /** Loads thumbnail raw data instead of decoding it's content into canvas.
    * `thumnailRaw` field is used instead of `thumbnail` field. */
   useRawThumbnail?: boolean;
+  /** Reads only listed `imageResources` fields, other image resources are skipped without decoding them
+   * (e.g. `['resolutionInfo', 'gridAndGuidesInformation']`). Use empty array to skip all image resources.
+   * Resources needed to read layers and composite image (`alphaChannelNames`, `transparencyIndex`, layer link groups)
+   * are always read. */
+  imageResourcesWhitelist?: (keyof ImageResources)[];
 	/** Total memory limit to use when decoding bitmaps (default: 2GB). */
 	totalMemoryLimit?: number;
   /** Usend only for development */

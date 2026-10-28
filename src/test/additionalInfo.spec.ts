@@ -73,6 +73,17 @@ describe('additionalInfo', () => {
 		expect(Array.from(result![1].channels[0]!.data)).eql([5, 6, 7, 8]);
 	});
 
+	it('reads invalid external linked file time as unix epoch', () => {
+		const linkedFile = { fileSize: 1, name: 'a.png', fullPath: 'file:///C:/a.png', originalPath: 'C:\a.png', relativePath: 'a.png' };
+		const buffer = writePsdBuffer({ width: 10, height: 10, linkedFiles: [{ id: guid1, name: 'a.png', time: '2020-01-02T03:04:05.250Z', linkedFile }] });
+		// year, month, day, hour and minute of the time
+		const offset = buffer.indexOf(Buffer.from([0, 0, 0x07, 0xe4, 0, 2, 3, 4]));
+		expect(offset).greaterThan(0);
+		buffer.writeUInt32BE(0x7fffffff, offset); // out of range year
+		const psd = readPsd(buffer, { ...readOpts, throwForMissingFeatures: true });
+		expect(psd.linkedFiles![0].time).equal('1970-01-01T00:00:00.000Z');
+	});
+
 	it('round-trips external linked file (lnkE)', () => {
 		const psd = roundTrip({
 			width: 10, height: 10,
