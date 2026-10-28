@@ -1,16 +1,18 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
-import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, Layer } from './psd';
+import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, Layer, CameraRawColors, CameraRawCurvePoint, CameraRawFilterSettings } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPatternSafe, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
-import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor } from './descriptor';
+import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor, cameraRawFilterClassID, patternColorHandling } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
-import { encodeEngineData, decodeEngineData } from './text';
+import { encodeEngineData, decodeEngineData, decodeLegacyTextData, LegacyTextData } from './text';
 import { decodeEngineData2 } from './engineData2';
 import type { InternalImageResources } from './imageResources';
 
 export interface ExtendedWriteOptions extends WriteOptions {
+	colorMode?: number; // color mode of written document
+	bitsPerChannel?: number; // bit depth of written document
 	layerIds: Set<number>;
 	layerToId: Map<any, number>;
 	explicitLayerIds?: Set<number>; // ids set on layers in the document (generated ids can't use them)
@@ -147,15 +149,95 @@ addHandler(
 	},
 );
 
+// type tool info from Photoshop 5.0 and 5.5, converted to regular text data (written as 'TySh')
+addHandler(
+	'tySh',
+	() => false,
+	(reader, target, left) => {
+		if (readInt16(reader) !== 1) throw new Error(`Invalid tySh version`);
+
+		const transform: number[] = [];
+		for (let i = 0; i < 6; i++) transform.push(readFloat64(reader));
+
+		if (readInt16(reader) !== 6) throw new Error(`Invalid tySh font version`);
+
+		const data: LegacyTextData = { transform, faces: [], styles: [], lines: [], color: { r: 0, g: 0, b: 0 }, antiAlias: false };
+		const facesCount = readInt16(reader);
+
+		for (let i = 0; i < facesCount; i++) {
+			const mark = readInt16(reader);
+			readInt32(reader); // font type
+			const name = readPascalString(reader, 1);
+			const familyName = readPascalString(reader, 1);
+			const styleName = readPascalString(reader, 1);
+			const script = readInt16(reader);
+			const axesCount = readInt32(reader);
+			if (axesCount < 0 || axesCount * 4 > left()) throw new Error(`Invalid tySh design axes count`);
+			skipBytes(reader, axesCount * 4);
+			data.faces.push({ mark, name, familyName, styleName, script });
+		}
+
+		const stylesCount = readInt16(reader);
+
+		for (let i = 0; i < stylesCount; i++) {
+			const mark = readInt16(reader);
+			const faceMark = readInt16(reader);
+			const size = readInt32(reader);
+			const tracking = readInt32(reader);
+			const kerning = readInt32(reader);
+			const leading = readInt32(reader);
+			const baselineShift = readInt32(reader);
+			const autoKerning = !!readUint8(reader);
+			readUint8(reader); // rotate
+			data.styles.push({ mark, faceMark, size, tracking, kerning, leading, baselineShift, autoKerning });
+		}
+
+		readInt16(reader); // type (0 = point, 1 = paragraph)
+		readInt32(reader); // scaling factor
+		readInt32(reader); // character count
+		readInt32(reader); // horizontal placement
+		readInt32(reader); // vertical placement
+		readInt32(reader); // select start
+		readInt32(reader); // select end
+
+		const linesCount = readInt16(reader);
+
+		for (let i = 0; i < linesCount; i++) {
+			const charCount = readInt32(reader);
+			const orientation = readInt16(reader);
+			const alignment = readInt16(reader);
+			if (charCount < 0 || charCount * 4 > left()) throw new Error(`Invalid tySh character count`);
+			const chars: { code: number; style: number; }[] = [];
+
+			for (let j = 0; j < charCount; j++) {
+				const code = readUint16(reader);
+				const style = readInt16(reader);
+				chars.push({ code, style });
+			}
+
+			data.lines.push({ orientation, alignment, chars });
+		}
+
+		data.color = readColor(reader);
+		data.antiAlias = !!readUint8(reader);
+
+		if (!target.text) target.text = decodeLegacyTextData(data);
+
+		skipBytes(reader, left());
+	},
+	() => { },
+);
+
 // vector fills
 
 addHandler(
 	'SoCo',
 	target => target.vectorFill !== undefined && target.vectorStroke === undefined &&
 		target.vectorFill.type === 'color',
-	(reader, target) => {
+	(reader, target, left) => {
 		const descriptor = readVersionAndDescriptor(reader);
 		target.vectorFill = parseVectorContent(descriptor);
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const { descriptor } = serializeVectorContent(target.vectorFill!);
@@ -545,12 +627,12 @@ addHandler(
 		// console.log('READ', require('util').inspect(desc, false, 99, true));
 
 		// discard if read in 'lrFX' or 'lfx2' section
-		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
+		target.effects = parseEffects(desc, reader);
 
 		skipBytes(reader, left());
 	},
-	(writer, target, _, options) => {
-		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+	(writer, target) => {
+		const desc = serializeEffects(target.effects!, writer, true);
 		// console.log('WRITE', require('util').inspect(desc, false, 99, true));
 
 		writeUint32(writer, 0); // version
@@ -746,6 +828,82 @@ addHandler(
 );
 
 addHandler(
+	'vmgm',
+	hasKey('vectorMaskAsGlobalMask'),
+	(reader, target) => {
+		target.vectorMaskAsGlobalMask = !!readUint8(reader);
+		skipBytes(reader, 3);
+	},
+	(writer, target) => {
+		writeUint8(writer, target.vectorMaskAsGlobalMask ? 1 : 0);
+		writeZeros(writer, 3);
+	},
+);
+
+addHandler(
+	'ffxi',
+	hasKey('foreignEffectId'),
+	(reader, target) => {
+		target.foreignEffectId = readInt32(reader);
+	},
+	(writer, target) => {
+		writeInt32(writer, target.foreignEffectId!);
+	},
+);
+
+addHandler(
+	'shpa',
+	hasKey('patternData'),
+	(reader, target, left) => {
+		if (readInt32(reader) !== 0) throw new Error(`Invalid shpa version`);
+
+		const count = readInt32(reader);
+		target.patternData = [];
+
+		for (let i = 0; i < count && left() > 0; i++) {
+			const signature = readSignature(reader);
+			const key = readSignature(reader);
+			const patternsCount = readInt32(reader);
+			const copyOnSheetDuplication = !!readUint8(reader);
+			skipBytes(reader, 3);
+			const patterns: NonNullable<LayerAdditionalInfo['patternData']>[number]['patterns'] = [];
+
+			for (let j = 0; j < patternsCount && left() > 0; j++) {
+				const colorHandling = patternColorHandling.decode('.' + readSignature(reader));
+				readPascalString(reader, 1); // name
+				const name = readUnicodeString(reader);
+				const id = readPascalString(reader, 1);
+				patterns.push({ colorHandling, name, id });
+			}
+
+			target.patternData.push({ signature, key, copyOnSheetDuplication, patterns });
+		}
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const sets = target.patternData!;
+		writeInt32(writer, 0); // version
+		writeInt32(writer, sets.length);
+
+		for (const set of sets) {
+			writeSignature(writer, set.signature);
+			writeSignature(writer, set.key);
+			writeInt32(writer, set.patterns.length);
+			writeUint8(writer, set.copyOnSheetDuplication ? 1 : 0);
+			writeZeros(writer, 3);
+
+			for (const pattern of set.patterns) {
+				writeSignature(writer, patternColorHandling.encode(pattern.colorHandling).split('.')[1]);
+				writePascalString(writer, pattern.name.replace(/[^\x20-\x7e]/g, '?'), 1);
+				writeUnicodeString(writer, pattern.name);
+				writePascalString(writer, pattern.id, 1);
+			}
+		}
+	},
+);
+
+addHandler(
 	'lspf',
 	hasKey('protected'),
 	(reader, target) => {
@@ -891,7 +1049,7 @@ addHandler(
 							if (f.enab !== undefined) frame.enable = f.enab;
 							if (f.Ofst) frame.offset = horzVrtcToXY(f.Ofst);
 							if (f.FXRf) frame.referencePoint = horzVrtcToXY(f.FXRf);
-							if (f.Lefx) frame.effects = parseEffects(f.Lefx, !!reader.logMissingFeatures);
+							if (f.Lefx) frame.effects = parseEffects(f.Lefx, reader);
 							if (f.blendOptions && f.blendOptions.Opct) frame.opacity = parsePercent(f.blendOptions.Opct);
 							target.animationFrames.push(frame);
 						}
@@ -922,7 +1080,7 @@ addHandler(
 						};
 
 						if (desc.trackList) {
-							timeline.tracks = parseTrackList(desc.trackList, !!reader.logMissingFeatures);
+							timeline.tracks = parseTrackList(desc.trackList, reader);
 						}
 
 						target.timeline = timeline;
@@ -994,7 +1152,7 @@ addHandler(
 					frame.FrLs = f.frames;
 					if (f.offset) frame.Ofst = xyToHorzVrtc(f.offset);
 					if (f.referencePoint) frame.FXRf = xyToHorzVrtc(f.referencePoint);
-					if (f.effects) frame.Lefx = serializeEffects(f.effects, false, hasMultiEffects(f.effects));
+					if (f.effects) frame.Lefx = serializeEffects(f.effects, writer, hasMultiEffects(f.effects));
 					if (f.opacity !== undefined) frame.blendOptions = { Opct: unitsPercentF(f.opacity) };
 					desc.LaSt.push(frame);
 				}
@@ -1038,7 +1196,7 @@ addHandler(
 				} as any;
 
 				if (timeline.tracks) {
-					desc.trackList = serializeTrackList(timeline.tracks);
+					desc.trackList = serializeTrackList(timeline.tracks, writer);
 				}
 
 				desc.LyrI = getLayerId(target, options);
@@ -2244,6 +2402,91 @@ function pointToHrznVrtc(point: { x: UnitsValue; y: UnitsValue; }): HrznVrtcDesc
 	};
 }
 
+// Camera Raw Filter setting paths (in CameraRawFilterSettings) and their descriptor keys
+const cameraRawColorKeys: [keyof CameraRawColors, string][] = [
+	['red', 'R'], ['orange', 'O'], ['yellow', 'Y'], ['green', 'G'], ['aqua', 'A'], ['blue', 'B'], ['purple', 'P'], ['magenta', 'M'],
+];
+
+const cameraRawSettings: [string, string][] = [
+	['version', 'CrVe'], ['processVersion', 'PrVN'], ['processVersionCode', 'PrVe'], ['whiteBalance', 'WBal'],
+	['temperature', 'Temp'], ['tint', 'Tint'], ['exposure', 'Ex12'], ['contrast', 'Cr12'], ['highlights', 'Hi12'],
+	['shadows', 'Sh12'], ['whites', 'Wh12'], ['blacks', 'Bk12'], ['texture', 'CrTx'], ['clarity', 'Cl12'],
+	['dehaze', 'Dhze'], ['vibrance', 'Vibr'], ['saturation', 'Strt'],
+	['parametricCurve.shadows', 'PC_S'], ['parametricCurve.darks', 'PC_D'], ['parametricCurve.lights', 'PC_L'],
+	['parametricCurve.highlights', 'PC_H'], ['parametricCurve.shadowSplit', 'PC_1'], ['parametricCurve.midtoneSplit', 'PC_2'],
+	['parametricCurve.highlightSplit', 'PC_3'],
+	['pointCurve.composite', 'Crv '], ['pointCurve.red', 'CrvR'], ['pointCurve.green', 'CrvG'], ['pointCurve.blue', 'CrvB'],
+	...cameraRawColorKeys.map(([name, key]) => [`hsl.hue.${name}`, `HA_${key}`] as [string, string]),
+	...cameraRawColorKeys.map(([name, key]) => [`hsl.saturation.${name}`, `SA_${key}`] as [string, string]),
+	...cameraRawColorKeys.map(([name, key]) => [`hsl.luminance.${name}`, `LA_${key}`] as [string, string]),
+	['colorGrading.shadows.hue', 'STSH'], ['colorGrading.shadows.saturation', 'STSS'], ['colorGrading.shadows.luminance', 'CgSL'],
+	['colorGrading.midtones.hue', 'CgMH'], ['colorGrading.midtones.saturation', 'CgMS'], ['colorGrading.midtones.luminance', 'CgML'],
+	['colorGrading.highlights.hue', 'STHH'], ['colorGrading.highlights.saturation', 'STHS'], ['colorGrading.highlights.luminance', 'CgHL'],
+	['colorGrading.global.hue', 'CgGH'], ['colorGrading.global.saturation', 'CgGS'], ['colorGrading.global.luminance', 'CgGL'],
+	['colorGrading.blending', 'CgBl'], ['colorGrading.balance', 'STB '],
+	['sharpening.amount', 'Shrp'], ['sharpening.radius', 'ShpR'], ['sharpening.detail', 'ShpD'], ['sharpening.masking', 'ShpM'],
+	['noiseReduction.luminance', 'LNR '], ['noiseReduction.luminanceDetail', 'LNRD'], ['noiseReduction.luminanceContrast', 'LNRC'],
+	['noiseReduction.color', 'CNR '], ['noiseReduction.colorDetail', 'CNRD'], ['noiseReduction.colorSmoothness', 'CNRS'],
+	['grain.amount', 'GRNA'], ['grain.size', 'GRNS'], ['grain.roughness', 'GRNF'],
+	['postCropVignette.amount', 'PCVA'], ['postCropVignette.midpoint', 'PCVM'], ['postCropVignette.feather', 'PCVF'],
+	['postCropVignette.roundness', 'PCVR'],
+];
+
+const cameraRawCurveKeys = ['Crv ', 'CrvR', 'CrvG', 'CrvB'];
+const cameraRawFilterID = 2783;
+
+function parseCameraRawSettings(desc: any, reader: PsdReader) {
+	const settings: any = {};
+
+	for (const [path, key] of cameraRawSettings) {
+		let value = desc[key];
+		if (value === undefined) continue;
+
+		if (key === 'WBal') {
+			value = (value as string).split('.')[1];
+		} else if (cameraRawCurveKeys.includes(key)) {
+			const values = value as number[];
+			value = [];
+			for (let i = 0; i + 1 < values.length; i += 2) value.push({ input: values[i], output: values[i + 1] });
+		}
+
+		const parts = path.split('.');
+		let target = settings;
+		for (let i = 0; i < parts.length - 1; i++) target = target[parts[i]] = target[parts[i]] ?? {};
+		target[parts[parts.length - 1]] = value;
+	}
+
+	for (const key of Object.keys(desc)) {
+		if (key !== '_name' && key !== '_classID' && !cameraRawSettings.some(s => s[1] === key)) {
+			reader.logMissingFeatures && reader.log(`Unhandled Camera Raw Filter setting: ${key}`);
+		}
+	}
+
+	return settings as CameraRawFilterSettings;
+}
+
+function serializeCameraRawSettings(settings: CameraRawFilterSettings) {
+	const desc: any = { _name: '', _classID: cameraRawFilterClassID };
+
+	for (const [path, key] of cameraRawSettings) {
+		let value: any = settings;
+		for (const part of path.split('.')) value = value?.[part];
+		if (value === undefined) continue;
+
+		if (key === 'WBal') {
+			value = `WBal.${value}`;
+		} else if (cameraRawCurveKeys.includes(key)) {
+			value = (value as CameraRawCurvePoint[]).flatMap(p => [Math.round(p.input), Math.round(p.output)]);
+		} else if (typeof value === 'number' && key !== 'Ex12' && key !== 'ShpR') {
+			value = Math.round(value);
+		}
+
+		desc[key] = value;
+	}
+
+	return desc;
+}
+
 function parseFilterFXItem(f: SoLdDescriptorFilterItem, reader: PsdReader): Filter | undefined {
 	const base: Omit<Filter, 'type' | 'filter'> = {
 		name: f['Nm  '],
@@ -2254,6 +2497,10 @@ function parseFilterFXItem(f: SoLdDescriptorFilterItem, reader: PsdReader): Filt
 		foregroundColor: parseColor(f.FrgC),
 		backgroundColor: parseColor(f.BckC),
 	};
+
+	if ('Fltr' in f && (f.Fltr._classID as string) === cameraRawFilterClassID) {
+		return { ...base, type: 'camera raw', filter: parseCameraRawSettings(f.Fltr, reader) };
+	}
 
 	if ('Fltr' in f) {
 		switch (f.Fltr._classID) {
@@ -3594,6 +3841,11 @@ function serializeFilterFXItem(f: Filter): SoLdDescriptorFilterItem {
 			},
 			filterID: 1282829427,
 		};
+		case 'camera raw': return {
+			...base,
+			Fltr: serializeCameraRawSettings(f.filter),
+			filterID: cameraRawFilterID,
+		} as any;
 		case 'brightness/contrast': return {
 			...base,
 			Fltr: {
@@ -3914,36 +4166,24 @@ addHandler(
 	},
 );
 
-if (MOCK_HANDLERS) {
-	addHandler(
-		'Patt',
-		target => (target as any)._Patt !== undefined,
-		(reader, target, left) => {
-			// console.log('additional info: Patt');
-			(target as any)._Patt = readBytes(reader, left());
-		},
-		(writer, target) => false && writeBytes(writer, (target as any)._Patt),
-	);
-} else {
-	addHandler(
-		'Patt', // 'Pat2' and 'Pat3' (16 and 32 bit documents) are aliases, patterns are always written as 8 bit
-		target => !!(target.patterns && target.patterns.length > 0),
-		(reader, target, left) => {
-			while (left() > 0) {
-				const pattern = readPatternSafe(reader);
-				if (!pattern) continue;
-				if (target.patterns === undefined) target.patterns = [];
-				target.patterns.push(pattern);
-			}
-		},
-		(writer, target, _, _options) => {
-			const patterns = target.patterns || [];
-			for (const pattern of patterns) {
-				writePattern(writer, pattern);
-			}
-		},
-	);
-}
+addHandler(
+	'Patt', // 'Pat2' and 'Pat3' (16 and 32 bit documents) are aliases, patterns are always written as 8 bit
+	target => !!(target.patterns && target.patterns.length > 0),
+	(reader, target, left) => {
+		while (left() > 0) {
+			const pattern = readPatternSafe(reader);
+			if (!pattern) continue;
+			if (target.patterns === undefined) target.patterns = [];
+			target.patterns.push(pattern);
+		}
+	},
+	(writer, target, _, _options) => {
+		const patterns = target.patterns || [];
+		for (const pattern of patterns) {
+			writePattern(writer, pattern);
+		}
+	},
+);
 
 addHandlerAlias('Pat2', 'Patt');
 addHandlerAlias('Pat3', 'Patt');
@@ -4419,12 +4659,12 @@ addHandler(
 		if (version !== 0) throw new Error(`Invalid lfxs version`);
 
 		const desc: Lfx2Descriptor & LmfxDescriptor = readVersionAndDescriptor(reader);
-		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
+		target.effects = parseEffects(desc, reader);
 
 		skipBytes(reader, left());
 	},
-	(writer, target, _, options) => {
-		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+	(writer, target) => {
+		const desc = serializeEffects(target.effects!, writer, true);
 		writeUint32(writer, 0); // version
 		writeVersionAndDescriptor(writer, '', 'null', desc);
 	},
@@ -4497,10 +4737,17 @@ addHandler(
 		}
 
 		if (left() >= 8) {
-			if (readSignature(reader) !== 'Lvls') throw new Error(`Invalid levl signature`);
-			if (readUint16(reader) !== 3) throw new Error(`Invalid levl version`);
+			const signature = readSignature(reader);
+			let totalChannelRecords: number;
 
-			const totalChannelRecords = readUint16(reader);
+			if (signature === 'ls\x00\x03') {
+				// Clip Studio Paint writes 'ls' instead of 'Lvls' signature (version is part of the read signature)
+				totalChannelRecords = readUint16(reader);
+			} else {
+				if (signature !== 'Lvls') throw new Error(`Invalid levl signature`);
+				if (readUint16(reader) !== 3) throw new Error(`Invalid levl version`);
+				totalChannelRecords = readUint16(reader);
+			}
 
 			while (channels.length < totalChannelRecords && left() >= 10) {
 				channels.push(readLevelsChannel(reader));
@@ -4563,71 +4810,81 @@ addHandler(
 	'curv',
 	adjustmentType('curves'),
 	(reader, target, left) => {
-		readUint8(reader);
-		if (readUint16(reader) !== 1) throw new Error('Invalid curv version');
-		readUint16(reader);
-		const channelsMask = readUint16(reader);
-		const channels: CurvesAdjustmentChannel[] = [];
+		const isMap = !!readUint8(reader); // curves drawn with pencil tool (lookup tables instead of points)
+		const version = readUint16(reader);
+		if (version !== 1 && version !== 4) throw new Error('Invalid curv version');
+		const countOrMask = readUint32(reader);
+		const channels: (CurvesAdjustmentChannel | number[])[] = [];
+		const readChannel = () => isMap ? Array.from(readBytes(reader, 256)) : readCurveChannel(reader);
 
-		for (let i = 0; i < 16; i++) {
-			if (channelsMask & (1 << i)) {
-				while (channels.length < i) channels.push([]);
-				channels.push(readCurveChannel(reader));
+		if (version === 1) {
+			for (let i = 0; i < 32; i++) {
+				if (countOrMask & (1 << i)) {
+					while (channels.length < i) channels.push([]);
+					channels.push(readChannel());
+				}
+			}
+		} else {
+			if (countOrMask > 64) throw new Error('Invalid curv channel count');
+			for (let i = 0; i < countOrMask; i++) channels.push(readChannel());
+		}
+
+		// extra section stores curves for all channels (including ones that don't fit in the mask)
+		if (version === 1 && left() >= 10 && readSignature(reader) === 'Crv ') {
+			readUint16(reader); // version
+			const count = readUint32(reader);
+
+			for (let i = 0; i < count && left() >= 2; i++) {
+				const index = readUint16(reader);
+				const channel = readChannel();
+				while (channels.length < index) channels.push([]);
+				channels[index] = channel;
 			}
 		}
 
 		target.adjustment = {
 			...target.adjustment as PresetInfo,
 			type: 'curves',
-			channels,
+			...(isMap ? { values: channels as number[][] } : { channels: channels as CurvesAdjustmentChannel[] }),
 		};
-
-		// ignoring, duplicate information
-		// checkSignature(reader, 'Crv ');
-
-		// const cVersion = readUint16(reader);
-		// readUint16(reader);
-		// const channelCount = readUint16(reader);
-
-		// for (let i = 0; i < channelCount; i++) {
-		// 	const index = readUint16(reader);
-		// 	const nodes = readUint16(reader);
-
-		// 	for (let j = 0; j < nodes; j++) {
-		// 		const output = readInt16(reader);
-		// 		const input = readInt16(reader);
-		// 	}
-		// }
 
 		skipBytes(reader, left());
 	},
 	(writer, target) => {
-		const channels = ((target.adjustment as CurvesAdjustment).channels || []).slice(0, 16);
+		const adjustment = target.adjustment as CurvesAdjustment;
+		const isMap = !!adjustment.values;
+		const channels: (CurvesAdjustmentChannel | number[])[] = (isMap ? adjustment.values : adjustment.channels) || [];
 		const used: number[] = [];
 		let channelsMask = 0;
 
 		for (let i = 0; i < channels.length; i++) {
 			if (channels[i]?.length) {
-				channelsMask |= 1 << i;
+				if (i < 32) channelsMask |= 1 << i;
 				used.push(i);
 			}
 		}
 
-		writeUint8(writer, 0);
-		writeUint16(writer, 1); // version
-		writeUint16(writer, 0);
-		writeUint16(writer, channelsMask);
+		const writeChannel = (channel: CurvesAdjustmentChannel | number[]) => {
+			if (isMap) {
+				for (let i = 0; i < 256; i++) writeUint8(writer, clamp(Math.round((channel as number[])[i] ?? i), 0, 255));
+			} else {
+				writeCurveChannel(writer, channel as CurvesAdjustmentChannel);
+			}
+		};
 
-		for (const i of used) writeCurveChannel(writer, channels[i]);
+		writeUint8(writer, isMap ? 1 : 0);
+		writeUint16(writer, 1); // version
+		writeUint32(writer, channelsMask >>> 0);
+
+		for (const i of used) if (i < 32) writeChannel(channels[i]);
 
 		writeSignature(writer, 'Crv ');
 		writeUint16(writer, 4); // version
-		writeUint16(writer, 0);
-		writeUint16(writer, used.length);
+		writeUint32(writer, used.length);
 
 		for (const i of used) {
 			writeUint16(writer, i);
-			writeCurveChannel(writer, channels[i]);
+			writeChannel(channels[i]);
 		}
 	},
 );
@@ -5567,6 +5824,10 @@ addHandler(
 );
 
 addHandlerAlias('FXid', 'FEid');
+addHandlerAlias('FELS', 'FEid'); // filter effects 3
+addHandlerAlias('hue ', 'hue2'); // old hue/saturation (Photoshop 4.0), same structure as 'hue2'
+addHandlerAlias('plLd', 'PlLd'); // old placed layer key
+addHandlerAlias('abdd', 'artb'); // artboard data 3
 
 addHandler(
 	'FMsk',
@@ -5648,12 +5909,12 @@ addHandler(
 		// console.log('READ', require('util').inspect(desc, false, 99, true));
 
 		// discard if read in 'lrFX' section ('lmfx' and 'lfx2' are never stored together)
-		target.effects = parseEffects(desc, !!reader.logMissingFeatures);
+		target.effects = parseEffects(desc, reader);
 
 		skipBytes(reader, left());
 	},
-	(writer, target, _, options) => {
-		const desc = serializeEffects(target.effects!, !!options.logMissingFeatures, true);
+	(writer, target) => {
+		const desc = serializeEffects(target.effects!, writer, true);
 		// console.log('WRITE', require('util').inspect(desc, false, 99, true));
 
 		writeUint32(writer, 0); // version
@@ -5732,6 +5993,91 @@ addHandler(
 	},
 	(writer, target) => {
 		writeVersionAndDescriptor(writer, '', 'null', serializeGeneratorSettings(target.generatorSettings!));
+	},
+);
+
+// generator settings stored by older versions of Photoshop (written back in 'shmd' or 'extn' section)
+addHandler(
+	'extd',
+	() => false,
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as GeneratorSettingsDescriptor;
+		if (desc.generatorSettings && target.generatorSettings === undefined) {
+			target.generatorSettings = parseGeneratorSettings(desc.generatorSettings);
+		}
+		skipBytes(reader, left());
+	},
+	() => { },
+);
+
+interface FrgbDescriptor {
+	framedGroupRect: { _name: ''; _classID: 'classFloatRect'; 'Top ': number; Left: number; Btom: number; Rght: number; };
+	framedGroupType: number;
+	LockPPI?: boolean;
+	PreferredResolution?: number;
+	SavedIteratedName?: string;
+}
+
+addHandler(
+	'frgb', // frame tool group
+	hasKey('framedGroup'),
+	(reader, target, left) => {
+		const desc = readVersionAndDescriptor(reader) as FrgbDescriptor;
+		const rect = desc.framedGroupRect;
+		target.framedGroup = {
+			rect: { top: rect['Top '], left: rect.Left, bottom: rect.Btom, right: rect.Rght },
+			type: desc.framedGroupType,
+		};
+		if (desc.LockPPI !== undefined) target.framedGroup.lockPPI = desc.LockPPI;
+		if (desc.PreferredResolution !== undefined) target.framedGroup.preferredResolution = desc.PreferredResolution;
+		if (desc.SavedIteratedName !== undefined) target.framedGroup.savedIteratedName = desc.SavedIteratedName;
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		const group = target.framedGroup!;
+		const rect = group.rect;
+		const desc: FrgbDescriptor = {
+			framedGroupRect: { _name: '', _classID: 'classFloatRect', 'Top ': rect.top, Left: rect.left, Btom: rect.bottom, Rght: rect.right },
+			framedGroupType: group.type,
+		};
+		if (group.lockPPI !== undefined) desc.LockPPI = group.lockPPI;
+		if (group.preferredResolution !== undefined) desc.PreferredResolution = group.preferredResolution;
+		if (group.savedIteratedName !== undefined) desc.SavedIteratedName = group.savedIteratedName;
+		writeVersionAndDescriptor(writer, '', 'framedGroup', desc);
+	},
+);
+
+addHandler(
+	'anFX',
+	hasKey('animationEffects'),
+	(reader, target, left) => {
+		target.animationEffects = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, target.animationEffects);
+	},
+);
+
+addHandler(
+	'PxSD', // pixel source data 2 (video layer frames)
+	hasKey('pixelSourceData'),
+	(reader, target, left) => {
+		target.pixelSourceData = [];
+
+		while (left() >= 8) {
+			const length = readLength64(reader);
+			if (length > left()) throw new Error('Invalid PxSD data length');
+			target.pixelSourceData.push(readBytes(reader, length));
+		}
+
+		skipBytes(reader, left());
+	},
+	(writer, target) => {
+		for (const data of target.pixelSourceData!) {
+			writeUint32(writer, 0);
+			writeUint32(writer, data.byteLength);
+			writeBytes(writer, data);
+		}
 	},
 );
 

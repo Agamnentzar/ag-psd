@@ -5,6 +5,7 @@ import { fromByteArray } from 'base64-js';
 
 export * from './abr';
 export * from './csh';
+export * from './ase';
 export { initializeCanvas } from './helpers';
 export * from './psd';
 export type { PsdReader, PsdWriter };

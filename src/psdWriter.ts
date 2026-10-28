@@ -1,5 +1,6 @@
 import { Psd, Layer, LayerAdditionalInfo, ColorMode, SectionDividerType, WriteOptions, Color, GlobalLayerMaskInfo, PixelData, LayerMaskData, Compression, ChannelID, PatternInfo } from './psd';
-import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, writeDataZipWithoutPrediction, imageDataToCanvas, denormalizeLabAB } from './helpers';
+import { hasAlpha, createCanvas, writeDataRLE, LayerChannelData, ChannelData, offsetForChannel, createImageData, fromBlendMode, clamp, LayerMaskFlags, MaskParams, ColorSpace, Bounds, largeAdditionalInfoKeys, writeDataZipWithoutPrediction, imageDataToCanvas, denormalizeLabAB, PlanarData, planarToBytes, writeDataRLEBytes, writeDataZipWithPrediction, rgbToCmykValues } from './helpers';
+import { deflate as deflateSync } from 'pako';
 import { ExtendedWriteOptions, infoHandlers, infoHandlersMap } from './additionalInfo';
 import { InternalImageResources, resourceHandlers } from './imageResources';
 import { getCompositeImageData, getLayerImageData, getLayerMaskImageData, getLayerRealMaskImageData } from './psdReader';
@@ -9,6 +10,7 @@ export interface PsdWriter {
 	buffer: ArrayBuffer;
 	view: DataView;
 	tempBuffer: Uint8Array | undefined;
+	logMissingFeatures?: boolean;
 	log(...args: any[]): void;
 }
 
@@ -217,10 +219,37 @@ export function writeSection(writer: PsdWriter, round: number, func: () => void,
 function verifyPixelData(data: PixelData | undefined, name: string) {
 	// check element size instead of instanceof, so arrays from other realms (iframes, workers, vm) are accepted
 	const bytesPerElement = data && (data.data as any).BYTES_PER_ELEMENT;
-	if (bytesPerElement !== undefined && bytesPerElement !== 1) {
-		throw new Error(`${name} has incorrect bitDepth (only 8-bit Uint8Array or Uint8ClampedArray data is supported for writing)`);
+	if (bytesPerElement !== undefined && bytesPerElement !== 1 && bytesPerElement !== 2 && !(data!.data instanceof Float32Array)) {
+		throw new Error(`${name} has incorrect bitDepth (only Uint8Array, Uint8ClampedArray, Uint16Array and Float32Array data is supported for writing)`);
 	}
 }
+
+// supported bit depths for each color mode
+const writeBitDepths: { [colorMode: number]: number[] | undefined; } = {
+	[ColorMode.Bitmap]: [1],
+	[ColorMode.Grayscale]: [8, 16, 32],
+	[ColorMode.Indexed]: [8],
+	[ColorMode.RGB]: [8, 16, 32],
+	[ColorMode.CMYK]: [8, 16],
+};
+
+const colorModeNames: { [colorMode: number]: string; } = {
+	[ColorMode.Bitmap]: 'Bitmap', [ColorMode.Grayscale]: 'Grayscale', [ColorMode.Indexed]: 'Indexed', [ColorMode.RGB]: 'RGB',
+	[ColorMode.CMYK]: 'CMYK', [ColorMode.Multichannel]: 'Multichannel', [ColorMode.Duotone]: 'Duotone', [ColorMode.Lab]: 'Lab',
+};
+
+function colorChannelsCount(colorMode: ColorMode) {
+	return colorMode === ColorMode.RGB ? 3 : (colorMode === ColorMode.CMYK ? 4 : 1);
+}
+
+// HDR toning settings that Photoshop stores in color mode data of 32bit documents (default values of new document),
+// Photoshop refuses to open 32bit documents without them
+const hdrToningData = [
+	104, 100, 114, 116, 0, 0, 0, 3, 62, 107, 133, 31, 0, 0, 0, 2, 0, 0, 0, 7, 0, 76, 0, 105, 0, 110, 0, 101, 0, 97, 0, 114, 0, 0,
+	0, 2, 0, 2, 0, 0, 0, 0, 0, 255, 0, 255, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 65, 128, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 63, 128, 0, 0,
+	104, 100, 114, 97, 0, 0, 0, 6, 0, 0, 0, 0, 65, 160, 0, 0, 65, 240, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 63, 128, 0, 0, 0, 0, 0, 0,
+	0, 0,
+];
 
 function verifyBitCount(target: Psd | Layer) {
 	target.children?.forEach(verifyBitCount);
@@ -238,33 +267,38 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	if ((psd.width > 30000 || psd.height > 30000) && !options.psb)
 		throw new Error('Document size is too large (max is 30000x30000, use PSB format instead)');
 
-	const bitsPerChannel = psd.bitsPerChannel ?? 8;
+	const colorMode = psd.colorMode ?? ColorMode.RGB;
+	const bitsPerChannel = psd.bitsPerChannel ?? (colorMode === ColorMode.Bitmap ? 1 : 8);
+	const bitDepths = writeBitDepths[colorMode];
 
-	if (bitsPerChannel !== 8)
-		throw new Error('bitsPerChannel other than 8 are not supported for writing');
+	if (!bitDepths)
+		throw new Error(`${colorModeNames[colorMode] ?? colorMode} color mode is not supported for writing`);
+
+	if (bitDepths.indexOf(bitsPerChannel) === -1)
+		throw new Error(`bitsPerChannel ${bitsPerChannel} is not supported for writing in ${colorModeNames[colorMode]} color mode`);
+
+	// Photoshop doesn't support layers in bitmap and indexed color modes
+	const layersAllowed = colorMode !== ColorMode.Bitmap && colorMode !== ColorMode.Indexed;
+
+	if (!layersAllowed && psd.children?.length)
+		throw new Error(`Layers are not supported in ${colorModeNames[colorMode]} color mode`);
+
+	if (colorMode === ColorMode.Indexed && !psd.palette)
+		throw new Error('Missing color palette for Indexed color mode');
 
 	if (options.log) writer.log = options.log;
+	if (options.logMissingFeatures) writer.logMissingFeatures = true;
 
 	const layers: Layer[] = [];
 	addChildren(layers, psd.children);
-	if (!layers.length) layers.push({});
+	if (!layers.length && layersAllowed) layers.push({});
 
 	verifyBitCount(psd);
 
 	const imageResources: InternalImageResources = { ...psd.imageResources };
-	const opt: ExtendedWriteOptions = { ...options, layerIds: new Set(), layerToId: new Map() };
-
-	// document is always written in RGB color mode, skip resources specific to original color mode
-	if (psd.colorMode !== undefined && psd.colorMode !== ColorMode.RGB) {
-		delete imageResources.iccProfile;
-		delete imageResources.indexedColorCount;
-		delete imageResources.transparencyIndex;
-		delete imageResources.alphaChannelDisplayInfo;
-		delete imageResources.colorHalftoneScreens;
-		delete imageResources.grayscaleHalftoneScreens;
-		delete imageResources.colorTransferFunctions;
-		delete imageResources.grayscaleTransferFunctions;
-	}
+	const opt: ExtendedWriteOptions = { ...options, layerIds: new Set(), layerToId: new Map(), colorMode, bitsPerChannel };
+	// 16 and 32 bit documents store layers in Lr16 / Lr32 section of global additional info
+	const layersInGlobalInfo = bitsPerChannel === 16 || bitsPerChannel === 32;
 
 	if (opt.generateThumbnail) {
 		imageResources.thumbnail = createThumbnail(psd);
@@ -283,7 +317,7 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	if (imageData && (psd.width !== imageData.width || psd.height !== imageData.height))
 		throw new Error('Document canvas must have the same size as document');
 
-	const globalAlpha = !!imageData && hasAlpha(imageData);
+	const globalAlpha = !!imageData && layersAllowed && hasAlpha(imageData);
 	// only used for encoding a single layer channel at a time, composite image is encoded directly into the writer buffer
 	writer.tempBuffer = new Uint8Array(getLargestLayerSize(psd.children, !!options.psb));
 
@@ -291,14 +325,23 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 	writeSignature(writer, '8BPS');
 	writeUint16(writer, options.psb ? 2 : 1); // version
 	writeZeros(writer, 6);
-	writeUint16(writer, globalAlpha ? 4 : 3); // channels
+	writeUint16(writer, colorChannelsCount(colorMode) + (globalAlpha ? 1 : 0)); // channels
 	writeUint32(writer, psd.height);
 	writeUint32(writer, psd.width);
 	writeUint16(writer, bitsPerChannel); // bits per channel
-	writeUint16(writer, ColorMode.RGB); // we only support saving RGB right now
+	writeUint16(writer, colorMode);
 
-	// color mode data (empty for RGB color mode)
-	writeUint32(writer, 0);
+	// color mode data
+	writeSection(writer, 1, () => {
+		if (colorMode === ColorMode.Indexed) {
+			const palette = psd.palette!;
+			for (let i = 0; i < 256; i++) writeUint8(writer, palette[i]?.r ?? 0);
+			for (let i = 0; i < 256; i++) writeUint8(writer, palette[i]?.g ?? 0);
+			for (let i = 0; i < 256; i++) writeUint8(writer, palette[i]?.b ?? 0);
+		} else if (bitsPerChannel === 32) {
+			writeBytes(writer, new Uint8Array(hdrToningData));
+		}
+	});
 
 	// image resources
 
@@ -322,24 +365,217 @@ export function writePsd(writer: PsdWriter, psd: Psd, options: WriteOptions = {}
 
 	// layer and mask info
 	writeSection(writer, 2, () => {
-		writeLayerInfo(writer, layers, psd, globalAlpha, opt);
+		if (layersInGlobalInfo || !layersAllowed) {
+			writeSection(writer, 4, () => { }, true, opt.psb); // empty layer info
+		} else {
+			writeLayerInfo(writer, layers, psd, globalAlpha, opt);
+		}
+
 		writeGlobalLayerMaskInfo(writer, psd.globalLayerMaskInfo);
+
+		if (layersInGlobalInfo) {
+			if (globalAlpha) writeGlobalInfoSection(writer, bitsPerChannel === 16 ? 'Mt16' : 'Mt32', !!opt.psb, () => { });
+			writeGlobalInfoSection(writer, bitsPerChannel === 16 ? 'Lr16' : 'Lr32', !!opt.psb, () => {
+				writeLayerInfoData(writer, layers, psd, globalAlpha, opt);
+			});
+		}
+
 		writeAdditionalLayerInfo(writer, psd, psd, opt);
 	}, undefined, !!opt.psb);
 
 	writer.tempBuffer = undefined;
 
 	// image data
-	writeUint16(writer, Compression.RleCompressed); // Photoshop doesn't support zip compression of composite image data
+	if (colorMode === ColorMode.RGB && bitsPerChannel === 8 && (!imageData || is8bit(imageData))) {
+		writeUint16(writer, Compression.RleCompressed); // Photoshop doesn't support zip compression of composite image data
 
-	const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
-	const data = getCompositeData(imageData, psd.width, psd.height, globalAlpha);
+		const channels = globalAlpha ? [0, 1, 2, 3] : [0, 1, 2];
+		const data = getCompositeData(imageData, psd.width, psd.height, globalAlpha);
 
-	// encode directly into the writer buffer
-	const maxSize = channels.length * getRLEChannelBound(data.width, data.height, !!options.psb);
-	ensureSize(writer, writer.offset + maxSize);
-	const buffer = new Uint8Array(writer.buffer, writer.offset, maxSize);
-	writer.offset += writeDataRLE(buffer, data, channels, !!options.psb).length;
+		// encode directly into the writer buffer
+		const maxSize = channels.length * getRLEChannelBound(data.width, data.height, !!options.psb);
+		ensureSize(writer, writer.offset + maxSize);
+		const buffer = new Uint8Array(writer.buffer, writer.offset, maxSize);
+		writer.offset += writeDataRLE(buffer, data, channels, !!options.psb).length;
+	} else {
+		writeCompositeImageData(writer, psd, imageData, colorMode, bitsPerChannel, globalAlpha, !!options.psb);
+	}
+}
+
+function writeGlobalInfoSection(writer: PsdWriter, key: string, psb: boolean, func: () => void) {
+	writeSignature(writer, psb ? '8B64' : '8BIM');
+	writeSignature(writer, key);
+	writeSection(writer, 4, func, false, psb);
+}
+
+function is8bit(data: PixelData) {
+	return (data.data as any).BYTES_PER_ELEMENT === 1;
+}
+
+// converts image data (8, 16 or 32 bit RGBA data) to channels of the document color mode and bit depth
+function getPlanarChannels(imageData: PixelData, colorMode: ColorMode, bitsPerChannel: number, matte: boolean) {
+	const { data, width, height } = imageData;
+	const size = width * height;
+	const srcFloat = data instanceof Float32Array;
+	const srcMax = srcFloat ? 1 : (data instanceof Uint16Array ? 0xffff : 0xff);
+	const dstFloat = bitsPerChannel === 32;
+	const dstMax = dstFloat ? 1 : (bitsPerChannel === 16 ? 0xffff : 0xff);
+	const colorCount = colorChannelsCount(colorMode);
+	const create = () => dstFloat ? new Float32Array(size) : (bitsPerChannel === 16 ? new Uint16Array(size) : new Uint8Array(size));
+	const colors: PlanarData[] = [];
+	for (let i = 0; i < colorCount; i++) colors.push(create());
+	const alpha = create();
+
+	// color values are gamma corrected when converting between float (linear) and integer values (same as imageDataToCanvas)
+	const toNormalized = (v: number) => srcFloat ? Math.pow(clamp(v, 0, 1), 1 / 2.2) : v / srcMax;
+	const fromNormalized = (v: number) => dstFloat ? Math.pow(v, 2.2) : Math.round(clamp(v, 0, 1) * dstMax);
+	const sameType = srcFloat === dstFloat && srcMax === dstMax;
+	const convertColor = (v: number) => sameType ? (dstFloat ? v : Math.round(v)) : fromNormalized(toNormalized(v));
+	const convertAlpha = (v: number) => sameType ? v : (dstFloat ? v / srcMax : Math.round(clamp(v / srcMax, 0, 1) * dstMax));
+	const cmyk = [0, 0, 0, 0];
+
+	for (let i = 0, p = 0; i < size; i++, p += 4) {
+		const a = data[p + 3];
+		const alphaValue = convertAlpha(a);
+		alpha[i] = alphaValue;
+		// composite image colors are blended with white (or no ink) for documents with transparency
+		const blend = matte && a !== srcMax && a > 0 ? clamp(a / srcMax, 0, 1) : 1;
+
+		if (colorMode === ColorMode.CMYK) {
+			rgbToCmykValues(toNormalized(data[p]), toNormalized(data[p + 1]), toNormalized(data[p + 2]), cmyk);
+
+			for (let j = 0; j < 4; j++) {
+				colors[j][i] = Math.round((1 - clamp(cmyk[j] * blend, 0, 1)) * dstMax); // stored inverted (0 = 100% ink)
+			}
+		} else {
+			for (let j = 0; j < colorCount; j++) {
+				let value: number;
+
+				if (colorMode === ColorMode.RGB) {
+					value = convertColor(data[p + j]);
+				} else {
+					const r = data[p], g = data[p + 1], b = data[p + 2];
+					value = convertColor((r === g && g === b) ? r : (0.299 * r + 0.587 * g + 0.114 * b));
+				}
+
+				if (blend !== 1) value = dstFloat ? value * blend + 1 - blend : Math.round(value * blend + dstMax * (1 - blend));
+				colors[j][i] = value;
+			}
+		}
+	}
+
+	return { colors, alpha };
+}
+
+function encodeChannel(values: PlanarData, width: number, height: number, options: WriteOptions) {
+	if (!(values instanceof Uint8Array)) {
+		return { data: writeDataZipWithPrediction(values, width, height), compression: Compression.ZipWithPrediction };
+	} else if (options.compress) {
+		return { data: deflateSync(values), compression: Compression.ZipWithoutPrediction };
+	} else {
+		return { data: writeDataRLEBytes(values, width, height, !!options.psb), compression: Compression.RleCompressed };
+	}
+}
+
+function writeCompositeImageData(
+	writer: PsdWriter, psd: Psd, imageData: PixelData | undefined, colorMode: ColorMode, bitsPerChannel: number, globalAlpha: boolean, psb: boolean
+) {
+	const { width, height } = psd;
+	const data = imageData ?? { data: new Uint8Array(width * height * 4), width, height };
+	const parts: Uint8Array[] = [];
+
+	if (colorMode === ColorMode.Bitmap || colorMode === ColorMode.Indexed) {
+		const values = colorMode === ColorMode.Bitmap ?
+			getBitmapData(data) :
+			getIndexedData(data, psd.palette!, psd.imageResources?.transparencyIndex);
+		const rowBytes = colorMode === ColorMode.Bitmap ? Math.ceil(width / 8) : width;
+
+		if (colorMode === ColorMode.Bitmap) {
+			writeUint16(writer, Compression.RawData);
+			parts.push(values);
+		} else {
+			writeUint16(writer, Compression.RleCompressed);
+			parts.push(writeDataRLEBytes(values, rowBytes, height, psb));
+		}
+	} else {
+		const { colors, alpha } = getPlanarChannels(data, colorMode, bitsPerChannel, globalAlpha);
+		const channels = globalAlpha ? [...colors, alpha] : colors;
+
+		if (bitsPerChannel === 8) {
+			// row byte counts for all channels are stored before data of all channels
+			const encoded = channels.map(c => writeDataRLEBytes(c as Uint8Array, width, height, psb));
+			const countsSize = height * (psb ? 4 : 2);
+			writeUint16(writer, Compression.RleCompressed);
+			for (const e of encoded) parts.push(e.subarray(0, countsSize));
+			for (const e of encoded) parts.push(e.subarray(countsSize));
+		} else {
+			writeUint16(writer, Compression.RawData); // Photoshop writes 16 and 32 bit composite image without compression
+			for (const c of channels) parts.push(planarToBytes(c));
+		}
+	}
+
+	for (const part of parts) writeBytes(writer, part);
+}
+
+function getBitmapData({ data, width, height }: PixelData) {
+	const rowBytes = Math.ceil(width / 8);
+	const result = new Uint8Array(rowBytes * height);
+	const max = data instanceof Float32Array ? 1 : (data instanceof Uint16Array ? 0xffff : 0xff);
+
+	for (let y = 0, p = 0; y < height; y++) {
+		for (let x = 0; x < width; x++, p += 4) {
+			const a = data[p + 3] / max;
+			const value = ((0.299 * data[p] + 0.587 * data[p + 1] + 0.114 * data[p + 2]) / max) * a + (1 - a); // blend with white
+			if (value < 0.5) result[y * rowBytes + (x >> 3)] |= 0x80 >> (x & 7); // 1 = black
+		}
+	}
+
+	return result;
+}
+
+function getIndexedData({ data, width, height }: PixelData, palette: { r: number; g: number; b: number; }[], transparencyIndex: number | undefined) {
+	const size = width * height;
+	const result = new Uint8Array(size);
+	const shift = data instanceof Uint16Array ? 8 : 0;
+	const cache = new Map<number, number>();
+
+	for (let i = 0; i < palette.length && i < 256; i++) {
+		const key = (palette[i].r << 16) | (palette[i].g << 8) | palette[i].b;
+		if (i !== transparencyIndex && !cache.has(key)) cache.set(key, i);
+	}
+
+	for (let i = 0, p = 0; i < size; i++, p += 4) {
+		const read = (v: number) => data instanceof Float32Array ? Math.round(Math.pow(clamp(v, 0, 1), 1 / 2.2) * 255) : (v >>> shift);
+		const a = data instanceof Float32Array ? data[p + 3] * 255 : (data[p + 3] >>> shift);
+
+		if (transparencyIndex !== undefined && transparencyIndex >= 0 && a < 128) {
+			result[i] = transparencyIndex;
+			continue;
+		}
+
+		const r = read(data[p]), g = read(data[p + 1]), b = read(data[p + 2]);
+		const key = (r << 16) | (g << 8) | b;
+		let index = cache.get(key);
+
+		if (index === undefined) {
+			// use closest color from the palette
+			let best = Infinity;
+			index = 0;
+
+			for (let j = 0; j < palette.length && j < 256; j++) {
+				if (j === transparencyIndex) continue;
+				const dr = palette[j].r - r, dg = palette[j].g - g, db = palette[j].b - b;
+				const distance = dr * dr + dg * dg + db * db;
+				if (distance < best) { best = distance; index = j; }
+			}
+
+			cache.set(key, index);
+		}
+
+		result[i] = index;
+	}
+
+	return result;
 }
 
 function getCompositeData(imageData: PixelData | undefined, width: number, height: number, globalAlpha: boolean): PixelData {
@@ -368,64 +604,66 @@ function getCompositeData(imageData: PixelData | undefined, width: number, heigh
 }
 
 function writeLayerInfo(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
-	writeSection(writer, 4, () => {
-		writeInt16(writer, globalAlpha ? -layers.length : layers.length);
+	writeSection(writer, 4, () => writeLayerInfoData(writer, layers, psd, globalAlpha, options), true, options.psb);
+}
 
-		const layersData = layers.map((l, i) => getChannels(writer, l, i === 0, options));
+function writeLayerInfoData(writer: PsdWriter, layers: Layer[], psd: Psd, globalAlpha: boolean, options: ExtendedWriteOptions) {
+	writeInt16(writer, globalAlpha ? -layers.length : layers.length);
 
-		// layer records
-		for (const layerData of layersData) {
-			const { layer, top, left, bottom, right, channels } = layerData;
+	const layersData = layers.map((l, i) => getChannels(writer, l, i === 0, options));
 
-			writeInt32(writer, top);
-			writeInt32(writer, left);
-			writeInt32(writer, bottom);
-			writeInt32(writer, right);
-			writeUint16(writer, channels.length);
+	// layer records
+	for (const layerData of layersData) {
+		const { layer, top, left, bottom, right, channels } = layerData;
 
-			for (const c of channels) {
-				writeInt16(writer, c.id);
-				if (options.psb) {
-					writeUint64(writer, c.length);
-				} else {
-					writeUint32(writer, c.length);
-				}
-			}
+		writeInt32(writer, top);
+		writeInt32(writer, left);
+		writeInt32(writer, bottom);
+		writeInt32(writer, right);
+		writeUint16(writer, channels.length);
 
-			writeSignature(writer, '8BIM');
-			writeSignature(writer, fromBlendMode[layer.blendMode!] || 'norm');
-			writeUint8(writer, Math.round(clamp(layer.opacity ?? 1, 0, 1) * 255));
-			writeUint8(writer, layer.clipping ? 1 : 0);
-
-			let flags = 0x08; // 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
-			if (layer.transparencyProtected) flags |= 0x01;
-			if (layer.hidden) flags |= 0x02;
-			if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other) || layer.adjustment) {
-				flags |= 0x10; // pixel data irrelevant to appearance of document
-			}
-			if (layer.effectsOpen) flags |= 0x20;
-
-			writeUint8(writer, flags);
-			writeUint8(writer, 0); // filler
-			writeSection(writer, 1, () => {
-				writeLayerMaskData(writer, layer, layerData);
-				writeLayerBlendingRanges(writer, layer);
-				writePascalString(writer, (layer.name || '').substring(0, 255), 4);
-				writeAdditionalLayerInfo(writer, layer, psd, options);
-			});
-		}
-
-		// layer channel image data
-		for (const layerData of layersData) {
-			for (const channel of layerData.channels) {
-				writeUint16(writer, channel.compression);
-
-				if (channel.data) {
-					writeBytes(writer, channel.data);
-				}
+		for (const c of channels) {
+			writeInt16(writer, c.id);
+			if (options.psb) {
+				writeUint64(writer, c.length);
+			} else {
+				writeUint32(writer, c.length);
 			}
 		}
-	}, true, options.psb);
+
+		writeSignature(writer, '8BIM');
+		writeSignature(writer, fromBlendMode[layer.blendMode!] || 'norm');
+		writeUint8(writer, Math.round(clamp(layer.opacity ?? 1, 0, 1) * 255));
+		writeUint8(writer, layer.clipping ? 1 : 0);
+
+		let flags = 0x08; // 1 for Photoshop 5.0 and later, tells if bit 4 has useful information
+		if (layer.transparencyProtected) flags |= 0x01;
+		if (layer.hidden) flags |= 0x02;
+		if (layer.vectorMask || (layer.sectionDivider && layer.sectionDivider.type !== SectionDividerType.Other) || layer.adjustment) {
+			flags |= 0x10; // pixel data irrelevant to appearance of document
+		}
+		if (layer.effectsOpen) flags |= 0x20;
+
+		writeUint8(writer, flags);
+		writeUint8(writer, 0); // filler
+		writeSection(writer, 1, () => {
+			writeLayerMaskData(writer, layer, layerData);
+			writeLayerBlendingRanges(writer, layer);
+			writePascalString(writer, (layer.name || '').substring(0, 255), 4);
+			writeAdditionalLayerInfo(writer, layer, psd, options);
+		});
+	}
+
+	// layer channel image data
+	for (const layerData of layersData) {
+		for (const channel of layerData.channels) {
+			writeUint16(writer, channel.compression);
+
+			if (channel.data) {
+				writeBytes(writer, channel.data);
+			}
+		}
+	}
 }
 
 // real mask is only stored separately if layer has both vector and pixel masks, otherwise it's stored as the main mask
@@ -661,10 +899,14 @@ function getMaskChannels(tempBuffer: Uint8Array, layerData: LayerChannelData, ma
 
 	let buffer: Uint8Array;
 	let compression: Compression;
+	const bitsPerChannel = (options as ExtendedWriteOptions).bitsPerChannel ?? 8;
 
 	if (!imageData) {
 		buffer = new Uint8Array(0);
 		compression = Compression.RleCompressed;
+	} else if (bitsPerChannel !== 8 || !is8bit(imageData)) {
+		const { colors } = getPlanarChannels(imageData, ColorMode.RGB, bitsPerChannel, false);
+		({ data: buffer, compression } = encodeChannel(colors[0], width, height, options));
 	} else if (options.compress) {
 		buffer = writeDataZipWithoutPrediction(imageData, [0]);
 		compression = Compression.ZipWithoutPrediction;
@@ -692,8 +934,9 @@ function getChannels(writer: PsdWriter, layer: Layer, background: boolean, optio
 
 	if (layer.rawData) {
 		const { colorMode, bitsPerChannel, large } = layer.rawData;
+		const opt = options as ExtendedWriteOptions;
 
-		if (large === !!options.psb && colorMode === ColorMode.RGB && bitsPerChannel === 8) {
+		if (large === !!options.psb && colorMode === (opt.colorMode ?? ColorMode.RGB) && bitsPerChannel === (opt.bitsPerChannel ?? 8)) {
 			// same mask mapping as in writeLayerMaskData
 			const { mask, realMask } = getMasks(layer);
 			return {
@@ -704,8 +947,6 @@ function getChannels(writer: PsdWriter, layer: Layer, background: boolean, optio
 				realMask: bounds(realMask),
 			};
 		}
-
-		if (bitsPerChannel !== 8) throw new Error('Layer raw data with bitsPerChannel other than 8 is not supported for writing');
 
 		// raw data is in different format than the one we're writing, decode it so it can be re-encoded
 		source = {
@@ -739,11 +980,8 @@ function getLayerDimentions({ canvas, imageData }: Layer): { width: number; heig
 }
 
 function cropImageData(data: PixelData, left: number, top: number, width: number, height: number) {
-	if (data.data instanceof Uint32Array || data.data instanceof Uint16Array) {
-		throw new Error('imageData has incorrect bit depth');
-	}
-
-	const croppedData = createImageData(width, height);
+	const croppedData: PixelData = is8bit(data) ? createImageData(width, height) :
+		{ width, height, data: new (data.data.constructor as any)(width * height * 4) };
 	const srcData = data.data;
 	const dstData = croppedData.data;
 
@@ -775,8 +1013,9 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 	let { width, height } = getLayerDimentions(layer);
 
 	if (!(layer.canvas || layer.imageData) || !width || !height) {
-		right = left;
-		bottom = top;
+		// layer without image data is empty, keep inverted (negative size) bounds from some files as they are
+		if (layer.right === undefined || right > left) right = left;
+		if (layer.bottom === undefined || bottom > top) bottom = top;
 		return { layer, top, left, right, bottom, channels };
 	}
 
@@ -810,6 +1049,22 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 
 	if (!background || options.noBackground || layer.mask || hasAlpha(imageData)) {
 		channelIds.unshift(ChannelID.Transparency);
+	}
+
+	const colorMode = (options as ExtendedWriteOptions).colorMode ?? ColorMode.RGB;
+	const bitsPerChannel = (options as ExtendedWriteOptions).bitsPerChannel ?? 8;
+
+	if (colorMode !== ColorMode.RGB || bitsPerChannel !== 8 || !is8bit(imageData)) {
+		const { colors, alpha } = getPlanarChannels(imageData, colorMode, bitsPerChannel, false);
+		const ids = channelIds[0] === ChannelID.Transparency ? [ChannelID.Transparency] : [];
+		for (let i = 0; i < colors.length; i++) ids.push(i as ChannelID);
+
+		channels = ids.map(id => {
+			const { data, compression } = encodeChannel(id === ChannelID.Transparency ? alpha : colors[id], width, height, options);
+			return { id, compression, data, length: 2 + data.length };
+		});
+
+		return { layer, top, left, right, bottom, channels };
 	}
 
 	channels = channelIds.map(id => {

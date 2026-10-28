@@ -1,5 +1,27 @@
 # Changelog
 
+## v34.0.0
+- **BREAKING CHANGE:** Documents are now written in their `colorMode` and `bitsPerChannel` ("Bitmap", "Grayscale", "Indexed", "RGB" and "CMYK" color modes, 16 and 32 bits per channel for "RGB" and "Grayscale" and 16 bits for "CMYK"), previously documents were always written as 8 bit RGB documents (set `colorMode` to `ColorMode.RGB` and `bitsPerChannel` to `8` before writing to keep the previous behavior). Image data is converted from RGB data to the color mode and bit depth of the document, 16 and 32 bit layers are written in `Lr16` / `Lr32` sections using zip compression with prediction, 32 bit documents include HDR toning settings required by Photoshop
+- **BREAKING CHANGE:** Book (Pantone) colors in descriptors are now read with their color values (previously they were read as black) and `book` field with name of the color book and the color
+- Added `values` field to curves adjustment (curves drawn with pencil tool), previously they were read as curve points, curves are also read from extra curves section that includes channels outside of channel mask
+- Added `seafoam`, `indigo`, `magenta` and `fuchsia` layer colors (previously read as `undefined` and written as `none`)
+- Added `vectorMaskAsGlobalMask`, `foreignEffectId`, `framedGroup`, `animationEffects`, `patternData` and `pixelSourceData` layer fields
+- Added Camera Raw smart filter (`camera raw` filter type)
+- Added `quickMaskInfo`, `measurementScale`, `duotoneHalftoneScreens`, `duotoneTransferFunctions`, `duotoneImageInformation` and `alternateDuotoneColors` image resources
+- Added reading of Photoshop CS3 color samplers resource (`depth` field of `colorSamplers`), previously color samplers of newer documents were lost
+- Added reading of Photoshop 5 text layers (`tySh`) as `text` layer data
+- Added reading of old hue/saturation (`hue `), placed layer (`plLd`), filter effects (`FELS`) and artboard (`abdd`) keys and layer generator settings from `extd` section
+- Added `readAse` export to main module
+- Fixed reading levels adjustment written by Clip Studio Paint
+- Fixed reading layer channel with invalid length of 1 throwing an error
+- Fixed corrupted image data of a single layer preventing reading of the whole file (layer is read without image data, unless `throwForMissingFeatures` option is set)
+- Fixed writing files with group layers containing image data (from broken files) throwing an error
+- Fixed reading out of range global layer mask opacity
+- Fixed writing inverted bounds of empty layers
+- Fixed reading 16 bit brush samples in ABR files with half opacity (Photoshop uses 0-32768 range for 16 bit values)
+- Fixed large patterns allocating image data before checking memory limit (patterns exceeding the limit are now skipped without allocating memory)
+- Fixed reading performance regression from v32, RLE compressed image data, patterns and strings are decoded faster
+
 ## v33.0.0
 - **BREAKING CHANGE:** CMYK colors stored in binary color structures (legacy `lrFX` effects, background color, filter mask, etc.) are now inverted on read and write (Photoshop stores 0 as 100% ink), matching CMYK colors read from descriptors
 - **BREAKING CHANGE:** Text layers with "Windows" and "Windows LCD" anti-aliasing now read as `platform` and `platformLCD` instead of `smooth`, and writing them no longer produces `sharp` anti-aliasing

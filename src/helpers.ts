@@ -40,7 +40,7 @@ export const toBlendMode: { [key: string]: BlendMode } = {
 Object.keys(toBlendMode).forEach(key => fromBlendMode[toBlendMode[key]] = key);
 
 export const layerColors: LayerColor[] = [
-	'none', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray'
+	'none', 'red', 'orange', 'yellow', 'green', 'blue', 'violet', 'gray', 'seafoam', 'indigo', 'magenta', 'fuchsia',
 ];
 
 // keys not listed in documentation that Photoshop writes with 64bit length in PSB files (with 8B64 signature)
@@ -165,14 +165,163 @@ export function clamp(value: number, min: number, max: number) {
 
 export function hasAlpha(data: PixelData) {
 	const size = data.width * data.height * 4;
+	const max = data.data instanceof Float32Array ? 1 : (data.data instanceof Uint16Array ? 0xffff : 0xff);
 
 	for (let i = 3; i < size; i += 4) {
-		if (data.data[i] !== 255) {
+		if (data.data[i] !== max) {
 			return true;
 		}
 	}
 
 	return false;
+}
+
+// Polynomial approximation of U.S. Web Coated (SWOP) v2 CMYK to RGB conversion (default CMYK profile of Photoshop).
+// Coefficients are taken from pdf.js (DeviceCmykCS in src/core/colorspace.js, https://github.com/mozilla/pdf.js),
+// Copyright 2012 Mozilla Foundation, licensed under the Apache License, Version 2.0
+// (http://www.apache.org/licenses/LICENSE-2.0)
+// c, m, y, k - ink values (0 - 1), output - RGB values (0 - 255, not rounded or clamped)
+export function cmykToRgbValues(c: number, m: number, y: number, k: number, out: number[]) {
+	out[0] = 255 +
+		c * (-4.387332384609988 * c + 54.48615194189176 * m + 18.82290502165302 * y + 212.25662451639585 * k - 285.2331026137004) +
+		m * (1.7149763477362134 * m - 5.6096736904047315 * y - 17.873870861415444 * k - 5.497006427196366) +
+		y * (-2.5217340131683033 * y - 21.248923337353073 * k + 17.5119270841813) +
+		k * (-21.86122147463605 * k - 189.48180835922747);
+	out[1] = 255 +
+		c * (8.841041422036149 * c + 60.118027045597366 * m + 6.871425592049007 * y + 31.159100130055922 * k - 79.2970844816548) +
+		m * (-15.310361306967817 * m + 17.575251261109482 * y + 131.35250912493976 * k - 190.9453302588951) +
+		y * (4.444339102852739 * y + 9.8632861493405 * k - 24.86741582555878) +
+		k * (-20.737325471181034 * k - 187.80453709719578);
+	out[2] = 255 +
+		c * (0.8842522430003296 * c + 8.078677503112928 * m + 30.89978309703729 * y - 0.23883238689178934 * k - 14.183576799673286) +
+		m * (10.49593273432072 * m + 63.02378494754052 * y + 50.606957656360734 * k - 112.23884253719248) +
+		y * (0.03296041114873217 * y + 115.60384449646641 * k - 193.58209356861505) +
+		k * (-22.33816807309886 * k - 180.12613974708367);
+}
+
+const clamp01 = (v: number) => v < 0 ? 0 : (v > 1 ? 1 : v);
+
+// finds c, m, y (with fixed k) for given RGB color using Gauss-Newton method, returns squared error
+function solveCmy(r: number, g: number, b: number, k: number, x: number[]) {
+	const f = [0, 0, 0], f2 = [0, 0, 0], e = [0, 0, 0];
+	const J = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+	const h = 1e-4;
+
+	for (let iteration = 0; iteration < 20; iteration++) {
+		cmykToRgbValues(x[0], x[1], x[2], k, f);
+		e[0] = f[0] - r; e[1] = f[1] - g; e[2] = f[2] - b;
+		if ((e[0] * e[0] + e[1] * e[1] + e[2] * e[2]) < 1e-6) break;
+
+		for (let j = 0; j < 3; j++) {
+			const s = x[j];
+			x[j] = s + h;
+			cmykToRgbValues(x[0], x[1], x[2], k, f2);
+			x[j] = s;
+			for (let i = 0; i < 3; i++) J[i][j] = (f2[i] - f[i]) / h;
+		}
+
+		const [[a, b_, c], [d, e_, f_], [g_, h_, i_]] = J;
+		const det = a * (e_ * i_ - f_ * h_) - b_ * (d * i_ - f_ * g_) + c * (d * h_ - e_ * g_);
+		if (Math.abs(det) < 1e-12) break;
+
+		const inverse = [
+			[(e_ * i_ - f_ * h_), (c * h_ - b_ * i_), (b_ * f_ - c * e_)],
+			[(f_ * g_ - d * i_), (a * i_ - c * g_), (c * d - a * f_)],
+			[(d * h_ - e_ * g_), (b_ * g_ - a * h_), (a * e_ - b_ * d)],
+		];
+
+		let changed = 0;
+
+		for (let j = 0; j < 3; j++) {
+			const delta = -(inverse[j][0] * e[0] + inverse[j][1] * e[1] + inverse[j][2] * e[2]) / det;
+			const value = clamp01(x[j] + delta);
+			changed += Math.abs(value - x[j]);
+			x[j] = value;
+		}
+
+		if (changed < 1e-9) break;
+	}
+
+	cmykToRgbValues(x[0], x[1], x[2], k, f);
+	return (f[0] - r) * (f[0] - r) + (f[1] - g) * (f[1] - g) + (f[2] - b) * (f[2] - b);
+}
+
+// finds CMYK ink values (0 - 1) for RGB color (0 - 255), out of gamut colors are approximated
+function rgbToCmykExact(r: number, g: number, b: number, out: number[]) {
+	const max = Math.max(r, g, b) / 255;
+	const blackGeneration = Math.pow(clamp01((1 - max - 0.2) / 0.8), 1.3);
+	const x = [0, 0, 0];
+	let bestScore = Infinity, bestError = Infinity;
+
+	const tryBlack = (k: number) => {
+		x[0] = clamp01(1 - r / 255 - k);
+		x[1] = clamp01(1 - g / 255 - k);
+		x[2] = clamp01(1 - b / 255 - k);
+		const error = solveCmy(r, g, b, k, x);
+		// prefer solutions close to black generation value if the error is small enough
+		const score = Math.max(error, 0.1) + Math.abs(k - blackGeneration) * 0.01;
+
+		if (score < bestScore) {
+			bestScore = score;
+			bestError = error;
+			out[0] = x[0]; out[1] = x[1]; out[2] = x[2]; out[3] = k;
+		}
+	};
+
+	tryBlack(blackGeneration);
+
+	if (bestError > 0.1) {
+		for (let i = 0; i <= 10; i++) tryBlack(i / 10);
+	}
+
+	if (bestError > 0.1) {
+		const k = out[3];
+		for (let i = -5; i <= 5; i++) tryBlack(clamp01(k + i / 100));
+	}
+}
+
+const cmykLutSize = 33;
+let cmykLut: Float32Array | undefined;
+
+function getCmykLut() {
+	if (!cmykLut) {
+		const n = cmykLutSize;
+		const lut = new Float32Array(n * n * n * 4);
+		const out = [0, 0, 0, 0];
+
+		for (let r = 0, o = 0; r < n; r++) {
+			for (let g = 0; g < n; g++) {
+				for (let b = 0; b < n; b++, o += 4) {
+					rgbToCmykExact(r * 255 / (n - 1), g * 255 / (n - 1), b * 255 / (n - 1), out);
+					lut[o] = out[0]; lut[o + 1] = out[1]; lut[o + 2] = out[2]; lut[o + 3] = out[3];
+				}
+			}
+		}
+
+		cmykLut = lut;
+	}
+
+	return cmykLut;
+}
+
+// inverse of cmykToRgbValues, r, g, b - RGB values (0 - 1), output - CMYK ink values (0 - 1)
+export function rgbToCmykValues(r: number, g: number, b: number, out: number[]) {
+	const lut = getCmykLut();
+	const n1 = cmykLutSize - 1;
+	const fr = clamp01(r) * n1, fg = clamp01(g) * n1, fb = clamp01(b) * n1;
+	const r0 = Math.min(n1 - 1, Math.floor(fr)), g0 = Math.min(n1 - 1, Math.floor(fg)), b0 = Math.min(n1 - 1, Math.floor(fb));
+	const dr = fr - r0, dg = fg - g0, db = fb - b0;
+	out[0] = out[1] = out[2] = out[3] = 0;
+
+	for (let i = 0; i < 8; i++) {
+		const ir = i >> 2, ig = (i >> 1) & 1, ib = i & 1;
+		const w = (ir ? dr : 1 - dr) * (ig ? dg : 1 - dg) * (ib ? db : 1 - db);
+		const o = (((r0 + ir) * cmykLutSize + g0 + ig) * cmykLutSize + b0 + ib) * 4;
+		out[0] += w * lut[o];
+		out[1] += w * lut[o + 1];
+		out[2] += w * lut[o + 2];
+		out[3] += w * lut[o + 3];
+	}
 }
 
 export function resetImageData({ data }: PixelData) {
@@ -351,6 +500,117 @@ export function writeDataRLE(buffer: Uint8Array, { data, width, height }: PixelD
 
 	// returns view of the buffer, copy the data if the buffer is going to be reused
 	return buffer.subarray(0, o);
+}
+
+// single channel of image data (8bit, 16bit or 32bit values)
+export type PlanarData = Uint8Array | Uint16Array | Float32Array;
+
+// converts channel values to big-endian bytes
+export function planarToBytes(values: PlanarData): Uint8Array {
+	if (values instanceof Uint8Array) return values;
+
+	const bytes = new Uint8Array(values.byteLength);
+	const view = new DataView(bytes.buffer);
+
+	if (values instanceof Uint16Array) {
+		for (let i = 0; i < values.length; i++) view.setUint16(i * 2, values[i], false);
+	} else {
+		for (let i = 0; i < values.length; i++) view.setFloat32(i * 4, values[i], false);
+	}
+
+	return bytes;
+}
+
+// RLE (PackBits) compression of rows of bytes, prefixed with byte counts of each row
+export function writeDataRLEBytes(bytes: Uint8Array, rowBytes: number, height: number, large: boolean) {
+	const countSize = large ? 4 : 2;
+	const buffer = new Uint8Array(height * (countSize + rowBytes + Math.ceil(rowBytes / 128)));
+	let o = countSize * height;
+
+	for (let y = 0; y < height; y++) {
+		const start = o;
+		const rowStart = y * rowBytes;
+		const rowEnd = rowStart + rowBytes;
+		let i = rowStart;
+
+		while (i < rowEnd) {
+			let run = 1;
+			while (i + run < rowEnd && run < 128 && bytes[i + run] === bytes[i]) run++;
+
+			if (run > 1) {
+				buffer[o++] = 257 - run;
+				buffer[o++] = bytes[i];
+				i += run;
+			} else {
+				// literal bytes until a run of at least 3 equal bytes
+				const countIndex = o++;
+				let count = 0;
+
+				while (i < rowEnd && count < 128) {
+					if (i + 2 < rowEnd && bytes[i] === bytes[i + 1] && bytes[i] === bytes[i + 2]) break;
+					buffer[o++] = bytes[i++];
+					count++;
+				}
+
+				buffer[countIndex] = count - 1;
+			}
+		}
+
+		const length = o - start;
+
+		for (let j = 0; j < countSize; j++) {
+			buffer[y * countSize + j] = (length >>> ((countSize - j - 1) * 8)) & 0xff;
+		}
+	}
+
+	return buffer.subarray(0, o);
+}
+
+// zip compression with prediction (values are delta encoded per row, 32bit values are split into byte planes first)
+export function writeDataZipWithPrediction(values: PlanarData, width: number, height: number) {
+	let bytes: Uint8Array;
+
+	if (values instanceof Uint8Array) {
+		bytes = new Uint8Array(width * height);
+
+		for (let y = 0, i = 0; y < height; y++) {
+			for (let x = 0, prev = 0; x < width; x++, i++) {
+				bytes[i] = values[i] - prev; // Uint8Array wraps values on assignment
+				prev = values[i];
+			}
+		}
+	} else if (values instanceof Uint16Array) {
+		bytes = new Uint8Array(width * height * 2);
+
+		for (let y = 0, i = 0; y < height; y++) {
+			for (let x = 0, prev = 0; x < width; x++, i++) {
+				const delta = (values[i] - prev) & 0xffff;
+				bytes[i * 2] = delta >> 8;
+				bytes[i * 2 + 1] = delta & 0xff;
+				prev = values[i];
+			}
+		}
+	} else {
+		const rowBytes = width * 4;
+		const source = planarToBytes(values);
+		bytes = new Uint8Array(rowBytes * height);
+
+		for (let y = 0; y < height; y++) {
+			const row = y * rowBytes;
+
+			for (let x = 0; x < width; x++) {
+				for (let b = 0; b < 4; b++) {
+					bytes[row + b * width + x] = source[row + x * 4 + b];
+				}
+			}
+
+			for (let x = rowBytes - 1; x > 0; x--) {
+				bytes[row + x] -= bytes[row + x - 1];
+			}
+		}
+	}
+
+	return deflateSync(bytes);
 }
 
 export function writeDataZipWithoutPrediction({ data, width, height }: PixelData, offsets: number[]) {

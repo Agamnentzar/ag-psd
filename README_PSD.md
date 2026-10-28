@@ -25,7 +25,7 @@ const psd: Psd = {
 
 - `channels` property specifies number of color channels in the document, it's usually 3 channels (red, green, and blue, when document is in typical RGB color mode) Other color modes will have different channel count (grayscale - 1 channel, CMYK - 4 channels). This property can be omitted and is ignored when writing, this library only writes RGB color mode (3 channels, or 4 channels if composite image has transparency).
 
-- `bitsPerChannel` property specifies number of bits per each color channel, this value will be 1 for one bit bitmap color mode and 8, 16 or 32 in other cases. 16 and 32 bit documents can be read, but writing is only supported for 8 bits per channel (see [Bitmaps and image data](#bitmaps-and-image-data)). It can be omitted when writing a document and default value of 8 will be assumed.
+- `bitsPerChannel` property specifies number of bits per each color channel, this value will be 1 for one bit bitmap color mode and 8, 16 or 32 in other cases (see [Bitmaps and image data](#bitmaps-and-image-data)). Documents are written with the same bit depth, 16 and 32 bits are supported for "RGB" and "Grayscale" color modes and 16 bits for "CMYK" color mode. It can be omitted when writing a document and default value of 8 will be assumed (1 for "Bitmap" color mode).
 
 - `colorMode` specifies color mode of the PSD document.
 
@@ -45,7 +45,7 @@ const psd: Psd = {
     Lab = 9,
   }
   ```
-  The library supports reading "Bitmap", "Grayscale", "Indexed", "RGB" and "CMYK" color modes at the moment. Image data of "Bitmap", "Grayscale", "Indexed" and "CMYK" documents will be converted to RGB when reading PSD file (the `colorMode` field keeps the original value). CMYK image data is converted using approximation of U.S. Web Coated (SWOP) v2 profile (Photoshop's default CMYK profile), embedded color profile (`imageResources.iccProfile`) is not used, so colors of documents using other profiles can differ slightly from Photoshop. 32 bit CMYK documents are not supported. Writing is only supported for "RGB" mode. The value is ignored when writing and "RGB" color mode is always used.
+  The library supports reading "Bitmap", "Grayscale", "Indexed", "RGB" and "CMYK" color modes at the moment. Image data of "Bitmap", "Grayscale", "Indexed" and "CMYK" documents will be converted to RGB when reading PSD file (the `colorMode` field keeps the original value). CMYK image data is converted using approximation of U.S. Web Coated (SWOP) v2 profile (Photoshop's default CMYK profile), embedded color profile (`imageResources.iccProfile`) is not used, so colors of documents using other profiles can differ slightly from Photoshop. 32 bit CMYK documents are not supported. Documents are written in the same color mode ("Bitmap", "Grayscale", "Indexed", "RGB" and "CMYK" color modes are supported for writing, "RGB" is used if the value is omitted), image data is converted from RGB to the color mode of the document (CMYK colors are converted using inverse of the approximation used for reading, "Indexed" color mode uses the closest color from the `palette`). "Bitmap" and "Indexed" documents can't have layers (Photoshop doesn't support them in these color modes), only composite image is written.
 
 - `palette` list of 256 RGB colors used by "Indexed" color mode, this property is only present when reading documents in "Indexed" color mode. It can be omitted when writing.
 
@@ -61,7 +61,7 @@ const psd: Psd = {
   
   If you're generating your own PSD file and want to provide this composite image data you will have to generate one yourself by composing all layer image data and effects yourself, this library does not provide any utilities to generate this image data for you.
 
-- `rawCompositeData` and `rawCompositeDataInfo` are used instead of `canvas` / `imageData` when `useRawData: true` option is passed to `readPsd` function. They contain undecoded composite image data that can be decoded later using `getCompositeImageData` or `getCompositeCanvas` functions (see [main README document](/README.md#functions)). Similarly layers will have `rawData` field (containing both layer and mask channels) instead of decoded image data, which can be decoded using `getLayerImageData`, `getLayerMaskImageData` and other helper functions. When writing, layer `rawData` is used instead of `canvas` / `imageData`. It's written back unchanged if it matches the format of the written file (8 bit RGB data and the same PSD/PSB format), otherwise it's decoded and re-encoded (raw data with bit depth other than 8 bits can't be written and throws an error). `rawCompositeData` is ignored when writing.
+- `rawCompositeData` and `rawCompositeDataInfo` are used instead of `canvas` / `imageData` when `useRawData: true` option is passed to `readPsd` function. They contain undecoded composite image data that can be decoded later using `getCompositeImageData` or `getCompositeCanvas` functions (see [main README document](/README.md#functions)). Similarly layers will have `rawData` field (containing both layer and mask channels) instead of decoded image data, which can be decoded using `getLayerImageData`, `getLayerMaskImageData` and other helper functions. When writing, layer `rawData` is used instead of `canvas` / `imageData`. It's written back unchanged if it matches the format of the written file (the same color mode, bit depth and PSD/PSB format), otherwise it's decoded and re-encoded. `rawCompositeData` is ignored when writing.
 
 - `children` list of layers and groups at the root of the document. [see Layers and Groups](#layers-and-groups)
 
@@ -128,7 +128,7 @@ Image data can be accessed from `psd.canvas` or `layer.canvas` fields by default
 
 If `useImageData` option is set to true in read options then the image data will be available in `psd.imageData` and `layer.imageData` fields instead. Using image data option gives you direct access to pixel data without having to go through the canvas object, which bypasses alpha premultiplication and conversion from 16/32bit image data to 8bit canvas data.
 
-16bit and 32bit documents can only be read, writing is only supported for 8bit documents.
+When writing, image data can be provided as canvas or `PixelData` with 8 bit (`Uint8Array` or `Uint8ClampedArray`), 16 bit (`Uint16Array`) or 32 bit (`Float32Array`) values regardless of the bit depth of the document, it's converted to the bit depth of the document. 16 and 32 bit layers are stored in `Lr16` / `Lr32` sections and compressed using zip compression with prediction (like Photoshop does).
 
 For 16bit documents `imageData` fields will contain pixel data as `Uint16Array`, the values ranging from 0 to 65535.
 
@@ -319,7 +319,8 @@ Example layer structure:
 - `layerColor` color of the layer in layer list, property will be missing or will be one of the following values:
 
   ```ts
-  type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray'
+  type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray' |
+    'seafoam' | 'indigo' | 'magenta' | 'fuchsia'
   ```
 
   ![](/files/layer-color.png)
@@ -388,7 +389,7 @@ Example layer structure:
 
   This property is not present if there are not blending options set for the layer. This property can be omitted when writing.
 
-- `text` text properties of text layer
+- `text` text properties of text layer (type tool info of Photoshop 5 text layers is also read into this field, these layers are written in current format)
 
   _TODO_
 
@@ -539,6 +540,7 @@ Example layer structure:
   - `blendInteriorElements` "Blend Interior Effects as Group" value
   - `transparencyShapesLayer` "Transparency Shapes Layer" value
   - `layerMaskAsGlobalMask` "Layer Mask Hides Effects" value
+  - `vectorMaskAsGlobalMask` "Vector Mask Hides Effects" value
   - `channelBlendingRestrictions` list of disabled color channels ("Channels" checkboxes), channel indices start from 0
   - `blendingRanges` "Blend If" ranges
   - `linkGroup` and `linkGroupEnabled` Layers with the same `linkGroup` value are linked together for moving/transforming. `0` value means no linking is active.
@@ -554,6 +556,12 @@ Example layer structure:
 - `filterMask`, `userMask` and `filterEffectsMasks` additional mask information, `userMask.opacity` and `filterMask.opacity` values range from 0 to 1.
 
 - `pixelSource` video layer source information.
+
+- `pixelSourceData` raw data of video layer frames (`Uint8Array` for each entry).
+
+- `framedGroup` frame settings of frame layers (created with Frame tool), `rect` of the frame, frame `type` (1 - rectangle, 2 - ellipse), `lockPPI`, `preferredResolution` and `savedIteratedName`.
+
+- `foreignEffectId`, `animationEffects` (raw descriptor data) and `patternData` (patterns used by the layer, Photoshop 6) additional layer information.
 
 ### Group
 
@@ -678,7 +686,7 @@ Image resources are global document settings, stored in `psd.imageResources` fie
 
 - `iccUntaggedProfile` ICC Untagged Profile
 
-- `iccProfile` raw ICC color profile data (`Uint8Array`). Documents are always written in RGB color mode, so `iccProfile`, `indexedColorCount`, `transparencyIndex`, `alphaChannelDisplayInfo`, halftone screens and transfer functions are not written if `colorMode` of the document is set to color mode other than RGB.
+- `iccProfile` raw ICC color profile data (`Uint8Array`).
 
 - `exifData` raw EXIF data (`Uint8Array`, TIFF format).
 
@@ -696,7 +704,13 @@ Image resources are global document settings, stored in `psd.imageResources` fie
 
 - `alphaChannelDisplayInfo` display options (color, opacity and kind) of alpha and spot channels, in the same order as `alphaChannelNames`. Colors in color spaces not supported by the library are stored in `rawColor` field (color space id and 4 raw values) instead of `color`. Obsolete display info resource (Photoshop 5) is also read into this field, it is always written in the newer format.
 
-- `colorSamplers` positions (in pixels) and color spaces of color samplers (Photoshop 5 format).
+- `colorSamplers` positions (in pixels), color spaces and sample size (`depth`) of color samplers. Samplers are written in Photoshop CS3 format if any of them has `depth` set, otherwise Photoshop 5 format is used.
+
+- `quickMaskInfo` channel id and "initially empty" flag of Quick Mask.
+
+- `measurementScale` measurement scale settings (raw descriptor data, `Uint8Array`).
+
+- `duotoneHalftoneScreens`, `duotoneTransferFunctions`, `duotoneImageInformation` (raw data) and `alternateDuotoneColors` (Lab equivalents of duotone inks) settings of "Duotone" documents.
 
 - `effectsVisible` global flag to show or hide all layer effects (Photoshop only writes it when effects are hidden).
 
@@ -873,8 +887,10 @@ type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
 type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
 type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
 type Grayscale = { k: number }; // values from 0 to 255
-type Color = RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale;
+type Color = (RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale) & { book?: ColorBookInfo; };
 ```
+
+Colors picked from color books (Pantone, etc.) also have `book` field with name of the book and the color (`{ book: string; name: string; bookID: number; bookKey: string; }`), color values hold the book color converted to document color space.
 
 When you want to set field with a `Color` type, it's pretty straightforward, you can just choose any of the formats you like and set it on the field:
 

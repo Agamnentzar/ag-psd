@@ -3,9 +3,10 @@ import * as path from 'path';
 import * as vm from 'vm';
 import { expect } from 'chai';
 import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
-import { Psd, WriteOptions, ReadOptions, PatternInfo, PixelData, LayerMaskData } from '../psd';
+import { Psd, WriteOptions, ReadOptions, PatternInfo, PixelData, LayerMaskData, ColorMode, PixelArray } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter, writePattern, getRLEChannelBound, writeColor } from '../psdWriter';
-import { readPsd, createReader, readPattern, readColor } from '../psdReader';
+import { readPsd, createReader, readPattern, readColor, readDataRLE, readDataZip } from '../psdReader';
+import { writeDataRLEBytes, writeDataZipWithPrediction, rgbToCmykValues, cmykToRgbValues, clamp } from '../helpers';
 import { writePsdBuffer, writePsdUint8Array, readPsd as readPsdBuffer } from '../index';
 
 const layerImagesPath = path.join(__dirname, '..', '..', 'test', 'layer-images');
@@ -746,27 +747,192 @@ describe('PsdWriter', () => {
 			expect(() => writePsdUint8Array(psd)).not.throw();
 		});
 
-		it('rejects Float32Array composite image data', () => {
-			const psd: Psd = { width: 2, height: 2, imageData: { width: 2, height: 2, data: new Float32Array(16) } as any };
+		it('rejects Uint32Array composite image data', () => {
+			const psd: Psd = { width: 2, height: 2, imageData: { width: 2, height: 2, data: new Uint32Array(16) } as any };
 			expect(() => writePsdUint8Array(psd)).throw(/imageData has incorrect bitDepth/);
 		});
 
-		it('rejects Float32Array layer image data', () => {
-			const psd: Psd = { width: 2, height: 2, children: [{ imageData: { width: 2, height: 2, data: new Float32Array(16) } as any }] };
-			expect(() => writePsdUint8Array(psd)).throw(/imageData has incorrect bitDepth/);
-		});
-
-		it('rejects Uint16Array realMask image data', () => {
+		it('rejects Uint32Array realMask image data', () => {
 			const psd: Psd = {
 				width: 2, height: 2,
-				children: [{ realMask: { imageData: { width: 2, height: 2, data: new Uint16Array(16) } as any } }],
+				children: [{ realMask: { imageData: { width: 2, height: 2, data: new Uint32Array(16) } as any } }],
 			};
 			expect(() => writePsdUint8Array(psd)).throw(/realMask imageData has incorrect bitDepth/);
+		});
+
+		it('converts 16 and 32 bit image data to document bit depth', () => {
+			const data16 = new Uint16Array([0, 0x8080, 0xffff, 0xffff, 0x1010, 0x2020, 0x3030, 0xffff]);
+			const data32 = new Float32Array([0, Math.pow(128 / 255, 2.2), 1, 1, 0.5, 0.5, 0.5, 1]);
+			const psd: Psd = {
+				width: 2, height: 1,
+				imageData: { width: 2, height: 1, data: data16 },
+				children: [{ imageData: { width: 2, height: 1, data: data32 } }],
+			};
+			const result = readPsdBuffer(writePsdBuffer(psd), { useImageData: true });
+			expect(Array.from(result.imageData!.data)).eql([0, 128, 255, 255, 16, 32, 48, 255]);
+			expect(Array.from(result.children![0].imageData!.data)).eql([0, 128, 255, 255, 186, 186, 186, 255]);
 		});
 
 		it('accepts Uint8Array image data', () => {
 			const psd: Psd = { width: 2, height: 2, imageData: { width: 2, height: 2, data: new Uint8Array(16) } as any };
 			expect(() => writePsdUint8Array(psd)).not.throw();
+		});
+	});
+
+	describe('color modes and bit depths', () => {
+		function testData(width: number, height: number, max: number, ArrayType: any, alpha = true): PixelData {
+			const data: PixelArray = new ArrayType(width * height * 4);
+			for (let i = 0; i < data.length; i++) {
+				const v = ((i * 37) % 101) / 100;
+				data[i] = (i % 4 === 3 && !alpha) ? max : (max === 1 ? v : Math.round(v * max));
+			}
+			return { width, height, data };
+		}
+
+		function roundTrip(psd: Psd, options: WriteOptions = {}) {
+			return readPsdBuffer(writePsdBuffer(psd, options), { useImageData: true, throwForMissingFeatures: true, skipThumbnail: true });
+		}
+
+		for (const bitsPerChannel of [16, 32]) {
+			for (const psb of [false, true]) {
+				it(`writes ${bitsPerChannel}bit RGB document${psb ? ' (PSB)' : ''}`, () => {
+					const [max, ArrayType] = bitsPerChannel === 16 ? [0xffff, Uint16Array] : [1, Float32Array];
+					const layerData = testData(5, 3, max, ArrayType);
+					const maskData = testData(2, 2, max, ArrayType, false);
+					for (let i = 0; i < maskData.data.length; i += 4) maskData.data[i + 1] = maskData.data[i + 2] = maskData.data[i];
+					const imageData = testData(4, 4, max, ArrayType);
+					const psd: Psd = {
+						width: 4, height: 4, bitsPerChannel, imageData,
+						children: [
+							{ name: 'a', left: 1, top: 1, imageData: layerData, mask: { left: 0, top: 0, imageData: maskData } },
+							{ name: 'b', children: [{ name: 'c' }] },
+						],
+					};
+					const result = roundTrip(psd, { psb });
+
+					expect(result.bitsPerChannel).equal(bitsPerChannel);
+					expect(result.children!.map(c => c.name)).eql(['a', 'b']);
+					expect(result.children![1].children![0].name).equal('c');
+					expect(Array.from(result.children![0].imageData!.data)).eql(Array.from(layerData.data));
+					expect(Array.from(result.children![0].mask!.imageData!.data)).eql(Array.from(maskData.data));
+					// composite with transparency, colors are blended with white
+					expect(result.imageData!.data.length).equal(imageData.data.length);
+					for (let i = 3; i < imageData.data.length; i += 4) expect(result.imageData!.data[i]).equal(imageData.data[i]);
+				});
+			}
+		}
+
+		it('writes HDR toning color mode data for 32bit documents', () => {
+			const buffer = Buffer.from(writePsdBuffer({ width: 1, height: 1, bitsPerChannel: 32 }));
+			expect(buffer.readUInt32BE(26)).equal(110);
+			expect(buffer.toString('latin1', 30, 34)).equal('hdrt');
+		});
+
+		for (const bitsPerChannel of [8, 16, 32]) {
+			it(`writes ${bitsPerChannel}bit grayscale document`, () => {
+				const [max, ArrayType] = bitsPerChannel === 8 ? [255, Uint8ClampedArray] : (bitsPerChannel === 16 ? [0xffff, Uint16Array] : [1, Float32Array]);
+				const data = testData(5, 3, max, ArrayType);
+				for (let i = 0; i < data.data.length; i += 4) data.data[i + 1] = data.data[i + 2] = data.data[i];
+				const imageData = testData(3, 3, max, ArrayType, false);
+				for (let i = 0; i < imageData.data.length; i += 4) imageData.data[i + 1] = imageData.data[i + 2] = imageData.data[i];
+				const result = roundTrip({
+					width: 3, height: 3, colorMode: ColorMode.Grayscale, bitsPerChannel, imageData,
+					children: [{ name: 'a', imageData: data }],
+				});
+				expect(result.colorMode).equal(ColorMode.Grayscale);
+				expect(result.channels).equal(1);
+				expect(Array.from(result.children![0].imageData!.data)).eql(Array.from(data.data));
+				expect(Array.from(result.imageData!.data)).eql(Array.from(imageData.data));
+			});
+		}
+
+		for (const bitsPerChannel of [8, 16]) {
+			it(`writes ${bitsPerChannel}bit CMYK document`, () => {
+				const max = bitsPerChannel === 8 ? 255 : 0xffff;
+				// colors converted from CMYK are in gamut, they should convert back without significant changes
+				const rgb = [0, 0, 0];
+				const data = bitsPerChannel === 8 ? new Uint8ClampedArray(4 * 4 * 4) : new Uint16Array(4 * 4 * 4);
+				for (let i = 0; i < 16; i++) {
+					cmykToRgbValues((i % 4) / 3, ((i >> 2) % 4) / 3, (i % 3) / 2, (i % 5) / 4, rgb);
+					for (let j = 0; j < 3; j++) data[i * 4 + j] = Math.round(clamp(rgb[j], 0, 255) * max / 255);
+					data[i * 4 + 3] = i < 8 ? max : Math.round(max / 2);
+				}
+				const imageData = { width: 4, height: 4, data };
+				const result = roundTrip({ width: 4, height: 4, colorMode: ColorMode.CMYK, bitsPerChannel, children: [{ name: 'a', imageData }] });
+				expect(result.colorMode).equal(ColorMode.CMYK);
+				const resultData = result.children![0].imageData!.data;
+				for (let i = 0; i < data.length; i++) {
+					expect(Math.abs(resultData[i] - data[i]), `value ${i}`).lessThan(max * 3 / 255);
+				}
+			});
+		}
+
+		it('converts RGB colors to CMYK (inverse of CMYK to RGB conversion)', () => {
+			const cmyk = [0, 0, 0, 0], rgb = [0, 0, 0];
+			for (const source of [[0, 0, 0, 0], [0.3, 0.2, 0.2, 0.1], [0.8, 0.4, 0, 0], [0.1, 0.7, 0.9, 0.2], [0.5, 0.5, 0.5, 0.9]]) {
+				cmykToRgbValues(source[0], source[1], source[2], source[3], rgb);
+				const color = rgb.map(v => clamp(v, 0, 255) / 255);
+				rgbToCmykValues(color[0], color[1], color[2], cmyk);
+				cmykToRgbValues(cmyk[0], cmyk[1], cmyk[2], cmyk[3], rgb);
+				for (let i = 0; i < 3; i++) expect(Math.abs(clamp(rgb[i], 0, 255) / 255 - color[i])).lessThan(0.01);
+			}
+		});
+
+		it('writes indexed document', () => {
+			const palette = [{ r: 255, g: 0, b: 0 }, { r: 0, g: 255, b: 0 }, { r: 0, g: 0, b: 255 }, { r: 10, g: 20, b: 30 }];
+			const data = new Uint8ClampedArray(4 * 2 * 4);
+			[0, 1, 2, 3, 2, 1, 0, 3].forEach((index, i) => {
+				const color = i === 7 ? { r: 12, g: 19, b: 31 } : palette[index]; // last color is closest to the palette color
+				data.set([color.r, color.g, color.b, 255], i * 4);
+			});
+			const result = roundTrip({ width: 4, height: 2, colorMode: ColorMode.Indexed, palette, imageData: { width: 4, height: 2, data } });
+			expect(result.colorMode).equal(ColorMode.Indexed);
+			expect(result.palette!.slice(0, 4)).eql(palette);
+			expect(result.children).undefined;
+			const expected = Array.from(data);
+			expected.splice(28, 3, 10, 20, 30);
+			expect(Array.from(result.imageData!.data)).eql(expected);
+		});
+
+		it('writes bitmap document', () => {
+			const data = new Uint8ClampedArray(10 * 2 * 4);
+			for (let i = 0; i < 20; i++) data.set(i % 3 ? [255, 255, 255, 255] : [0, 0, 0, 255], i * 4);
+			const result = roundTrip({ width: 10, height: 2, colorMode: ColorMode.Bitmap, imageData: { width: 10, height: 2, data } });
+			expect(result.colorMode).equal(ColorMode.Bitmap);
+			expect(result.bitsPerChannel).equal(1);
+			expect(Array.from(result.imageData!.data)).eql(Array.from(data));
+		});
+
+		it('throws for unsupported color modes and bit depths', () => {
+			expect(() => writePsdBuffer({ width: 1, height: 1, colorMode: ColorMode.Lab })).throw(/Lab color mode is not supported for writing/);
+			expect(() => writePsdBuffer({ width: 1, height: 1, colorMode: ColorMode.CMYK, bitsPerChannel: 32 })).throw(/bitsPerChannel 32 is not supported/);
+			expect(() => writePsdBuffer({ width: 1, height: 1, bitsPerChannel: 1 })).throw(/bitsPerChannel 1 is not supported/);
+			expect(() => writePsdBuffer({ width: 1, height: 1, colorMode: ColorMode.Indexed, palette: [], children: [{}] })).throw(/Layers are not supported/);
+			expect(() => writePsdBuffer({ width: 1, height: 1, colorMode: ColorMode.Indexed })).throw(/Missing color palette/);
+		});
+
+		it('writes RLE compressed rows of bytes', () => {
+			const rows = [[1, 1, 1, 1, 2, 3, 4, 4, 5], [7, 7, 8, 9, 9, 9, 10, 11, 11], new Array(9).fill(3)];
+			const bytes = new Uint8Array(([] as number[]).concat(...rows));
+			for (const large of [false, true]) {
+				const encoded = writeDataRLEBytes(bytes, 9, 3, large);
+				const decoded = new Uint8Array(27);
+				readDataRLE(createReader(encoded.buffer, encoded.byteOffset, encoded.byteLength), { width: 9, height: 3, data: decoded }, 9, 3, 8, 1, [0], large);
+				expect(Array.from(decoded)).eql(Array.from(bytes));
+			}
+		});
+
+		it('writes zip compressed data with prediction', () => {
+			const tests: [any, number][] = [
+				[new Uint8Array([0, 255, 3, 2, 200, 100, 5, 5]), 8],
+				[new Uint16Array([0, 65535, 3, 2, 50000, 100, 5, 5]), 16],
+				[new Float32Array([0, 1, 0.25, -1, 100, 0.5, 3, 3]), 32],
+			];
+			for (const [values, bitDepth] of tests) {
+				const pixels = { width: 4, height: 2, data: new values.constructor(8) };
+				readDataZip(writeDataZipWithPrediction(values, 4, 2), pixels, 4, 2, bitDepth, 1, 0, true);
+				expect(Array.from(pixels.data), `${bitDepth}bit`).eql(Array.from(values));
+			}
 		});
 	});
 
@@ -893,7 +1059,7 @@ describe('PsdWriter', () => {
 			const psd = readPsdBuffer(fs.readFileSync(path.join('test', 'read', 'indexed', 'src.psd')), { skipThumbnail: true });
 			expect(psd.palette).not.undefined;
 
-			const buffer = Buffer.from(writePsdBuffer(psd));
+			const buffer = Buffer.from(writePsdBuffer({ ...psd, colorMode: ColorMode.RGB }));
 			expect(buffer.readUInt16BE(24)).equal(3); // RGB color mode
 			expect(buffer.readUInt32BE(26)).equal(0); // color mode data length
 		});

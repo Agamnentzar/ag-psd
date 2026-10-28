@@ -4,7 +4,7 @@ import { expect } from 'chai';
 import { deflate } from 'pako';
 import { readPsdFromFile, importPSD, loadImagesFromDirectory, compareCanvases, saveCanvas, createReaderFromBuffer, compareBuffers, compareTwoFiles } from './common';
 import { Layer, ReadOptions, Psd, ColorMode, PixelData } from '../psd';
-import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData } from '../index';
+import { byteArrayToBase64, readPsd, writePsdBuffer, getLayerImageData, getCompositeImageData, readAse } from '../index';
 import { readPsd as readPsdInternal, readPattern, readDataRLE, createReader, readBytes, readDataZip, readAdditionalLayerInfo } from '../psdReader';
 import { createWriter, getWriterBuffer, writePattern } from '../psdWriter';
 import { infoHandlers, infoHandlersMap } from '../additionalInfo';
@@ -650,6 +650,32 @@ describe('PsdReader', () => {
 			const buf = buildPattern(1, 1, [{ depth: 8, rect: [0, 0, 30000, 30000], data: [1] }]);
 			expect(() => readPattern(createReaderFromBuffer(buf))).to.throw('Pattern channel bounds outside of pattern bounds');
 		});
+
+		it('checks pattern memory limit before allocating image data', () => {
+			// 100x1 RLE channels, each row is a single run of 100 values (image data 400 bytes + 100 bytes RLE decode buffer)
+			const rle = (value: number) => ({ depth: 8, compression: 1, data: [0, 2, 0x9d, value] });
+			const buf = buildPattern(100, 1, [rle(1), rle(2), rle(3)]);
+
+			const limited = createReaderFromBuffer(buf);
+			limited.totalMemoryLimit = 450;
+			expect(() => readPattern(limited)).to.throw('Exceeded memory limit');
+			expect(limited.totalMemoryLimit).equal(450);
+
+			const reader = createReaderFromBuffer(buf);
+			reader.totalMemoryLimit = 500;
+			const pattern = readPattern(reader);
+			expect(Array.from(pattern.data.slice(-4))).eql([1, 2, 3, 255]);
+			expect(reader.totalMemoryLimit).equal(100);
+		});
+
+		it('does not reduce memory limit when pattern fails to decode', () => {
+			// 10x2 RLE channel with data too short for its row lengths
+			const buf = buildPattern(10, 2, [{ depth: 8, compression: 1, data: [0, 2] }]);
+			const reader = createReaderFromBuffer(buf);
+			reader.totalMemoryLimit = 1000;
+			expect(() => readPattern(reader)).to.throw('RLE row lengths exceed buffer length');
+			expect(reader.totalMemoryLimit).equal(1000);
+		});
 	});
 
 	describe('patterns', () => {
@@ -698,6 +724,51 @@ describe('PsdReader', () => {
 	});
 
 	describe('fixes', () => {
+		it('exports readAse from main module', () => {
+			expect(readAse).a('function');
+		});
+
+		it('reads layer channel with invalid length of 1', () => {
+			const buffer = writePsdBuffer({ width: 2, height: 2, children: [{ name: 'a' }, { name: 'b' }] });
+			// channel info of first layer (transparency, red, green, blue with 2 bytes for compression type)
+			const info = Buffer.from([0xff, 0xff, 0, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0, 1, 0, 0, 0, 2, 0, 2, 0, 0, 0, 2]);
+			const offset = buffer.indexOf(info);
+			expect(offset).greaterThan(0);
+			buffer.writeUInt32BE(1, offset + 20);
+			const psd = readPsd(buffer, { skipCompositeImageData: true });
+			expect(psd.children!.map(c => c.name)).eql(['a', 'b']);
+		});
+
+		it('reads rest of the file when image data of one layer is corrupted', () => {
+			const data = new Uint8ClampedArray(4 * 4 * 4).map((_, i) => i * 7);
+			const buffer = writePsdBuffer({
+				width: 4, height: 4,
+				children: [{ name: 'a', imageData: { width: 4, height: 4, data } }, { name: 'b', imageData: { width: 4, height: 4, data } }],
+			}, { compress: true });
+			const offset = buffer.indexOf(Buffer.from([0x78, 0x9c])); // zip header of first channel of first layer
+			expect(offset).greaterThan(0);
+			buffer[offset] = 0;
+			const psd = readPsd(buffer, { useImageData: true, skipCompositeImageData: true });
+			expect(psd.children!.map(c => c.name)).eql(['a', 'b']);
+			expect(psd.children![0].imageData).undefined;
+			expect(Array.from(psd.children![1].imageData!.data)).eql(Array.from(data));
+			expect(() => readPsd(buffer, { useImageData: true, throwForMissingFeatures: true })).throw(/Invalid zip data/);
+		});
+
+		it('clamps global layer mask opacity out of 0-100 range', () => {
+			const globalLayerMaskInfo = { overlayColorSpace: 0x1234, colorSpace1: 0x5678, colorSpace2: 0x9abc, colorSpace3: 0xdef0, colorSpace4: 0x4321, opacity: 1, kind: 128 };
+			const buffer = writePsdBuffer({ width: 1, height: 1, globalLayerMaskInfo });
+			const offset = buffer.indexOf(Buffer.from([0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x43, 0x21]));
+			buffer.writeUInt16BE(355, offset + 10);
+			expect(readPsd(buffer).globalLayerMaskInfo!.opacity).equal(1);
+		});
+
+		it('writes empty layer with inverted bounds', () => {
+			const psd = readPsd(writePsdBuffer({ width: 10, height: 10, children: [{ name: 'a', left: 2, top: 3, right: 2, bottom: -1 }, { name: 'b', left: 1, top: 1 }] }));
+			expect(psd.children![0]).include({ left: 2, top: 3, right: 2, bottom: -1 });
+			expect(psd.children![1]).include({ left: 1, top: 1, right: 1, bottom: 1 });
+		});
+
 		it('reads layer with negative size as empty layer', () => {
 			const buffer = writePsdBuffer({ width: 10, height: 10, children: [{ name: 'a', left: 7, top: 5 }] });
 			// find layer record bounds (top, left, bottom, right) and make the layer -1 pixel wide
@@ -727,7 +798,7 @@ describe('PsdReader', () => {
 			expect(Array.from(result.imageData!.data).filter((_, i) => i % 4 === 3)).eql([0, 255]);
 		});
 
-		it('does not write color mode specific image resources for documents in other color modes than RGB', () => {
+		it('writes color mode specific image resources for documents in other color modes than RGB', () => {
 			const imageResources: Psd['imageResources'] = {
 				iccProfile: new Uint8Array([1, 2, 3]),
 				indexedColorCount: 2,
@@ -738,11 +809,8 @@ describe('PsdReader', () => {
 			};
 			const read = (colorMode: ColorMode) => readPsd(writePsdBuffer({ width: 1, height: 1, colorMode, imageResources }), { skipCompositeImageData: true }).imageResources!;
 			expect(read(ColorMode.RGB)).deep.include(imageResources);
-			const fromCmyk = read(ColorMode.CMYK);
-			expect(fromCmyk.globalAngle).equal(30);
-			for (const key of ['iccProfile', 'indexedColorCount', 'transparencyIndex', 'alphaChannelDisplayInfo', 'grayscaleTransferFunctions']) {
-				expect((fromCmyk as any)[key], key).undefined;
-			}
+			expect(read(ColorMode.CMYK)).deep.include(imageResources);
+			expect(read(ColorMode.Grayscale)).deep.include(imageResources);
 		});
 
 		it('decodes raw composite data with transparency named in alpha channel names when layers are in Lr16', () => {
@@ -1247,13 +1315,13 @@ function clearCanvasFields(layer: Layer | undefined) {
 	}
 }
 
-function buildPattern(width: number, height: number, channels: { depth: number; rect?: number[]; data: number[]; }[], colorMode = ColorMode.RGB) {
+function buildPattern(width: number, height: number, channels: { depth: number; rect?: number[]; data: number[]; compression?: number; }[], colorMode = ColorMode.RGB) {
 	const uint32 = (v: number) => [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff];
 	const arrays: number[] = [];
 
 	for (const c of channels) {
 		const [top, left, bottom, right] = c.rect ?? [0, 0, height, width];
-		arrays.push(...uint32(1), ...uint32(23 + c.data.length), ...uint32(c.depth), ...uint32(top), ...uint32(left), ...uint32(bottom), ...uint32(right), 0, c.depth, 0, ...c.data);
+		arrays.push(...uint32(1), ...uint32(23 + c.data.length), ...uint32(c.depth), ...uint32(top), ...uint32(left), ...uint32(bottom), ...uint32(right), 0, c.depth, c.compression ?? 0, ...c.data);
 	}
 
 	arrays.push(...uint32(0), ...uint32(0)); // user mask and sheet mask

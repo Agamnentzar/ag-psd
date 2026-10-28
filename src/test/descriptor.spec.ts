@@ -29,6 +29,10 @@ function writeDesc(value: any, classID = 'null', root = '') {
 	return new Uint8Array(getWriterBuffer(writer));
 }
 
+const testReader = createReader(new ArrayBuffer(0));
+const logReader = { ...createReader(new ArrayBuffer(0)), logMissingFeatures: true };
+const testWriter = createWriter();
+
 function readDesc(buffer: Uint8Array, includeClass = true) {
 	return readDescriptorStructure(toReader(buffer), includeClass);
 }
@@ -314,11 +318,22 @@ describe('colors', () => {
 		expect(serializeColor(parseColor(original as any))).eql(original);
 	});
 
-	it('reads book colors as black', () => {
+	it('reads book colors without color values as black', () => {
 		const original = { _name: '', _classID: 'BkCl', 'Bk  ': 'PANTONE+ Solid Coated', 'Nm  ': 'PANTONE 185 C', bookID: 3060, bookKey: new Uint8Array([1, 2]) };
 		const desc = readDesc(writeDesc({ 'Clr ': original }))['Clr '];
 		expect(desc).eql(original);
-		expect(parseColor(desc)).eql({ r: 0, g: 0, b: 0 });
+		expect(parseColor(desc)).eql({ r: 0, g: 0, b: 0, book: { book: 'PANTONE+ Solid Coated', name: 'PANTONE 185 C', bookID: 3060, bookKey: '' } });
+	});
+
+	it('reads and writes book colors', () => {
+		const original = {
+			_name: '', _classID: 'CMYC', 'Cyn ': 37.17, Mgnt: 71.36, 'Ylw ': 27.44, Blck: 2.25,
+			'Bk  ': 'PANTONE+ Solid Coated', 'Nm  ': 'PANTONE 688 C', bookID: 3060, bookKey: new Uint8Array([48, 52, 50, 53, 83, 67]),
+		};
+		const desc = readDesc(writeDesc({ 'Clr ': original }))['Clr '];
+		const color = parseColor(desc);
+		expect(color.book).eql({ book: 'PANTONE+ Solid Coated', name: 'PANTONE 688 C', bookID: 3060, bookKey: '0425SC' });
+		expect(readDesc(writeDesc({ 'Clr ': serializeColor(color) }))['Clr ']).eql(original);
 	});
 });
 
@@ -328,10 +343,10 @@ describe('effects', () => {
 		const effects: LayerEffectsInfo = {
 			bevel: { enabled: true, useShape: true, contour: contour('gloss'), shapeContour: contour('shape') },
 		};
-		const info = serializeEffects(effects, false, false);
+		const info = serializeEffects(effects, testWriter, false);
 		expect((info.ebbl as any).TrnS['Nm  ']).equal('gloss');
 		expect((info.ebbl as any).MpgS['Nm  ']).equal('shape');
-		const bevel = parseEffects(info, false).bevel!;
+		const bevel = parseEffects(info, testReader).bevel!;
 		expect(bevel.contour!.name).equal('gloss');
 		expect(bevel.shapeContour!.name).equal('shape');
 	});
@@ -350,15 +365,15 @@ describe('effects', () => {
 				},
 			}],
 		};
-		const info = serializeEffects(effects, false, false);
+		const info = serializeEffects(effects, testWriter, false);
 		expect((info.GrFl as any).Grad.Clrs.map((s: any) => s.Type)).eql(['Clry.FrgC', 'Clry.UsrS']);
-		const gradient = parseEffects(info, false).gradientOverlay![0].gradient as any;
+		const gradient = parseEffects(info, testReader).gradientOverlay![0].gradient as any;
 		expect(gradient.colorStops[0].type).equal('foreground');
 		expect(gradient.colorStops[1].type).undefined;
 
 		// color stop without color
 		delete (info.GrFl as any).Grad.Clrs[0]['Clr '];
-		expect((parseEffects(info, false).gradientOverlay![0].gradient as any).colorStops[0].color).eql({ r: 0, g: 0, b: 0 });
+		expect((parseEffects(info, testReader).gradientOverlay![0].gradient as any).colorStops[0].color).eql({ r: 0, g: 0, b: 0 });
 	});
 
 	it('reads unknown gradient color stop type as user color', () => {
@@ -372,11 +387,11 @@ describe('effects', () => {
 				},
 			}],
 		};
-		const info = serializeEffects(effects, false, false);
+		const info = serializeEffects(effects, testWriter, false);
 		(info.GrFl as any).Grad.Clrs[0].Type = 'Clry.Xxxx';
-		const parsed = parseEffects(info, false);
+		const parsed = parseEffects(info, testReader);
 		expect((parsed.gradientOverlay![0].gradient as any).colorStops[0].type).undefined;
-		expect((serializeEffects(parsed, false, false).GrFl as any).Grad.Clrs[0].Type).equal('Clry.UsrS');
+		expect((serializeEffects(parsed, testWriter, false).GrFl as any).Grad.Clrs[0].Type).equal('Clry.UsrS');
 	});
 
 	it('round-trips pattern fill scale and angle', () => {
@@ -403,26 +418,26 @@ describe('effects', () => {
 				enab: true, Styl: 'FStl.OutF', PntT: 'FrFl.SClr', 'Md  ': 'BlnM.Nrml', Opct: { units: 'Percent', value: 100 }, 'Sz  ': 3,
 				'Clr ': { _name: '', _classID: 'RGBC', 'Rd  ': 255, 'Grn ': 0, 'Bl  ': 0 },
 			},
-		} as any, false);
+		} as any, testReader);
 		expect(effects.stroke![0].size).eql({ units: 'Pixels', value: 3 });
 	});
 
 	it('round-trips glow gradient interpolation method', () => {
 		const effects: LayerEffectsInfo = { outerGlow: { enabled: true, interpolationMethod: 'classic' } };
-		const info = serializeEffects(effects, false, false);
+		const info = serializeEffects(effects, testWriter, false);
 		expect((info.OrGl as any).gradientsInterpolationMethod).equal('gradientInterpolationMethodType.Gcls');
 		expect((info.OrGl as any).gs99).undefined;
-		expect(parseEffects(readDesc(writeDesc(info)) as any, true).outerGlow!.interpolationMethod).equal('classic');
+		expect(parseEffects(readDesc(writeDesc(info)) as any, logReader).outerGlow!.interpolationMethod).equal('classic');
 	});
 
 	it('writes pattern overlay angle as Angl', () => {
 		const effects: LayerEffectsInfo = {
 			patternOverlay: { enabled: true, angle: 45, pattern: { name: 'p', id: 'id' } } as any,
 		};
-		const info = serializeEffects(effects, false, false);
+		const info = serializeEffects(effects, testWriter, false);
 		expect((info.patternFill as any).Angl).eql({ units: 'Angle', value: 45 });
 		expect((info.patternFill as any).lagl).undefined;
-		expect((parseEffects(info, false).patternOverlay as any).angle).equal(45);
+		expect((parseEffects(info, testReader).patternOverlay as any).angle).equal(45);
 	});
 
 	it('ignores undefined effects when counting modifying effects', () => {
@@ -432,7 +447,7 @@ describe('effects', () => {
 			innerGlow: null as any,
 			bevel: { enabled: true },
 		};
-		const info = serializeEffects(effects, false, true);
+		const info = serializeEffects(effects, testWriter, true);
 		expect(info.numModifyingFX).equal(2);
 	});
 
@@ -449,12 +464,12 @@ describe('effects', () => {
 				},
 			}],
 		};
-		const info: any = serializeEffects(effects, false, false);
+		const info: any = serializeEffects(effects, testWriter, false);
 		expect(info.GrFl.Grad.Intr).equal(2048);
 		expect(info.GrFl.Grad.Clrs[1].Lctn).equal(2048);
 		expect(info.GrFl.Grad.Trns[0].Lctn).equal(1024);
 
-		const gradient: any = parseEffects(info, false).gradientOverlay![0].gradient;
+		const gradient: any = parseEffects(info, testReader).gradientOverlay![0].gradient;
 		expect(gradient.smoothness).equal(0.5);
 		expect(gradient.colorStops[1].location).equal(0.5);
 		expect(gradient.opacityStops[0].location).equal(0.25);
@@ -467,7 +482,7 @@ describe('effects', () => {
 				gradient: { type: 'noise', name: 'n', roughness: 0.5, colorModel: 'rgb', randomSeed: 1, min: [0.29, 0, 0, 0], max: [0.57, 1, 1, 1] },
 			}],
 		};
-		const info: any = serializeEffects(effects, false, false);
+		const info: any = serializeEffects(effects, testWriter, false);
 		expect(info.GrFl.Grad['Mnm ']).eql([29, 0, 0, 0]);
 		expect(info.GrFl.Grad['Mxm ']).eql([57, 100, 100, 100]);
 		const bytes = writeDesc(info);
@@ -487,9 +502,9 @@ describe('timeline', () => {
 				keys: [{ interpolation: 'hold', time: { numerator: 10, denominator: 30 }, selected: true, type: 'opacity', value: 0.5 }],
 			},
 		}];
-		const trackList = serializeTrackList(tracks);
+		const trackList = serializeTrackList(tracks, testWriter);
 		const bytes = writeDesc({ trackList });
-		const result = parseTrackList(readDesc(bytes, false).trackList, false);
+		const result = parseTrackList(readDesc(bytes, false).trackList, testReader);
 		expect(result).eql(tracks);
 	});
 });

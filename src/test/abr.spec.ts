@@ -104,7 +104,13 @@ describe('ABR', () => {
 	it('reads 16bit RLE compressed brush sample', () => {
 		// 1 row: length 5, literal run of 4 bytes (0x1234, 0xff00)
 		const abr = readAbr(createAbr(2, 1, 16, [0, 5, 3, 0x12, 0x34, 0xff, 0x00]));
-		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xff]);
+		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xfe]);
+	});
+
+	it('reads 16bit brush sample using 0-32768 range', () => {
+		// 1 row: length 5, literal run of 4 bytes (0x8000, 0x4000)
+		const abr = readAbr(createAbr(2, 1, 16, [0, 5, 3, 0x80, 0x00, 0x40, 0x00]));
+		expect(Array.from(abr.samples[0].alpha)).eql([0xff, 0x80]);
 	});
 
 	it('skips RLE compressed brush sample larger than its data', () => {
@@ -253,7 +259,7 @@ describe('ABR', () => {
 		const invalid = createAbr(10000, 10000, 8, new Array(100).fill(0)).slice(4);
 		const abr = readAbr(new Uint8Array([0, 6, 0, 2, ...lPdc, ...invalid, ...valid]));
 		expect(abr.samples.length).equal(1);
-		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xff]);
+		expect(Array.from(abr.samples[0].alpha)).eql([0x12, 0xfe]);
 	});
 });
 

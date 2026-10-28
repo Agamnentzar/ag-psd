@@ -44,11 +44,6 @@ const unitsMap: Dict = {
 };
 
 const unitsMapRev = revMap(unitsMap);
-let logErrors = false;
-
-export function setLogErrors(value: boolean) {
-	logErrors = value;
-}
 
 function makeType(name: string, classID: string) {
 	return { name, classID };
@@ -98,6 +93,7 @@ const fieldToExtType: ExtTypeDict = {
 	psVersion: nullType,
 	docDefaultNewArtboardBackgroundColor: makeType('', 'RGBC'),
 	artboardRect: makeType('', 'classFloatRect'),
+	framedGroupRect: makeType('', 'classFloatRect'),
 	keyOriginRRectRadii: makeType('', 'radii'),
 	keyOriginBoxCorners: nullType,
 	rectangleCornerA: makeType('', 'Pnt '),
@@ -185,7 +181,7 @@ const fieldToArrayExtType: ExtTypeDict = {
 const typeToField: { [key: string]: string[]; } = {
 	'TEXT': [
 		'Txt ', 'printerName', 'Nm  ', 'Idnt', 'blackAndWhitePresetFileName', 'LUT3DFileName', 'exportOption', 'scaleSettings',
-		'BackgroundImagePath', 'ImageSubfolderName',
+		'BackgroundImagePath', 'ImageSubfolderName', 'SavedIteratedName',
 		'presetFileName', 'curvesPresetFileName', 'mixerPresetFileName', 'placed', 'description', 'reason',
 		'artboardPresetName', 'json', 'clipID', 'relPath', 'fullPath', 'mediaDescriptor', 'Msge',
 		'altTag', 'url', 'cellText', 'preset', 'KnNm', 'FPth', 'comment', 'originalPath', 'Bk  ', 'pathUnicodeName',
@@ -212,7 +208,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN', 'NmbG', 'WLMn', 'WLMx', 'AmMn', 'AmMx', 'SclH', 'SclV',
 		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'FlRs', 'Vrnc', 'Strg', 'ExtS', 'ExtD',
 		'HrzS', 'VrtS', 'NmbR', 'EdgF', 'Ang1', 'Ang2', 'Ang3', 'Ang4', 'lastAppliedComp', 'capturedInfo',
-		'pixelSourceType',
+		'pixelSourceType', 'framedGroupType',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS', 'BlrQ',
@@ -236,7 +232,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'materialsDisclosed', 'hasMotion', 'muted', 'Effc', 'selected', 'autoScope', 'fillCanvas',
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
 		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch', 'ExtF', 'ExtM',
-		'moreAccurate', 'GpuY', 'LIWy', 'Cnty', 'Lnkd', 'showAlteredVideo', 'lightingOn',
+		'moreAccurate', 'GpuY', 'LIWy', 'Cnty', 'Lnkd', 'showAlteredVideo', 'lightingOn', 'LockPPI',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght', 'Gmm ',
@@ -244,7 +240,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'xx', 'xy', 'yx', 'yy', 'tx', 'ty', 'FrGA', 'frameRate', 'audioLevel', 'rotation',
 		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat', 'imageResolution',
 		'PuX0', 'PuX1', 'PuX2', 'PuX3', 'PuY0', 'PuY1', 'PuY2', 'PuY3',
-		'stylization', 'cleanliness', 'brushScale', 'microBrush', 'specularity',
+		'stylization', 'cleanliness', 'brushScale', 'microBrush', 'specularity', 'PreferredResolution',
 	],
 	'UntF': [
 		'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
@@ -276,6 +272,14 @@ const channels = [
 const doubleColorClasses = ['Grsc', 'LbCl', 'GRYC', 'LABC'];
 
 // fallback for unknown keys, based on the type of the value
+export const cameraRawFilterClassID = 'Adobe Camera Raw Filter';
+
+// types of Camera Raw Filter settings (keys clash with other descriptors so they're typed by class)
+export const cameraRawFilterKeyTypes: Dict = {
+	CrVe: 'TEXT', PrVN: 'long', PrVe: 'long', WBal: 'enum', Ex12: 'doub', ShpR: 'doub',
+	'Crv ': 'VlLs', CrvR: 'VlLs', CrvG: 'VlLs', CrvB: 'VlLs',
+};
+
 function guessOSType(value: any): string | undefined {
 	if (typeof value === 'boolean') return 'bool';
 	if (typeof value === 'number' && !Number.isInteger(value)) return 'doub';
@@ -441,7 +445,7 @@ export function readDescriptorStructure(reader: PsdReader, includeClass: boolean
 export const outputSettingsRoot = 'outputSettings';
 
 export function writeDescriptorStructure(writer: PsdWriter, name: string, classId: string, value: any, root: string) {
-	if (logErrors && !classId) console.log('Missing classId for: ', name, classId, value);
+	if (writer.logMissingFeatures && !classId) writer.log('Missing classId for: ', name, classId, value);
 
 	// write class structure
 	writeUnicodeStringWithPadding(writer, name);
@@ -463,6 +467,11 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		let type: string | undefined = getTypeByKey(key, value[key], root, value);
 		let childRoot = root;
 		let extType = fieldToExtType[key];
+
+		if (classId === cameraRawFilterClassID) {
+			type = cameraRawFilterKeyTypes[key] ?? 'long'; // other settings are integer levels
+			childRoot = cameraRawFilterClassID; // lists (curves) contain integer levels
+		}
 
 		if (key === 'bounds' && root === 'text') {
 			extType = makeType('', 'bounds');
@@ -533,7 +542,7 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 			} else if (value[key].Ptrn) {
 				extType = makeType('', 'patternLayer');
 			} else {
-				logErrors && console.log('Invalid strokeStyleContent value', value[key]);
+				writer.logMissingFeatures && writer.log('Invalid strokeStyleContent value', value[key]);
 			}
 		} else if (key === 'bounds' && root === 'quiltWarp') {
 			extType = makeType('', 'classFloatRect');
@@ -552,7 +561,7 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 		writeAsciiStringOrClassId(writer, key);
 		writeSignature(writer, type || 'long');
 		writeOSType(writer, type || 'long', value[key], key, extType, childRoot);
-		if (logErrors && !type) console.log(`Missing descriptor field type for: '${key}' in`, value);
+		if (writer.logMissingFeatures && !type) writer.log(`Missing descriptor field type for: '${key}' in`, value);
 	}
 }
 
@@ -676,10 +685,10 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeInt32(writer, value.length);
 
 			for (let i = 0; i < value.length; i++) {
-				const type = fieldToArrayType[key] ?? guessOSType(value[i]);
+				const type = root === cameraRawFilterClassID ? 'long' : (fieldToArrayType[key] ?? guessOSType(value[i]));
 				writeSignature(writer, type || 'long');
 				writeOSType(writer, type || 'long', value[i], `${key}[]`, fieldToArrayExtType[key], root);
-				if (logErrors && !type) console.log(`Missing descriptor array type for: '${key}' in`, value);
+				if (writer.logMissingFeatures && !type) writer.log(`Missing descriptor array type for: '${key}' in`, value);
 			}
 			break;
 		case 'doub': // Double
@@ -1353,7 +1362,7 @@ function serializeFxObject(stroke: LayerEffectStroke) {
 	return FrFX;
 }
 
-export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boolean) {
+export function serializeEffects(e: LayerEffectsInfo, writer: PsdWriter, multi: boolean) {
 	const info: Lfx2Descriptor & LmfxDescriptor = multi ? {
 		'Scl ': unitsPercentF(e.scale ?? 1),
 		masterFXSwitch: !e.disabled,
@@ -1370,20 +1379,20 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 	const useMulti = <T>(arr: undefined | T[]): arr is T[] => !!arr && arr.length > 1 && multi;
 	const useSingle = <T>(arr: undefined | T[]): arr is T[] => !!arr && arr.length >= 1 && (!multi || arr.length === 1);
 
-	if (useSingle(e.dropShadow)) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', log);
-	if (useMulti(e.dropShadow)) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', log));
-	if (useSingle(e.innerShadow)) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', log);
-	if (useMulti(e.innerShadow)) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', log));
-	if (e.outerGlow) info.OrGl = serializeEffectObject(e.outerGlow, 'outerGlow', log);
-	if (useMulti(e.solidFill)) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', log));
-	if (useMulti(e.gradientOverlay)) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', log));
+	if (useSingle(e.dropShadow)) info.DrSh = serializeEffectObject(e.dropShadow[0], 'dropShadow', writer);
+	if (useMulti(e.dropShadow)) info.dropShadowMulti = e.dropShadow.map(i => serializeEffectObject(i, 'dropShadow', writer));
+	if (useSingle(e.innerShadow)) info.IrSh = serializeEffectObject(e.innerShadow[0], 'innerShadow', writer);
+	if (useMulti(e.innerShadow)) info.innerShadowMulti = e.innerShadow.map(i => serializeEffectObject(i, 'innerShadow', writer));
+	if (e.outerGlow) info.OrGl = serializeEffectObject(e.outerGlow, 'outerGlow', writer);
+	if (useMulti(e.solidFill)) info.solidFillMulti = e.solidFill.map(i => serializeEffectObject(i, 'solidFill', writer));
+	if (useMulti(e.gradientOverlay)) info.gradientFillMulti = e.gradientOverlay.map(i => serializeEffectObject(i, 'gradientOverlay', writer));
 	if (useMulti(e.stroke)) info.frameFXMulti = e.stroke.map(i => serializeFxObject(i));
-	if (e.innerGlow) info.IrGl = serializeEffectObject(e.innerGlow, 'innerGlow', log);
-	if (e.bevel) info.ebbl = serializeEffectObject(e.bevel, 'bevel', log);
-	if (useSingle(e.solidFill)) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', log);
-	if (e.patternOverlay) info.patternFill = serializeEffectObject(e.patternOverlay, 'patternOverlay', log);
-	if (useSingle(e.gradientOverlay)) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', log);
-	if (e.satin) info.ChFX = serializeEffectObject(e.satin, 'satin', log);
+	if (e.innerGlow) info.IrGl = serializeEffectObject(e.innerGlow, 'innerGlow', writer);
+	if (e.bevel) info.ebbl = serializeEffectObject(e.bevel, 'bevel', writer);
+	if (useSingle(e.solidFill)) info.SoFi = serializeEffectObject(e.solidFill[0], 'solidFill', writer);
+	if (e.patternOverlay) info.patternFill = serializeEffectObject(e.patternOverlay, 'patternOverlay', writer);
+	if (useSingle(e.gradientOverlay)) info.GrFl = serializeEffectObject(e.gradientOverlay[0], 'gradientOverlay', writer);
+	if (e.satin) info.ChFX = serializeEffectObject(e.satin, 'satin', writer);
 	if (useSingle(e.stroke)) info.FrFX = serializeFxObject(e.stroke?.[0]);
 
 	if (multi) {
@@ -1406,31 +1415,31 @@ export function serializeEffects(e: LayerEffectsInfo, log: boolean, multi: boole
 	return info;
 }
 
-export function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, log: boolean) {
+export function parseEffects(info: Lfx2Descriptor & LmfxDescriptor, reader: PsdReader) {
 	const effects: LayerEffectsInfo = {};
 	const { _name, _classID, 'Scl ': scale, masterFXSwitch, DrSh, dropShadowMulti, IrSh, innerShadowMulti, OrGl, IrGl, ebbl, SoFi, solidFillMulti, patternFill, GrFl, gradientFillMulti, ChFX, FrFX, frameFXMulti, numModifyingFX, ...rest } = info as typeof info & { _name?: string; _classID?: string; };
 	if (!masterFXSwitch) effects.disabled = true;
 	if (scale) effects.scale = parsePercent(scale);
-	if (DrSh) effects.dropShadow = [parseEffectObject(DrSh, log)];
-	if (dropShadowMulti) effects.dropShadow = dropShadowMulti.map(i => parseEffectObject(i, log));
-	if (IrSh) effects.innerShadow = [parseEffectObject(IrSh, log)];
-	if (innerShadowMulti) effects.innerShadow = innerShadowMulti.map(i => parseEffectObject(i, log));
-	if (OrGl) effects.outerGlow = parseEffectObject(OrGl, log);
-	if (IrGl) effects.innerGlow = parseEffectObject(IrGl, log);
-	if (ebbl) effects.bevel = parseEffectObject(ebbl, log, 'bevel');
-	if (SoFi) effects.solidFill = [parseEffectObject(SoFi, log)];
-	if (solidFillMulti) effects.solidFill = solidFillMulti.map(i => parseEffectObject(i, log));
-	if (patternFill) effects.patternOverlay = parseEffectObject(patternFill, log);
-	if (GrFl) effects.gradientOverlay = [parseEffectObject(GrFl, log)];
-	if (gradientFillMulti) effects.gradientOverlay = gradientFillMulti.map(i => parseEffectObject(i, log));
-	if (ChFX) effects.satin = parseEffectObject(ChFX, log);
+	if (DrSh) effects.dropShadow = [parseEffectObject(DrSh, reader)];
+	if (dropShadowMulti) effects.dropShadow = dropShadowMulti.map(i => parseEffectObject(i, reader));
+	if (IrSh) effects.innerShadow = [parseEffectObject(IrSh, reader)];
+	if (innerShadowMulti) effects.innerShadow = innerShadowMulti.map(i => parseEffectObject(i, reader));
+	if (OrGl) effects.outerGlow = parseEffectObject(OrGl, reader);
+	if (IrGl) effects.innerGlow = parseEffectObject(IrGl, reader);
+	if (ebbl) effects.bevel = parseEffectObject(ebbl, reader, 'bevel');
+	if (SoFi) effects.solidFill = [parseEffectObject(SoFi, reader)];
+	if (solidFillMulti) effects.solidFill = solidFillMulti.map(i => parseEffectObject(i, reader));
+	if (patternFill) effects.patternOverlay = parseEffectObject(patternFill, reader);
+	if (GrFl) effects.gradientOverlay = [parseEffectObject(GrFl, reader)];
+	if (gradientFillMulti) effects.gradientOverlay = gradientFillMulti.map(i => parseEffectObject(i, reader));
+	if (ChFX) effects.satin = parseEffectObject(ChFX, reader);
 	if (FrFX) effects.stroke = [parseFxObject(FrFX)];
 	if (frameFXMulti) effects.stroke = frameFXMulti.map(i => parseFxObject(i));
-	if (log && Object.keys(rest).length) console.log('Unhandled effect keys:', rest);
+	if (reader.logMissingFeatures && Object.keys(rest).length) reader.log('Unhandled effect keys:', rest);
 	return effects;
 }
 
-function parseKeyList(keyList: TimelineKeyDescriptor[], logMissingFeatures: boolean) {
+function parseKeyList(keyList: TimelineKeyDescriptor[], reader: PsdReader) {
 	const keys: TimelineKey[] = [];
 
 	for (let j = 0; j < keyList.length; j++) {
@@ -1454,7 +1463,7 @@ function parseKeyList(keyList: TimelineKeyDescriptor[], logMissingFeatures: bool
 				break;
 			case 'keyType.sheetStyle': {
 				const key: TimelineKey = { interpolation, time, selected, type: 'style' };
-				if (animKey.sheetStyle.Lefx) key.style = parseEffects(animKey.sheetStyle.Lefx, logMissingFeatures);
+				if (animKey.sheetStyle.Lefx) key.style = parseEffects(animKey.sheetStyle.Lefx, reader);
 				keys.push(key);
 				break;
 			}
@@ -1472,7 +1481,7 @@ function parseKeyList(keyList: TimelineKeyDescriptor[], logMissingFeatures: bool
 	return keys;
 }
 
-function serializeKeyList(keys: TimelineKey[]): TimelineKeyDescriptor[] {
+function serializeKeyList(keys: TimelineKey[], writer: PsdWriter): TimelineKeyDescriptor[] {
 	const keyList: TimelineKeyDescriptor[] = [];
 
 	for (let j = 0; j < keys.length; j++) {
@@ -1493,7 +1502,7 @@ function serializeKeyList(keys: TimelineKey[]): TimelineKeyDescriptor[] {
 				break;
 			case 'style':
 				animKey = { Type: 'keyType.sheetStyle', sheetStyle: { Vrsn: 1, blendOptions: {} } };
-				if (key.style) animKey.sheetStyle = { Vrsn: 1, Lefx: serializeEffects(key.style, false, false), blendOptions: {} };
+				if (key.style) animKey.sheetStyle = { Vrsn: 1, Lefx: serializeEffects(key.style, writer, false), blendOptions: {} };
 				break;
 			case 'globalLighting': {
 				animKey = { Type: 'keyType.globalLighting', gblA: key.globalAngle, globalAltitude: key.globalAltitude };
@@ -1508,7 +1517,7 @@ function serializeKeyList(keys: TimelineKey[]): TimelineKeyDescriptor[] {
 	return keyList;
 }
 
-export function parseTrackList(trackList: TimelineTrackDescriptor[], logMissingFeatures: boolean) {
+export function parseTrackList(trackList: TimelineTrackDescriptor[], reader: PsdReader) {
 	const tracks: TimelineTrack[] = [];
 
 	for (let i = 0; i < trackList.length; i++) {
@@ -1516,14 +1525,14 @@ export function parseTrackList(trackList: TimelineTrackDescriptor[], logMissingF
 		const track: TimelineTrack = {
 			type: stdTrackID.decode(tr.trackID),
 			enabled: tr.enab,
-			keys: parseKeyList(tr.keyList, logMissingFeatures),
+			keys: parseKeyList(tr.keyList, reader),
 		};
 
 		if (tr.effectParams) {
 			track.effectParams = {
 				fillCanvas: tr.effectParams.fillCanvas,
 				zoomOrigin: tr.effectParams.zoomOrigin,
-				keys: parseKeyList(tr.effectParams.keyList, logMissingFeatures),
+				keys: parseKeyList(tr.effectParams.keyList, reader),
 			};
 		}
 
@@ -1533,7 +1542,7 @@ export function parseTrackList(trackList: TimelineTrackDescriptor[], logMissingF
 	return tracks;
 }
 
-export function serializeTrackList(tracks: TimelineTrack[]): TimelineTrackDescriptor[] {
+export function serializeTrackList(tracks: TimelineTrack[], writer: PsdWriter): TimelineTrackDescriptor[] {
 	const trackList: TimelineTrackDescriptor[] = [];
 
 	for (let i = 0; i < tracks.length; i++) {
@@ -1545,12 +1554,12 @@ export function serializeTrackList(tracks: TimelineTrack[]): TimelineTrackDescri
 			Effc: !!t.effectParams,
 			...(t.effectParams ? {
 				effectParams: {
-					keyList: serializeKeyList(t.effectParams.keys),
+					keyList: serializeKeyList(t.effectParams.keys, writer),
 					fillCanvas: t.effectParams.fillCanvas,
 					zoomOrigin: t.effectParams.zoomOrigin,
 				}
 			} : {}),
-			keyList: serializeKeyList(t.keys),
+			keyList: serializeKeyList(t.keys, writer),
 		});
 	}
 
@@ -1561,7 +1570,7 @@ type AllEffects = LayerEffectShadow & LayerEffectsOuterGlow & LayerEffectStroke 
 	LayerEffectInnerGlow & LayerEffectBevel & LayerEffectSolidFill &
 	LayerEffectPatternOverlay & LayerEffectSatin & LayerEffectGradientOverlay;
 
-function parseEffectObject(obj: any, reportErrors: boolean, objName?: string) {
+function parseEffectObject(obj: any, reader: PsdReader, objName?: string) {
 	const result: AllEffects = {} as any;
 
 	for (const key of Object.keys(obj)) {
@@ -1636,14 +1645,14 @@ function parseEffectObject(obj: any, reportErrors: boolean, objName?: string) {
 			case '_classID':
 				break;
 			default:
-				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
+				reader.logMissingFeatures && reader.log(`Invalid effect key: '${key}', value:`, val);
 		}
 	}
 
 	return result;
 }
 
-function serializeEffectObject(obj: any, objName: string, reportErrors: boolean) {
+function serializeEffectObject(obj: any, objName: string, writer: PsdWriter) {
 	const result: any = {
 		enab: false,
 	};
@@ -1720,7 +1729,7 @@ function serializeEffectObject(obj: any, objName: string, reportErrors: boolean)
 				result[key] = val;
 				break;
 			default:
-				reportErrors && console.log(`Invalid effect key: '${key}', value:`, val);
+				writer.logMissingFeatures && writer.log(`Invalid effect key: '${key}', value:`, val);
 		}
 	}
 
@@ -1948,6 +1957,23 @@ function isBookColor(color: any) {
 }
 
 export function parseColor(color: DescriptorColor): Color {
+	const result = parseColorValues(color);
+
+	if (isBookColor(color)) {
+		const book = color as any as { 'Bk  '?: string; 'Nm  '?: string; bookID?: number; bookKey?: Uint8Array | string; };
+		const key = book.bookKey;
+		result.book = {
+			book: book['Bk  '] ?? '',
+			name: book['Nm  '] ?? '',
+			bookID: book.bookID ?? 0,
+			bookKey: typeof key === 'string' ? key : (key ? String.fromCharCode(...Array.from(key)) : ''),
+		};
+	}
+
+	return result;
+}
+
+function parseColorValues(color: DescriptorColor): Color {
 	if ('H   ' in color) {
 		return { h: parsePercentOrAngle(color['H   ']), s: color.Strt / 100, b: color.Brgh / 100 };
 	} else if ('Rd  ' in color) {
@@ -1966,13 +1992,26 @@ export function parseColor(color: DescriptorColor): Color {
 	} else if ('redFloat' in color) {
 		return { fr: color.redFloat, fg: color.greenFloat, fb: color.blueFloat };
 	} else if (isBookColor(color)) {
-		return { r: 0, g: 0, b: 0 }; // book (Pantone) colors are not supported
+		return { r: 0, g: 0, b: 0 }; // book (Pantone) color without color values
 	} else {
 		throw new Error('Unsupported color descriptor');
 	}
 }
 
 export function serializeColor(color: Color | undefined): DescriptorColor {
+	const result = serializeColorValues(color);
+
+	if (color?.book) {
+		const { book, name, bookID, bookKey } = color.book;
+		const key = new Uint8Array(bookKey.length);
+		for (let i = 0; i < key.length; i++) key[i] = bookKey.charCodeAt(i) & 0xff;
+		Object.assign(result, { 'Bk  ': book, 'Nm  ': name, bookID, bookKey: key });
+	}
+
+	return result;
+}
+
+function serializeColorValues(color: Color | undefined): DescriptorColor {
 	if (!color) {
 		return { _name: '', _classID: 'RGBC', 'Rd  ': 0, 'Grn ': 0, 'Bl  ': 0 };
 	} else if ('r' in color) {
@@ -2454,4 +2493,10 @@ export const prjM = createEnum<'fisheye' | 'perspective' | 'auto' | 'full spheri
 export const presetKindType = createEnum<'custom' | 'default'>('presetKindType', 'custom', {
 	custom: 'presetKindCustom',
 	default: 'presetKindDefault',
+});
+
+export const patternColorHandling = createEnum<'convert' | 'avoid conversion' | 'luminance only'>('', 'convert', {
+	'convert': 'conv',
+	'avoid conversion': 'avod',
+	'luminance only': 'lumi',
 });

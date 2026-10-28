@@ -31,7 +31,15 @@ export type HSB = { h: number; s: number; b: number; }; // values from 0 to 1
 export type CMYK = { c: number; m: number; y: number; k: number; }; // values from 0 to 255
 export type LAB = { l: number; a: number; b: number; }; // values `l` from 0 to 1; `a` and `b` from -1 to 1
 export type Grayscale = { k: number }; // values from 0 to 255
-export type Color = RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale;
+export interface ColorBookInfo {
+	book: string; // name of the color book (e.g. 'PANTONE+® Solid Coated')
+	name: string; // name of the color in the book (e.g. 'PANTONE 688 C')
+	bookID: number;
+	bookKey: string; // unique key of the color in the book
+}
+// `book` is only present for colors picked from color books (Pantone, etc.) in descriptors, color values are the
+// book color converted to document color space
+export type Color = (RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale) & { book?: ColorBookInfo; };
 
 export interface EffectContour {
 	name: string;
@@ -559,6 +567,9 @@ export interface CurvesAdjustment extends PresetInfo {
 	// curve for each channel, index 0 is composite channel, followed by document color channels (red, green, blue for RGB,
 	// cyan, magenta, yellow, black for CMYK, gray for Grayscale), missing or empty curve means no change to the channel
 	channels?: CurvesAdjustmentChannel[];
+	// curves drawn with pencil tool, lookup table of 256 output values (0-255) for each channel (same indexing as
+	// `channels`), missing or empty table means no change to the channel, used instead of `channels` when present
+	values?: number[][];
 }
 
 export interface ExposureAdjustment extends PresetInfo {
@@ -1213,7 +1224,74 @@ type FilterVariant = {
 		contrast: number;
 		useLegacy: boolean;
 	};
+} | {
+	type: 'camera raw';
+	filter: CameraRawFilterSettings;
 };
+
+export type CameraRawCurvePoint = { input: number; output: number; };
+export type CameraRawColors = { red?: number; orange?: number; yellow?: number; green?: number; aqua?: number; blue?: number; purple?: number; magenta?: number; };
+export type CameraRawColorGradingWheel = { hue?: number; saturation?: number; luminance?: number; };
+
+// Camera Raw Filter settings (missing values use Camera Raw defaults), settings that are not supported are not preserved
+export interface CameraRawFilterSettings {
+	version?: string; // Camera Raw version (e.g. '18.4')
+	processVersion?: number;
+	processVersionCode?: number;
+	whiteBalance?: string; // raw white balance value (e.g. 'Cst ' for custom)
+	temperature?: number;
+	tint?: number;
+	exposure?: number;
+	contrast?: number;
+	highlights?: number;
+	shadows?: number;
+	whites?: number;
+	blacks?: number;
+	texture?: number;
+	clarity?: number;
+	dehaze?: number;
+	vibrance?: number;
+	saturation?: number;
+	parametricCurve?: {
+		shadows?: number;
+		darks?: number;
+		lights?: number;
+		highlights?: number;
+		shadowSplit?: number;
+		midtoneSplit?: number;
+		highlightSplit?: number;
+	};
+	pointCurve?: {
+		composite?: CameraRawCurvePoint[];
+		red?: CameraRawCurvePoint[];
+		green?: CameraRawCurvePoint[];
+		blue?: CameraRawCurvePoint[];
+	};
+	hsl?: {
+		hue?: CameraRawColors;
+		saturation?: CameraRawColors;
+		luminance?: CameraRawColors;
+	};
+	colorGrading?: {
+		shadows?: CameraRawColorGradingWheel;
+		midtones?: CameraRawColorGradingWheel;
+		highlights?: CameraRawColorGradingWheel;
+		global?: CameraRawColorGradingWheel;
+		blending?: number;
+		balance?: number;
+	};
+	sharpening?: { amount?: number; radius?: number; detail?: number; masking?: number; };
+	noiseReduction?: {
+		luminance?: number;
+		luminanceDetail?: number;
+		luminanceContrast?: number;
+		color?: number;
+		colorDetail?: number;
+		colorSmoothness?: number;
+	};
+	grain?: { amount?: number; size?: number; roughness?: number; };
+	postCropVignette?: { amount?: number; midpoint?: number; feather?: number; roundness?: number; };
+}
 
 /*
 export interface Position3D {
@@ -1290,7 +1368,8 @@ export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAd
 	InvertAdjustment | PosterizeAdjustment | ThresholdAdjustment | GradientMapAdjustment |
 	SelectiveColorAdjustment;
 
-export type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray';
+export type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray' |
+	'seafoam' | 'indigo' | 'magenta' | 'fuchsia';
 
 export interface KeyDescriptorItem {
 	keyShapeInvalidated?: boolean;
@@ -1414,6 +1493,7 @@ export interface LayerAdditionalInfo {
 	blendInteriorElements?: boolean;
 	knockout?: boolean;
 	layerMaskAsGlobalMask?: boolean;
+	vectorMaskAsGlobalMask?: boolean;
 	protected?: {
 		transparency?: boolean;
 		composite?: boolean;
@@ -1542,6 +1622,26 @@ export interface LayerAdditionalInfo {
 		ranges: { sourceRange: number[]; destRange: number[]; }[];
 	};
 	vowv?: number; // ???
+	foreignEffectId?: number; // foreign effect ID (Photoshop 6.0)
+	framedGroup?: { // frame tool group (frame layer)
+		rect: { top: number; left: number; bottom: number; right: number; };
+		type: number; // 1 - rectangle, 2 - ellipse
+		lockPPI?: boolean;
+		preferredResolution?: number;
+		savedIteratedName?: string;
+	};
+	animationEffects?: Uint8Array; // animation effects (Photoshop CS6, raw descriptor data)
+	patternData?: { // pattern data (Photoshop 6.0)
+		signature: string;
+		key: string;
+		copyOnSheetDuplication: boolean;
+		patterns: {
+			colorHandling: 'convert' | 'avoid conversion' | 'luminance only';
+			name: string;
+			id: string;
+		}[];
+	}[];
+	pixelSourceData?: Uint8Array[]; // pixel source data of video layers (raw data of each entry)
 	pixelSource?: {
 		type: 'vdPS';
 		origin: { x: number; y: number; };
@@ -1676,6 +1776,7 @@ export interface ImageResources {
 		x: number; // pixels
 		y: number; // pixels
 		colorSpace: number; // -1 - actual color, 0 - RGB, 1 - HSB, 2 - CMYK, 7 - Lab, 8 - grayscale, ...
+		depth?: number; // sample size (Photoshop CS3 format), samplers are written in Photoshop 5 format if missing
 	}[];
 	effectsVisible?: boolean; // global flag to show or hide all layer effects
 	iccProfile?: Uint8Array; // raw ICC profile data
@@ -1687,6 +1788,18 @@ export interface ImageResources {
 	grayscaleHalftoneScreens?: HalftoneScreen[];
 	colorTransferFunctions?: PrintTransferFunction[]; // one for each of 4 printing plates
 	grayscaleTransferFunctions?: PrintTransferFunction[];
+	duotoneHalftoneScreens?: HalftoneScreen[];
+	duotoneTransferFunctions?: PrintTransferFunction[];
+	duotoneImageInformation?: Uint8Array; // raw data
+	alternateDuotoneColors?: {
+		colors: Color[];
+		labColors: Uint8Array; // Lab color table (usually 256 colors), 3 bytes for each color (L, a, b)
+	};
+	quickMaskInfo?: {
+		channelId: number;
+		initiallyEmpty: boolean;
+	};
+	measurementScale?: Uint8Array; // raw descriptor data
 	printStyle?: {
 		caption?: boolean;
 		calibrationBars?: boolean;

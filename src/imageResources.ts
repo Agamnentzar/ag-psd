@@ -1,5 +1,5 @@
 import { toByteArray } from 'base64-js';
-import { BlendMode, HalftoneScreen, ImageResources, KeyDescriptorItem, PrintTransferFunction, RenderingIntent, SavedPath } from './psd';
+import { BlendMode, Color, HalftoneScreen, ImageResources, KeyDescriptorItem, PrintTransferFunction, RenderingIntent, SavedPath } from './psd';
 import { KeyDescriptorListDescriptor, parseKeyDescriptorList, readVectorMask, serializeKeyDescriptorList, writeVectorMask } from './additionalInfo';
 import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString, decodeUtf8, getUtf8StrictDecoder, getGbkStrictDecoder } from './psdReader';
 import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, writeZeros } from './psdWriter';
@@ -735,6 +735,50 @@ function writeTransferFunctions(writer: PsdWriter, functions: PrintTransferFunct
 }
 
 addHandler(
+	1014, // Duotone halftoning information
+	target => target.duotoneHalftoneScreens !== undefined,
+	(reader, target, left) => target.duotoneHalftoneScreens = readHalftoneScreens(reader, left),
+	(writer, target) => writeHalftoneScreens(writer, target.duotoneHalftoneScreens!),
+);
+
+addHandler(
+	1017, // Duotone transfer functions
+	target => target.duotoneTransferFunctions !== undefined,
+	(reader, target, left) => target.duotoneTransferFunctions = readTransferFunctions(reader, left),
+	(writer, target) => writeTransferFunctions(writer, target.duotoneTransferFunctions!),
+);
+
+addHandler(
+	1018, // Duotone image information
+	target => target.duotoneImageInformation !== undefined,
+	(reader, target, left) => target.duotoneImageInformation = readBytes(reader, left()),
+	(writer, target) => writeBytes(writer, target.duotoneImageInformation),
+);
+
+addHandler(
+	1066, // Alternate duotone colors
+	target => target.alternateDuotoneColors !== undefined,
+	(reader, target, left) => {
+		if (readUint16(reader) !== 1) throw new Error('Invalid alternate duotone colors version');
+		const colors: Color[] = [];
+		const count = readUint16(reader);
+		for (let i = 0; i < count && left() >= 10; i++) colors.push(readColor(reader));
+		const labCount = readUint16(reader);
+		if (labCount * 3 > left()) throw new Error('Invalid alternate duotone colors Lab table size');
+		const labColors = readBytes(reader, labCount * 3);
+		target.alternateDuotoneColors = { colors, labColors };
+	},
+	(writer, target) => {
+		const { colors, labColors } = target.alternateDuotoneColors!;
+		writeUint16(writer, 1); // version
+		writeUint16(writer, colors.length);
+		for (const color of colors) writeColor(writer, color);
+		writeUint16(writer, Math.floor(labColors.byteLength / 3));
+		writeBytes(writer, labColors.subarray(0, Math.floor(labColors.byteLength / 3) * 3));
+	},
+);
+
+addHandler(
 	1015, // Grayscale and multichannel transfer function
 	target => target.grayscaleTransferFunctions !== undefined,
 	(reader, target, left) => target.grayscaleTransferFunctions = readTransferFunctions(reader, left),
@@ -1161,7 +1205,7 @@ addHandler(
 			workOutTime: frac(desc.workOutTime),
 			repeats: desc.LCnt,
 			hasMotion: desc.hasMotion,
-			globalTracks: parseTrackList(desc.globalTrackList, !!reader.logMissingFeatures),
+			globalTracks: parseTrackList(desc.globalTrackList, reader),
 		};
 
 		if (desc.audioClipGroupList?.audioClipGroupList?.length) {
@@ -1201,7 +1245,7 @@ addHandler(
 			workInTime: timeline.workInTime,
 			workOutTime: timeline.workOutTime,
 			LCnt: timeline.repeats,
-			globalTrackList: serializeTrackList(timeline.globalTracks),
+			globalTrackList: serializeTrackList(timeline.globalTracks, writer),
 			audioClipGroupList: {
 				audioClipGroupList: (timeline.audioClipGroups ?? []).map(a => ({
 					groupID: a.id,
@@ -1600,10 +1644,11 @@ addHandler(
 
 addHandler(
 	1038, // Color samplers (Photoshop 5.0, replaced by 1073 in CS3)
-	target => target.colorSamplers !== undefined,
+	target => target.colorSamplers !== undefined && !target.colorSamplers.some(s => s.depth !== undefined),
 	(reader, target, left) => {
 		const version = readUint32(reader);
 		if (version !== 1) throw new Error(`Invalid color samplers version: ${version}`);
+		if (target.colorSamplers?.some(s => s.depth !== undefined)) return skipBytes(reader, left()); // already read from 1073
 		const count = readUint32(reader);
 		target.colorSamplers = [];
 
@@ -1625,6 +1670,64 @@ addHandler(
 			writeInt32(writer, Math.round(sampler.x * 16));
 			writeInt16(writer, sampler.colorSpace);
 		}
+	},
+);
+
+addHandler(
+	1073, // Color samplers (Photoshop CS3)
+	target => target.colorSamplers !== undefined && target.colorSamplers.some(s => s.depth !== undefined),
+	(reader, target, left) => {
+		const version = readUint32(reader);
+		if (version < 1 || version > 3) throw new Error(`Invalid color samplers version: ${version}`);
+		const count = readUint32(reader);
+		target.colorSamplers = [];
+
+		for (let i = 0; i < count && left() >= 10; i++) {
+			// position is fixed point value for sampler version 1 (stored the same way as in 1038 resource) or float for version 2
+			const samplerVersion = version === 3 ? readUint32(reader) : version;
+			const y = samplerVersion === 1 ? readInt32(reader) / 16 : readFloat32(reader);
+			const x = samplerVersion === 1 ? readInt32(reader) / 16 : readFloat32(reader);
+			const colorSpace = readInt16(reader);
+			const depth = version >= 2 ? readInt16(reader) : 1;
+			target.colorSamplers.push({ x, y, colorSpace, depth });
+		}
+	},
+	(writer, target) => {
+		writeUint32(writer, 3); // version
+		writeUint32(writer, target.colorSamplers!.length);
+
+		for (const sampler of target.colorSamplers!) {
+			writeUint32(writer, 1); // sampler version
+			writeInt32(writer, Math.round(sampler.y * 16));
+			writeInt32(writer, Math.round(sampler.x * 16));
+			writeInt16(writer, sampler.colorSpace);
+			writeInt16(writer, sampler.depth ?? 1);
+		}
+	},
+);
+
+addHandler(
+	1022, // Quick Mask information
+	target => target.quickMaskInfo !== undefined,
+	(reader, target) => {
+		const channelId = readUint16(reader);
+		const initiallyEmpty = !!readUint8(reader);
+		target.quickMaskInfo = { channelId, initiallyEmpty };
+	},
+	(writer, target) => {
+		writeUint16(writer, target.quickMaskInfo!.channelId);
+		writeUint8(writer, target.quickMaskInfo!.initiallyEmpty ? 1 : 0);
+	},
+);
+
+addHandler(
+	1074, // Measurement scale
+	target => target.measurementScale !== undefined,
+	(reader, target, left) => {
+		target.measurementScale = readBytes(reader, left());
+	},
+	(writer, target) => {
+		writeBytes(writer, target.measurementScale);
 	},
 );
 

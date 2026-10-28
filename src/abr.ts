@@ -677,7 +677,7 @@ function readSampleBitmap(reader: PsdReader, brushEnd: number, id: string): Samp
 		throw new Error('Brush sample data out of bounds');
 	}
 
-	consumeMemory(reader, w * h * (compression === 1 && bithDepth === 16 ? 3 : 1));
+	consumeMemory(reader, w * h * (bithDepth === 16 ? 3 : 1));
 	const alpha = new Uint8Array(w * h);
 
 	if (bithDepth === 8) {
@@ -689,18 +689,25 @@ function readSampleBitmap(reader: PsdReader, brushEnd: number, id: string): Samp
 			throw new Error('Invalid compression');
 		}
 	} else if (bithDepth === 16) {
+		const data = new Uint16Array(w * h);
+
 		if (compression === 0) {
-			for (let i = 0; i < alpha.byteLength; i++) {
-				alpha[i] = readUint16(reader) >> 8; // convert to 8bit values
+			for (let i = 0; i < data.length; i++) {
+				data[i] = readUint16(reader);
 			}
 		} else if (compression === 1) {
-			const data = new Uint16Array(w * h);
 			readDataRLE(reader, { width: w, height: h, data }, w, h, bithDepth, 1, [0], false);
-			for (let i = 0; i < alpha.byteLength; i++) {
-				alpha[i] = data[i] >> 8; // convert to 8bit values
-			}
 		} else {
 			throw new Error('Invalid compression');
+		}
+
+		// Photoshop uses 0-32768 range for 16bit values internally, use full 0-65535 range only if there are values outside of it
+		let max = 0;
+		for (let i = 0; i < data.length; i++) max = Math.max(max, data[i]);
+		const scale = max > 32768 ? 255 / 65535 : 255 / 32768;
+
+		for (let i = 0; i < alpha.byteLength; i++) {
+			alpha[i] = Math.round(data[i] * scale); // convert to 8bit values
 		}
 	} else {
 		throw new Error('Invalid depth');

@@ -1,4 +1,4 @@
-import type { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color, TextPath } from './psd';
+import type { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color, TextPath, TextStyleRun } from './psd';
 import { clamp } from './helpers';
 
 interface Adjustments {
@@ -629,6 +629,81 @@ export function decodeEngineData(engineData: EngineData) {
 	deduplicateValues(result.style, result.styleRuns, styleKeys);
 
 	if (!result.styleRuns.length) delete result.styleRuns;
+
+	return result;
+}
+
+// type tool info from Photoshop 5.0 and 5.5 ('tySh')
+export interface LegacyTextData {
+	transform: number[];
+	faces: { mark: number; name: string; familyName: string; styleName: string; script: number; }[];
+	styles: {
+		mark: number; faceMark: number; size: number; tracking: number; kerning: number; leading: number;
+		baselineShift: number; autoKerning: boolean;
+	}[];
+	lines: { orientation: number; alignment: number; chars: { code: number; style: number; }[]; }[];
+	color: Color;
+	antiAlias: boolean;
+}
+
+const fixed = (value: number) => value / 0x10000; // 16.16 fixed point value
+
+export function decodeLegacyTextData(data: LegacyTextData): LayerTextData {
+	const styleRuns: { length: number; mark: number; }[] = [];
+	let text = '';
+
+	for (const line of data.lines) {
+		for (const { code, style } of line.chars) {
+			text += String.fromCharCode(code);
+			const last = styleRuns[styleRuns.length - 1];
+
+			if (last && last.mark === style) {
+				last.length++;
+			} else {
+				styleRuns.push({ length: 1, mark: style });
+			}
+		}
+	}
+
+	// remove one trailing new line (Photoshop always appends it)
+	if (text.endsWith('\r')) {
+		text = text.slice(0, -1);
+		if (--styleRuns[styleRuns.length - 1].length === 0) styleRuns.pop();
+	}
+
+	const runs: TextStyleRun[] = styleRuns.map(({ length, mark }) => {
+		const s = data.styles.find(s => s.mark === mark) ?? data.styles[0];
+		const face = s && (data.faces.find(f => f.mark === s.faceMark) ?? data.faces[0]);
+		const style: TextStyle = {};
+
+		if (face) style.font = { name: face.name, script: face.script };
+
+		if (s) {
+			style.fontSize = fixed(s.size);
+			style.autoLeading = s.leading === 0;
+			if (s.leading) style.leading = fixed(s.leading);
+			style.tracking = Math.round(fixed(s.tracking) * 1000); // stored in ems
+			style.autoKerning = s.autoKerning;
+			style.kerning = Math.round(fixed(s.kerning) * 1000); // stored in ems
+			style.baselineShift = fixed(s.baselineShift);
+		}
+
+		style.fillColor = data.color;
+		return { length, style };
+	});
+
+	const result: LayerTextData = {
+		text: text.replace(/\r/g, '\n'),
+		transform: data.transform,
+		antiAlias: data.antiAlias ? 'smooth' : 'none',
+		orientation: data.lines[0]?.orientation === 1 ? 'vertical' : 'horizontal',
+		paragraphStyle: { justification: justification[data.lines[0]?.alignment ?? 0] ?? 'left' },
+		style: {},
+		styleRuns: runs,
+	};
+
+	deduplicateValues(result.style!, result.styleRuns!, styleKeys);
+	if (!result.styleRuns!.length) delete result.styleRuns;
 
 	return result;
 }

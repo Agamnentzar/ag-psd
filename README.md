@@ -10,7 +10,7 @@ Implemented according to [official documentation](https://www.adobe.com/devnet-a
 ## Limitations
 
 * Does not support reading Multichannel, Duotone and LAB color modes (image data of all supported color modes - Bitmap, Grayscale, Indexed, RGB and CMYK - is converted to RGB when reading, CMYK colors are converted using approximation of U.S. Web Coated (SWOP) v2 profile, embedded color profile is not used)
-* Does not support writing any color modes other than RGB
+* Does not support writing Multichannel, Duotone and LAB color modes (Bitmap, Grayscale, Indexed, RGB and CMYK documents are written in their color mode and bit depth, image data is converted from RGB)
 * Does not support writing 16 or 32 bits per channel (reading is supported)
 * Limited pattern support: reads and writes document-level pattern blocks (`Patt`/`Pat2`/`Pat3`) for raw/RLE-compressed RGB/Grayscale patterns and raw Indexed patterns (patterns are always written as RGB). Does not support zip-compressed patterns (used by most real Photoshop files), RLE-compressed Indexed patterns or 16-bit patterns. Pattern references in layer effects and vector fills (such as "Pattern Overlay") only carry pattern name/id and are not linked to pattern data
 * Does not support some metadata fields

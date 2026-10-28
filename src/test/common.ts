@@ -11,12 +11,10 @@ import '../initializeCanvas';
 import { Psd, ReadOptions } from '../index';
 import { readPsd, createReader, PsdReader } from '../psdReader';
 import { PsdWriter, writeSignature } from '../psdWriter';
-import { setLogErrors, writeAsciiStringOrClassId } from '../descriptor';
+import { writeAsciiStringOrClassId } from '../descriptor';
 export { createCanvas };
 // descriptor building helpers (to create descriptors with types that ag-psd does not normally write)
 export { writeAsciiStringOrClassId as writeDescriptorId, writeClassStructure as writeDescriptorClass } from '../descriptor';
-
-setLogErrors(true);
 
 const resultsPath = path.join(__dirname, '..', '..', 'results');
 

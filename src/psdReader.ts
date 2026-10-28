@@ -1,6 +1,6 @@
 import { Inflate } from 'pako';
 import { Psd, Layer, ColorMode, SectionDividerType, LayerAdditionalInfo, ReadOptions, LayerMaskData, Color, PatternInfo, GlobalLayerMaskInfo, RGB, PixelData, PixelArray, ChannelID, Compression } from './psd';
-import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, largeAdditionalInfoKeys, largeAdditionalInfoKeysObserved, imageDataToCanvas, normalizeLabAB } from './helpers';
+import { resetImageData, offsetForChannel, decodeBitmap, createImageData, toBlendMode, LayerMaskFlags, MaskParams, ColorSpace, largeAdditionalInfoKeys, largeAdditionalInfoKeysObserved, imageDataToCanvas, normalizeLabAB, cmykToRgbValues } from './helpers';
 import { infoHandlersMap } from './additionalInfo';
 import { decodeString } from './utf8';
 import { InternalImageResources, resourceHandlersMap } from './imageResources';
@@ -185,6 +185,8 @@ export function readUnicodeString(reader: PsdReader) {
 }
 
 const STRING_CHUNK_SIZE = 0x2000;
+// shorter strings (most descriptor keys, OSTypes and names) are faster to build with simple loop than String.fromCharCode.apply
+const SHORT_STRING_LENGTH = 64;
 
 function checkReadBounds(reader: PsdReader, size: number) {
 	if (reader.offset < 0 || (reader.offset + size) > reader.view.byteLength) {
@@ -198,9 +200,20 @@ function readUtf16String(reader: PsdReader, length: number, littleEndian: boolea
 	checkReadBounds(reader, length * 2);
 
 	const view = reader.view;
-	const codes = new Uint16Array(Math.min(length, STRING_CHUNK_SIZE));
 	let offset = reader.offset;
 	let text = '';
+
+	if (length <= SHORT_STRING_LENGTH) {
+		for (let i = 0; i < length; i++, offset += 2) {
+			text += String.fromCharCode(view.getUint16(offset, littleEndian));
+		}
+
+		reader.offset = offset;
+		if (text.charCodeAt(text.length - 1) === 0) text = text.substring(0, text.length - 1);
+		return text;
+	}
+
+	const codes = new Uint16Array(Math.min(length, STRING_CHUNK_SIZE));
 
 	for (let i = 0; i < length; i += STRING_CHUNK_SIZE) {
 		const count = Math.min(STRING_CHUNK_SIZE, length - i);
@@ -241,6 +254,19 @@ export function readUnicodeStringWithLengthLE(reader: PsdReader, length: number)
 export function readAsciiString(reader: PsdReader, length: number) {
 	if (!(length > 0)) return '';
 	checkReadBounds(reader, length);
+
+	if (length <= SHORT_STRING_LENGTH) {
+		const view = reader.view;
+		let text = '';
+
+		for (let i = 0, offset = reader.offset; i < length; i++, offset++) {
+			text += String.fromCharCode(view.getUint8(offset));
+		}
+
+		reader.offset += length;
+		return text;
+	}
+
 	const text = bytesToString(new Uint8Array(reader.view.buffer, reader.view.byteOffset + reader.offset, length));
 	reader.offset += length;
 	return text;
@@ -260,7 +286,16 @@ export function checkSignature(reader: PsdReader, a: string, b?: string) {
 }
 
 function readShortString(reader: PsdReader, length: number) {
-	return bytesToString(readBytes(reader, length));
+	const bytes = readBytes(reader, length);
+	if (length > SHORT_STRING_LENGTH) return bytesToString(bytes);
+
+	let text = '';
+
+	for (let i = 0; i < bytes.length; i++) {
+		text += String.fromCharCode(bytes[i]);
+	}
+
+	return text;
 }
 
 function isValidSignature(sig: string) {
@@ -457,6 +492,10 @@ export function readLayerInfo(reader: PsdReader, psd: Psd, imageResources: Inter
 		if (type === SectionDividerType.OpenFolder || type === SectionDividerType.ClosedFolder) {
 			l.opened = type === SectionDividerType.OpenFolder;
 			l.children = [];
+
+			// group layers can't have image data, some broken files have it, ignore it like Photoshop does
+			delete l.canvas;
+			delete l.imageData;
 
 			if (l.sectionDivider?.key) {
 				l.blendMode = toBlendMode[l.sectionDivider.key] ?? l.blendMode;
@@ -675,8 +714,8 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 		let compression = Compression.RawData;
 		let data: Uint8Array | undefined = undefined;
 
-		if (channel.length === 1) throw new Error('Invalid channel length');
-		if (channel.length) {
+		// channel length of 1 is invalid (should be 0 or at least 2), skip the byte and treat channel as empty
+		if (channel.length >= 2) {
 			compression = readUint16(reader) as Compression;
 			// try to fix broken files where there's 1 byte shift of channel
 			if (compression > 3) {
@@ -702,7 +741,14 @@ function readLayerChannelImageData(reader: PsdReader, psd: Psd, layer: Layer, ch
 	}
 
 	if (!reader.useRawData) {
-		decodeLayerImageData(layer, reader);
+		try {
+			decodeLayerImageData(layer, reader);
+		} catch (e) {
+			// corrupted image data of one layer shouldn't prevent reading rest of the file
+			if (reader.throwForMissingFeatures || (e as Error).message === 'Exceeded memory limit') throw e;
+			reader.logMissingFeatures && reader.log(`Failed to decode layer image data: ${(e as Error).message}`);
+			delete layer.rawData;
+		}
 	}
 }
 
@@ -924,7 +970,7 @@ export function readGlobalLayerMaskInfo(reader: PsdReader) {
 		const colorSpace2 = readUint16(reader);
 		const colorSpace3 = readUint16(reader);
 		const colorSpace4 = readUint16(reader);
-		const opacity = readUint16(reader) / 100; // 0 - 100
+		const opacity = Math.min(readUint16(reader), 100) / 100; // 0 - 100 (some files have values out of range)
 		const kind = readUint8(reader);
 		skipBytes(reader, left()); // 3 bytes of padding ?
 		return { overlayColorSpace, colorSpace1, colorSpace2, colorSpace3, colorSpace4, opacity, kind };
@@ -1191,10 +1237,7 @@ function toRange(value: number, max: number) {
 	return value <= 0 ? 0 : (value >= max ? max : value);
 }
 
-// Polynomial approximation of U.S. Web Coated (SWOP) v2 CMYK to RGB conversion (default CMYK profile of Photoshop).
-// Coefficients are taken from pdf.js (DeviceCmykCS in src/core/colorspace.js, https://github.com/mozilla/pdf.js),
-// Copyright 2012 Mozilla Foundation, licensed under the Apache License, Version 2.0
-// (http://www.apache.org/licenses/LICENSE-2.0)
+// converts CMYK data to RGB using approximation of U.S. Web Coated (SWOP) v2 profile (see cmykToRgbValues)
 // cmyk - 8 or 16 bit data with 5 channels (cmyka), rgb - 8 or 16 bit data with 4 channels (rgba)
 // removeMatte - colors are blended with white (no ink), used for composite image of documents with global alpha
 function cmykToRgb(cmyk: PixelData, rgb: PixelData, removeMatte: boolean) {
@@ -1203,6 +1246,7 @@ function cmykToRgb(cmyk: PixelData, rgb: PixelData, removeMatte: boolean) {
 	const dstData = rgb.data;
 	const srcMax = srcData instanceof Uint16Array ? 0xffff : 0xff;
 	const dstMax = dstData instanceof Uint16Array ? 0xffff : 0xff;
+	const out = [0, 0, 0];
 
 	for (let src = 0, dst = 0; dst < size; src += 5, dst += 4) {
 		const a = srcData[src + 4];
@@ -1221,21 +1265,10 @@ function cmykToRgb(cmyk: PixelData, rgb: PixelData, removeMatte: boolean) {
 			k = Math.min(1, k * ra);
 		}
 
-		dstData[dst] = toRange(255 +
-			c * (-4.387332384609988 * c + 54.48615194189176 * m + 18.82290502165302 * y + 212.25662451639585 * k - 285.2331026137004) +
-			m * (1.7149763477362134 * m - 5.6096736904047315 * y - 17.873870861415444 * k - 5.497006427196366) +
-			y * (-2.5217340131683033 * y - 21.248923337353073 * k + 17.5119270841813) +
-			k * (-21.86122147463605 * k - 189.48180835922747), dstMax);
-		dstData[dst + 1] = toRange(255 +
-			c * (8.841041422036149 * c + 60.118027045597366 * m + 6.871425592049007 * y + 31.159100130055922 * k - 79.2970844816548) +
-			m * (-15.310361306967817 * m + 17.575251261109482 * y + 131.35250912493976 * k - 190.9453302588951) +
-			y * (4.444339102852739 * y + 9.8632861493405 * k - 24.86741582555878) +
-			k * (-20.737325471181034 * k - 187.80453709719578), dstMax);
-		dstData[dst + 2] = toRange(255 +
-			c * (0.8842522430003296 * c + 8.078677503112928 * m + 30.89978309703729 * y - 0.23883238689178934 * k - 14.183576799673286) +
-			m * (10.49593273432072 * m + 63.02378494754052 * y + 50.606957656360734 * k - 112.23884253719248) +
-			y * (0.03296041114873217 * y + 115.60384449646641 * k - 193.58209356861505) +
-			k * (-22.33816807309886 * k - 180.12613974708367), dstMax);
+		cmykToRgbValues(c, m, y, k, out);
+		dstData[dst] = toRange(out[0], dstMax);
+		dstData[dst + 1] = toRange(out[1], dstMax);
+		dstData[dst + 2] = toRange(out[2], dstMax);
 		dstData[dst + 3] = srcMax === dstMax ? a : Math.round(a * dstMax / srcMax);
 	}
 }
@@ -1418,8 +1451,8 @@ export function readDataZip(
 	}
 }
 
-// decodes single PackBits row, returns number of decoded values
-function decodeRLERow(src: Uint8Array, i: number, end: number, dst: PixelArray, p: number, step: number, count: number) {
+// decodes single PackBits row into byte buffer, returns number of decoded bytes
+function decodeRLERow(src: Uint8Array, i: number, end: number, dst: Uint8Array, count: number) {
 	let x = 0;
 
 	while (i < end && x < count) {
@@ -1431,19 +1464,15 @@ function decodeRLERow(src: Uint8Array, i: number, end: number, dst: PixelArray, 
 			const value = src[i++];
 			let n = 257 - header;
 			if (n > count - x) n = count - x;
+			dst.fill(value, x, x + n);
 			x += n;
-
-			for (; n > 0; n--, p += step) {
-				dst[p] = value;
-			}
 		} else if (header < 128) {
 			let n = header + 1;
 			if (n > count - x) n = count - x;
 			if (n > end - i) n = end - i;
-			x += n;
 
-			for (; n > 0; n--, p += step) {
-				dst[p] = src[i++];
+			for (; n > 0; n--) {
+				dst[x++] = src[i++];
 			}
 		} else {
 			// ignore 128
@@ -1451,6 +1480,51 @@ function decodeRLERow(src: Uint8Array, i: number, end: number, dst: PixelArray, 
 	}
 
 	return x;
+}
+
+// decodes RLE rows of single 8bit channel, writing values to `data` with `step`
+// (kept as single function with the loops, inlining row decoder into readDataRLE makes V8 generate much slower code)
+function decodeRLEChannel8(
+	src: Uint8Array, lengths: Uint16Array | Uint32Array, li: number, pos: number, width: number, height: number,
+	data: PixelArray, offset: number, step: number
+) {
+	const srcEnd = src.length | 0;
+
+	for (let y = 0; y < height; y++, li++) {
+		let i = (pos < srcEnd ? pos : srcEnd) | 0;
+		pos += lengths[li];
+		const end = (pos < srcEnd ? pos : srcEnd) | 0;
+		let p = (offset + y * width * step) | 0;
+		let x = 0;
+
+		while (i < end && x < width) {
+			const header = src[i++] | 0;
+
+			if (header > 128) {
+				if (i >= end) break;
+
+				const value = src[i++] | 0;
+				let n = (257 - header) | 0;
+				if (n > width - x) n = (width - x) | 0;
+				x = (x + n) | 0;
+
+				for (const pe = (p + n * step) | 0; p < pe; p = (p + step) | 0) {
+					data[p] = value;
+				}
+			} else if (header < 128) {
+				let n = (header + 1) | 0;
+				if (n > width - x) n = (width - x) | 0;
+				if (n > end - i) n = (end - i) | 0;
+				x = (x + n) | 0;
+
+				for (const ie = (i + n) | 0; i < ie; i = (i + 1) | 0, p = (p + step) | 0) {
+					data[p] = src[i];
+				}
+			} else {
+				// ignore 128
+			}
+		}
+	}
 }
 
 // converts big-endian 16/32-bit values from bytes and writes them to `data` starting at `p` with `step`
@@ -1468,10 +1542,10 @@ function scatterValues(bytes: Uint8Array, count: number, bpv: number, data: Pixe
 	}
 }
 
-// decodes RLE rows of single channel, each row starts at the beginning of the image row
-function decodeRLEChannel(
+// decodes RLE rows of single 16bit or 32bit channel, each row is decoded into `row` buffer and then converted to values
+function decodeRLEChannelWide(
 	src: Uint8Array, lengths: Uint16Array | Uint32Array, li: number, pos: number, width: number, height: number,
-	data: PixelArray, offset: number, step: number, bpv: number, row: Uint8Array | undefined
+	data: PixelArray, offset: number, step: number, bpv: number, row: Uint8Array
 ) {
 	const srcEnd = src.length;
 	const rowSize = width * bpv;
@@ -1483,12 +1557,8 @@ function decodeRLEChannel(
 
 		if (rowStart >= rowEnd) continue;
 
-		if (bpv === 1) {
-			decodeRLERow(src, rowStart, rowEnd, data, offset + y * width * step, step, width);
-		} else {
-			const decoded = decodeRLERow(src, rowStart, rowEnd, row!, 0, 1, rowSize);
-			scatterValues(row!, Math.floor(decoded / bpv), bpv, data, offset + y * width * step, step);
-		}
+		const decoded = decodeRLERow(src, rowStart, rowEnd, row, rowSize);
+		scatterValues(row, Math.floor(decoded / bpv), bpv, data, offset + y * width * step, step);
 	}
 }
 
@@ -1496,15 +1566,19 @@ export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined,
 	const data = pixelData && pixelData.data;
 	const rows = offsets.length * height;
 	const lengthSize = large ? 4 : 2;
+	const lengthsMemory = rows * lengthSize;
+	const srcEnd = reader.view.byteLength;
+	const bpv = bytesPerValue(bitDepth); // throws before consuming memory
+	let lengths: Uint16Array | Uint32Array;
 
-	consumeMemory(reader, rows * lengthSize);
+	consumeMemory(reader, lengthsMemory);
 
 	try {
-		if ((reader.offset + rows * lengthSize) > reader.view.byteLength) {
+		if ((reader.offset + lengthsMemory) > srcEnd) {
 			throw new Error('RLE row lengths exceed buffer length');
 		}
 
-		const lengths = large ? new Uint32Array(rows) : new Uint16Array(rows);
+		lengths = large ? new Uint32Array(rows) : new Uint16Array(rows);
 		let total = 0;
 
 		if (large) {
@@ -1513,36 +1587,39 @@ export function readDataRLE(reader: PsdReader, pixelData: PixelData | undefined,
 			for (let i = 0; i < rows; i++) total += (lengths[i] = readUint16(reader));
 		}
 
-		const start = reader.offset;
-		const srcEnd = reader.view.byteLength;
-
-		if (total > (srcEnd - start)) {
+		if (total > (srcEnd - reader.offset)) {
 			// broken or truncated file, decode only data that is available
 			warnOrThrow(reader, 'RLE data exceeds buffer length');
 		}
 
-		const bpv = bytesPerValue(bitDepth);
 		if (data) verifyArrayType(data, bpv);
+	} catch (e) {
+		recoverMemory(reader, lengthsMemory);
+		throw e;
+	}
 
-		const src = new Uint8Array(reader.view.buffer, reader.view.byteOffset, srcEnd);
-		const row = (data && bpv > 1) ? new Uint8Array(width * bpv) : undefined;
-		let pos = start;
+	// decoding can't throw, it's kept outside of try block because V8 generates much slower code for loops inlined into try block
+	const src = new Uint8Array(reader.view.buffer, reader.view.byteOffset, srcEnd);
+	const row = (data && bpv > 1) ? new Uint8Array(width * bpv) : undefined;
+	let pos = reader.offset;
 
-		for (let c = 0, li = 0; c < offsets.length; c++, li += height) {
-			const offset = offsets[c] | 0;
-			const channelStart = pos;
+	for (let c = 0, li = 0; c < offsets.length; c++, li += height) {
+		const offset = offsets[c] | 0;
+		const channelStart = pos;
 
-			for (let y = 0; y < height; y++) pos += lengths[li + y];
+		for (let y = 0; y < height; y++) pos += lengths[li + y];
 
-			if (data && offset >= 0 && offset < step) {
-				decodeRLEChannel(src, lengths, li, channelStart, width, height, data, offset, step, bpv, row);
+		if (data && offset >= 0 && offset < step) {
+			if (bpv === 1) {
+				decodeRLEChannel8(src, lengths, li, channelStart, width, height, data, offset, step);
+			} else {
+				decodeRLEChannelWide(src, lengths, li, channelStart, width, height, data, offset, step, bpv, row!);
 			}
 		}
-
-		reader.offset = pos;
-	} finally {
-		recoverMemory(reader, rows * lengthSize);
 	}
+
+	reader.offset = pos;
+	recoverMemory(reader, lengthsMemory);
 }
 
 export function readSection<T>(
@@ -1690,21 +1767,15 @@ export function readPattern(reader: PsdReader): PatternInfo {
 	if (channelsCount > 64) throw new Error(`Invalid pattern channel count: ${channelsCount}`);
 	// channels cover whole pattern, each 2 bytes of RLE data can produce at most 128 bytes
 	if (width * height > (Math.min(end, reader.view.byteLength) - reader.offset) * 64) throw new Error('Pattern data out of bounds');
-	const size = width * height * 4;
-	consumeMemory(reader, size);
-	const data = new Uint8Array(size);
-
-	for (let i = 3; i < data.byteLength; i += 4) {
-		data[i] = 255;
-	}
 
 	// first written arrays are color channels, next one is transparency (Photoshop stores it in the last, sheet mask, array)
 	const colorChannels = colorMode === ColorMode.RGB ? 3 : (colorMode === ColorMode.CMYK ? 4 : 1);
-	// CMYK channels are decoded into separate buffer (5 values per pixel, inverted, 0 = 100% ink) and converted to RGB at the end
-	const cmyk = colorMode === ColorMode.CMYK ? new Uint8Array(width * height * 5).fill(255) : undefined;
-	if (cmyk) consumeMemory(reader, cmyk.byteLength);
-	const alphaTarget = cmyk ? 4 : 3;
+	const isCmyk = colorMode === ColorMode.CMYK;
+	const alphaTarget = isCmyk ? 4 : 3;
+	const channels: { target: number; depth: number; compressionMode: number; cdata: Uint8Array; ctop: number; cleft: number; w: number; h: number; rowBytes: number; channelSize: number; }[] = [];
+	let maxDecodeSize = 0;
 
+	// validate all channels before allocating any image data
 	for (let i = 0, ch = 0; i < (channelsCount + 2) && reader.offset + 4 <= end; i++) {
 		const has = readUint32(reader);
 		if (!has) continue;
@@ -1738,72 +1809,119 @@ export function readPattern(reader: PsdReader): PatternInfo {
 		const h = cbottom - ctop;
 		const rowBytes = w * (depth / 8);
 		const channelSize = rowBytes * h;
-		let bytes: Uint8Array;
 
 		if (compressionMode === 0) {
 			if (cdata.byteLength < channelSize) throw new Error('Pattern channel data out of bounds');
-			bytes = cdata;
 		} else if (compressionMode === 1) {
 			// each 2 bytes of RLE data can produce at most 128 bytes
 			if (channelSize > cdata.byteLength * 64) throw new Error('Pattern channel data out of bounds');
-
-			consumeMemory(reader, channelSize);
-			bytes = new Uint8Array(channelSize);
-			const cdataReader = createReader(cdata.buffer, cdata.byteOffset, cdata.byteLength);
-			readDataRLE(cdataReader, { data: bytes, width: rowBytes, height: h }, rowBytes, h, 8, 1, [0], false);
+			maxDecodeSize = Math.max(maxDecodeSize, channelSize);
 		} else {
 			throw new Error('Invalid pattern compression mode');
 		}
 
+		channels.push({ target, depth, compressionMode, cdata, ctop, cleft, w, h, rowBytes, channelSize });
+	}
+
+	// check peak memory up front (image data, CMYK buffer and largest RLE decode buffer),
+	// image data is consumed only after successful decoding so failed patterns don't reduce the limit
+	const size = width * height * 4;
+	const cmykSize = isCmyk ? width * height * 5 : 0;
+	consumeMemory(reader, size + cmykSize + maxDecodeSize);
+	recoverMemory(reader, size + cmykSize + maxDecodeSize);
+
+	const data = new Uint8Array(size);
+
+	for (let i = 3; i < data.byteLength; i += 4) {
+		data[i] = 255;
+	}
+
+	// CMYK channels are decoded into separate buffer (5 values per pixel, inverted, 0 = 100% ink) and converted to RGB at the end
+	const cmyk = isCmyk ? new Uint8Array(cmykSize).fill(255) : undefined;
+
+	for (const { target, depth, compressionMode, cdata, ctop, cleft, w, h, rowBytes, channelSize } of channels) {
+		let bytes = cdata;
+
+		if (compressionMode === 1) {
+			bytes = new Uint8Array(channelSize);
+			const cdataReader = createReader(cdata.buffer, cdata.byteOffset, cdata.byteLength);
+			readDataRLE(cdataReader, { data: bytes, width: rowBytes, height: h }, rowBytes, h, 8, 1, [0], false);
+		}
+
+		if (depth !== 8) bytes = patternChannelTo8bit(bytes, w * h, depth);
+
 		const ox = cleft - left;
 		const oy = ctop - top;
 
-		for (let y = 0; y < h; y++) {
-			for (let x = 0; x < w; x++) {
-				const src = x + y * w;
-				const dst = (ox + x + (y + oy) * width) * 4;
-				const value = depth === 8 ? bytes[src] : patternValueTo8bit(bytes, src, depth);
+		if (cmyk) {
+			copyPatternChannel(bytes, cmyk, w, h, (ox + oy * width) * 5 + target, width * 5, 5);
+		} else if (target === 3 || colorMode === ColorMode.RGB) {
+			copyPatternChannel(bytes, data, w, h, (ox + oy * width) * 4 + target, width * 4, 4);
+		} else if (colorMode === ColorMode.Indexed) {
+			const colors = new Uint8Array(256 * 3);
 
-				if (cmyk) {
-					cmyk[(ox + x + (y + oy) * width) * 5 + target] = value;
-				} else if (target === 3) {
-					data[dst + 3] = value;
-				} else if (colorMode === ColorMode.Indexed) {
-					const color = palette[value];
-					data[dst + 0] = color.r;
-					data[dst + 1] = color.g;
-					data[dst + 2] = color.b;
-				} else if (colorMode === ColorMode.Grayscale) {
+			for (let i = 0; i < 256; i++) {
+				colors[i * 3 + 0] = palette[i].r;
+				colors[i * 3 + 1] = palette[i].g;
+				colors[i * 3 + 2] = palette[i].b;
+			}
+
+			for (let y = 0; y < h; y++) {
+				for (let x = 0, src = y * w, dst = (ox + (y + oy) * width) * 4; x < w; x++, src++, dst += 4) {
+					const index = bytes[src] * 3;
+					data[dst + 0] = colors[index + 0];
+					data[dst + 1] = colors[index + 1];
+					data[dst + 2] = colors[index + 2];
+				}
+			}
+		} else { // grayscale
+			for (let y = 0; y < h; y++) {
+				for (let x = 0, src = y * w, dst = (ox + (y + oy) * width) * 4; x < w; x++, src++, dst += 4) {
+					const value = bytes[src];
 					data[dst + 0] = value;
 					data[dst + 1] = value;
 					data[dst + 2] = value;
-				} else {
-					data[dst + target] = value;
 				}
 			}
 		}
-
-		if (compressionMode === 1) recoverMemory(reader, channelSize);
 	}
 
 	if (cmyk) {
 		cmykToRgb({ width, height, data: cmyk }, { width, height, data }, false);
-		recoverMemory(reader, cmyk.byteLength);
 	}
 
+	consumeMemory(reader, size);
 	reader.offset = end;
 
 	return { id, name, x, y, bounds: { x: left, y: top, w: width, h: height }, data };
 }
 
-// converts big-endian 16bit or 32bit (float) value at given index to 8bit value
-function patternValueTo8bit(bytes: Uint8Array, index: number, depth: number) {
+// converts big-endian 16bit or 32bit (float) values to 8bit values
+function patternChannelTo8bit(bytes: Uint8Array, count: number, depth: number) {
+	const result = new Uint8Array(count);
+
 	if (depth === 16) {
-		return Math.round(((bytes[index * 2] << 8) | bytes[index * 2 + 1]) / 257);
+		for (let i = 0; i < count; i++) {
+			result[i] = Math.round(((bytes[i * 2] << 8) | bytes[i * 2 + 1]) / 257);
+		}
 	} else {
-		const view = new DataView(bytes.buffer, bytes.byteOffset + index * 4, 4);
-		const value = view.getFloat32(0, false);
-		return value > 0 ? (value < 1 ? Math.round(value * 255) : 255) : 0;
+		const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+
+		for (let i = 0; i < count; i++) {
+			const value = view.getFloat32(i * 4, false);
+			result[i] = value > 0 ? (value < 1 ? Math.round(value * 255) : 255) : 0;
+		}
+	}
+
+	return result;
+}
+
+// copies w x h channel values into interleaved data starting at `offset`
+function copyPatternChannel(bytes: Uint8Array, data: Uint8Array, w: number, h: number, offset: number, stride: number, step: number) {
+	for (let y = 0, src = 0; y < h; y++) {
+		for (let x = 0, dst = offset + y * stride; x < w; x++, src++, dst += step) {
+			data[dst] = bytes[src];
+		}
 	}
 }
 

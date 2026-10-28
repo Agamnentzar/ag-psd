@@ -446,4 +446,38 @@ describe('imageResources', () => {
 		expect(psd.imageResources!.transparencyIndex).equal(1);
 		expect(Array.from(psd.imageData!.data)).eql([255, 0, 0, 255, 0, 255, 0, 0]);
 	});
+
+	it('reads and writes Photoshop CS3 color samplers', () => {
+		const colorSamplers = [{ x: 1.5, y: 2.25, colorSpace: -1, depth: 3 }, { x: 10, y: 20, colorSpace: 0, depth: 1 }];
+		expect(writeAndReadImageResources({ colorSamplers }).colorSamplers).eql(colorSamplers);
+		// samplers without depth are written in Photoshop 5 format
+		expect(writeAndReadImageResources({ colorSamplers: [{ x: 1, y: 2, colorSpace: 0 }] }).colorSamplers).eql([{ x: 1, y: 2, colorSpace: 0 }]);
+		expect(resourceHandlersMap[1073].has({ colorSamplers: [{ x: 1, y: 2, colorSpace: 0 }] })).false;
+	});
+
+	it('reads color samplers with float positions', () => {
+		const writer = createWriter();
+		writeUint32(writer, 2); // version
+		writeUint32(writer, 1); // count
+		writer.view.setFloat32(writer.offset, 2.5); writer.offset += 4; // y
+		writer.view.setFloat32(writer.offset, 1.25); writer.offset += 4; // x
+		writer.view.setInt16(writer.offset, 7); writer.offset += 2;
+		writer.view.setInt16(writer.offset, 5); writer.offset += 2;
+		expect(readResource(1073, new Uint8Array(getWriterBuffer(writer))).colorSamplers).eql([{ x: 1.25, y: 2.5, colorSpace: 7, depth: 5 }]);
+	});
+
+	it('reads and writes quick mask info, measurement scale and duotone resources', () => {
+		const screen = { frequency: 53, frequencyUnits: 'lines/inch' as const, angle: 45, shape: 'diamond' as const, accurateScreens: false, printerDefaultScreens: true };
+		const imageResources: ImageResources = {
+			quickMaskInfo: { channelId: 3, initiallyEmpty: true },
+			measurementScale: new Uint8Array([0, 0, 0, 16, 1, 2, 3, 4]),
+			duotoneHalftoneScreens: [screen, { ...screen, angle: 75 }],
+			duotoneTransferFunctions: [{ curve: [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1000], override: false }],
+			duotoneImageInformation: new Uint8Array([1, 2, 3]),
+			alternateDuotoneColors: { colors: [{ l: 0.5, a: 0.25, b: -0.5 }], labColors: new Uint8Array([1, 2, 3, 4, 5, 6]) },
+		};
+		const result = writeAndReadImageResources(imageResources);
+		expect(result).deep.include(imageResources);
+	});
+
 });

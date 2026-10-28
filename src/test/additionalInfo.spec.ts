@@ -3,7 +3,7 @@ import './common';
 import { Psd, Layer, Filter, ReadOptions, GradientMapAdjustment, PhotoFilterAdjustment, WriteOptions, Annotation } from '../psd';
 import { readPsd, writePsdBuffer } from '../index';
 import { infoHandlersMap, ExtendedWriteOptions } from '../additionalInfo';
-import { createWriter, getWriterBuffer, writeUint16, writeUint32, writeUint8, writeSignature, writeInt32, writePascalString, writeColor, writeZeros, writeInt16 } from '../psdWriter';
+import { createWriter, getWriterBuffer, writeUint16, writeUint32, writeUint8, writeSignature, writeInt32, writePascalString, writeColor, writeZeros, writeInt16, writeFloat64 } from '../psdWriter';
 import { createReader, readUint32, readSignature, readUint8, skipBytes } from '../psdReader';
 import { readVersionAndDescriptor, writeVersionAndDescriptor } from '../descriptor';
 
@@ -807,4 +807,166 @@ describe('additionalInfo', () => {
 		expect(psd.generatorSettings).eql(generatorSettings);
 		expect(psd.children![0].generatorSettings).eql({ exportAs: { scaleSettings: '[{"size":1}]' }, layerTime: 2 });
 	});
+
+	it('round-trips new layer colors', () => {
+		const psd = roundTrip({
+			width: 10, height: 10,
+			children: [{ name: 'a', layerColor: 'seafoam' }, { name: 'b', layerColor: 'fuchsia' }],
+		});
+		expect(psd.children!.map(c => c.layerColor)).eql(['seafoam', 'fuchsia']);
+	});
+
+	it('round-trips curves drawn with pencil tool', () => {
+		const map = Array.from({ length: 256 }, (_, i) => 255 - i);
+		const values: number[][] = [map, [], map.map(v => v >> 1)];
+		const result = readHandler('curv', writeHandler('curv', { adjustment: { type: 'curves', values } }, { width: 10, height: 10 }));
+		expect(result.adjustment).eql({ type: 'curves', values });
+	});
+
+	it('reads curves for channels outside of channel mask from extra section', () => {
+		const channels = [[{ input: 0, output: 10 }, { input: 255, output: 255 }]];
+		channels[20] = [{ input: 0, output: 0 }, { input: 128, output: 200 }, { input: 255, output: 255 }];
+		for (let i = 1; i < 20; i++) channels[i] = [];
+		const result = readHandler('curv', writeHandler('curv', { adjustment: { type: 'curves', channels } }, { width: 10, height: 10 }));
+		expect(result.adjustment.channels).eql(channels);
+	});
+
+	it('reads levels written by Clip Studio Paint', () => {
+		const writer = createWriter();
+		writeUint16(writer, 2); // version
+		const record = (shadow: number) => [shadow, 255, 0, 255, 100].forEach(v => writeInt16(writer, v));
+		record(10);
+		for (let i = 1; i < 29; i++) record(0);
+		writeSignature(writer, 'ls\x00\x03'); // 'ls' instead of 'Lvls' signature, followed by version
+		writeUint16(writer, 33); // count
+		record(0);
+		record(20);
+		record(0);
+		const result = readHandler('levl', getWriterBuffer(writer));
+		expect(result.adjustment.channels.length).equal(31);
+		expect(result.adjustment.channels[0].shadowInput).equal(10);
+		expect(result.adjustment.channels[30].shadowInput).equal(20);
+	});
+
+	it('reads old hue/saturation, placed layer, filter effects and artboard keys', () => {
+		expect(infoHandlersMap['hue ']).equal(infoHandlersMap['hue2']);
+		expect(infoHandlersMap['plLd']).equal(infoHandlersMap['PlLd']);
+		expect(infoHandlersMap['FELS']).equal(infoHandlersMap['FEid']);
+		expect(infoHandlersMap['abdd']).equal(infoHandlersMap['artb']);
+	});
+
+	it('round-trips vector mask as global mask, foreign effect id, frame group, animation effects, pattern data and pixel source data', () => {
+		const layer: Layer = {
+			name: 'a',
+			vectorMaskAsGlobalMask: true,
+			foreignEffectId: 123,
+			framedGroup: { rect: { top: 16, left: 186, bottom: 1122, right: 1153 }, type: 1, lockPPI: false, preferredResolution: 300, savedIteratedName: 'Frame 1' },
+			animationEffects: new Uint8Array([0, 0, 0, 16, 1, 2, 3, 4]),
+			patternData: [{
+				signature: '8BIM', key: 'patt', copyOnSheetDuplication: true,
+				patterns: [{ colorHandling: 'avoid conversion', name: 'Pattern 1', id: 'abc' }],
+			}],
+			pixelSourceData: [new Uint8Array([1, 2, 3]), new Uint8Array([4, 5, 6, 7])],
+		};
+		const result = roundTrip({ width: 10, height: 10, children: [layer] }).children![0];
+		expect(result.vectorMaskAsGlobalMask).true;
+		expect(result.foreignEffectId).equal(123);
+		expect(result.framedGroup).eql(layer.framedGroup);
+		expect(result.animationEffects).eql(layer.animationEffects);
+		expect(result.patternData).eql(layer.patternData);
+		expect(result.pixelSourceData).eql(layer.pixelSourceData);
+	});
+
+	it('reads layer generator settings from extd section', () => {
+		const writer = createWriter();
+		writeVersionAndDescriptor(writer, '', 'null', {
+			generatorSettings: { _name: '', _classID: 'null', crema: { _name: '', _classID: 'null', json: '{"a":1}' }, layerTime: 5 },
+		});
+		expect(readHandler('extd', getWriterBuffer(writer)).generatorSettings).eql({ crema: '{"a":1}', layerTime: 5 });
+		expect(infoHandlersMap['extd'].has({ generatorSettings: {} })).false; // written in 'shmd' section
+	});
+
+	it('reads legacy type tool info (tySh) as text data', () => {
+		const writer = createWriter();
+		writeInt16(writer, 1); // version
+		[1, 0, 0, 1, 10, 20].forEach(v => writeFloat64(writer, v));
+		writeInt16(writer, 6); // font version
+		writeInt16(writer, 1); // faces
+		writeInt16(writer, 1); // mark
+		writeInt32(writer, 1); // font type
+		writePascalString(writer, 'Arial-BoldMT', 1);
+		writePascalString(writer, 'Arial', 1);
+		writePascalString(writer, 'Bold', 1);
+		writeInt16(writer, 0); // script
+		writeInt32(writer, 0); // design axes
+		writeInt16(writer, 2); // styles
+		for (const [mark, kerning] of [[1, 0], [2, -0.1]]) {
+			writeInt16(writer, mark);
+			writeInt16(writer, 1); // face mark
+			writeInt32(writer, 24 * 0x10000); // size
+			writeInt32(writer, 0); // tracking
+			writeInt32(writer, Math.round(kerning * 0x10000)); // kerning
+			writeInt32(writer, 0); // leading
+			writeInt32(writer, 0); // baseline shift
+			writeUint8(writer, 1); // auto kern
+			writeUint8(writer, 0); // rotate
+		}
+		writeInt16(writer, 0); // type
+		[0x10000, 4, 0, 0, 0, 0].forEach(v => writeInt32(writer, v));
+		writeInt16(writer, 1); // lines
+		writeInt32(writer, 4); // characters
+		writeInt16(writer, 0); // orientation
+		writeInt16(writer, 2); // alignment
+		for (const [char, style] of [['A', 1], ['b', 2], ['c', 1], ['\r', 1]] as [string, number][]) {
+			writeUint16(writer, char.charCodeAt(0));
+			writeInt16(writer, style);
+		}
+		writeColor(writer, { r: 255, g: 0, b: 0 });
+		writeUint8(writer, 1); // anti-alias
+
+		const text = readHandler('tySh', getWriterBuffer(writer)).text;
+		expect(text.text).equal('Abc');
+		expect(text.transform).eql([1, 0, 0, 1, 10, 20]);
+		expect(text.antiAlias).equal('smooth');
+		expect(text.paragraphStyle).eql({ justification: 'center' });
+		expect(text.style).eql({
+			font: { name: 'Arial-BoldMT', script: 0 }, fontSize: 24, autoLeading: true, tracking: 0, autoKerning: true,
+			baselineShift: 0, fillColor: { r: 255, g: 0, b: 0 },
+		});
+		expect(text.styleRuns).eql([
+			{ length: 1, style: { kerning: 0 } },
+			{ length: 1, style: { kerning: -100 } },
+			{ length: 1, style: { kerning: 0 } },
+		]);
+		expect(infoHandlersMap['tySh'].has({ text })).false; // written as 'TySh'
+	});
+
+	it('round-trips camera raw smart filter', () => {
+		const filter: Filter = {
+			name: 'Camera Raw Filter', opacity: 1, blendMode: 'normal', enabled: true, hasOptions: true,
+			foregroundColor: { r: 0, g: 0, b: 0 }, backgroundColor: { r: 255, g: 255, b: 255 },
+			type: 'camera raw',
+			filter: {
+				version: '18.4', processVersion: 6, processVersionCode: 251920384, whiteBalance: 'Cst ',
+				temperature: 10, exposure: 0.5, contrast: -20, texture: 5, saturation: 15,
+				parametricCurve: { shadows: 10, shadowSplit: 25, midtoneSplit: 50, highlightSplit: 75 },
+				pointCurve: { composite: [{ input: 0, output: 0 }, { input: 128, output: 140 }, { input: 255, output: 255 }] },
+				hsl: { hue: { red: 5, magenta: -10 }, saturation: { aqua: 20 } },
+				colorGrading: { shadows: { hue: 200, saturation: 30 }, blending: 50 },
+				sharpening: { amount: 40, radius: 1.2 },
+				noiseReduction: { luminance: 10 },
+				grain: { amount: 5 },
+				postCropVignette: { amount: -10, roundness: 0 },
+			},
+		};
+		const layer: Layer = {
+			placedLayer: {
+				id: guid1, type: 'raster', transform: [0, 0, 10, 0, 10, 10, 0, 10], width: 10, height: 10,
+				filter: { enabled: true, validAtPosition: true, maskEnabled: false, maskLinked: false, maskExtendWithWhite: false, list: [filter] },
+			},
+		};
+		const result = readHandler('SoLd', writeHandler('SoLd', layer, { width: 10, height: 10 }));
+		expect(result.placedLayer.filter.list).eql([filter]);
+	});
+
 });
