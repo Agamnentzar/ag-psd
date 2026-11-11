@@ -86,13 +86,14 @@ const dctSqrt1d2 = 2896; // sqrt(2) / 2
 const maxResolutionInMP = 100; // Don't decode more than 100 megapixels
 const maxMemoryUsageBytes = 64 * 1024 * 1024; // Don't decode if memory footprint is more than 64MB
 let totalBytesAllocated = 0; // avoid unexpected OOMs from untrusted content.
+let memoryLimitBytes = maxMemoryUsageBytes; // effective cap for one decode, lowered by the caller's remaining totalMemoryLimit
 
 function requestMemoryAllocation(increaseAmount: number) {
   if (!isFinite(increaseAmount) || increaseAmount < 0) throw new Error(`Invalid memory allocation size (${increaseAmount})`);
 
   const totalMemoryImpactBytes = totalBytesAllocated + increaseAmount;
-  if (totalMemoryImpactBytes > maxMemoryUsageBytes) {
-    const exceededAmount = Math.ceil((totalMemoryImpactBytes - maxMemoryUsageBytes) / 1024 / 1024);
+  if (totalMemoryImpactBytes > memoryLimitBytes) {
+    const exceededAmount = Math.ceil((totalMemoryImpactBytes - memoryLimitBytes) / 1024 / 1024);
     throw new Error(`Max memory limit exceeded by at least ${exceededAmount}MB`);
   }
 
@@ -1108,8 +1109,10 @@ function getData(decoded: Decoded) {
   return data;
 }
 
-export function decodeJpeg(encoded: Uint8Array, createImageData: (width: number, height: number) => ImageData) {
+export function decodeJpeg(encoded: Uint8Array, createImageData: (width: number, height: number) => ImageData, memoryLimit?: number) {
   totalBytesAllocated = 0;
+  // the caller's remaining budget can only lower jpeg's own 64MB safety cap, never raise it
+  memoryLimitBytes = memoryLimit === undefined ? maxMemoryUsageBytes : Math.min(maxMemoryUsageBytes, Math.max(0, memoryLimit));
 
   if (encoded.length === 0) throw new Error('Empty jpeg buffer');
 

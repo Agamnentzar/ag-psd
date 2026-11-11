@@ -1,4 +1,4 @@
-import { PsdReader } from "./psdReader";
+import { consumeMemory, PsdReader } from "./psdReader";
 
 function isWhitespace(char: number) {
 	// ' ', '\n', '\r', '\t'
@@ -18,7 +18,12 @@ export function setProperty(target: any, key: string, value: any) {
 	}
 }
 
-export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdReader, 'log'>) {
+// estimated cost of one parsed node (array/object/value) with V8 overhead, charged against
+// `totalMemoryLimit` so malformed data of single-byte tokens (e.g. '[[[[...') can't build an
+// unbounded object graph that bypasses the limit
+const NODE_COST = 64;
+
+export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdReader, 'log' | 'totalMemoryLimit'>) {
 	let index = 0;
 
 	function skipWhitespace() {
@@ -53,6 +58,7 @@ export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdRea
 				result += String.fromCharCode(getTextByte());
 			}
 
+			consumeMemory(reader, result.length * 2);
 			index++;
 			return result;
 		}
@@ -68,6 +74,7 @@ export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdRea
 			result += String.fromCharCode(char);
 		}
 
+		consumeMemory(reader, result.length * 2);
 		index++;
 		return result;
 	}
@@ -87,6 +94,8 @@ export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdRea
 
 	function pushValue(value: any) {
 		if (!stack.length) throw new Error('Invalid data');
+
+		consumeMemory(reader, NODE_COST);
 
 		const top = stack[stack.length - 1];
 
@@ -116,6 +125,7 @@ export function parseEngineData(data: number[] | Uint8Array, reader: Pick<PsdRea
 				pushValue(`/${name}`);
 			}
 		} else if (top && typeof top === 'object') {
+			consumeMemory(reader, NODE_COST + name.length * 2);
 			stack.push(name);
 		} else {
 			throw new Error('Invalid data');

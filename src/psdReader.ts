@@ -2010,7 +2010,7 @@ function copyPatternChannel(bytes: Uint8Array, data: Uint8Array, w: number, h: n
 	}
 }
 
-export function consumeMemory(reader: PsdReader, size: number) {
+export function consumeMemory(reader: Pick<PsdReader, 'totalMemoryLimit'>, size: number) {
 	if (!(size >= 0)) throw new Error('Invalid size');
 
 	if (reader.totalMemoryLimit !== undefined) {

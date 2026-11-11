@@ -17,6 +17,10 @@
 - Fixed writing "pass through" blend mode in descriptors as invalid value
 - Fixed `totalMemoryLimit` option not being applied to reading of raw byte buffers, malformed files declaring data sizes exceeding file length could allocate memory above the limit
 - Fixed reading linked files (`lnk2`), filter effects (`FEid`) and raw descriptor data (`tdta`) with data sizes exceeding their section, they are now rejected instead of being read as zero filled data
+- Fixed reading text engine data (`TySh` / `Txt2`) allocating memory above `totalMemoryLimit`, malformed data of single byte tokens could build an unbounded object graph
+- Fixed reading JPEG thumbnails ignoring `totalMemoryLimit` (decoding was capped at a separate 64MB limit), the decode is now also bounded by the remaining memory limit and the decoded thumbnail is counted towards it
+- Fixed reading brush (`readAbr`) descriptor sections with declared sizes smaller than their descriptor reading data outside the section
+- Added `totalMemoryLimit` option to `readAse` and new `ReadCshOptions` with `totalMemoryLimit` option to `readCsh` (2GB by default, like `readAbr`), previously these functions had no memory limit
 
 ## v34.1.0
 - Added `imageResourcesWhitelist` read option for reading only listed image resources (other image resources are skipped without decoding)

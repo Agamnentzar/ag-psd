@@ -97,4 +97,13 @@ describe('engineData2', () => {
 		for (let i = 0; i < 1000; i++) data = { '1': data };
 		expect(() => decodeEngineData2(data)).throw(/nested too deeply/);
 	});
+
+	it('stops parsing single-byte tokens that exceed the memory limit', () => {
+		// '[' is a single byte that allocates an array node; without accounting a tiny input
+		// could build an unbounded object graph (bypassing totalMemoryLimit)
+		const data = new Uint8Array(100000).fill(0x5b); // '['
+		const reader = { log() { }, totalMemoryLimit: 64 * 1024 };
+		expect(() => parseEngineData(data, reader)).throw('Exceeded memory limit');
+		expect(reader.totalMemoryLimit).least(0);
+	});
 });

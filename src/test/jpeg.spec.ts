@@ -87,4 +87,20 @@ describe('jpeg', () => {
 		expect(data[0]).equal(data[1]);
 		expect(data[0]).equal(data[2]);
 	});
+
+	const minimal = new Uint8Array([...SOI, ...DQT, ...sof([[1, 0x11]]), ...DHT, ...sos([1]), ...scan1, ...EOI]);
+
+	it('throws when the caller memory limit is smaller than the decode needs', () => {
+		// an 8x8 decode needs at least 8*8*4 bytes for the output alone
+		expect(() => decodeJpeg(minimal, createImageData, 100)).throw(/memory limit exceeded/i);
+	});
+
+	it('decodes within a generous caller memory limit', () => {
+		expect(decodeJpeg(minimal, createImageData, 1024 * 1024).width).equal(8);
+	});
+
+	it('uses its own 64MB cap when no caller limit is given', () => {
+		// undefined must not disable jpeg's own safety cap (regression: caller limit only lowers it)
+		expect(decodeJpeg(minimal, createImageData, undefined).width).equal(8);
+	});
 });

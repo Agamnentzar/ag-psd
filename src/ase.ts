@@ -39,10 +39,13 @@ export interface ReadAseOptions {
   logMissingFeatures?: boolean;
   /** Throw on unsupported or invalid blocks instead of skipping them */
   throwForMissingFeatures?: boolean;
+  /** Memory limit for decoded data in bytes (2GB by default), set to `undefined` explicitly to disable */
+  totalMemoryLimit?: number;
 }
 
 export function readAse(buffer: ArrayBufferView, options: ReadAseOptions = {}): Ase {
   const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+  reader.totalMemoryLimit = 'totalMemoryLimit' in options ? options.totalMemoryLimit : 2 * 1024 * 1024 * 1024;
   const signature = readSignature(reader); // ASEF
   if (signature !== 'ASEF') throw new Error('Invalid signature');
   const versionMajor = readUint16(reader); // 1
@@ -58,6 +61,7 @@ export function readAse(buffer: ArrayBufferView, options: ReadAseOptions = {}): 
     const end = Math.min(reader.offset + length, reader.view.byteLength);
     // block reader, so invalid lengths can't make us read data of following blocks
     const block = createReader(reader.view.buffer, reader.view.byteOffset + reader.offset, end - reader.offset);
+    block.totalMemoryLimit = reader.totalMemoryLimit; // share the budget with the block reader
 
     try {
       switch (type) {
@@ -89,6 +93,7 @@ export function readAse(buffer: ArrayBufferView, options: ReadAseOptions = {}): 
       options.logMissingFeatures && reader.log(`Skipped invalid block: ${(e as Error).message}`);
     }
 
+    reader.totalMemoryLimit = block.totalMemoryLimit; // carry block consumption back to the shared budget
     reader.offset = end;
   }
 

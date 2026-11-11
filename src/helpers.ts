@@ -644,15 +644,18 @@ export function writeDataZipWithoutPrediction({ data, width, height }: PixelData
 	}
 }
 
-export function createCanvasFromData(data: Uint8Array, reader: Pick<PsdReader, 'log'>): HTMLCanvasElement {
+export function createCanvasFromData(data: Uint8Array, reader: Pick<PsdReader, 'log' | 'totalMemoryLimit'>): HTMLCanvasElement {
 	const canvas = createCanvas(100, 100);
 
 	try {
 		const context = canvas.getContext('2d')!;
-		const imageData = decodeJpeg(data, (w, h) => context.createImageData(w, h) as any);
+		// the caller's remaining budget caps the decode (jpeg keeps its own 64MB cap regardless)
+		const imageData = decodeJpeg(data, (w, h) => context.createImageData(w, h) as any, reader.totalMemoryLimit);
 		canvas.width = imageData.width;
 		canvas.height = imageData.height;
 		context.putImageData(imageData, 0, 0);
+		// permanently charge the retained thumbnail, so many thumbnail resources can't exceed the budget together
+		if (reader.totalMemoryLimit !== undefined) reader.totalMemoryLimit -= imageData.width * imageData.height * 4;
 	} catch (e: any) {
 		reader.log('JPEG decompression error', e.message);
 	}

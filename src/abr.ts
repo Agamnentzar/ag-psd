@@ -528,6 +528,13 @@ export interface ReadAbrOptions {
 	totalMemoryLimit?: number;
 }
 
+// reads a descriptor bounded to its section, so a section declaring a size smaller than its
+// descriptor can't make the parser read (and allocate) data out into the rest of the file
+function readSectionDescriptor(reader: PsdReader, end: number) {
+	const sectionReader = createReader(reader.view.buffer, reader.view.byteOffset + reader.offset, end - reader.offset);
+	return readVersionAndDescriptor(sectionReader, true);
+}
+
 export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): Abr {
 	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 	reader.logMissingFeatures = options.logMissingFeatures;
@@ -582,7 +589,7 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 						break;
 					}
 					case 'desc': {
-						const desc: DescDescriptor = readVersionAndDescriptor(reader, true);
+						const desc: DescDescriptor = readSectionDescriptor(reader, end);
 
 						for (const [index, brush] of (desc.Brsh || []).entries()) {
 							try {
@@ -604,7 +611,7 @@ export function readAbr(buffer: ArrayBufferView, options: ReadAbrOptions = {}): 
 					}
 					case 'phry': { // brush groups (folders in brushes panel)
 						// flat list of group starts, presets (in the same order as in 'desc' section) and group ends
-						const desc: PhryDescriptor = readVersionAndDescriptor(reader, true);
+						const desc: PhryDescriptor = readSectionDescriptor(reader, end);
 						hierarchy = desc.hierarchy;
 						break;
 					}

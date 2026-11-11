@@ -11,8 +11,14 @@ export interface Csh {
 	})[];
 }
 
-export function readCsh(buffer: ArrayBufferView): Csh {
+export interface ReadCshOptions {
+	/** Memory limit for decoded data in bytes (2GB by default), set to `undefined` explicitly to disable */
+	totalMemoryLimit?: number;
+}
+
+export function readCsh(buffer: ArrayBufferView, options: ReadCshOptions = {}): Csh {
 	const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
+	reader.totalMemoryLimit = 'totalMemoryLimit' in options ? options.totalMemoryLimit : 2 * 1024 * 1024 * 1024;
 	const csh: Csh = { shapes: [] };
 
 	checkSignature(reader, 'cush');
