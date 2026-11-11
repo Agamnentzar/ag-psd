@@ -492,6 +492,22 @@ Example layer structure:
     keyOriginRRectRadii?: { topRight: UnitsValue; topLeft: UnitsValue; bottomLeft: UnitsValue; bottomRight: UnitsValue; }; // corner radii of the rectangle
     keyOriginShapeBoundingBox?: { top: UnitsValue; left: UnitsValue; bottom: UnitsValue; right: UnitsValue; }; // bounds of the shape
     keyOriginBoxCorners?: { x: number; y: number; }[]; // 4 corners of the shape bounding box (top-left, top-right, bottom-right, bottom-left)
+    // polygon (and star) settings
+    keyOriginPolySides?: number;
+    keyOriginPolyCornerRadius?: number;
+    keyOriginPolyStarRatio?: number; // 0..1, inner radius of the star
+    keyOriginPolyPreviousTightBoxCorners?: { x: number; y: number; }[];
+    keyOriginPolyTrueRectCorners?: { x: number; y: number; }[];
+    keyOriginPolyPixelHSF?: number;
+    // line settings
+    keyOriginLineStart?: { x: number; y: number; };
+    keyOriginLineEnd?: { x: number; y: number; };
+    keyOriginLineWeight?: number;
+    keyOriginLineArrowStart?: boolean;
+    keyOriginLineArrowEnd?: boolean;
+    keyOriginLineArrowWidth?: number;
+    keyOriginLineArrowLength?: number;
+    keyOriginLineArrowConcavity?: number;
     transform?: number[]; // 2d transform matrix of the shape [xx, xy, yx, yy, tx, ty]
     keyShapeInvalidated?: boolean; // shape path was edited directly and is no longer a live shape
   };
@@ -551,7 +567,24 @@ Example layer structure:
 
 - `animationFrames`, `animationFrameFlags` and `timeline` per-layer animation frame and video timeline data, see [psd.ts file](/src/psd.ts) for structure.
 
-- `comps` per-layer settings for layer comps (see `layerComps` in [Image Resources](#image-resources)).
+- `comps` per-layer settings for layer comps (see `layerComps` in [Image Resources](#image-resources)). Items of `comps.settings` and `animationFrames` can override layer properties for the comp/frame:
+
+  ```ts
+  {
+    offset?: { x: number; y: number; }; // layer position offset
+    vectorMaskOffset?: { x: number; y: number; };
+    maskOffset?: { x: number; y: number; }; // animationFrames only
+    effects?: LayerEffectsInfo;
+    blendMode?: BlendMode;
+    opacity?: number; // 0..1
+    fillOpacity?: number; // 0..1
+    blendClippedElements?: boolean;
+    blendInteriorElements?: boolean;
+    knockout?: 'none' | 'shallow' | 'deep';
+    text?: { warp: Warp; warpRect: number[]; }; // warp of text layer
+    placedLayerCompId?: number; // layer comp of smart object
+  }
+  ```
 
 - `filterMask`, `userMask` and `filterEffectsMasks` additional mask information, `userMask.opacity` and `filterMask.opacity` values range from 0 to 1. Image data of `filterEffectsMasks` items is stored undecoded, it can be decoded using `getFilterEffectsMaskImageData` / `getFilterEffectsMaskCanvas` (color and transparency channels) and `getFilterEffectsMaskExtraImageData` / `getFilterEffectsMaskExtraCanvas` (`extra` mask) functions (see [main README document](/README.md#functions)). `colorMode` of `filterEffectsMasks` items is set to color mode of the document when reading (it's not written to the file), it's used for decoding the color channels.
 
@@ -714,9 +747,9 @@ Image resources are global document settings, stored in `psd.imageResources` fie
 
 - `effectsVisible` global flag to show or hide all layer effects (Photoshop only writes it when effects are hidden).
 
-- `layerComps` list of layer comps defined in the document, per-layer settings are stored in `comps` field of each layer.
+- `layerComps` list of layer comps defined in the document, per-layer settings are stored in `comps` field of each layer. `expanded` field of a comp indicates if it's expanded in Layer Comps panel.
 
-- `animations`, `onionSkins`, `timelineInformation` and `sheetDisclosure` frame animation and video timeline settings.
+- `animations`, `onionSkins`, `timelineInformation` and `sheetDisclosure` frame animation and video timeline settings. `animations.activeAnimation` is the active animation and `globalAngle` and `globalAltitude` fields of `animations.frames` items are global light settings of the frame.
 
 - `slices` list of slices defined in the document.
 
@@ -788,6 +821,7 @@ interface PlacedLayer {
 	comp?: number;
 	compInfo?: { compID: number; originalCompID: number; };
 	filter?: PlacedLayerFilter; // smart filters
+	imported?: boolean; // `Impr` flag stored by Photoshop
 }
 ```
 
@@ -817,6 +851,7 @@ interface LinkedFile {
 		fullPath: string;
 		originalPath: string;
 		relativePath: string;
+		alias?: string; // binary data of macOS alias record (one character per byte)
 	};
 }
 ```

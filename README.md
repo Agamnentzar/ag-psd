@@ -313,10 +313,10 @@ interface ReadOptions {
    * `thumnailRaw` field is used instead of `thumbnail` field. */
   useRawThumbnail?: boolean;
   /** Reads only listed `imageResources` fields, other image resources are skipped without decoding them
-   * (e.g. `['resolutionInfo', 'gridAndGuidesInformation']`). Use empty array to skip all image resources.
+   * (e.g. `['resolutionInfo', 'gridAndGuidesInformation']`, array or Set). Use empty array to skip all image resources.
    * Resources needed to read layers and composite image (`alphaChannelNames`, `transparencyIndex`, layer link groups)
    * are always read. */
-  imageResourcesWhitelist?: (keyof ImageResources)[];
+  imageResourcesWhitelist?: (keyof ImageResources)[] | Set<keyof ImageResources>;
 	/** Total memory limit to use when decoding bitmaps (default: 2GB). */
 	totalMemoryLimit?: number;
   /** Usend only for development */

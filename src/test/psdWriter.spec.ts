@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as vm from 'vm';
 import { expect } from 'chai';
 import { loadCanvasFromFile, compareBuffers, createCanvas, compareCanvases } from './common';
-import { Psd, WriteOptions, ReadOptions, PatternInfo, PixelData, LayerMaskData, ColorMode, PixelArray } from '../psd';
+import { Psd, WriteOptions, ReadOptions, PatternInfo, PixelData, LayerMaskData, ColorMode, PixelArray, Layer, LayerStateText, AnimationFrame, Animations } from '../psd';
 import { writePsd, writeSignature, getWriterBuffer, createWriter, writePattern, getRLEChannelBound, writeColor } from '../psdWriter';
 import { readPsd, createReader, readPattern, readColor, readDataRLE, readDataZip } from '../psdReader';
 import { writeDataRLEBytes, writeDataZipWithPrediction, rgbToCmykValues, cmykToRgbValues, clamp } from '../helpers';
@@ -517,7 +517,7 @@ describe('PsdWriter', () => {
 			fs.writeFileSync(path.join(resultsDir, `expected.psd`), buffer);
 			// fs.writeFileSync(path.join(resultsDir, `expected.bin`), buffer); // TEMP
 
-			const reader = createReader(buffer.buffer);
+			const reader = createReader(buffer.buffer, buffer.byteOffset, buffer.byteLength);
 			const result = readPsd(reader, { skipLayerImageData: true, logMissingFeatures: true, throwForMissingFeatures: true });
 			fs.writeFileSync(path.join(resultsDir, `composite.png`), result.canvas!.toBuffer());
 			//compareCanvases(psd.canvas, result.canvas, 'composite image');
@@ -953,8 +953,8 @@ describe('PsdWriter', () => {
 	describe('writePsdBuffer', () => {
 		it('returns buffer that is not larger than the file', () => {
 			// large enough to not use node's buffer pool
-			const buffer = writePsdBuffer({ width: 100, height: 100, imageData: createPixels(100, 100, false) as ImageData });
-			expect(buffer.length).greaterThan(8192);
+			const buffer = writePsdBuffer({ width: 200, height: 200, imageData: createPixels(200, 200, false) as ImageData });
+			expect(buffer.length).greaterThan(Buffer.poolSize >>> 1);
 			expect(buffer.buffer.byteLength).equal(buffer.length);
 		});
 
@@ -1062,6 +1062,161 @@ describe('PsdWriter', () => {
 			const buffer = Buffer.from(writePsdBuffer({ ...psd, colorMode: ColorMode.RGB }));
 			expect(buffer.readUInt16BE(24)).equal(3); // RGB color mode
 			expect(buffer.readUInt32BE(26)).equal(0); // color mode data length
+		});
+	});
+
+	describe('descriptor fields', () => {
+		const guid = '20953ddb-9391-11ec-b4f1-c15674f50bc4';
+		const textState: LayerStateText = {
+			warp: { style: 'wave', value: 10, perspective: 0, perspectiveOther: 0, rotate: 'vertical' },
+			warpRect: [1, 2, 3, 4],
+		};
+
+		it('writes layer comp settings', () => {
+			const settings: NonNullable<Layer['comps']>['settings'][0] = {
+				compList: [5],
+				enabled: true,
+				offset: { x: 3, y: -4 },
+				vectorMaskOffset: { x: 7, y: 8 },
+				blendMode: 'pass through',
+				opacity: 0.5,
+				fillOpacity: 0.25,
+				blendInteriorElements: true,
+				blendClippedElements: false,
+				knockout: 'deep',
+				effectsReferencePoint: { x: 1.5, y: 2.5 },
+				text: textState,
+				placedLayerCompId: -1,
+			};
+			const psd = writeAndRead({
+				width: 8, height: 8,
+				children: [{
+					name: 'a',
+					comps: {
+						settings: [{
+							...settings,
+							effects: { stroke: [{ enabled: true, position: 'outside', fillType: 'color', blendMode: 'normal', opacity: 1, size: { units: 'Pixels', value: 3 }, color: { r: 255, g: 0, b: 0 } }] },
+						}],
+					},
+				}],
+			});
+			const result = psd.children![0].comps!.settings[0];
+			const { effects, ...rest } = result;
+			expect(rest).eql(settings);
+			expect(effects!.stroke![0].size).eql({ units: 'Pixels', value: 3 });
+		});
+
+		it('writes animation frame offsets, blend options and layer specific settings', () => {
+			const frame: AnimationFrame = {
+				frames: [1], enable: true, offset: { x: 1, y: -2 }, maskOffset: { x: 3, y: 4 }, vectorMaskOffset: { x: -5, y: 6 },
+				blendMode: 'multiply', opacity: 0.5, fillOpacity: 0.75, knockout: 'shallow', text: textState, placedLayerCompId: 7,
+			};
+			const psd = writeAndRead({ width: 8, height: 8, children: [{ name: 'a', animationFrames: [frame] }] });
+			expect(psd.children![0].animationFrames).eql([frame]);
+		});
+
+		it('writes animations active animation and frame global light', () => {
+			const animations: Animations = {
+				activeAnimation: 0,
+				frames: [{ id: 1, delay: 0.5, dispose: 'auto', globalAngle: 120, globalAltitude: 30 }],
+				animations: [{ id: 0, frames: [1], repeats: 0, activeFrame: 0 }],
+			};
+			const buffer = writePsdBuffer({ width: 8, height: 8, imageResources: { animations } });
+			expect(buffer.indexOf('8BIMRoll')).not.equal(-1); // rollover states written like in Photoshop
+			const psd = readPsdBuffer(buffer, { throwForMissingFeatures: true });
+			expect(psd.imageResources!.animations).eql(animations);
+		});
+
+		it('writes layer comp expanded flag', () => {
+			const layerComps = { list: [{ id: 1, name: 'comp', capturedInfo: 7, expanded: true }] };
+			const psd = writeAndRead({ width: 8, height: 8, imageResources: { layerComps } });
+			expect(psd.imageResources!.layerComps).eql(layerComps);
+		});
+
+		it('writes line and polygon shape origination', () => {
+			const corners = [{ x: 1, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 4 }, { x: 1, y: 4 }];
+			const keyDescriptorList = [
+				{
+					keyOriginType: 4,
+					keyOriginLineStart: { x: 1, y: 2 },
+					keyOriginLineEnd: { x: 5, y: 6 },
+					keyOriginLineWeight: 1.5,
+					keyOriginLineArrowStart: true,
+					keyOriginLineArrowEnd: false,
+					keyOriginLineArrowWidth: 3,
+					keyOriginLineArrowLength: 4,
+					keyOriginLineArrowConcavity: 10,
+				},
+				{
+					keyOriginType: 8,
+					keyOriginBoxCorners: corners,
+					keyOriginPolySides: 5,
+					keyOriginPolyCornerRadius: 2.5,
+					keyOriginPolyStarRatio: 0.5,
+					keyOriginPolyPreviousTightBoxCorners: corners,
+					keyOriginPolyTrueRectCorners: corners,
+					keyOriginPolyPixelHSF: 1,
+				},
+			];
+			const psd = writeAndRead({ width: 8, height: 8, children: [{ name: 'a', vectorOrigination: { keyDescriptorList } }] });
+			expect(psd.children![0].vectorOrigination!.keyDescriptorList).eql(keyDescriptorList);
+		});
+
+		it('writes pattern align and gradient aspect ratio and noise seed of vector content', () => {
+			const psd = writeAndRead({
+				width: 8, height: 8,
+				children: [{
+					name: 'a',
+					vectorFill: {
+						type: 'solid', style: 'linear', name: 'g', aspectRatio: 1.5, noisePreSeed: 1234,
+						colorStops: [{ color: { r: 0, g: 0, b: 0 }, location: 0, midpoint: 50 }, { color: { r: 255, g: 255, b: 255 }, location: 1, midpoint: 50 }],
+						opacityStops: [{ opacity: 1, location: 0, midpoint: 50 }, { opacity: 1, location: 1, midpoint: 50 }],
+					},
+					vectorStroke: { content: { type: 'pattern', name: 'p', id: guid, align: true } },
+				}],
+			});
+			const layer = psd.children![0];
+			expect(layer.vectorFill).include({ aspectRatio: 1.5, noisePreSeed: 1234 });
+			expect(layer.vectorStroke!.content).include({ type: 'pattern', align: true });
+		});
+
+		it('writes text substitutes used flag, click point, text on path settings and vertical alignment', () => {
+			const textOnPath = { type: 'TxTo', direction: 'TxCW', mirror: true };
+			const psd = writeAndRead({
+				width: 8, height: 8,
+				children: [{ name: 'a', text: { text: 'a', substitutesUsed: true, clickPoint: { x: 1.5, y: 2 }, textOnPath, verticalAlignment: 1 } }],
+			});
+			expect(psd.children![0].text).include({ substitutesUsed: true, verticalAlignment: 1 });
+			expect(psd.children![0].text!.clickPoint).eql({ x: 1.5, y: 2 });
+			expect(psd.children![0].text!.textOnPath).eql(textOnPath);
+		});
+
+		it('writes smooth and corner points of effect contour', () => {
+			const contour = { name: 'c', curve: [{ x: 0, y: 0, curved: true }, { x: 128, y: 200, curved: false }, { x: 255, y: 255 }] };
+			const psd = writeAndRead({
+				width: 8, height: 8,
+				children: [{
+					name: 'a',
+					effects: {
+						dropShadow: [{
+							enabled: true, blendMode: 'multiply', color: { r: 0, g: 0, b: 0 }, opacity: 0.5, angle: 90,
+							distance: { units: 'Pixels', value: 5 }, size: { units: 'Pixels', value: 5 }, contour,
+						}],
+					},
+				}],
+			});
+			expect(psd.children![0].effects!.dropShadow![0].contour).eql(contour);
+		});
+
+		it('writes external linked file alias and placed layer imported flag', () => {
+			const alias = '\x00\x01\x02\xffalias';
+			const psd = writeAndRead({
+				width: 8, height: 8,
+				linkedFiles: [{ id: guid, name: 'a.png', linkedFile: { fileSize: 0, name: 'a.png', fullPath: 'file:///a.png', originalPath: '', relativePath: 'a.png', alias } }],
+				children: [{ name: 'a', placedLayer: { id: guid, type: 'raster', transform: [0, 0, 8, 0, 8, 8, 0, 8], width: 8, height: 8, imported: true } }],
+			});
+			expect(psd.linkedFiles![0].linkedFile!.alias).equal(alias);
+			expect(psd.children![0].placedLayer!.imported).true;
 		});
 	});
 });

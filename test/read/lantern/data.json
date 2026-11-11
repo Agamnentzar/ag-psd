@@ -328,7 +328,8 @@
           "repeats": 0,
           "activeFrame": 0
         }
-      ]
+      ],
+      "activeAnimation": 0
     }
   },
   "children": [
@@ -440,7 +441,11 @@
           "frames": [
             545139881
           ],
-          "enable": true
+          "enable": true,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          }
         },
         {
           "frames": [
@@ -590,6 +595,10 @@
             545139881
           ],
           "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          },
           "referencePoint": {
             "x": 0,
             "y": 0
@@ -743,6 +752,10 @@
             545139881
           ],
           "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          },
           "referencePoint": {
             "x": 0,
             "y": 0
@@ -896,6 +909,10 @@
             545139881
           ],
           "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          },
           "referencePoint": {
             "x": 0,
             "y": 0
@@ -1049,6 +1066,10 @@
             545139881
           ],
           "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          },
           "referencePoint": {
             "x": 0,
             "y": 0
@@ -1202,6 +1223,10 @@
             545139881
           ],
           "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          },
           "referencePoint": {
             "x": 0,
             "y": 0
@@ -1354,7 +1379,11 @@
           "frames": [
             545139881
           ],
-          "enable": false
+          "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          }
         },
         {
           "frames": [
@@ -1503,7 +1532,11 @@
           "frames": [
             545139881
           ],
-          "enable": false
+          "enable": false,
+          "vectorMaskOffset": {
+            "x": -27,
+            "y": -41
+          }
         },
         {
           "frames": [

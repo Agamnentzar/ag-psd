@@ -200,7 +200,7 @@ describe('descriptor types', () => {
 		});
 
 		const desc = readDesc(bytes);
-		expect(desc.cmpx).eql({ low: 1, high: 0xffffffff });
+		expect(desc.cmpx).eql({ low: 0xffffffff, high: 1 }); // high 32 bits first
 		expect(desc.typx).eql({ name: 'name', classID: 'Lyr ' });
 		expect(desc.glbc).eql({ name: '', classID: 'Dcmn' });
 		expect(desc.alis).equal('\x00\xffA');

@@ -294,7 +294,8 @@
           "repeats": 0,
           "activeFrame": 1
         }
-      ]
+      ],
+      "activeAnimation": 0
     }
   },
   "children": [

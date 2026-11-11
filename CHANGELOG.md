@@ -1,5 +1,23 @@
 # Changelog
 
+## v34.2.0
+- Added `vectorMaskOffset`, `effects`, `blendMode`, `opacity`, `fillOpacity`, `blendClippedElements`, `blendInteriorElements`, `knockout` and `text` (text warp) fields to layer `comps.settings` items, previously these layer comp settings were lost
+- Added `placedLayerCompId` field to layer `comps.settings` items
+- Added `blendMode`, `fillOpacity`, `blendClippedElements`, `blendInteriorElements`, `knockout`, `text` (text warp), `placedLayerCompId`, `maskOffset` and `vectorMaskOffset` fields to `animationFrames` items
+- Added `activeAnimation` field to `animations` image resource and `globalAngle` and `globalAltitude` fields to animation frames
+- Added `expanded` field to `layerComps` image resource items
+- Added line (`keyOriginLineStart`, `keyOriginLineEnd`, `keyOriginLineWeight`, arrowhead settings) and polygon (`keyOriginPolySides`, `keyOriginPolyCornerRadius`, `keyOriginPolyStarRatio`, `keyOriginPolyPreviousTightBoxCorners`, `keyOriginPolyTrueRectCorners`, `keyOriginPolyPixelHSF`) fields to `vectorOrigination` items
+- Added `align` field to pattern vector content and `aspectRatio` and `noisePreSeed` fields to gradient vector content
+- Added `substitutesUsed`, `clickPoint`, `textOnPath` (text on path settings) and `verticalAlignment` fields to text layer data
+- Added `curved` field to effect contour points (smooth or corner point)
+- Added writing rollover states section of animations like Photoshop
+- Added `alias` field to `linkedFile` of external linked files and `imported` field to `placedLayer`
+- Fixed reading `associatedLayerId` of layer based slices from slices resource version 7 and 8 (it was always read as 0)
+- Fixed writing layer comp and animation frame `offset` as point with fractional values instead of integer values
+- Fixed writing "pass through" blend mode in descriptors as invalid value
+- Fixed `totalMemoryLimit` option not being applied to reading of raw byte buffers, malformed files declaring data sizes exceeding file length could allocate memory above the limit
+- Fixed reading linked files (`lnk2`), filter effects (`FEid`) and raw descriptor data (`tdta`) with data sizes exceeding their section, they are now rejected instead of being read as zero filled data
+
 ## v34.1.0
 - Added `imageResourcesWhitelist` read option for reading only listed image resources (other image resources are skipped without decoding)
 - Added `getFilterEffectsMaskImageData`, `getFilterEffectsMaskExtraImageData`, `getFilterEffectsMaskCanvas` and `getFilterEffectsMaskExtraCanvas` functions for decoding image data of `filterEffectsMasks`

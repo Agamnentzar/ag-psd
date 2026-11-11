@@ -179,6 +179,12 @@ describe('PsdReader', () => {
 			expect(notRequiredKeys(psd)).eql([]);
 		});
 
+		it('accepts Set of image resources', () => {
+			const psd = readPsdFromFile(filePath, { ...readOpts, imageResourcesWhitelist: new Set(['resolutionInfo', 'savedPaths'] as const) });
+			expect(notRequiredKeys(psd)).members(['resolutionInfo', 'savedPaths']);
+			expect(notRequiredKeys(readPsdFromFile(filePath, { ...readOpts, imageResourcesWhitelist: new Set() }))).eql([]);
+		});
+
 		it('reads saved paths with unicode names', () => {
 			const full = readPsdFromFile(filePath, readOpts);
 			const psd = readPsdFromFile(filePath, { ...readOpts, imageResourcesWhitelist: ['savedPaths'] });
@@ -1072,12 +1078,102 @@ describe('PsdReader', () => {
 			expect(() => readBytes(reader, NaN)).throw(Error, 'Invalid length: NaN');
 		});
 
+		it('counts zero-filled allocation past end of buffer against memory limit', () => {
+			const reader = createReader(new Uint8Array(8).buffer);
+			reader.totalMemoryLimit = 100;
+			reader.offset = 4;
+			expect(readBytes(reader, 20).byteLength).equal(20);
+			expect(reader.totalMemoryLimit).equal(80);
+		});
+
+		it('throws without consuming memory limit if allocation past end of buffer exceeds it', () => {
+			const reader = createReader(new Uint8Array(8).buffer);
+			reader.totalMemoryLimit = 10;
+			reader.offset = 4;
+			expect(() => readBytes(reader, 20)).throw('Exceeded memory limit');
+			expect(reader.totalMemoryLimit).equal(10);
+		});
+
+		it('does not count reads within buffer against memory limit', () => {
+			const reader = createReader(new Uint8Array(8).buffer);
+			reader.totalMemoryLimit = 10;
+			expect(readBytes(reader, 8).byteLength).equal(8);
+			expect(reader.totalMemoryLimit).equal(10);
+		});
+
+		it('limits total memory of repeated reads past end of buffer', () => {
+			const reader = createReader(new Uint8Array(8).buffer);
+			reader.totalMemoryLimit = 25;
+			let allocated = 0;
+
+			// malformed files can restore the offset after an over-long read, so the same bytes
+			// can be read any number of times (lnk2 linked files, FEid filter effects)
+			expect(() => {
+				for (let i = 0; i < 100; i++) {
+					reader.offset = 4;
+					allocated += readBytes(reader, 10).byteLength;
+				}
+			}).throw('Exceeded memory limit');
+
+			expect(allocated).equal(20);
+			expect(reader.totalMemoryLimit).equal(5);
+		});
+
 		it('limits raw composite data to the view', () => {
 			const data = buildPsd({ width: 1, height: 1, channels: 3, composite: Buffer.concat([u16(0), u8(10, 20, 30)]) });
 			const outer = Buffer.concat([data, Buffer.alloc(100, 0xff)]);
 			const psd = readPsd(Buffer.from(outer.buffer, outer.byteOffset, data.length), { useRawData: true });
 			expect(psd.rawCompositeData!.byteLength).equal(5);
 			expect(Array.from(getCompositeImageData(psd)!.data)).eql([10, 20, 30, 255]);
+		});
+	});
+
+	describe('data sizes exceeding section', () => {
+		// 'lnk2' record for an embedded file ('liFD'), version 2, without file open descriptor
+		function linkedFileSection(dataSize: number, data = Buffer.alloc(0)) {
+			const record = Buffer.concat([
+				ascii('liFD'), u32(2), // type, version
+				u8(0), u32(0), // id (empty pascal string), name (empty unicode string)
+				ascii('    '), ascii('    '), // file type, file creator
+				u32(0), u32(dataSize), // 64bit data size
+				u8(0), // no file open descriptor
+				data,
+			]);
+			const section = Buffer.concat([u32(0), u32(record.length), record]); // 64bit record length
+			return Buffer.concat([ascii('8BIMlnk2'), u32(section.length), section]);
+		}
+
+		function readSectionOf(buffer: Buffer) {
+			const psd: any = {};
+			readAdditionalLayerInfo(createReaderFromBuffer(buffer), psd, psd, {});
+			return psd;
+		}
+
+		it('rejects linked file data size exceeding the section', () => {
+			expect(() => readSectionOf(linkedFileSection(1000))).throw('Invalid linked file data size');
+		});
+
+		it('reads linked file data size filling the section exactly', () => {
+			const psd = readSectionOf(linkedFileSection(2, u8(1, 2)));
+			expect(psd.linkedFiles).length(1);
+			expect(Array.from(psd.linkedFiles[0].data)).eql([1, 2]);
+		});
+
+		it('rejects filter effect channel length exceeding the section', () => {
+			// maxChannels of -1 makes the channel loop run once, then the offset is restored to the
+			// end of the record, so an unbounded length could be read once per record
+			const record = Buffer.concat([
+				u8(0), u32(1), // id (empty pascal string), effect version
+				u32(0), u32(0), // 64bit effect length
+				u32(0), u32(0), u32(0), u32(0), // bounds
+				u32(0), u32(0xffffffff), // depth, maxChannels (-1)
+				u32(1), // channel exists
+				u32(0), u32(1000), // 64bit channel length
+				u16(0), // compression mode
+			]);
+			const section = Buffer.concat([u32(3), u32(0), u32(record.length), record]); // version, 64bit record length
+			const buffer = Buffer.concat([ascii('8BIMFEid'), u32(section.length), section]);
+			expect(() => readSectionOf(buffer)).throw('filterEffect: Invalid channel length');
 		});
 	});
 

@@ -145,6 +145,9 @@
               "x": 0,
               "y": 0
             },
+            "blendMode": "normal",
+            "opacity": 1,
+            "fillOpacity": 1,
             "effectsReferencePoint": {
               "x": 0,
               "y": 0
@@ -312,7 +315,8 @@
           986,
           543.0146484375001,
           986
-        ]
+        ],
+        "imported": true
       },
       "comps": {
         "settings": [
@@ -325,6 +329,9 @@
               "x": 0,
               "y": 0
             },
+            "blendMode": "normal",
+            "opacity": 1,
+            "fillOpacity": 1,
             "effectsReferencePoint": {
               "x": 513,
               "y": 550

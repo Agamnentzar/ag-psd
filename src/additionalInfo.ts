@@ -1,10 +1,10 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
 import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
-import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, Layer, CameraRawColors, CameraRawCurvePoint, CameraRawFilterSettings } from './psd';
+import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, Layer, CameraRawColors, CameraRawCurvePoint, CameraRawFilterSettings, Knockout, LayerStateBlendOptions, LayerStateText } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPatternSafe, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
-import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor, cameraRawFilterClassID, patternColorHandling } from './descriptor';
+import { Annt, BlnM, DescriptorColor, DescriptorUnitsValue, parsePercent, parseUnits, parseUnitsOrNumber, QuiltWarpDescriptor, strokeStyleLineAlignment, strokeStyleLineCapType, strokeStyleLineJoinType, TextDescriptor, textGridding, unitsPercent, unitsValue, WarpDescriptor, warpStyle, writeVersionAndDescriptor, readVersionAndDescriptor, StrokeDescriptor, Ornt, horzVrtcToXY, LmfxDescriptor, Lfx2Descriptor, FrameListDescriptor, TimelineDescriptor, FrameDescriptor, xyToHorzVrtc, serializeEffects, parseEffects, parseColor, serializeColor, serializeVectorContent, parseVectorContent, parseTrackList, serializeTrackList, FractionDescriptor, BlrM, BlrQ, SmBQ, SmBM, DspM, UndA, Cnvr, RplS, SphM, Wvtp, ZZTy, Dstr, Chnl, MztT, Lns, blurType, DfsM, ExtT, ExtR, FlCl, CntE, WndM, Drct, IntE, IntC, FlMd, unitsPercentF, frac, ClrS, descBoundsToBounds, boundsToDescBounds, presetKindType, gradientInterpolationMethodType, PxScDescriptor, cameraRawFilterClassID, patternColorHandling, BlendOptionsDescriptor, LayerSpecificDescriptor, layerStateRoot } from './descriptor';
 import { serializeEngineData, parseEngineData } from './engineData';
 import { encodeEngineData, decodeEngineData, decodeLegacyTextData, LegacyTextData } from './text';
 import { decodeEngineData2 } from './engineData2';
@@ -92,6 +92,15 @@ addHandler(
 
 		if (text.bounds) target.text.bounds = descBoundsToBounds(text.bounds);
 		if (text.boundingBox) target.text.boundingBox = descBoundsToBounds(text.boundingBox);
+		if (text.substitutesUsed !== undefined) target.text.substitutesUsed = text.substitutesUsed;
+		if (text.TxtC) target.text.clickPoint = horzVrtcToXY(text.TxtC);
+		if (text.TxPT !== undefined || text.TxPR !== undefined || text.TxMP !== undefined) {
+			target.text.textOnPath = {};
+			if (text.TxPT !== undefined) target.text.textOnPath.type = text.TxPT.split('.')[1];
+			if (text.TxPR !== undefined) target.text.textOnPath.direction = text.TxPR.split('.')[1];
+			if (text.TxMP !== undefined) target.text.textOnPath.mirror = text.TxMP;
+		}
+		if (text.VAlign !== undefined) target.text.verticalAlignment = text.VAlign;
 
 		if (text.EngineData) {
 			const engineData = parseEngineData(text.EngineData, reader);
@@ -119,12 +128,18 @@ addHandler(
 
 		const textDescriptor: TextDescriptor = {
 			'Txt ': (text.text || '').replace(/\r?\n/g, '\r'),
+			...(text.clickPoint ? { TxtC: xyToHorzVrtc(text.clickPoint) } : {}),
+			...(text.substitutesUsed !== undefined ? { substitutesUsed: !!text.substitutesUsed } : {}),
 			textGridding: textGridding.encode(text.gridding),
 			Ornt: Ornt.encode(text.orientation),
 			AntA: Annt.encode(text.antiAlias),
+			...(text.textOnPath?.type !== undefined ? { TxPT: `TxPT.${text.textOnPath.type}` } : {}),
+			...(text.textOnPath?.direction !== undefined ? { TxPR: `TxPR.${text.textOnPath.direction}` } : {}),
+			...(text.textOnPath?.mirror !== undefined ? { TxMP: !!text.textOnPath.mirror } : {}),
 			...(text.bounds ? { bounds: boundsToDescBounds(text.bounds) } : {}),
 			...(text.boundingBox ? { boundingBox: boundsToDescBounds(text.boundingBox) } : {}),
 			TextIndex: text.index || 0,
+			...(text.verticalAlignment !== undefined ? { VAlign: text.verticalAlignment } : {}),
 			EngineData: serializeEngineData(encodeEngineData(text)),
 		};
 
@@ -264,9 +279,10 @@ addHandler(
 	'PtFl',
 	target => target.vectorFill !== undefined && target.vectorStroke === undefined &&
 		target.vectorFill.type === 'pattern',
-	(reader, target) => {
+	(reader, target, left) => {
 		const descriptor = readVersionAndDescriptor(reader);
 		target.vectorFill = parseVectorContent(descriptor);
+		skipBytes(reader, left());
 	},
 	(writer, target) => {
 		const { descriptor } = serializeVectorContent(target.vectorFill!);
@@ -460,6 +476,31 @@ addHandler(
 	},
 );
 
+interface BoxCornersDescriptor {
+	rectangleCornerA: { Hrzn: number; Vrtc: number; };
+	rectangleCornerB: { Hrzn: number; Vrtc: number; };
+	rectangleCornerC: { Hrzn: number; Vrtc: number; };
+	rectangleCornerD: { Hrzn: number; Vrtc: number; };
+}
+
+function parseBoxCorners(corners: BoxCornersDescriptor) {
+	return [
+		horzVrtcToXY(corners.rectangleCornerA),
+		horzVrtcToXY(corners.rectangleCornerB),
+		horzVrtcToXY(corners.rectangleCornerC),
+		horzVrtcToXY(corners.rectangleCornerD),
+	];
+}
+
+function serializeBoxCorners(corners: { x: number; y: number; }[]): BoxCornersDescriptor {
+	return {
+		rectangleCornerA: xyToHorzVrtc(corners[0]),
+		rectangleCornerB: xyToHorzVrtc(corners[1]),
+		rectangleCornerC: xyToHorzVrtc(corners[2]),
+		rectangleCornerD: xyToHorzVrtc(corners[3]),
+	};
+}
+
 export interface KeyDescriptorListDescriptor {
 	keyDescriptorList: {
 		keyShapeInvalidated?: boolean;
@@ -479,12 +520,21 @@ export interface KeyDescriptorListDescriptor {
 			Btom: DescriptorUnitsValue | number;
 			Rght: DescriptorUnitsValue | number;
 		};
-		keyOriginBoxCorners?: {
-			rectangleCornerA: { Hrzn: number; Vrtc: number; };
-			rectangleCornerB: { Hrzn: number; Vrtc: number; };
-			rectangleCornerC: { Hrzn: number; Vrtc: number; };
-			rectangleCornerD: { Hrzn: number; Vrtc: number; };
-		};
+		keyOriginBoxCorners?: BoxCornersDescriptor;
+		keyOriginPolySides?: number;
+		keyOriginPolyCornerRadius?: number;
+		keyOriginPolyStarRatio?: DescriptorUnitsValue;
+		keyOriginPolyPreviousTightBoxCorners?: BoxCornersDescriptor;
+		keyOriginPolyTrueRectCorners?: BoxCornersDescriptor;
+		keyOriginPolyPixelHSF?: number;
+		keyOriginLineEnd?: { Hrzn: number; Vrtc: number; };
+		keyOriginLineStart?: { Hrzn: number; Vrtc: number; };
+		keyOriginLineWeight?: number;
+		keyOriginLineArrowSt?: boolean;
+		keyOriginLineArrowEnd?: boolean;
+		keyOriginLineArrWdth?: number;
+		keyOriginLineArrLngth?: number;
+		keyOriginLineArrConc?: number;
 		Trnf?: { xx: number; xy: number; yx: number; yy: number; tx: number; ty: number; },
 		keyOriginIndex: number;
 	}[];
@@ -516,15 +566,21 @@ export function parseKeyDescriptorList(desc: KeyDescriptorListDescriptor) {
 				bottomRight: parseUnits(rectRadii.bottomRight),
 			};
 		}
-		const corners = i.keyOriginBoxCorners;
-		if (corners) {
-			item.keyOriginBoxCorners = [
-				{ x: corners.rectangleCornerA.Hrzn, y: corners.rectangleCornerA.Vrtc },
-				{ x: corners.rectangleCornerB.Hrzn, y: corners.rectangleCornerB.Vrtc },
-				{ x: corners.rectangleCornerC.Hrzn, y: corners.rectangleCornerC.Vrtc },
-				{ x: corners.rectangleCornerD.Hrzn, y: corners.rectangleCornerD.Vrtc },
-			];
-		}
+		if (i.keyOriginBoxCorners) item.keyOriginBoxCorners = parseBoxCorners(i.keyOriginBoxCorners);
+		if (i.keyOriginPolySides != null) item.keyOriginPolySides = i.keyOriginPolySides;
+		if (i.keyOriginPolyCornerRadius != null) item.keyOriginPolyCornerRadius = i.keyOriginPolyCornerRadius;
+		if (i.keyOriginPolyStarRatio) item.keyOriginPolyStarRatio = parsePercent(i.keyOriginPolyStarRatio);
+		if (i.keyOriginPolyPreviousTightBoxCorners) item.keyOriginPolyPreviousTightBoxCorners = parseBoxCorners(i.keyOriginPolyPreviousTightBoxCorners);
+		if (i.keyOriginPolyTrueRectCorners) item.keyOriginPolyTrueRectCorners = parseBoxCorners(i.keyOriginPolyTrueRectCorners);
+		if (i.keyOriginPolyPixelHSF != null) item.keyOriginPolyPixelHSF = i.keyOriginPolyPixelHSF;
+		if (i.keyOriginLineStart) item.keyOriginLineStart = horzVrtcToXY(i.keyOriginLineStart);
+		if (i.keyOriginLineEnd) item.keyOriginLineEnd = horzVrtcToXY(i.keyOriginLineEnd);
+		if (i.keyOriginLineWeight != null) item.keyOriginLineWeight = i.keyOriginLineWeight;
+		if (i.keyOriginLineArrowSt != null) item.keyOriginLineArrowStart = i.keyOriginLineArrowSt;
+		if (i.keyOriginLineArrowEnd != null) item.keyOriginLineArrowEnd = i.keyOriginLineArrowEnd;
+		if (i.keyOriginLineArrWdth != null) item.keyOriginLineArrowWidth = i.keyOriginLineArrWdth;
+		if (i.keyOriginLineArrLngth != null) item.keyOriginLineArrowLength = i.keyOriginLineArrLngth;
+		if (i.keyOriginLineArrConc != null) item.keyOriginLineArrowConcavity = i.keyOriginLineArrConc;
 		const trnf = i.Trnf;
 		if (trnf) {
 			item.transform = [trnf.xx, trnf.xy, trnf.yx, trnf.yy, trnf.tx, trnf.ty];
@@ -572,14 +628,23 @@ export function serializeKeyDescriptorList(keyDescriptorList: KeyDescriptorItem[
 		}
 
 		const corners = item.keyOriginBoxCorners;
-		if (corners && corners.length === 4) {
-			out.keyOriginBoxCorners = {
-				rectangleCornerA: { Hrzn: corners[0].x, Vrtc: corners[0].y },
-				rectangleCornerB: { Hrzn: corners[1].x, Vrtc: corners[1].y },
-				rectangleCornerC: { Hrzn: corners[2].x, Vrtc: corners[2].y },
-				rectangleCornerD: { Hrzn: corners[3].x, Vrtc: corners[3].y },
-			};
-		}
+		if (corners && corners.length === 4) out.keyOriginBoxCorners = serializeBoxCorners(corners);
+		if (item.keyOriginPolySides != null) out.keyOriginPolySides = item.keyOriginPolySides;
+		if (item.keyOriginPolyCornerRadius != null) out.keyOriginPolyCornerRadius = item.keyOriginPolyCornerRadius;
+		if (item.keyOriginPolyStarRatio != null) out.keyOriginPolyStarRatio = unitsPercentF(item.keyOriginPolyStarRatio);
+		const previousCorners = item.keyOriginPolyPreviousTightBoxCorners;
+		if (previousCorners && previousCorners.length === 4) out.keyOriginPolyPreviousTightBoxCorners = serializeBoxCorners(previousCorners);
+		const trueCorners = item.keyOriginPolyTrueRectCorners;
+		if (trueCorners && trueCorners.length === 4) out.keyOriginPolyTrueRectCorners = serializeBoxCorners(trueCorners);
+		if (item.keyOriginPolyPixelHSF != null) out.keyOriginPolyPixelHSF = item.keyOriginPolyPixelHSF;
+		if (item.keyOriginLineEnd) out.keyOriginLineEnd = xyToHorzVrtc(item.keyOriginLineEnd);
+		if (item.keyOriginLineStart) out.keyOriginLineStart = xyToHorzVrtc(item.keyOriginLineStart);
+		if (item.keyOriginLineWeight != null) out.keyOriginLineWeight = item.keyOriginLineWeight;
+		if (item.keyOriginLineArrowStart != null) out.keyOriginLineArrowSt = !!item.keyOriginLineArrowStart;
+		if (item.keyOriginLineArrowEnd != null) out.keyOriginLineArrowEnd = !!item.keyOriginLineArrowEnd;
+		if (item.keyOriginLineArrowWidth != null) out.keyOriginLineArrWdth = item.keyOriginLineArrowWidth;
+		if (item.keyOriginLineArrowLength != null) out.keyOriginLineArrLngth = item.keyOriginLineArrowLength;
+		if (item.keyOriginLineArrowConcavity != null) out.keyOriginLineArrConc = item.keyOriginLineArrowConcavity;
 
 		const transform = item.transform;
 		if (transform && transform.length === 6) {
@@ -1011,9 +1076,84 @@ interface CmlsDescriptor {
 	layerSettings: {
 		enab?: boolean;
 		Ofst?: { Hrzn: number; Vrtc: number; };
+		vectorMask?: { Ofst: { Hrzn: number; Vrtc: number; }; };
+		Lefx?: Lfx2Descriptor & LmfxDescriptor;
+		blendOptions?: BlendOptionsDescriptor;
 		FXRefPoint?: { Hrzn: number; Vrtc: number; };
+		layerSpecific?: LayerSpecificDescriptor;
 		compList: number[];
 	}[];
+}
+
+const knockoutType = createEnum<Knockout>('knockout', 'none', {
+	none: 'none',
+	shallow: 'shallow',
+	deep: 'deep',
+});
+
+function parseLayerStateBlendOptions(desc: BlendOptionsDescriptor, target: LayerStateBlendOptions) {
+	if (desc['Md  '] !== undefined) target.blendMode = BlnM.decode(desc['Md  ']);
+	if (desc.Opct !== undefined) target.opacity = parsePercent(desc.Opct);
+	if (desc.fillOpacity !== undefined) target.fillOpacity = parsePercent(desc.fillOpacity);
+	if (desc.blendInterior !== undefined) target.blendInteriorElements = desc.blendInterior;
+	if (desc.blendClipped !== undefined) target.blendClippedElements = desc.blendClipped;
+	if (desc.knockout !== undefined) target.knockout = knockoutType.decode(desc.knockout);
+}
+
+function serializeLayerStateBlendOptions(source: LayerStateBlendOptions): BlendOptionsDescriptor | undefined {
+	const desc: BlendOptionsDescriptor = {};
+	if (source.blendMode !== undefined) desc['Md  '] = BlnM.encode(source.blendMode);
+	if (source.opacity !== undefined) desc.Opct = unitsPercentF(source.opacity);
+	if (source.fillOpacity !== undefined) desc.fillOpacity = unitsPercentF(source.fillOpacity);
+	if (source.blendInteriorElements !== undefined) desc.blendInterior = !!source.blendInteriorElements;
+	if (source.blendClippedElements !== undefined) desc.blendClipped = !!source.blendClippedElements;
+	if (source.knockout !== undefined) desc.knockout = knockoutType.encode(source.knockout);
+	return Object.keys(desc).length ? desc : undefined;
+}
+
+interface LayerStateSpecific {
+	text?: LayerStateText;
+	placedLayerCompId?: number;
+}
+
+// layer type specific settings of layer comp or animation frame
+function parseLayerStateSpecific(desc: LayerSpecificDescriptor, target: LayerStateSpecific) {
+	const settings = desc.textLayerSettings;
+
+	if (settings) {
+		target.text = {
+			warp: {
+				style: warpStyle.decode(settings.warpStyle),
+				value: settings.warpValue || 0,
+				perspective: settings.warpPerspective || 0,
+				perspectiveOther: settings.warpPerspectiveOther || 0,
+				rotate: Ornt.decode(settings.warpRotate),
+			},
+			warpRect: settings.textLayerSettingsWarpRect || [0, 0, 0, 0],
+		};
+	}
+
+	if (desc.placedLayerSettings) target.placedLayerCompId = desc.placedLayerSettings.placedLayerCompID;
+}
+
+function serializeLayerStateSpecific(source: LayerStateSpecific): LayerSpecificDescriptor | undefined {
+	const desc: LayerSpecificDescriptor = {};
+	const text = source.text;
+
+	if (text) {
+		desc.textLayerSettings = {
+			warpStyle: warpStyle.encode(text.warp.style),
+			warpValue: text.warp.value || 0,
+			warpPerspective: text.warp.perspective || 0,
+			warpPerspectiveOther: text.warp.perspectiveOther || 0,
+			warpRotate: Ornt.encode(text.warp.rotate),
+			textLayerSettingsWarpRect: text.warpRect || [0, 0, 0, 0],
+		};
+	}
+
+	if (source.placedLayerCompId !== undefined) desc.placedLayerSettings = { placedLayerCompID: source.placedLayerCompId };
+
+	return Object.keys(desc).length ? desc : undefined;
 }
 
 addHandler(
@@ -1049,9 +1189,12 @@ addHandler(
 							const frame: AnimationFrame = { frames: f.FrLs };
 							if (f.enab !== undefined) frame.enable = f.enab;
 							if (f.Ofst) frame.offset = horzVrtcToXY(f.Ofst);
+							if (f.IMsk?.Ofst) frame.maskOffset = horzVrtcToXY(f.IMsk.Ofst);
+							if (f.VMsk?.Ofst) frame.vectorMaskOffset = horzVrtcToXY(f.VMsk.Ofst);
 							if (f.FXRf) frame.referencePoint = horzVrtcToXY(f.FXRf);
 							if (f.Lefx) frame.effects = parseEffects(f.Lefx, reader);
-							if (f.blendOptions && f.blendOptions.Opct) frame.opacity = parsePercent(f.blendOptions.Opct);
+							if (f.blendOptions) parseLayerStateBlendOptions(f.blendOptions, frame);
+							if (f.LSpc) parseLayerStateSpecific(f.LSpc, frame);
 							target.animationFrames.push(frame);
 						}
 					} else if (key === 'mdyn') {
@@ -1101,7 +1244,11 @@ addHandler(
 							const t = target.comps.settings[target.comps.settings.length - 1];
 							if ('enab' in item) t.enabled = item.enab;
 							if (item.Ofst) t.offset = { x: item.Ofst.Hrzn, y: item.Ofst.Vrtc };
+							if (item.vectorMask?.Ofst) t.vectorMaskOffset = horzVrtcToXY(item.vectorMask.Ofst);
+							if (item.Lefx) t.effects = parseEffects(item.Lefx, reader);
+							if (item.blendOptions) parseLayerStateBlendOptions(item.blendOptions, t);
 							if (item.FXRefPoint) t.effectsReferencePoint = { x: item.FXRefPoint.Hrzn, y: item.FXRefPoint.Vrtc };
+							if (item.layerSpecific) parseLayerStateSpecific(item.layerSpecific, t);
 						}
 					} else if (key === 'extn') {
 						const desc = readVersionAndDescriptor(reader) as GeneratorSettingsDescriptor;
@@ -1152,13 +1299,18 @@ addHandler(
 					if (f.enable !== undefined) frame.enab = f.enable;
 					frame.FrLs = f.frames;
 					if (f.offset) frame.Ofst = xyToHorzVrtc(f.offset);
+					if (f.maskOffset) frame.IMsk = { Ofst: xyToHorzVrtc(f.maskOffset) };
+					if (f.vectorMaskOffset) frame.VMsk = { Ofst: xyToHorzVrtc(f.vectorMaskOffset) };
 					if (f.referencePoint) frame.FXRf = xyToHorzVrtc(f.referencePoint);
+					const layerSpecific = serializeLayerStateSpecific(f);
+					if (layerSpecific) frame.LSpc = layerSpecific;
 					if (f.effects) frame.Lefx = serializeEffects(f.effects, writer, hasMultiEffects(f.effects));
-					if (f.opacity !== undefined) frame.blendOptions = { Opct: unitsPercentF(f.opacity) };
+					const blendOptions = serializeLayerStateBlendOptions(f);
+					if (blendOptions) frame.blendOptions = blendOptions;
 					desc.LaSt.push(frame);
 				}
 
-				writeVersionAndDescriptor(writer, '', 'null', desc);
+				writeVersionAndDescriptor(writer, '', 'null', desc, layerStateRoot);
 			}, true);
 		}
 
@@ -1238,14 +1390,23 @@ addHandler(
 				for (const item of comps.settings) {
 					const t: CmlsDescriptor['layerSettings'][0] = {} as any;
 					if (item.enabled !== undefined) t.enab = item.enabled;
-					if (item.offset) t.Ofst = { Hrzn: item.offset.x, Vrtc: item.offset.y };
+					if (item.offset) t.Ofst = xyToHorzVrtc(item.offset);
+					if (item.vectorMaskOffset) t.vectorMask = { Ofst: xyToHorzVrtc(item.vectorMaskOffset) };
+					if (item.effects) {
+						const { numModifyingFX: _, ...effects } = serializeEffects(item.effects, writer, true);
+						t.Lefx = effects;
+					}
+					const blendOptions = serializeLayerStateBlendOptions(item);
+					if (blendOptions) t.blendOptions = blendOptions;
 					if (item.effectsReferencePoint) t.FXRefPoint = { Hrzn: item.effectsReferencePoint.x, Vrtc: item.effectsReferencePoint.y };
+					const layerSpecific = serializeLayerStateSpecific(item);
+					if (layerSpecific) t.layerSpecific = layerSpecific;
 					t.compList = item.compList;
 					desc.layerSettings.push(t);
 				}
 
 				// console.log('cmls', require('util').inspect(desc, false, 99, true));
-				writeVersionAndDescriptor(writer, '', 'null', desc);
+				writeVersionAndDescriptor(writer, '', 'null', desc, layerStateRoot);
 			}, true);
 		}
 
@@ -3982,6 +4143,7 @@ addHandler(
 			};
 		}
 		if (desc.filterFX) target.placedLayer.filter = parseFilterFX(desc.filterFX, reader);
+		if (desc.Impr) target.placedLayer.imported = true;
 
 		// console.log('filter', require('util').inspect(target.placedLayer.filter, false, 99, true));
 
@@ -4069,6 +4231,7 @@ addHandler(
 
 		if (placed.comp) desc.comp = placed.comp;
 		if (placed.compInfo) desc.compInfo = placed.compInfo;
+		if (placed.imported) desc.Impr = {};
 
 		writeVersionAndDescriptor(writer, '', 'null', desc, desc.quiltWarp ? 'quiltWarp' : 'warp');
 	},
@@ -4398,6 +4561,7 @@ interface LinkedFileDescriptor {
 	descVersion: 2;
 	'Nm  ': string;
 	fullPath: string;
+	alis?: string;
 	originalPath: string;
 	relPath: string;
 }
@@ -4470,12 +4634,21 @@ function createLnkHandler(tag: string) {
 
 				const fileSize = type === 'liFE' ? readLength64(reader) : 0;
 
+				// data is stored inside this section, sizes exceeding it come from malformed files,
+				// reject them instead of allocating (the offset is restored after each record,
+				// so a single short section could otherwise be read any number of times)
+				if (type === 'liFD' && dataSize > left()) throw new Error('Invalid linked file data size');
+
 				if (type === 'liFA') skipBytes(reader, 8);
 				if (type === 'liFD') file.data = readBytes(reader, dataSize); // seems to be a typo in docs
 				if (version >= 5) file.childDocumentID = readUnicodeString(reader);
 				if (version >= 6) file.assetModTime = readFloat64(reader);
 				if (version >= 7) file.assetLockedState = readUint8(reader);
-				if (type === 'liFE' && version === 2) file.data = readBytes(reader, fileSize);
+
+				if (type === 'liFE' && version === 2) {
+					if (fileSize > left()) throw new Error('Invalid linked file size');
+					file.data = readBytes(reader, fileSize);
+				}
 
 				if (reader.skipLinkedFilesData) file.data = undefined;
 
@@ -4487,6 +4660,8 @@ function createLnkHandler(tag: string) {
 						originalPath: linkedFileDescriptor?.originalPath || '',
 						relativePath: linkedFileDescriptor?.relPath || '',
 					};
+
+					if (linkedFileDescriptor?.alis !== undefined) file.linkedFile.alias = linkedFileDescriptor.alis;
 				}
 
 				psd.linkedFiles.push(file);
@@ -4545,6 +4720,7 @@ function createLnkHandler(tag: string) {
 						descVersion: 2,
 						'Nm  ': file.linkedFile?.name ?? '',
 						fullPath: file.linkedFile?.fullPath ?? '',
+						...(file.linkedFile?.alias !== undefined ? { alis: file.linkedFile.alias } : {}),
 						originalPath: file.linkedFile?.originalPath ?? '',
 						relPath: file.linkedFile?.relativePath ?? '',
 					};
@@ -4611,7 +4787,11 @@ addHandler(
 	'pths',
 	target => (target as Psd).imageResources?.savedPaths !== undefined,
 	(reader, _target, left, psd) => {
-		if (reader.imageResourcesWhitelist && !reader.imageResourcesWhitelist.includes('savedPaths')) {
+		// older versions of this library wrote this key with 32bit length of 0 in PSB files,
+		// there's no descriptor to read in that case
+		if (!left()) return;
+
+		if (reader.imageResourcesWhitelistSet && !reader.imageResourcesWhitelistSet.has('savedPaths')) {
 			skipBytes(reader, left());
 			return;
 		}
@@ -5745,6 +5925,10 @@ addHandler(
 					const channelLength = readUint32(reader);
 					if (!channelLength) throw new Error('filterEffect: Empty channel');
 					const compressionMode = readUint16(reader);
+					// channel data is stored inside this section, lengths exceeding it come from
+					// malformed files, reject them instead of allocating (the offset is restored
+					// after each record, so a short section could otherwise be read many times over)
+					if ((channelLength - 2) > leftBytes()) throw new Error('filterEffect: Invalid channel length');
 					const data = readBytes(reader, channelLength - 2);
 					channels.push({ compressionMode, data });
 				} else {
@@ -5762,6 +5946,7 @@ addHandler(
 				if (readUint32(reader)) throw new Error('filterEffect: 64 bit length is not supported');
 				const extraLength = readUint32(reader);
 				const compressionMode = readUint16(reader);
+				if ((extraLength - 2) > leftBytes()) throw new Error('filterEffect: Invalid extra channel length');
 				const data = readBytes(reader, extraLength - 2);
 				target.filterEffectsMasks[target.filterEffectsMasks.length - 1].extra = { top, left, bottom, right, compressionMode, data };
 			}

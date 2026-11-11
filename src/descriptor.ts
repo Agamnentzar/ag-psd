@@ -100,6 +100,10 @@ const fieldToExtType: ExtTypeDict = {
 	rectangleCornerB: makeType('', 'Pnt '),
 	rectangleCornerC: makeType('', 'Pnt '),
 	rectangleCornerD: makeType('', 'Pnt '),
+	keyOriginPolyPreviousTightBoxCorners: nullType,
+	keyOriginPolyTrueRectCorners: nullType,
+	keyOriginLineStart: makeType('', 'Pnt '),
+	keyOriginLineEnd: makeType('', 'Pnt '),
 	compInfo: nullType,
 	quiltWarp: makeType('', 'quiltWarp'),
 	generatorSettings: nullType,
@@ -135,6 +139,14 @@ const fieldToExtType: ExtTypeDict = {
 	customShape: makeType('', 'customShape'),
 	origFXRefPoint: nullType,
 	FXRefPoint: nullType,
+	vectorMask: nullType,
+	layerSpecific: nullType,
+	LSpc: nullType,
+	textLayerSettings: makeType('', 'warp'),
+	placedLayerSettings: nullType,
+	IMsk: nullType,
+	VMsk: nullType,
+	TxtC: nullType,
 	ClMg: makeType('', 'ClMg'),
 	interpretation: makeType('', 'footageInterpretation'),
 	bgColor: makeType('', 'NativeQuad'),
@@ -208,7 +220,8 @@ const typeToField: { [key: string]: string[]; } = {
 		'meshExpansion', 'meshRigidity', 'VrsM', 'VrsN', 'NmbG', 'WLMn', 'WLMx', 'AmMn', 'AmMx', 'SclH', 'SclV',
 		'Lvl ', 'TlNm', 'TlOf', 'FlRs', 'Thsh', 'ShrS', 'ShrE', 'FlRs', 'Vrnc', 'Strg', 'ExtS', 'ExtD',
 		'HrzS', 'VrtS', 'NmbR', 'EdgF', 'Ang1', 'Ang2', 'Ang3', 'Ang4', 'lastAppliedComp', 'capturedInfo',
-		'pixelSourceType', 'framedGroupType',
+		'pixelSourceType', 'framedGroupType', 'keyOriginPolySides', 'keyOriginLineArrConc', 'noisePreSeed',
+		'associatedLayer', 'placedLayerCompID', 'VAlign',
 	],
 	'enum': [
 		'textGridding', 'Ornt', 'warpStyle', 'warpRotate', 'Inte', 'Bltn', 'ClrS', 'BlrQ',
@@ -219,7 +232,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'enableCompCoreThreads', 'gs99', 'FrDs', 'trackID', 'animInterpStyle', 'horzAlign',
 		'vertAlign', 'bgColorType', 'shapeOperation', 'UndA', 'Wvtp', 'Drct', 'WndM', 'Edg ', 'FlCl', 'IntE',
 		'IntC', 'Cnvr', 'Fl  ', 'Dstr', 'MztT', 'Lns ', 'ExtT', 'DspM', 'ExtR', 'ZZTy', 'SphM', 'SmBQ', 'placedLayerOCIOConversion', 'gradientsInterpolationMethod', 'pathSymmetryMode',
-		'interpretAlpha',
+		'interpretAlpha', 'knockout', 'TxPT', 'TxPR',
 	],
 	'bool': [
 		'PstS', 'printSixteenBit', 'masterFXSwitch', 'enab', 'uglg', 'antialiasGloss',
@@ -233,6 +246,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'cellTextIsHTML', 'Smoo', 'Clsp', 'validAtPosition', 'rigidType', 'hasoptions', 'filterMaskEnable',
 		'filterMaskLinked', 'filterMaskExtendWithWhite', 'removeJPEGArtifact', 'Mnch', 'ExtF', 'ExtM',
 		'moreAccurate', 'GpuY', 'LIWy', 'Cnty', 'Lnkd', 'showAlteredVideo', 'lightingOn', 'LockPPI',
+		'keyOriginLineArrowSt', 'keyOriginLineArrowEnd', 'Expn', 'substitutesUsed', 'blendClipped', 'blendInterior', 'TxMP',
 	],
 	'doub': [
 		'warpValue', 'warpPerspective', 'warpPerspectiveOther', 'Intr', 'Wdth', 'Hght', 'Gmm ',
@@ -241,12 +255,14 @@ const typeToField: { [key: string]: string[]; } = {
 		'X   ', 'Y   ', 'redFloat', 'greenFloat', 'blueFloat', 'imageResolution',
 		'PuX0', 'PuX1', 'PuX2', 'PuX3', 'PuY0', 'PuY1', 'PuY2', 'PuY3',
 		'stylization', 'cleanliness', 'brushScale', 'microBrush', 'specularity', 'PreferredResolution',
+		'FrGL', 'keyOriginLineWeight', 'keyOriginLineArrWdth', 'keyOriginLineArrLngth', 'keyOriginPolyPixelHSF', 'keyOriginPolyCornerRadius',
+		'gradientAspectRatio',
 	],
 	'UntF': [
 		'sdwO', 'hglO', 'lagl', 'Lald', 'srgR', 'blur', 'Sftn', 'Opct', 'Dstn', 'Angl',
 		'Ckmt', 'Nose', 'Inpr', 'ShdN', 'strokeStyleLineWidth', 'strokeStyleLineDashOffset',
 		'strokeStyleOpacity', 'H   ', 'Top ', 'Left', 'Btom', 'Rght', 'Rslt',
-		'topRight', 'topLeft', 'bottomLeft', 'bottomRight', 'ClNs', 'Shrp',
+		'topRight', 'topLeft', 'bottomLeft', 'bottomRight', 'ClNs', 'Shrp', 'fillOpacity', 'keyOriginPolyStarRatio',
 	],
 	'VlLs': [
 		'Crv ', 'Clrs', 'Mnm ', 'Mxm ', 'Trns', 'pathList', 'keyRootDescriptorList', 'strokeStyleLineDashSet', 'FrLs', 'slices',
@@ -256,7 +272,7 @@ const typeToField: { [key: string]: string[]; } = {
 		'warpValues', 'selectedPin', 'Pts ', 'SbpL', 'pathComponents', 'pinOffsets', 'posFinalPins',
 		'pinVertexIndices', 'PinP', 'PnRt', 'PnOv', 'PnDp', 'filterFXList', 'puppetShapeList', 'ShrP',
 		'channelDenoise', 'Mtrx', 'layerSettings', 'list', 'compList', 'Adjs',
-		'vertices', 'warpedVertices', 'quads', 'indices', 'Mpng',
+		'vertices', 'warpedVertices', 'quads', 'indices', 'Mpng', 'textLayerSettingsWarpRect',
 	],
 	'ObAr': ['meshPoints', 'quiltSliceX', 'quiltSliceY'],
 	'obj ': ['null', 'Chnl'],
@@ -340,6 +356,7 @@ const fieldToArrayType: Dict = {
 	channelDenoise: 'Objc',
 	Mtrx: 'long',
 	compList: 'long',
+	textLayerSettingsWarpRect: 'doub',
 	Chnl: 'enum',
 	indices: 'long',
 	Mpng: 'long',
@@ -362,6 +379,8 @@ for (const field of Object.keys(fieldToArrayExtType)) {
 }
 
 const pixelSourceOriginRoot = 'PixelSource.origin';
+// layer comps settings ('cmls') and animation frames ('mlst'), offsets are stored as 'null' class with integer Hrzn/Vrtc
+export const layerStateRoot = 'layerState';
 
 function getTypeByKey(key: string, value: any, root: string, parent: any) {
 	if (key === 'presetKind') {
@@ -482,6 +501,9 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 				extType = nullType; // stored as 'null' class with integer Hrzn/Vrtc
 				childRoot = pixelSourceOriginRoot;
 			}
+		} else if (key === 'Ofst' && root === layerStateRoot && typeof value[key].Hrzn === 'number') {
+			extType = nullType;
+			childRoot = pixelSourceOriginRoot;
 		} else if ((key === 'Cyn ' || key === 'Mgnt' || key === 'Ylw ' || key === 'Blck') && value._classID === 'CMYC') {
 			type = 'doub';
 		} else if (/^PN[a-z][a-z]$/.test(key)) {
@@ -607,9 +629,9 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		}
 		case 'long': // Integer
 			return readInt32(reader);
-		case 'comp': { // Large Integer
-			const low = readUint32(reader);
+		case 'comp': { // Large Integer (big endian 64 bit integer, high 32 bits first)
 			const high = readUint32(reader);
+			const low = readUint32(reader);
 			return { low, high };
 		}
 		case 'bool': // Boolean
@@ -623,6 +645,9 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		}
 		case 'tdta': { // Raw Data
 			const length = readInt32(reader);
+			// descriptors have no section bounds here, but data declared larger than the rest of
+			// the file can't be read, reject it instead of allocating a zero-filled buffer for it
+			if (length > (reader.view.byteLength - reader.offset)) throw new Error(`Invalid tdta length: ${length}`);
 			return readBytes(reader, length);
 		}
 		case 'ObAr': { // Object array
@@ -721,8 +746,8 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			break;
 		case 'comp': // Large Integer
 			if (!value || typeof value !== 'object') throw new Error(`Invalid large integer value: ${JSON.stringify(value)}, key: ${key}`);
-			writeUint32(writer, value.low >>> 0);
 			writeUint32(writer, value.high >>> 0);
+			writeUint32(writer, value.low >>> 0);
 			break;
 		case 'bool': // Boolean
 			if (typeof value !== 'boolean') throw new Error(`Invalid boolean value: ${JSON.stringify(value)}, key: ${key}`);
@@ -1022,6 +1047,7 @@ export interface DescriptorColorContent {
 export interface DescriptorGradientContent {
 	Dthr?: boolean;
 	gradientsInterpolationMethod?: string; // 'gradientInterpolationMethodType.Smoo'
+	gradientAspectRatio?: number;
 	Angl?: DescriptorUnitsValue;
 	Type: string;
 	Grad: DesciptorGradient;
@@ -1029,10 +1055,12 @@ export interface DescriptorGradientContent {
 	'Scl '?: DescriptorUnitsValue;
 	Algn?: boolean;
 	Ofst?: { Hrzn: DescriptorUnitsValue; Vrtc: DescriptorUnitsValue; };
+	noisePreSeed?: number;
 }
 
 export interface DescriptorPatternContent {
 	Ptrn: DesciptorPattern;
+	Algn?: boolean;
 	Lnkd?: boolean;
 	phase?: { Hrzn: number | DescriptorUnitsValue; Vrtc: number | DescriptorUnitsValue; };
 	'Scl '?: DescriptorUnitsValue;
@@ -1069,12 +1097,18 @@ export interface BoundsDescriptor {
 
 export interface TextDescriptor {
 	'Txt ': string;
+	TxtC?: HrznVrtcDescriptor;
+	substitutesUsed?: boolean;
 	textGridding: string;
 	Ornt: string;
 	AntA: string;
+	TxPT?: string;
+	TxPR?: string;
+	TxMP?: boolean;
 	bounds?: BoundsDescriptor;
 	boundingBox?: BoundsDescriptor;
 	TextIndex: number;
+	VAlign?: number;
 	EngineData?: Uint8Array;
 }
 
@@ -1147,8 +1181,32 @@ export interface FrameDescriptor {
 	VMsk?: { Ofst: HrznVrtcDescriptor };
 	Ofst?: HrznVrtcDescriptor;
 	FXRf?: HrznVrtcDescriptor;
+	LSpc?: LayerSpecificDescriptor;
 	Lefx?: Lfx2Descriptor;
-	blendOptions?: { Opct: DescriptorUnitsValue; };
+	blendOptions?: BlendOptionsDescriptor;
+}
+
+export interface BlendOptionsDescriptor {
+	'Md  '?: string;
+	Opct?: DescriptorUnitsValue;
+	fillOpacity?: DescriptorUnitsValue;
+	blendInterior?: boolean;
+	blendClipped?: boolean;
+	knockout?: string;
+}
+
+export interface LayerSpecificDescriptor {
+	textLayerSettings?: {
+		warpStyle: string;
+		warpValue: number;
+		warpPerspective: number;
+		warpPerspectiveOther: number;
+		warpRotate: string;
+		textLayerSettingsWarpRect: number[];
+	};
+	placedLayerSettings?: {
+		placedLayerCompID: number;
+	};
 }
 
 export interface FrameListDescriptor {
@@ -1623,7 +1681,7 @@ function parseEffectObject(obj: any, reader: PsdReader, objName?: string) {
 			case 'TrnS': {
 				const contour: EffectContour = {
 					name: val['Nm  '],
-					curve: (val['Crv '] as any[]).map(p => ({ x: p.Hrzn, y: p.Vrtc })),
+					curve: (val['Crv '] as any[]).map(p => p.Cnty !== undefined ? { x: p.Hrzn, y: p.Vrtc, curved: p.Cnty } : { x: p.Hrzn, y: p.Vrtc }),
 				};
 
 				// bevel can have both: gloss contour (TrnS) and contour of the shape (MpgS)
@@ -1739,7 +1797,7 @@ function serializeEffectObject(obj: any, objName: string, writer: PsdWriter) {
 function serializeContour(contour: EffectContour) {
 	return {
 		'Nm  ': contour.name,
-		'Crv ': contour.curve.map(p => ({ Hrzn: p.x, Vrtc: p.y })),
+		'Crv ': contour.curve.map(p => p.curved !== undefined ? { Hrzn: p.x, Vrtc: p.y, Cnty: !!p.curved } : { Hrzn: p.x, Vrtc: p.y }),
 	};
 }
 
@@ -1839,6 +1897,8 @@ function parseGradientContent(descriptor: DescriptorGradientContent) {
 			y: parsePercent(descriptor.Ofst.Vrtc)
 		};
 	}
+	if (descriptor.gradientAspectRatio !== undefined) result.aspectRatio = descriptor.gradientAspectRatio;
+	if (descriptor.noisePreSeed !== undefined) result.noisePreSeed = descriptor.noisePreSeed;
 	return result;
 }
 
@@ -1855,6 +1915,7 @@ function parsePatternContent(descriptor: DescriptorPatternContent) {
 		name: descriptor.Ptrn['Nm  '],
 		id: descriptor.Ptrn.Idnt,
 	};
+	if (descriptor.Algn !== undefined) result.align = descriptor.Algn;
 	if (descriptor.Lnkd !== undefined) result.linked = descriptor.Lnkd;
 	if (descriptor.phase !== undefined) result.phase = parsePhase(descriptor.phase);
 	if (descriptor['Scl '] !== undefined) result.scale = parsePercent(descriptor['Scl ']);
@@ -1880,6 +1941,7 @@ function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGra
 	if (content.dither !== undefined) result.Dthr = content.dither;
 	if (content.interpolationMethod !== undefined) result.gradientsInterpolationMethod = gradientInterpolationMethodType.encode(content.interpolationMethod);
 	if (content.reverse !== undefined) result.Rvrs = content.reverse;
+	if (content.aspectRatio !== undefined) result.gradientAspectRatio = content.aspectRatio;
 	if (content.angle !== undefined) result.Angl = unitsAngle(content.angle);
 	result.Type = GrdT.encode(content.style);
 	if (content.align !== undefined) result.Algn = content.align;
@@ -1890,6 +1952,7 @@ function serializeGradientContent(content: (EffectSolidGradient | EffectNoiseGra
 			Vrtc: unitsPercentF(content.offset.y),
 		};
 	}
+	if (content.noisePreSeed !== undefined) result.noisePreSeed = content.noisePreSeed;
 	result.Grad = serializeGradient(content);
 	return result;
 }
@@ -1901,6 +1964,7 @@ function serializePatternContent(content: EffectPattern & ExtraPatternInfo) {
 			Idnt: content.id || '',
 		}
 	};
+	if (content.align !== undefined) result.Algn = !!content.align;
 	if (content.linked !== undefined) result.Lnkd = !!content.linked;
 	if (content.phase !== undefined) result.phase = { Hrzn: content.phase.x, Vrtc: content.phase.y };
 	if (content.scale !== undefined) result['Scl '] = unitsPercentF(content.scale);
@@ -2198,7 +2262,7 @@ export const BlnM = createEnum<BlendMode>('BlnM', 'normal', {
 	'linear height': 'linearHeight',
 	'height': 'Hght',
 	'subtraction': 'Sbtr', // 2nd version of subtract ?
-	'pass through': '????', // added for compilation to work, not used in actual files
+	'pass through': 'passThrough', // only used in layer comps and animation frames
 });
 
 export const BESl = createEnum<BevelStyle>('BESl', 'inner bevel', {

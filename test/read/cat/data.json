@@ -312,107 +312,128 @@
         {
           "id": 372053929,
           "delay": 1,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 276808660,
           "delay": 0.04,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 326809485,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 275010311,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 318809353,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 541317226,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 582158236,
           "delay": 1.2,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 200408874,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 213484720,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 222325202,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 754277887,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 220089871,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 229451370,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 363644130,
           "delay": 1.2,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 365946480,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 390585542,
           "delay": 1,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 828095067,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 914550275,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 904919864,
           "delay": 0.12,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 951391219,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         },
         {
           "id": 961677103,
           "delay": 0.08,
-          "dispose": "auto"
+          "dispose": "auto",
+          "globalAngle": 30
         }
       ],
       "animations": [
@@ -444,7 +465,8 @@
           "repeats": 0,
           "activeFrame": 0
         }
-      ]
+      ],
+      "activeAnimation": 0
     }
   },
   "children": [

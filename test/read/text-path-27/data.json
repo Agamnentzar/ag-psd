@@ -918,6 +918,11 @@
             "units": "Points"
           }
         },
+        "textOnPath": {
+          "type": "TxTo",
+          "direction": "TxCW",
+          "mirror": false
+        },
         "useFractionalGlyphWidths": true,
         "superscriptSize": 0.583,
         "superscriptPosition": 0.333,
@@ -1212,6 +1217,9 @@
             "value": 91.59915924072266,
             "units": "Points"
           }
+        },
+        "textOnPath": {
+          "mirror": false
         },
         "useFractionalGlyphWidths": true,
         "superscriptSize": 0.583,

@@ -857,6 +857,45 @@
                 "y": 439
               }
             ],
+            "keyOriginPolySides": 15,
+            "keyOriginPolyCornerRadius": 18.393067628188028,
+            "keyOriginPolyPreviousTightBoxCorners": [
+              {
+                "x": 311.46875,
+                "y": 360.09375
+              },
+              {
+                "x": 487.53125,
+                "y": 360.09375
+              },
+              {
+                "x": 487.53125,
+                "y": 439
+              },
+              {
+                "x": 311.46875,
+                "y": 439
+              }
+            ],
+            "keyOriginPolyTrueRectCorners": [
+              {
+                "x": 310,
+                "y": 360
+              },
+              {
+                "x": 489,
+                "y": 360
+              },
+              {
+                "x": 489,
+                "y": 439
+              },
+              {
+                "x": 310,
+                "y": 439
+              }
+            ],
+            "keyOriginPolyPixelHSF": 1,
             "transform": [
               1,
               0,

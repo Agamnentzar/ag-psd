@@ -44,13 +44,13 @@
     ],
     "alphaChannelDisplayInfo": [
       {
+        "opacity": 1,
+        "kind": "protected",
         "color": {
           "r": 255,
           "g": 0,
           "b": 0
-        },
-        "opacity": 1,
-        "kind": "protected"
+        }
       }
     ]
   },
@@ -158,6 +158,9 @@
               "x": 0,
               "y": 0
             },
+            "blendMode": "normal",
+            "opacity": 1,
+            "fillOpacity": 1,
             "effectsReferencePoint": {
               "x": 10,
               "y": 10
@@ -383,7 +386,8 @@
               }
             ]
           }
-        }
+        },
+        "imported": true
       },
       "comps": {
         "settings": [
@@ -396,6 +400,9 @@
               "x": 0,
               "y": 0
             },
+            "blendMode": "normal",
+            "opacity": 1,
+            "fillOpacity": 1,
             "effectsReferencePoint": {
               "x": 225,
               "y": 20

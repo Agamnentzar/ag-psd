@@ -276,7 +276,8 @@
         {
           "id": 393816367,
           "delay": 0.3,
-          "dispose": "none"
+          "dispose": "none",
+          "globalAngle": 30
         },
         {
           "id": 393833174,
@@ -294,7 +295,8 @@
           "repeats": 0,
           "activeFrame": 0
         }
-      ]
+      ],
+      "activeAnimation": 0
     }
   },
   "children": [

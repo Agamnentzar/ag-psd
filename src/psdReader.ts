@@ -29,6 +29,7 @@ export interface PsdReader extends ReadOptions {
 	large: boolean;
 	globalAlpha: boolean;
 	layersInGlobalInfo?: boolean; // layers were read from Lr16/Lr32/Layr global additional info
+	imageResourcesWhitelistSet?: Set<string>; // `imageResourcesWhitelist` option converted to a Set
 	log(...args: any[]): void;
 	// text decoders, created lazily (null if not supported)
 	utf8Decoder?: TextDecoder | null;
@@ -150,6 +151,13 @@ export function readBytes(reader: PsdReader, length: number) {
 		// fix for broken PSD files that are missing part of file at the end
 		warnOrThrow(reader, 'Reading bytes exceeding buffer length');
 		if (length > (100 * 1024 * 1024)) throw new Error('Reading past end of file'); // limit to 100MB
+
+		// this is the only branch that allocates (the other one returns a view into the file buffer),
+		// count it, so that malformed files can't allocate unlimited memory by repeatedly declaring
+		// lengths exceeding the buffer length (the offset is often restored afterwards, so a single
+		// small section can be read many times over)
+		consumeMemory(reader, length);
+
 		const result = new Uint8Array(length);
 		const len = Math.min(length, viewLength - start);
 		if (len > 0) result.set(new Uint8Array(reader.view.buffer, reader.view.byteOffset + start, len));
@@ -331,6 +339,8 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 	reader.large = version === 2;
 	reader.globalAlpha = false;
 	reader.layersInGlobalInfo = false;
+	const whitelist = reader.imageResourcesWhitelist;
+	reader.imageResourcesWhitelistSet = whitelist ? (whitelist instanceof Set ? whitelist : new Set(whitelist)) : undefined;
 	if (!('totalMemoryLimit' in reader)) { // setting totalMemoryLimit to undefined explicitly disables memory limit
 		reader.totalMemoryLimit = 2 * 1024 * 1024 * 1024; // default 2GB memory limit
 	}
@@ -373,7 +383,7 @@ export function readPsd(reader: PsdReader, readOptions: ReadOptions = {}) {
 				const handler = resourceHandlersMap[id];
 
 				if (handler) {
-					const skip = (id === 1036 && !!reader.skipThumbnail) || !shouldReadResource(handler, reader.imageResourcesWhitelist);
+					const skip = (id === 1036 && !!reader.skipThumbnail) || !shouldReadResource(handler, reader.imageResourcesWhitelistSet);
 
 					if (skip) {
 						skipBytes(reader, left());
@@ -1098,11 +1108,7 @@ export function readAdditionalLayerInfo(reader: PsdReader, target: LayerAddition
 		const handler = infoHandlersMap[key];
 
 		if (handler) {
-			try {
-				handler.read(reader, target, left, psd, imageResources);
-			} catch (e) {
-				if (reader.throwForMissingFeatures) throw e;
-			}
+			handler.read(reader, target, left, psd, imageResources);
 		} else {
 			reader.logMissingFeatures && key !== 'GenI' && key !== 'OCIO' && key !== 'CAI ' && reader.log(`Unhandled additional info: ${key}`);
 			skipBytes(reader, left());

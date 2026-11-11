@@ -1,5 +1,5 @@
 import { toByteArray } from 'base64-js';
-import { BlendMode, Color, HalftoneScreen, ImageResources, KeyDescriptorItem, PrintTransferFunction, RenderingIntent, SavedPath } from './psd';
+import { Animations, BlendMode, Color, HalftoneScreen, ImageResources, KeyDescriptorItem, PrintTransferFunction, RenderingIntent, SavedPath } from './psd';
 import { KeyDescriptorListDescriptor, parseKeyDescriptorList, readVectorMask, serializeKeyDescriptorList, writeVectorMask } from './additionalInfo';
 import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString, decodeUtf8, getUtf8StrictDecoder, getGbkStrictDecoder } from './psdReader';
 import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, writeZeros } from './psdWriter';
@@ -32,6 +32,7 @@ export interface ResourceHandler {
 	write: (writer: PsdWriter, target: InternalImageResources, index: number, document: ResourceDocumentInfo) => void;
 	name?: (target: InternalImageResources, index: number) => string;
 	fields: string[]; // fields of image resources stored in this resource
+	required: boolean; // resource is needed to read layers or composite image (always read)
 }
 
 export const resourceHandlers: ResourceHandler[] = [];
@@ -54,6 +55,9 @@ function fieldsCheckedBy(has: (target: InternalImageResources) => boolean | numb
 	return fields;
 }
 
+// resources used when reading layers and composite image, they're always read
+const requiredFields = new Set(['layersGroup', 'layerGroupsEnabledId', 'alphaChannelNames', 'transparencyIndex']);
+
 function addHandler(
 	key: number,
 	has: (target: InternalImageResources) => boolean | number,
@@ -62,17 +66,15 @@ function addHandler(
 	options: { keyCount?: number; name?: (target: InternalImageResources, index: number) => string; fields?: string[]; } = {},
 ) {
 	const fields = options.fields ?? fieldsCheckedBy(has);
-	const handler: ResourceHandler = { key, keyCount: options.keyCount ?? 1, has, read, write, name: options.name, fields };
+	const required = fields.some(field => requiredFields.has(field));
+	const handler: ResourceHandler = { key, keyCount: options.keyCount ?? 1, has, read, write, name: options.name, fields, required };
 	resourceHandlers.push(handler);
 	for (let i = 0; i < handler.keyCount; i++) resourceHandlersMap[handler.key + i] = handler;
 }
 
-// resources used when reading layers and composite image, they're always read
-const requiredFields = ['layersGroup', 'layerGroupsEnabledId', 'alphaChannelNames', 'transparencyIndex'];
-
 // returns false if resource should be skipped because none of its fields are listed in `imageResourcesWhitelist` read option
-export function shouldReadResource(handler: ResourceHandler, whitelist: string[] | undefined) {
-	return !whitelist || handler.fields.some(field => whitelist.includes(field) || requiredFields.includes(field));
+export function shouldReadResource(handler: ResourceHandler, whitelist: Set<string> | undefined) {
+	return !whitelist || handler.required || (whitelist.size > 0 && handler.fields.some(field => whitelist.has(field)));
 }
 
 const LOG_MOCK_HANDLERS = false;
@@ -1065,6 +1067,7 @@ interface LayerCompsDescriptor {
 		compID: number;
 		capturedInfo: number;
 		comment?: string;
+		Expn?: boolean;
 	}[];
 	lastAppliedComp?: number;
 }
@@ -1086,6 +1089,7 @@ addHandler(
 			});
 
 			if (item.comment !== undefined) target.layerComps.list[target.layerComps.list.length - 1].comment = item.comment;
+			if (item.Expn !== undefined) target.layerComps.list[target.layerComps.list.length - 1].expanded = item.Expn;
 		}
 
 		if (desc.lastAppliedComp !== undefined) target.layerComps.lastApplied = desc.lastAppliedComp;
@@ -1101,6 +1105,7 @@ addHandler(
 			if (item.comment !== undefined) t.comment = item.comment;
 			t.compID = item.id;
 			t.capturedInfo = item.capturedInfo;
+			if (item.expanded !== undefined) t.Expn = !!item.expanded;
 			desc.list.push(t);
 		}
 
@@ -1397,6 +1402,7 @@ interface SlicesSliceDesc {
 	sliceID: number;
 	groupID: number;
 	origin: string;
+	associatedLayer?: number;
 	'Nm  '?: string;
 	Type: string;
 	bounds: BoundsDesc;
@@ -1518,7 +1524,7 @@ addHandler(
 					...(s['Nm  '] ? { name: s['Nm  '] } : {}),
 					id: s.sliceID,
 					groupId: s.groupID,
-					associatedLayerId: 0,
+					associatedLayerId: s.associatedLayer ?? 0,
 					origin: ESliceOrigin.decode(s.origin),
 					type: ESliceType.decode(s.Type),
 					bounds: boundsFromBounds(s.bounds),
@@ -2045,6 +2051,7 @@ interface AnimationFrameDescriptor {
 	FrDl?: number;
 	FrDs: string;
 	FrGA?: number;
+	FrGL?: number;
 }
 
 interface AnimationDescriptor {
@@ -2092,13 +2099,16 @@ addHandler(
 						if (key === 'AnDs') {
 							const desc = readVersionAndDescriptor(reader) as AnimationsDescriptor;
 							target.animations = {
-								// desc.AFSt ???
-								frames: desc.FrIn.map(x => ({
-									id: x.FrID,
-									delay: (x.FrDl || 0) / 100,
-									dispose: x.FrDs ? FrmD.decode(x.FrDs) : 'auto', // missing == auto
-									// x.FrGA ???
-								})),
+								frames: desc.FrIn.map(x => {
+									const frame: Animations['frames'][0] = {
+										id: x.FrID,
+										delay: (x.FrDl || 0) / 100,
+										dispose: x.FrDs ? FrmD.decode(x.FrDs) : 'auto', // missing == auto
+									};
+									if (x.FrGA !== undefined) frame.globalAngle = x.FrGA;
+									if (x.FrGL !== undefined) frame.globalAltitude = x.FrGL;
+									return frame;
+								}),
 								animations: desc.FSts.map(x => ({
 									id: x.FsID,
 									frames: x.FsFr,
@@ -2106,6 +2116,8 @@ addHandler(
 									activeFrame: x.AFrm || 0,
 								})),
 							};
+
+							if (desc.AFSt !== undefined) target.animations.activeAnimation = desc.AFSt;
 
 							// console.log('#4000 AnDs', require('util').inspect(desc, false, 99, true));
 							// console.log('#4000 AnDs:result', require('util').inspect(target.animations, false, 99, true));
@@ -2153,7 +2165,7 @@ addHandler(
 				writeSignature(writer, 'AnDs');
 				writeSection(writer, 1, () => {
 					const desc: AnimationsDescriptor = {
-						// AFSt: 0, // ???
+						...(target.animations!.activeAnimation !== undefined ? { AFSt: target.animations!.activeAnimation } : {}),
 						FrIn: [],
 						FSts: [],
 					};
@@ -2165,7 +2177,8 @@ addHandler(
 						} as any;
 						if (f.delay) frame.FrDl = Math.round(f.delay * 100);
 						frame.FrDs = FrmD.encode(f.dispose);
-						// if (i === 0) frame.FrGA = 30; // ???
+						if (f.globalAngle !== undefined) frame.FrGA = f.globalAngle;
+						if (f.globalAltitude !== undefined) frame.FrGL = f.globalAltitude;
 						desc.FrIn.push(frame);
 					}
 
@@ -2183,11 +2196,12 @@ addHandler(
 					writeVersionAndDescriptor(writer, '', 'null', desc);
 				});
 
-				// writeSignature(writer, '8BIM');
-				// writeSignature(writer, 'Roll');
-				// writeSection(writer, 1, () => {
-				// 	writeZeros(writer, 8);
-				// });
+				// rollover states (Photoshop always writes 8 zero bytes here)
+				writeSignature(writer, '8BIM');
+				writeSignature(writer, 'Roll');
+				writeSection(writer, 1, () => {
+					writeZeros(writer, 8);
+				});
 			});
 		}
 	},

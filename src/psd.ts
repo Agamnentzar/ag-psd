@@ -43,7 +43,7 @@ export type Color = (RGBA | RGB | FRGB | HSB | CMYK | LAB | Grayscale) & { book?
 
 export interface EffectContour {
 	name: string;
-	curve: { x: number; y: number; }[];
+	curve: { x: number; y: number; curved?: boolean; }[]; // curved: smooth point (corner point if false)
 }
 
 export interface EffectPattern {
@@ -305,10 +305,13 @@ export interface Warp {
 }
 
 export interface Animations {
+	activeAnimation?: number;
 	frames: {
 		id: number;
 		delay: number;
 		dispose?: 'auto' | 'none' | 'dispose';
+		globalAngle?: number; // global light angle in this frame
+		globalAltitude?: number; // global light altitude in this frame
 	}[];
 	animations: {
 		id: number;
@@ -447,6 +450,14 @@ export interface LayerTextData {
 	orientation?: Orientation;
 	index?: number; // index of Editor in extra editor data related to this layer
 	warp?: Warp;
+	substitutesUsed?: boolean; // missing fonts were substituted
+	clickPoint?: { x: number; y: number; }; // text click point (Photoshop 7)
+	textOnPath?: {
+		type?: string; // raw enum value, e.g. 'TxTo'
+		direction?: string; // raw enum value, e.g. 'TxCW'
+		mirror?: boolean;
+	};
+	verticalAlignment?: number; // raw value of `VAlign`
 	top?: number;
 	left?: number;
 	bottom?: number;
@@ -507,9 +518,12 @@ export interface ExtraGradientInfo {
 	reverse?: boolean;
 	align?: boolean;
 	offset?: { x: number; y: number; };
+	aspectRatio?: number;
+	noisePreSeed?: number;
 }
 
 export interface ExtraPatternInfo {
+	align?: boolean;
 	linked?: boolean;
 	phase?: { x: number; y: number; };
 	scale?: number;
@@ -761,6 +775,7 @@ export type LinkedFile = {
 		fullPath: string;
 		originalPath: string;
 		relativePath: string;
+		alias?: string; // binary data of macOS alias record (one character per byte)
 	};
 }
 
@@ -1360,6 +1375,7 @@ export interface PlacedLayer {
 	comp?: number;
 	compInfo?: { compID: number; originalCompID: number; };
 	filter?: PlacedLayerFilter;
+	imported?: boolean; // `Impr` flag
 }
 
 export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAdjustment |
@@ -1371,6 +1387,7 @@ export type AdjustmentLayer = BrightnessAdjustment | LevelsAdjustment | CurvesAd
 export type LayerColor = 'none' | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'violet' | 'gray' |
 	'seafoam' | 'indigo' | 'magenta' | 'fuchsia';
 
+// TODO: remove keyOrigin prefix from fields in future version
 export interface KeyDescriptorItem {
 	keyShapeInvalidated?: boolean;
 	keyOriginType?: number; // shape type: 1 - rectangle, 2 - rounded rectangle, 4 - line, 5 - ellipse, 8 - polygon
@@ -1388,6 +1405,22 @@ export interface KeyDescriptorItem {
 		right: UnitsValue;
 	};
 	keyOriginBoxCorners?: { x: number; y: number; }[];
+	// polygon
+	keyOriginPolySides?: number;
+	keyOriginPolyCornerRadius?: number;
+	keyOriginPolyStarRatio?: number; // 0..1, only for stars
+	keyOriginPolyPreviousTightBoxCorners?: { x: number; y: number; }[];
+	keyOriginPolyTrueRectCorners?: { x: number; y: number; }[];
+	keyOriginPolyPixelHSF?: number;
+	// line
+	keyOriginLineStart?: { x: number; y: number; };
+	keyOriginLineEnd?: { x: number; y: number; };
+	keyOriginLineWeight?: number;
+	keyOriginLineArrowStart?: boolean;
+	keyOriginLineArrowEnd?: boolean;
+	keyOriginLineArrowWidth?: number;
+	keyOriginLineArrowLength?: number;
+	keyOriginLineArrowConcavity?: number;
 	transform?: number[]; // 2d transform matrix [xx, xy, yx, yy, tx, ty]
 }
 
@@ -1417,13 +1450,33 @@ export interface SavedPath extends VectorPathData {
 	};
 }
 
-export interface AnimationFrame {
+export type Knockout = 'none' | 'shallow' | 'deep';
+
+// layer properties overridden in animation frame or layer comp
+export interface LayerStateBlendOptions {
+	blendMode?: BlendMode;
+	opacity?: number;
+	fillOpacity?: number;
+	blendClippedElements?: boolean;
+	blendInteriorElements?: boolean;
+	knockout?: Knockout;
+}
+
+export interface LayerStateText {
+	warp: Warp;
+	warpRect: number[];
+}
+
+export interface AnimationFrame extends LayerStateBlendOptions {
 	frames: number[]; // IDs of frames that this modifiers applies to
 	enable?: boolean;
 	offset?: { x: number; y: number; };
+	maskOffset?: { x: number; y: number; };
+	vectorMaskOffset?: { x: number; y: number; };
 	referencePoint?: { x: number; y: number; };
-	opacity?: number;
 	effects?: LayerEffectsInfo;
+	text?: LayerStateText; // text layer settings (warp)
+	placedLayerCompId?: number; // smart object layer comp
 }
 
 export interface Fraction {
@@ -1608,14 +1661,20 @@ export interface LayerAdditionalInfo {
 	};
 	timeline?: Timeline;
 	filterEffectsMasks?: FilterEffectsMask[];
+	// per-layer settings of layer comps (layer comps are listed in `imageResources.layerComps`), each item of `settings`
+	// stores layer properties (visibility, position, appearance) recorded for the layer comps listed in its `compList`
 	comps?: {
 		originalEffectsReferencePoint?: { x: number; y: number; };
-		settings: {
+		settings: (LayerStateBlendOptions & {
 			enabled?: boolean;
-			compList: number[];
+			compList: number[]; // IDs of layer comps (`id` of `imageResources.layerComps.list` items) these settings apply to, `0` seems to be used for Last Document State
 			offset?: { x: number; y: number; };
+			vectorMaskOffset?: { x: number; y: number; };
+			effects?: LayerEffectsInfo;
 			effectsReferencePoint?: { x: number; y: number; };
-		}[];
+			text?: LayerStateText; // text layer settings (warp)
+			placedLayerCompId?: number; // smart object layer comp
+		})[];
 	};
 	userMask?: {
 		colorSpace: Color;
@@ -1943,6 +2002,7 @@ export interface ImageResources {
 			name: string;
 			comment?: string;
 			capturedInfo: LayerCompCapturedInfo;
+			expanded?: boolean;
 		}[];
 		lastApplied?: number;
 	};
@@ -2078,10 +2138,10 @@ export interface ReadOptions {
 	 * `thumnailRaw` field is used instead. */
 	useRawThumbnail?: boolean;
 	/** Reads only listed `imageResources` fields, other image resources are skipped without decoding them
-	 * (e.g. `['resolutionInfo', 'gridAndGuidesInformation']`). Use empty array to skip all image resources.
+	 * (e.g. `['resolutionInfo', 'gridAndGuidesInformation']`, array or Set). Use empty array to skip all image resources.
 	 * Resources needed to read layers and composite image (`alphaChannelNames`, `transparencyIndex`, layer link groups)
 	 * are always read. */
-	imageResourcesWhitelist?: (keyof ImageResources)[];
+	imageResourcesWhitelist?: (keyof ImageResources)[] | Set<keyof ImageResources>;
 
 	/** Used only for development. */
 	logDevFeatures?: boolean;
