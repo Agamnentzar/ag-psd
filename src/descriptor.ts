@@ -23,27 +23,22 @@ interface Dict { [key: string]: string; }
 interface NameClassID { name: string; classID: string; }
 interface ExtTypeDict { [key: string]: NameClassID; }
 
-function revMap(map: Dict) {
-	const result: Dict = {};
-	Object.keys(map).forEach(key => result[map[key]] = key);
-	return result;
-}
+const unitsMap = new Map<string, string>([
+	['#Ang', 'Angle'],
+	['#Rsl', 'Density'],
+	['#Rlt', 'Distance'],
+	['#Nne', 'None'],
+	['#Prc', 'Percent'],
+	['#Pxl', 'Pixels'],
+	['#Mlm', 'Millimeters'],
+	['#Pnt', 'Points'],
+	['RrPi', 'Picas'],
+	['RrIn', 'Inches'],
+	['RrCm', 'Centimeters'],
+]);
 
-const unitsMap: Dict = {
-	'#Ang': 'Angle',
-	'#Rsl': 'Density',
-	'#Rlt': 'Distance',
-	'#Nne': 'None',
-	'#Prc': 'Percent',
-	'#Pxl': 'Pixels',
-	'#Mlm': 'Millimeters',
-	'#Pnt': 'Points',
-	'RrPi': 'Picas',
-	'RrIn': 'Inches',
-	'RrCm': 'Centimeters',
-};
-
-const unitsMapRev = revMap(unitsMap);
+const unitsMapRev = new Map<string, string>();
+unitsMap.forEach((value, key) => unitsMapRev.set(value, key));
 
 function makeType(name: string, classID: string) {
 	return { name, classID };
@@ -611,14 +606,16 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 		case 'UntF': { // Unit double
 			const units = readSignature(reader);
 			const value = readFloat64(reader);
-			if (!unitsMap[units]) throw new Error(`Invalid units: ${units}`);
-			return { units: unitsMap[units], value };
+			const unit = unitsMap.get(units);
+			if (!unit) throw new Error(`Invalid units: ${units}`);
+			return { units: unit, value };
 		}
 		case 'UnFl': { // Unit float
 			const units = readSignature(reader);
 			const value = readFloat32(reader);
-			if (!unitsMap[units]) throw new Error(`Invalid units: ${units}`);
-			return { units: unitsMap[units], value };
+			const unit = unitsMap.get(units);
+			if (!unit) throw new Error(`Invalid units: ${units}`);
+			return { units: unit, value };
 		}
 		case 'TEXT': // String
 			return readUnicodeString(reader);
@@ -720,16 +717,20 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			if (typeof value !== 'number') throw new Error(`Invalid number value: ${JSON.stringify(value)}, key: ${key}`);
 			writeFloat64(writer, value);
 			break;
-		case 'UntF': // Unit double
-			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units} in ${key}`);
-			writeSignature(writer, unitsMapRev[value.units]);
+		case 'UntF': { // Unit double
+			const unit = unitsMapRev.get(value.units);
+			if (!unit) throw new Error(`Invalid units: ${value.units} in ${key}`);
+			writeSignature(writer, unit);
 			writeFloat64(writer, value.value);
 			break;
-		case 'UnFl': // Unit float
-			if (!unitsMapRev[value.units]) throw new Error(`Invalid units: ${value.units} in ${key}`);
-			writeSignature(writer, unitsMapRev[value.units]);
+		}
+		case 'UnFl': { // Unit float
+			const unit = unitsMapRev.get(value.units);
+			if (!unit) throw new Error(`Invalid units: ${value.units} in ${key}`);
+			writeSignature(writer, unit);
 			writeFloat32(writer, value.value);
 			break;
+		}
 		case 'TEXT': // String
 			writeUnicodeStringWithPadding(writer, value);
 			break;

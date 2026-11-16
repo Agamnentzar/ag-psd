@@ -42,6 +42,14 @@ describe('helpers', () => {
 			expect(() => e.decode('BlnM.bogus')).throw(`Unrecognized value for enum: 'BlnM.bogus'`);
 		});
 
+		it('does not return inherited properties for crafted values', () => {
+			// a crafted PSD can supply an arbitrary-length enum value; an inherited property name
+			// must be rejected, not returned as Object.prototype or a native function
+			for (const value of ['__proto__', 'constructor', 'toString', 'hasOwnProperty', 'valueOf']) {
+				expect(() => e.decode(`BlnM.${value}`), value).throw(`Unrecognized value for enum: 'BlnM.${value}'`);
+			}
+		});
+
 		it('round-trips: encode(decode(long-form)) === the 4-char code', () => {
 			expect(e.encode(e.decode('BlnM.normal'))).equal('BlnM.Nrml');
 		});

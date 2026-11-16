@@ -387,9 +387,9 @@ function decodeObject(obj: any, keys: string[], fonts: Font[]) {
 		if (obj[Key] === undefined) continue;
 
 		if (key === 'justification') {
-			result[key] = justification[obj[Key]] ?? 'left';
+			result[key] = justification[obj[Key] | 0] ?? 'left';
 		} else if (key === 'font') {
-			const font = fonts[obj[Key]];
+			const font = fonts[obj[Key] | 0];
 			if (font) result[key] = font; // invalid font index, leave the font unset so it falls back to default
 		} else if (key === 'fillColor' || key === 'strokeColor') {
 			result[key] = decodeColor(obj[Key]);
@@ -697,7 +697,7 @@ export function decodeLegacyTextData(data: LegacyTextData): LayerTextData {
 		transform: data.transform,
 		antiAlias: data.antiAlias ? 'smooth' : 'none',
 		orientation: data.lines[0]?.orientation === 1 ? 'vertical' : 'horizontal',
-		paragraphStyle: { justification: justification[data.lines[0]?.alignment ?? 0] ?? 'left' },
+		paragraphStyle: { justification: justification[(data.lines[0]?.alignment ?? 0) | 0] ?? 'left' },
 		style: {},
 		styleRuns: runs,
 	};

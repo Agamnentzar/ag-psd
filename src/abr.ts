@@ -410,13 +410,15 @@ interface DescDescriptor {
 // sanity limits for brush sample dimensions (Photoshop brushes are limited to 5000px)
 const MAX_BRUSH_SIZE = 10000;
 
-const toBrushType: { [key: string]: 'brush' | 'mixer brush' | 'smudge brush'; } = {
-	_: 'brush',
-	MixB: 'mixer brush',
-	SmTl: 'smudge brush',
+// Map (not a plain object) so a crafted classID like '__proto__' looks up as undefined
+// instead of returning an inherited property instead of a brush type
+const toBrushType = new Map<string, 'brush' | 'mixer brush' | 'smudge brush'>([
+	['_', 'brush'],
+	['MixB', 'mixer brush'],
+	['SmTl', 'smudge brush'],
 	// PbTl
 	// ErTl
-};
+]);
 
 function parseDynamics(desc: DynamicsDescriptor): BrushDynamics {
 	return {
@@ -899,7 +901,7 @@ function parseBrush(brush: DescDescriptor['Brsh'][number]): Brush {
 	const to = brush.toolOptions;
 	if (to) {
 		b.toolOptions = {
-			type: toBrushType[to._classID] || 'brush',
+			type: toBrushType.get(to._classID) || 'brush',
 			brushPreset: to.brushPreset,
 			flow: to.flow ?? 100,
 			smooth: to.Smoo ?? 0,

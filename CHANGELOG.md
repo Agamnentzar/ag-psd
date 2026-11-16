@@ -1,5 +1,8 @@
 # Changelog
 
+## v34.2.1
+- Fixed decoding descriptor enum values returning inherited properties (`Object.prototype` or native functions) for crafted files with values such as `__proto__` or `constructor`, they are now rejected like any other unrecognized value
+
 ## v34.2.0
 - Added `vectorMaskOffset`, `effects`, `blendMode`, `opacity`, `fillOpacity`, `blendClippedElements`, `blendInteriorElements`, `knockout` and `text` (text warp) fields to layer `comps.settings` items, previously these layer comp settings were lost
 - Added `placedLayerCompId` field to layer `comps.settings` items

@@ -54,22 +54,16 @@ export const largeAdditionalInfoKeys = [
 	...largeAdditionalInfoKeysObserved,
 ];
 
-export interface Dict {
-	[key: string]: string;
-}
-
-export function revMap(map: Dict) {
-	const result: Dict = {};
-	Object.keys(map).forEach(key => result[map[key]] = key);
-	return result;
-}
-
 export function createEnum<T extends string>(prefix: string, def: T, map: { [K in T]: string; }) {
-	const rev = revMap(map);
+	// a Map (not a plain object) so a crafted value like '__proto__' or 'constructor' looks up as
+	// undefined instead of returning an inherited property (Object.prototype / native function)
+	const rev = new Map<string, T>();
+	for (const key of Object.keys(map) as T[]) rev.set(map[key], key);
 
 	const decode = (val: string): T => {
 		const value = val.split('.')[1];
-		if (value && !rev[value]) {
+		const mapped = value ? rev.get(value) : undefined;
+		if (value && !mapped) {
 			// Photoshop 2026 writes the long-form enum value instead of the historical 4-char code
 			// (the map VALUE, e.g. 'BlnM.Nrml'). Two long-form shapes occur:
 			//  - single-word modes use the map KEY verbatim:        'BlnM.normal'
@@ -80,7 +74,7 @@ export function createEnum<T extends string>(prefix: string, def: T, map: { [K i
 			if (Object.prototype.hasOwnProperty.call(map, spaced)) return spaced as any;
 			throw new Error(`Unrecognized value for enum: '${val}'`);
 		}
-		return (rev[value] as any) || def;
+		return mapped || def;
 	};
 
 	const encode = (val: T | undefined): string => {
