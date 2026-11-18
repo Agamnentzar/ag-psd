@@ -89,9 +89,9 @@ console.log(psd1);
 // read document structure and image data
 const psd2 = readPsd(buffer);
 console.log(psd2);
-// by defaults `canvas` field type is HTMLCanvasElement, so it needs to be cast to `any`
-// or node-canvas `Canvas` type, in order to call `toBuffer` method
-fs.writeFileSync('layer-1.png', (psd2.children[0].canvas as any).toBuffer());
+// The canvas field is typed as HTMLCanvasElement, but node-canvas canvases
+// also have toBuffer(). In TypeScript, cast it to the node-canvas `Canvas` type.
+fs.writeFileSync('layer-1.png', psd2.children[0].canvas.toBuffer('image/png'));
 ```
 
 #### Writing
@@ -114,6 +114,25 @@ const psd = {
 const buffer = writePsdBuffer(psd);
 fs.writeFileSync('my-file.psd', buffer);
 ```
+
+#### Exporting to PNG or JPEG
+
+`readPsd` puts a canvas on the document (`psd.canvas`) and on every layer that has image data (`layer.canvas`). In Node.js, write either one with node-canvas:
+
+```javascript
+import * as fs from 'fs';
+import 'ag-psd/initialize-canvas';
+import { readPsd } from 'ag-psd';
+
+const psd = readPsd(fs.readFileSync('my-file.psd'));
+
+fs.writeFileSync('composite.png', psd.canvas.toBuffer('image/png'));
+fs.writeFileSync('layer-1.png', psd.children[0].canvas.toBuffer('image/png'));
+```
+
+Use `toBuffer('image/jpeg', { quality: 0.8 })` for JPEG. In the browser, call `canvas.toDataURL('image/png')` or draw the canvas into another one.
+
+These canvases come from the image data stored in the file. The library does not re-render the composite after you change layers, blending or text, so export before making changes or update `psd.canvas` yourself. See the note under "Modifying documents" below.
 
 ### Browser
 
@@ -172,7 +191,7 @@ saveAs(blob, 'my-file.psd');
 
 #### Reading
 
-Browser has to support `OffscreenCanvas` and `bitmaprenderer` context.
+Browser has to support `OffscreenCanvas` and `bitmaprenderer` context. `initializeCanvas` only needs the `createCanvas` function: thumbnail data is decoded from its JPEG bytes internally, so no DOM `Image` is needed in the worker.
 
 ```js
 // worker.js
@@ -230,7 +249,7 @@ xhr.send();
 importScripts('bundle.js');
 
 const createCanvas = (width, height) => {
-  return OffscreenCanvas(width, height);
+  return new OffscreenCanvas(width, height);
 };
 
 agPsd.initializeCanvas(createCanvas);
@@ -533,6 +552,15 @@ function processLayer(layer) {
 
 psd.children?.forEach(processLayer);
 ```
+
+Always verify the size of bitmap data before decoding it. Functions decoding bitmaps on demand (`getLayerImageData`, `getLayerMaskImageData`, `getLayerRealMaskImageData`, `getCompositeImageData`, `getFilterEffectsMaskImageData`, `getFilterEffectsMaskExtraImageData`, their `*Canvas` variants and `decodeLayerPixels`) do not apply `totalMemoryLimit` from read options. They allocate memory based on the dimensions declared in the file, even if the file doesn't contain any actual image data for them, so a small file can cause an out of memory crash. Check the dimensions of each bitmap you're going to decode:
+
+- layer image: `layer.right - layer.left` and `layer.bottom - layer.top`
+- layer masks: same for `layer.mask` and `layer.realMask` (mask sizes are independent of layer size)
+- composite image: `psd.width` and `psd.height`
+- filter effects masks: same for `layer.filterEffectsMasks` items and their `extra` field
+
+Decoded bitmaps are always RGBA, taking `width * height * 4 * bytesPerChannel` bytes (1 byte for 8 bit, 2 bytes for 16 bit and 4 bytes for 32 bit documents), regardless of the color mode of the document. Decoding can temporarily take more memory than that, up to around 2.25x for CMYK documents, and `*Canvas` functions additionally allocate the canvas.
 
 2. Make sure you queue processing of multiple PSD documents. Processing can still take significant amount of memory and time, decoding many documents in parallel can exhaust your memory limit.
 
