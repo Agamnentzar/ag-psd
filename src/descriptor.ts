@@ -1,4 +1,5 @@
 import { createEnum, normalizeLabAB, denormalizeLabAB } from './helpers';
+import { setProperty } from './engineData';
 import {
 	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, Color, ColorStop, EffectContour,
 	EffectNoiseGradient, EffectPattern, EffectSolidGradient, ExtraGradientInfo, ExtraPatternInfo,
@@ -438,7 +439,7 @@ export function writeAsciiStringOrClassId(writer: PsdWriter, value: string) {
 	}
 }
 
-export function readDescriptorStructure(reader: PsdReader, includeClass: boolean) {
+export function readDescriptorStructure(reader: PsdReader, includeClass: boolean, depth = 0) {
 	const struct = readClassStructure(reader);
 	const object: any = includeClass ? { _name: struct.name, _classID: struct.classID } : {};
 	// console.log('>> ', struct);
@@ -448,9 +449,9 @@ export function readDescriptorStructure(reader: PsdReader, includeClass: boolean
 		const key = readAsciiStringOrClassId(reader);
 		const type = readSignature(reader);
 		// console.log(`> '${key}' '${type}'`);
-		const data = readOSType(reader, type, includeClass);
+		const data = readOSType(reader, type, includeClass, depth + 1);
 		// if (!getTypeByKey(key, data)) console.log(`> '${key}' '${type}'`, data);
-		object[key] = data;
+		setProperty(object, key, data); // key comes from the file, '__proto__' must not change the prototype
 	}
 
 	return object;
@@ -582,13 +583,19 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	}
 }
 
-function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
+// descriptors nest via lists (VlLs) and nested descriptors (Objc); a crafted file can nest them
+// arbitrarily deep, which would overflow the call stack (RangeError), so the depth is capped
+const maxDescriptorDepth = 1000;
+
+function readOSType(reader: PsdReader, type: string, includeClass: boolean, depth: number) {
+	if (depth > maxDescriptorDepth) throw new Error('Descriptor is nested too deeply');
+
 	switch (type) {
 		case 'obj ': // Reference
 			return readReferenceStructure(reader);
 		case 'Objc': // Descriptor
 		case 'GlbO': // GlobalObject same as Descriptor
-			return readDescriptorStructure(reader, includeClass);
+			return readDescriptorStructure(reader, includeClass, depth + 1);
 		case 'VlLs': { // List
 			const length = readInt32(reader);
 			const items: any[] = [];
@@ -596,7 +603,7 @@ function readOSType(reader: PsdReader, type: string, includeClass: boolean) {
 			for (let i = 0; i < length; i++) {
 				const itemType = readSignature(reader);
 				// console.log('  >', itemType);
-				items.push(readOSType(reader, itemType, includeClass));
+				items.push(readOSType(reader, itemType, includeClass, depth + 1));
 			}
 
 			return items;

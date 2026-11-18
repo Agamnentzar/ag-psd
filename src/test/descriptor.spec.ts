@@ -516,5 +516,46 @@ describe('version and descriptor', () => {
 		const desc = readVersionAndDescriptor(toReader(new Uint8Array(getWriterBuffer(writer))));
 		expect(desc).eql({ Vrsn: 1, minOpacity: 29 }); // long values are rounded
 	});
+
+	it('throws on descriptors nested too deeply instead of overflowing the stack', () => {
+		const u32 = (n: number) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n); return b; };
+		const sig = (v: string) => new Uint8Array([...v].map(c => c.charCodeAt(0)));
+		const parts: Uint8Array[] = [
+			u32(16), // version
+			u32(0), // class name (empty)
+			u32(0), sig('null'), // classID
+			u32(1), // one item
+			u32(0), sig('ke  '), sig('VlLs'), // key + list type
+		];
+		for (let i = 0; i < 5000; i++) { parts.push(u32(1), sig('VlLs')); } // deeply nested lists
+		parts.push(u32(0)); // innermost empty list
+		const size = parts.reduce((a, p) => a + p.length, 0);
+		const buffer = new Uint8Array(size);
+		for (let o = 0, i = 0; i < parts.length; o += parts[i].length, i++) buffer.set(parts[i], o);
+		expect(() => readVersionAndDescriptor(toReader(buffer))).throw('Descriptor is nested too deeply');
+	});
+
+	it('reads __proto__ key as own property without changing prototype', () => {
+		const u32 = (n: number) => { const b = new Uint8Array(4); new DataView(b.buffer).setUint32(0, n); return b; };
+		const sig = (v: string) => new Uint8Array([...v].map(c => c.charCodeAt(0)));
+		const parts: Uint8Array[] = [
+			u32(16), // version
+			u32(0), u32(0), sig('null'), // class name + classID
+			u32(2), // two items
+			u32(9), sig('__proto__'), sig('Objc'), // key + nested descriptor type
+			u32(0), u32(0), sig('null'), u32(1), // nested class + one item
+			u32(0), sig('isAd'), sig('bool'), new Uint8Array([1]),
+			u32(0), sig('norm'), sig('long'), u32(42),
+		];
+		const size = parts.reduce((a, p) => a + p.length, 0);
+		const buffer = new Uint8Array(size);
+		for (let o = 0, i = 0; i < parts.length; o += parts[i].length, i++) buffer.set(parts[i], o);
+		const desc = readVersionAndDescriptor(toReader(buffer));
+		expect(Object.getPrototypeOf(desc)).equal(Object.prototype);
+		expect(desc.norm).equal(42);
+		expect(desc.isAd).undefined;
+		expect(Object.prototype.hasOwnProperty.call(desc, '__proto__')).true;
+		expect(Object.getOwnPropertyDescriptor(desc, '__proto__')!.value).eql({ isAd: true });
+	});
 });
 });

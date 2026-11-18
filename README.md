@@ -534,6 +534,15 @@ function processLayer(layer) {
 psd.children?.forEach(processLayer);
 ```
 
+Always verify the size of bitmap data before decoding it. Functions decoding bitmaps on demand (`getLayerImageData`, `getLayerMaskImageData`, `getLayerRealMaskImageData`, `getCompositeImageData`, `getFilterEffectsMaskImageData`, `getFilterEffectsMaskExtraImageData`, their `*Canvas` variants and `decodeLayerPixels`) do not apply `totalMemoryLimit` from read options. They allocate memory based on the dimensions declared in the file, even if the file doesn't contain any actual image data for them, so a small file can cause an out of memory crash. Check the dimensions of each bitmap you're going to decode:
+
+- layer image: `layer.right - layer.left` and `layer.bottom - layer.top`
+- layer masks: same for `layer.mask` and `layer.realMask` (mask sizes are independent of layer size)
+- composite image: `psd.width` and `psd.height`
+- filter effects masks: same for `layer.filterEffectsMasks` items and their `extra` field
+
+Decoded bitmaps are always RGBA, taking `width * height * 4 * bytesPerChannel` bytes (1 byte for 8 bit, 2 bytes for 16 bit and 4 bytes for 32 bit documents), regardless of the color mode of the document. Decoding can temporarily take more memory than that, up to around 2.25x for CMYK documents, and `*Canvas` functions additionally allocate the canvas.
+
 2. Make sure you queue processing of multiple PSD documents. Processing can still take significant amount of memory and time, decoding many documents in parallel can exhaust your memory limit.
 
 3. Decoding document is synchronous and can take significant amount of time, especially decoding the bitmaps. If your application is processing everything in single main thread make sure you run decoding in separate process/thread or you risk stalling entire application.

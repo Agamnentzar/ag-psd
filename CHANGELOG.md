@@ -1,5 +1,10 @@
 # Changelog
 
+## v34.2.2
+- Fixed reading deeply nested descriptors (nested lists or descriptors) overflowing the call stack, nesting is now limited and rejected past a reasonable depth
+- Fixed decoding brush type (`readAbr`) returning inherited properties for a crafted class id
+- Fixed reading descriptors with `__proto__` key changing prototype of decoded object for crafted files, the key is now read as regular property
+
 ## v34.2.1
 - Fixed decoding descriptor enum values returning inherited properties (`Object.prototype` or native functions) for crafted files with values such as `__proto__` or `constructor`, they are now rejected like any other unrecognized value
 
