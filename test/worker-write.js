@@ -7,17 +7,7 @@ const createCanvas = (width, height) => {
   return canvas;
 };
 
-const createCanvasFromData = (data) => {
-  const image = new Image();
-  image.src = 'data:image/jpeg;base64,' + agPsd.byteArrayToBase64(data);
-  const canvas = new OffscreenCanvas(image.width, image.height);
-  canvas.width = image.width;
-  canvas.height = image.height;
-  canvas.getContext('2d').drawImage(image, 0, 0);
-  return canvas;
-};
-
-agPsd.initializeCanvas(createCanvas, createCanvasFromData);
+agPsd.initializeCanvas(createCanvas);
 
 onmessage = message => {
   const psd = message.data.psd;
