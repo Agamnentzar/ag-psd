@@ -172,7 +172,7 @@ saveAs(blob, 'my-file.psd');
 
 #### Reading
 
-Browser has to support `OffscreenCanvas` and `bitmaprenderer` context.
+Browser has to support `OffscreenCanvas` and `bitmaprenderer` context. `initializeCanvas` only needs the `createCanvas` function: thumbnail data is decoded from its JPEG bytes internally, so no DOM `Image` is needed in the worker.
 
 ```js
 // worker.js
@@ -230,7 +230,7 @@ xhr.send();
 importScripts('bundle.js');
 
 const createCanvas = (width, height) => {
-  return OffscreenCanvas(width, height);
+  return new OffscreenCanvas(width, height);
 };
 
 agPsd.initializeCanvas(createCanvas);
