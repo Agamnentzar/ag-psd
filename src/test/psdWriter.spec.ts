@@ -161,6 +161,31 @@ describe('PsdWriter', () => {
 	// const paddedImage = loadCanvasFromFile(path.join(layerImagesPath, 'padded.png'));
 
 	describe('layer left, top, right, bottom handling', () => {
+		it('preserves the bounds of a text layer without image data', () => {
+			const psd: Psd = {
+				width: 200,
+				height: 200,
+				children: [
+					{
+						name: 'Test Text',
+						left: 50,
+						top: 50,
+						right: 150,
+						bottom: 80,
+						text: { text: 'Hello World' },
+					},
+				],
+			};
+
+			const result = writeAndRead(psd);
+			const layer = result.children![0];
+			expect(layer.left).equal(50);
+			expect(layer.top).equal(50);
+			expect(layer.right).equal(150);
+			expect(layer.bottom).equal(80);
+			expect(layer.text!.text).equal('Hello World');
+		});
+
 		it('handles undefined left, top, right, bottom with layer image the same size as document', () => {
 			const psd: Psd = {
 				width: 300,

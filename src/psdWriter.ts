@@ -1013,9 +1013,14 @@ function getLayerChannels(tempBuffer: Uint8Array, layer: Layer, background: bool
 	let { width, height } = getLayerDimentions(layer);
 
 	if (!(layer.canvas || layer.imageData) || !width || !height) {
-		// layer without image data is empty, keep inverted (negative size) bounds from some files as they are
-		if (layer.right === undefined || right > left) right = left;
-		if (layer.bottom === undefined || bottom > top) bottom = top;
+		// A layer without image data is normally empty, but a text layer still
+		// needs its real bounds: Photoshop uses them to place the editable text
+		// even though ag-psd stores no pixels for it.
+		if (!layer.text) {
+			// keep inverted (negative size) bounds from some files as they are
+			if (layer.right === undefined || right > left) right = left;
+			if (layer.bottom === undefined || bottom > top) bottom = top;
+		}
 		return { layer, top, left, right, bottom, channels };
 	}
 
