@@ -89,9 +89,9 @@ console.log(psd1);
 // read document structure and image data
 const psd2 = readPsd(buffer);
 console.log(psd2);
-// by defaults `canvas` field type is HTMLCanvasElement, so it needs to be cast to `any`
-// or node-canvas `Canvas` type, in order to call `toBuffer` method
-fs.writeFileSync('layer-1.png', (psd2.children[0].canvas as any).toBuffer());
+// The canvas field is typed as HTMLCanvasElement, but node-canvas canvases
+// also have toBuffer(). In TypeScript, cast it to the node-canvas `Canvas` type.
+fs.writeFileSync('layer-1.png', psd2.children[0].canvas.toBuffer('image/png'));
 ```
 
 #### Writing
@@ -114,6 +114,25 @@ const psd = {
 const buffer = writePsdBuffer(psd);
 fs.writeFileSync('my-file.psd', buffer);
 ```
+
+#### Exporting to PNG or JPEG
+
+`readPsd` puts a canvas on the document (`psd.canvas`) and on every layer that has image data (`layer.canvas`). In Node.js, write either one with node-canvas:
+
+```javascript
+import * as fs from 'fs';
+import 'ag-psd/initialize-canvas';
+import { readPsd } from 'ag-psd';
+
+const psd = readPsd(fs.readFileSync('my-file.psd'));
+
+fs.writeFileSync('composite.png', psd.canvas.toBuffer('image/png'));
+fs.writeFileSync('layer-1.png', psd.children[0].canvas.toBuffer('image/png'));
+```
+
+Use `toBuffer('image/jpeg', { quality: 0.8 })` for JPEG. In the browser, call `canvas.toDataURL('image/png')` or draw the canvas into another one.
+
+These canvases come from the image data stored in the file. The library does not re-render the composite after you change layers, blending or text, so export before making changes or update `psd.canvas` yourself. See the note under "Modifying documents" below.
 
 ### Browser
 
