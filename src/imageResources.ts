@@ -3,7 +3,7 @@ import { Animations, BlendMode, Color, HalftoneScreen, ImageResources, KeyDescri
 import { KeyDescriptorListDescriptor, parseKeyDescriptorList, readVectorMask, serializeKeyDescriptorList, writeVectorMask } from './additionalInfo';
 import { PsdReader, readUnicodeString, readUint32, readUint16, readUint8, readFloat64, readBytes, skipBytes, readFloat32, readInt16, readFixedPoint32, readSignature, checkSignature, readSection, readColor, readInt32, readAsciiString, decodeUtf8, getUtf8StrictDecoder, getGbkStrictDecoder } from './psdReader';
 import { PsdWriter, writeUnicodeString, writeUint32, writeUint8, writeFloat64, writeUint16, writeBytes, writeInt16, writeFloat32, writeFixedPoint32, writeUnicodeStringWithPadding, writeColor, writeSignature, writeSection, writeInt32, writeAsciiString, writeZeros } from './psdWriter';
-import { clamp, ColorSpace, createCanvasFromData, createEnum, createImageData, imageDataToCanvas, MOCK_HANDLERS } from './helpers';
+import { arrayItem, clamp, ColorSpace, createCanvasFromData, createEnum, createImageData, imageDataToCanvas, MOCK_HANDLERS } from './helpers';
 import { encodeString } from './utf8';
 import { ESliceBGColorType, ESliceHorzAlign, ESliceOrigin, ESliceType, ESliceVertAlign, frac, FractionDescriptor, parseTrackList, pathSelectionStateToReference, DescriptorReferenceItem, readVersionAndDescriptor, serializeTrackList, TimelineTrackDescriptor, TimeScopeDescriptor, writeVersionAndDescriptor, DescriptorColor, DescriptorUnitsValue, parseColor, serializeColor, parseUnits, unitsValue, parsePercent, unitsPercentF , outputSettingsRoot } from './descriptor';
 
@@ -1161,7 +1161,7 @@ addHandler(
 			frameSpacing: desc.Spcn,
 			minOpacity: desc.minOpacity / 100,
 			maxOpacity: desc.maxOpacity / 100,
-			blendMode: onionSkinsBlendModes[desc.BlnM] || 'normal',
+			blendMode: arrayItem(onionSkinsBlendModes, desc.BlnM) || 'normal',
 		};
 	},
 	(writer, target) => {

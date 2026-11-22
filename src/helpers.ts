@@ -157,6 +157,17 @@ export function clamp(value: number, min: number, max: number) {
 	return value < min ? min : (value > max ? max : value);
 }
 
+// index read from a file can be any type (e.g. string '__proto__' or a list coerced to 'length'),
+// only integer indexes within the array return an item, so inherited properties are never returned
+export function arrayItem<T>(array: readonly T[], index: unknown): T | undefined {
+	return (typeof index === 'number' && Number.isInteger(index) && index >= 0 && index < array.length) ? array[index] : undefined;
+}
+
+// key read from a file can be a name of an inherited property (e.g. 'constructor' or 'toString')
+export function ownValue<T>(dict: { [key: string]: T; }, key: string): T | undefined {
+	return Object.prototype.hasOwnProperty.call(dict, key) ? dict[key] : undefined;
+}
+
 export function hasAlpha(data: PixelData) {
 	const size = data.width * data.height * 4;
 	const max = data.data instanceof Float32Array ? 1 : (data.data instanceof Uint16Array ? 0xffff : 0xff);

@@ -1,5 +1,5 @@
 import type { TextStyle, LayerTextData, ParagraphStyle, Font, AntiAlias, TextGridInfo, Justification, Color, TextPath, TextStyleRun } from './psd';
-import { clamp } from './helpers';
+import { arrayItem, clamp } from './helpers';
 
 interface Adjustments {
 	Axis: number[];
@@ -542,7 +542,7 @@ export function decodeEngineData(engineData: EngineData) {
 
 	const result: LayerTextData = {
 		text,
-		antiAlias: antialias[engineDict.AntiAlias] ?? 'smooth',
+		antiAlias: arrayItem(antialias, engineDict.AntiAlias) ?? 'smooth',
 		useFractionalGlyphWidths: !!engineDict.UseFractionalGlyphWidths,
 		superscriptSize: resourceDict.SuperscriptSize,
 		superscriptPosition: resourceDict.SuperscriptPosition,
@@ -606,9 +606,9 @@ export function decodeEngineData(engineData: EngineData) {
 	const styleRun = engineDict.StyleRun;
 
 	// style runs without a font use the font of the normal style sheet
-	const normalStyleSheet = resourceDict.StyleSheetSet?.[resourceDict.TheNormalStyleSheet ?? 0]?.StyleSheetData;
-	const normalFontIndex = normalStyleSheet?.Font;
-	const normalFont = (normalFontIndex !== undefined ? fonts[normalFontIndex] : undefined) ?? fonts[0];
+	const styleSheetSet = Array.isArray(resourceDict.StyleSheetSet) ? resourceDict.StyleSheetSet : [];
+	const normalStyleSheet = arrayItem(styleSheetSet, resourceDict.TheNormalStyleSheet ?? 0)?.StyleSheetData;
+	const normalFont = arrayItem(fonts, normalStyleSheet?.Font) ?? fonts[0];
 
 	result.style = {}; // decodeStyle(styleSheetData, fonts);
 	result.styleRuns = [];

@@ -557,5 +557,17 @@ describe('version and descriptor', () => {
 		expect(Object.prototype.hasOwnProperty.call(desc, '__proto__')).true;
 		expect(Object.getOwnPropertyDescriptor(desc, '__proto__')!.value).eql({ isAd: true });
 	});
+
+	it('writes keys with names of inherited properties', () => {
+		const keys = ['constructor', 'toString', 'valueOf', 'hasOwnProperty'];
+		for (const key of keys) {
+			for (const value of [5, [1, 2]]) {
+				const writer = createWriter();
+				writeVersionAndDescriptor(writer, '', 'null', { [key]: value });
+				const desc = readVersionAndDescriptor(toReader(new Uint8Array(getWriterBuffer(writer))));
+				expect(desc).eql({ [key]: value }, key);
+			}
+		}
+	});
 });
 });

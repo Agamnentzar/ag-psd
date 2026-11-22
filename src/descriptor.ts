@@ -1,4 +1,4 @@
-import { createEnum, normalizeLabAB, denormalizeLabAB } from './helpers';
+import { createEnum, normalizeLabAB, denormalizeLabAB, ownValue } from './helpers';
 import { setProperty } from './engineData';
 import {
 	AntiAlias, BevelDirection, BevelStyle, BevelTechnique, BlendMode, Color, ColorStop, EffectContour,
@@ -415,7 +415,7 @@ function getTypeByKey(key: string, value: any, root: string, parent: any) {
 	} else if (key === 'LghD' && parent._classID === 'oilPaint') {
 		return 'long';
 	} else {
-		return fieldToType[key];
+		return ownValue(fieldToType, key);
 	}
 }
 
@@ -481,10 +481,10 @@ export function writeDescriptorStructure(writer: PsdWriter, name: string, classI
 	for (const key of keys) {
 		let type: string | undefined = getTypeByKey(key, value[key], root, value);
 		let childRoot = root;
-		let extType = fieldToExtType[key];
+		let extType = ownValue(fieldToExtType, key);
 
 		if (classId === cameraRawFilterClassID) {
-			type = cameraRawFilterKeyTypes[key] ?? 'long'; // other settings are integer levels
+			type = ownValue(cameraRawFilterKeyTypes, key) ?? 'long'; // other settings are integer levels
 			childRoot = cameraRawFilterClassID; // lists (curves) contain integer levels
 		}
 
@@ -714,9 +714,9 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 			writeInt32(writer, value.length);
 
 			for (let i = 0; i < value.length; i++) {
-				const type = root === cameraRawFilterClassID ? 'long' : (fieldToArrayType[key] ?? guessOSType(value[i]));
+				const type = root === cameraRawFilterClassID ? 'long' : (ownValue(fieldToArrayType, key) ?? guessOSType(value[i]));
 				writeSignature(writer, type || 'long');
-				writeOSType(writer, type || 'long', value[i], `${key}[]`, fieldToArrayExtType[key], root);
+				writeOSType(writer, type || 'long', value[i], `${key}[]`, ownValue(fieldToArrayExtType, key), root);
 				if (writer.logMissingFeatures && !type) writer.log(`Missing descriptor array type for: '${key}' in`, value);
 			}
 			break;
@@ -782,7 +782,7 @@ function writeOSType(writer: PsdWriter, type: string, value: any, key: string, e
 		case 'ObAr': { // Object array
 			writeInt32(writer, 16); // version
 			writeUnicodeStringWithPadding(writer, ''); // name
-			const type = ObArTypes[key];
+			const type = ownValue(ObArTypes, key);
 			if (!type) throw new Error(`Not implemented ObArType for: ${key}`);
 			writeAsciiStringOrClassId(writer, type);
 			writeInt32(writer, value.length);

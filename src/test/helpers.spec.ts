@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { writeDataRaw, offsetForChannel, writeDataRLE, createEnum } from '../helpers';
+import { writeDataRaw, offsetForChannel, writeDataRLE, createEnum, arrayItem, ownValue } from '../helpers';
 import { createReader, readDataRLE } from '../psdReader';
 import { range, repeat } from './common';
 import { ChannelID, PixelArray, PixelData } from '../psd';
@@ -165,6 +165,39 @@ describe('helpers', () => {
 	describe('offsetForChannel()', () => {
 		it('returns offset for other channelId', () => {
 			expect(offsetForChannel(10 as ChannelID, false)).equal(11);
+		});
+	});
+
+	describe('arrayItem()', () => {
+		const items = ['a', 'b', 'c'];
+
+		it('returns item for integer index', () => {
+			expect(arrayItem(items, 0)).equal('a');
+			expect(arrayItem(items, 2)).equal('c');
+		});
+
+		it('returns undefined for index out of range', () => {
+			expect(arrayItem(items, -1)).undefined;
+			expect(arrayItem(items, 3)).undefined;
+			expect(arrayItem(items, 1.5)).undefined;
+			expect(arrayItem(items, NaN)).undefined;
+		});
+
+		it('returns undefined for non-number index instead of inherited properties', () => {
+			for (const index of ['__proto__', 'constructor', 'length', 'map', '0', ['length'], ['0'], {}, null, undefined, true]) {
+				expect(arrayItem(items, index), JSON.stringify(index)).undefined;
+			}
+		});
+	});
+
+	describe('ownValue()', () => {
+		it('returns own values only', () => {
+			const dict: { [key: string]: string; } = { a: 'x' };
+			expect(ownValue(dict, 'a')).equal('x');
+			expect(ownValue(dict, 'b')).undefined;
+			expect(ownValue(dict, 'constructor')).undefined;
+			expect(ownValue(dict, 'toString')).undefined;
+			expect(ownValue(dict, '__proto__')).undefined;
 		});
 	});
 });

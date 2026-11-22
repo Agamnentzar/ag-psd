@@ -1,5 +1,6 @@
 import { BlnM, DescriptorUnitsValue, parseAngle, parsePercent, parseUnitsToNumber, readVersionAndDescriptor } from './descriptor';
 import { BlendMode, PatternInfo } from './psd';
+import { arrayItem } from './helpers';
 import { checkSignature, consumeMemory, createReader, PsdReader, readBytes, readDataRLE, readInt16, readInt32, readPascalString, readPatternSafe, readSignature, readUint16, readUint32, readUint8, readUnicodeString, skipBytes } from './psdReader';
 
 export interface Abr {
@@ -422,7 +423,7 @@ const toBrushType = new Map<string, 'brush' | 'mixer brush' | 'smudge brush'>([
 
 function parseDynamics(desc: DynamicsDescriptor): BrushDynamics {
 	return {
-		control: dynamicsControl[desc.bVTy] as any,
+		control: arrayItem(dynamicsControl, desc.bVTy) as any,
 		steps: desc.fStp,
 		jitter: parsePercent(desc.jitter),
 		minimum: parsePercent(desc['Mnm ']),
@@ -461,7 +462,7 @@ function parseBrushShape(desc: BrushShapeDescriptor): BrushShape {
 		case 'dBrush':
 			return {
 				type: 'dynamic',
-				shape: dynamicBrushShapeShapes[desc['Shp ']],
+				shape: arrayItem(dynamicBrushShapeShapes, desc['Shp '])!,
 				angle: parseAngle(desc.Angl),
 				size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
 				density: parsePercent(desc.Dnst),
@@ -480,14 +481,14 @@ function parseBrushShape(desc: BrushShapeDescriptor): BrushShape {
 				type: 'tips',
 				angle: parseAngle(desc.Angl),
 				size: parseUnitsToNumber(desc.Dmtr, 'Pixels'),
-				shape: dynamicBrushShapeShapes[desc['Shp ']],
+				shape: arrayItem(dynamicBrushShapeShapes, desc['Shp '])!,
 				physics: desc.physics,
 				spacing: parsePercent(desc.Spcn),
 				spacingOn: desc.Intr,
 				flipX: desc.flipX,
 				flipY: desc.flipY,
 				// tips:
-				tipsType: tipsBrushShapeShapes[desc.dtipsType],
+				tipsType: arrayItem(tipsBrushShapeShapes, desc.dtipsType)!,
 				tipsLengthRatio: parsePercent(desc.dtipsLengthRatio),
 				tipsHardness: parsePercent(desc.dtipsHardness),
 				...((desc.dtipsGridSize && desc.dtipsErodibleTipHeightMap) ? {

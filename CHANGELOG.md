@@ -1,5 +1,9 @@
 # Changelog
 
+## v34.2.3
+- Fixed decoding brush settings (`readAbr` brush shape, tips type and dynamics control), placed layer type, onion skins blend mode and text layer anti-alias and default font returning inherited properties (`Array.prototype`, native functions) for crafted files with values of invalid type (such as `__proto__` string), invalid values are now read as `undefined` (or default value)
+- Fixed writing descriptors with keys named the same as built-in object properties (such as `constructor` or `toString`) throwing an error
+
 ## v34.2.2
 - Fixed reading deeply nested descriptors (nested lists or descriptors) overflowing the call stack, nesting is now limited and rejected past a reasonable depth
 - Fixed decoding brush type (`readAbr`) returning inherited properties for a crafted class id

@@ -1,6 +1,6 @@
 import { fromByteArray, toByteArray } from 'base64-js';
 import { readEffects, writeEffects } from './effectsHelpers';
-import { clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
+import { arrayItem, clamp, createEnum, layerColors, MOCK_HANDLERS, normalizeLabAB } from './helpers';
 import { LayerAdditionalInfo, LevelsFilterAdjustment, BezierPath, Psd, BrightnessAdjustment, ExposureAdjustment, VibranceAdjustment, ColorBalanceAdjustment, BlackAndWhiteAdjustment, PhotoFilterAdjustment, ChannelMixerChannel, ChannelMixerAdjustment, PosterizeAdjustment, ThresholdAdjustment, GradientMapAdjustment, CMYK, SelectiveColorAdjustment, ColorLookupAdjustment, LevelsAdjustmentChannel, LevelsAdjustment, CurvesAdjustment, CurvesAdjustmentChannel, HueSaturationAdjustment, HueSaturationAdjustmentChannel, PresetInfo, Color, ColorBalanceValues, WriteOptions, LinkedFile, PlacedLayerType, Warp, KeyDescriptorItem, BooleanOperation, LayerEffectsInfo, Annotation, VectorPathData, AnimationFrame, Timeline, PlacedLayerFilter, UnitsValue, Filter, PlacedLayer, Layer, CameraRawColors, CameraRawCurvePoint, CameraRawFilterSettings, Knockout, LayerStateBlendOptions, LayerStateText } from './psd';
 import { PsdReader, readSignature, readUnicodeString, skipBytes, readUint32, readUint8, readFloat64, readUint16, readBytes, readInt16, checkSignature, readFloat32, readFixedPointPath32, readSection, readColor, readInt32, readPascalString, readUnicodeStringWithLength, readAsciiString, readPatternSafe, readLayerInfo } from './psdReader';
 import { PsdWriter, writeZeros, writeSignature, writeBytes, writeUint32, writeUint16, writeFloat64, writeUint8, writeInt16, writeFloat32, writeFixedPointPath32, writeUnicodeString, writeSection, writeUnicodeStringWithPadding, writeColor, writePascalString, writeInt32, writePattern, writeUint64 } from './psdWriter';
@@ -4117,7 +4117,7 @@ addHandler(
 		target.placedLayer = {
 			id: desc.Idnt,
 			placed: desc.placed,
-			type: placedLayerTypes[desc.Type],
+			type: arrayItem(placedLayerTypes, desc.Type)!,
 			pageNumber: desc.PgNm,
 			totalPages: desc.totalPages,
 			frameStep: frac(desc.frameStep),
